@@ -73,6 +73,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
+  eventify:
+    dependency: "direct main"
+    description:
+      name: eventify
+      sha256: b829429f08586cc2001c628e7499e3e3c2493a1d895fd73b00ecb23351aa5a66
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   file:
     dependency: transitive
     description:
@@ -81,6 +89,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.4"
+  fixnum:
+    dependency: "direct main"
+    description:
+      name: fixnum
+      sha256: "25517a4deb0c03aa0f32fd12db525856438902d9c16536311e76cdc57b31d7d1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   frontend_server_client:
     dependency: transitive
     description:
@@ -201,6 +217,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.1"
+  protobuf:
+    dependency: "direct main"
+    description:
+      name: protobuf
+      sha256: "01dd9bd0fa02548bf2ceee13545d4a0ec6046459d847b6b061d8a27237108a08"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
   pub_semver:
     dependency: transitive
     description:
@@ -353,6 +377,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
+  web_socket_client:
+    dependency: "direct main"
+    description:
+      name: web_socket_client
+      sha256: c58378b2374622c43abfb0a29dce1a9418f95e1dddbf7fdd695a8c34b01eb737
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0-dev.3"
   webkit_inspection_protocol:
     dependency: transitive
     description:

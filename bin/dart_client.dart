@@ -1,5 +1,8 @@
-import 'package:dart_client/dart_client.dart' as dart_client;
+import 'package:electric_client/satellite/client.dart';
+import 'package:electric_client/websocket.dart';
 
 void main(List<String> arguments) {
-  print('Hello world: ${dart_client.calculate()}!');
+  final client = SatelliteClient();
+  final ws = WebsocketIO(client);
+  ws.open();
 }

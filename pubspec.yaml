@@ -12,3 +12,8 @@ environment:
 dev_dependencies:
   lints: ^2.0.0
   test: ^1.21.0
+dependencies:
+  eventify: ^1.0.1
+  fixnum: ^1.1.0
+  protobuf: ^2.1.0
+  web_socket_client: ^0.1.0-dev.3
