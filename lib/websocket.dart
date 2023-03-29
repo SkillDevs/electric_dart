@@ -5,7 +5,7 @@ import 'package:eventify/eventify.dart';
 import 'package:web_socket_client/web_socket_client.dart';
 
 class WebsocketIO with EventEmitter {
-  final SatelliteClient client;
+  final Client client;
 
   WebsocketIO(this.client);
 
