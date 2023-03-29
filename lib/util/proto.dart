@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:electric_client/proto/satellite.pb.dart';
 
+const kProtobufPackage = "Electric.Satellite.v0_2";
+
 enum SatMsgType {
   errorResp(code: 0),
   authReq(code: 1),
@@ -54,4 +56,29 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
     case SatMsgType.migrationNotification:
       return SatMigrationNotification.fromBuffer(data);
   }
+}
+
+SatMsgType? getTypeFromSatObject(Object object) {
+  if (object is SatAuthReq) {
+    return SatMsgType.authReq;
+  }
+
+  return null;
+}
+
+Uint8List encodeMessage(Object message) {
+  if (message is SatAuthReq) {
+    return message.writeToBuffer();
+  }
+  throw UnimplementedError();
+}
+
+Uint8List getSizeBuf(SatMsgType msgType) {
+  final buf = Uint8List(1);
+  buf.setRange(0, 1, [msgType.code]);
+  return buf;
+}
+
+String getProtocolVersion() {
+  return kProtobufPackage;
 }

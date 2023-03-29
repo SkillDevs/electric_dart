@@ -9,14 +9,14 @@ class SatelliteClientOpts {
   final String host;
   final int port;
   final bool ssl;
-  final int? timeout;
-  final int? pushPeriod;
+  final int timeout;
+  final int pushPeriod;
 
   SatelliteClientOpts({
     required this.host,
     required this.port,
     required this.ssl,
-    this.timeout,
-    this.pushPeriod,
+    required this.timeout,
+    required this.pushPeriod,
   });
 }

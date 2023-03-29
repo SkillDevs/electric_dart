@@ -20,6 +20,8 @@ void main(List<String> arguments) async {
       host: replicationConfig.host,
       port: replicationConfig.port,
       ssl: replicationConfig.ssl,
+      pushPeriod: 500,
+      timeout: 2000,
     ),
   );
 
@@ -41,6 +43,4 @@ void main(List<String> arguments) async {
   );
 
   await satellite.start(null);
-  // final ws = WebsocketIO(client);
-  // ws.open();
 }

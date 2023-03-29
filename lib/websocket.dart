@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:electric_client/satellite/client.dart';
-import 'package:eventify/eventify.dart';
+import 'package:events_emitter/events_emitter.dart';
 import 'package:web_socket_client/web_socket_client.dart';
 
-class WebsocketIO with EventEmitter {
+class WebsocketIO extends EventEmitter {
   final Client client;
 
   WebsocketIO(this.client);
@@ -29,7 +29,7 @@ class WebsocketIO with EventEmitter {
       } catch (e) {
         print(e);
         // this.emit('error', messageOrError)
-        emit("error", null, messageInfo);
+        emit("error", messageInfo);
         return;
       }
 
@@ -38,7 +38,7 @@ class WebsocketIO with EventEmitter {
       final response = handler.handle(messageInfo.msg);
 
       if (handler.isRpc) {
-        emit("rpc_response", null, response);
+        emit("rpc_response", response);
       }
     });
 

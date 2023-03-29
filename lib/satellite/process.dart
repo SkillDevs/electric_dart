@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/util/common.dart';
+import 'package:electric_client/util/types.dart';
 
 class Satellite {
   final ConsoleClient console;
@@ -9,6 +13,7 @@ class Satellite {
   final SatelliteConfig config;
 
   AuthState? _authState;
+  LSN? _lsn;
 
   Satellite({
     required this.console,
@@ -36,28 +41,65 @@ class Satellite {
       );
     }
 
+    final lsnBase64 = await _getMeta('lsn');
+    if (lsnBase64.isNotEmpty) {
+      print("retrieved lsn $_lsn");
+      _lsn = base64.decode(lsnBase64);
+    } else {
+      print("no lsn retrieved from store");
+    }
+
     await _connectAndStartReplication();
   }
 
   Future<void> _connectAndStartReplication() async {
     print("connecting and starting replication");
 
-    if (_authState == null) {
+    final authState = _authState;
+    if (authState == null) {
       throw Exception("trying to connect before authentication");
     }
-    final authState = _authState;
-
-    await client.connect();
 
 // TODO: Connect to client
-    // return client
-    //   .connect()
-    //   .then(() => this.refreshAuthState(authState))
-    //   .then((freshAuthState) => this.client.authenticate(freshAuthState))
-    //   .then(() => this.client.startReplication(this._lsn))
-    //   .catch((error) => {
-    //     Log.warn("couldn't start replication: ${error}")
-    //   })
+    return client
+        .connect()
+        .then((_) => refreshAuthState(authState))
+        .then((freshAuthState) => client.authenticate(freshAuthState))
+        //.then(() => client.startReplication(_lsn))
+        .then((_) => null)
+        .onError(
+      (error, st) {
+        print("couldn't start replication: $error");
+        return null;
+      },
+    );
+  }
+
+  FutureOr<AuthState> refreshAuthState(AuthState authState) async {
+    try {
+      final tokenResponse = await console.token(
+        TokenRequest(
+          app: authState.app,
+          env: authState.env,
+          clientId: authState.clientId,
+        ),
+      );
+      await _setMeta('token', tokenResponse.token);
+      // TODO: Bug
+      await _setMeta('refreshToken', tokenResponse.token);
+
+      return AuthState(
+        app: authState.app,
+        env: authState.env,
+        clientId: authState.clientId,
+        token: tokenResponse.token,
+        refreshToken: tokenResponse.refreshToken,
+      );
+    } catch (error) {
+      print("unable to refresh token: $error");
+    }
+
+    return authState;
   }
 
   Future<String> _getClientId() async {

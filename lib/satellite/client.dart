@@ -1,13 +1,14 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/sockets/io.dart';
 import 'package:electric_client/sockets/sockets.dart';
 import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
-import 'package:eventify/eventify.dart';
+import 'package:events_emitter/events_emitter.dart';
 
 class IncomingHandler {
   final Object? Function(Object?) handle;
@@ -23,11 +24,31 @@ class DecodedMessage {
   DecodedMessage(this.msg, this.msgType);
 }
 
-class Client with EventEmitter {
+class Client extends EventEmitter {
   Socket? socket;
   final SatelliteClientOpts opts;
 
-  Client(this.opts);
+  late final Replication inbound;
+  late final Replication outbound;
+
+  Client(this.opts) {
+    inbound = resetReplication();
+    outbound = resetReplication();
+  }
+
+  Replication resetReplication({
+    LSN? enqueued,
+    LSN? ack,
+    ReplicationStatus? isReplicating,
+  }) {
+    return Replication(
+      authenticated: false,
+      isReplicating: isReplicating ?? ReplicationStatus.stopped,
+      ackLsn: ack,
+      enqueuedlsn: enqueued,
+      // TODO: transactions
+    );
+  }
 
   void Function(Uint8List bytes)? socketHandler;
 
@@ -168,7 +189,7 @@ class Client with EventEmitter {
     } catch (e) {
       print(e);
       // this.emit('error', messageOrError)
-      emit("error", null, messageInfo);
+      emit("error", messageInfo);
       return;
     }
 
@@ -176,12 +197,99 @@ class Client with EventEmitter {
     final handler = getIncomingHandlerForMessage(messageInfo.msgType);
     final response = handler.handle(messageInfo.msg);
 
+    print("handle response $response");
     if (handler.isRpc) {
-      emit("rpc_response", null, response);
+      emit("rpc_response", response);
     }
   }
 
-  void handleAuthResp(SatAuthResp value) {}
+  Future<AuthResponse> authenticate(AuthState authState) async {
+    final headers = [
+      SatAuthHeaderPair(
+        key: SatAuthHeader.PROTO_VERSION,
+        value: getProtocolVersion(),
+      ),
+    ];
+    final request = SatAuthReq(
+      id: authState.clientId,
+      token: authState.token,
+      headers: headers,
+    );
+    return rpc<AuthResponse>(request);
+  }
+
+  void sendMessage(Object request) {
+    print("Sending message $request");
+    final _socket = socket;
+    if (_socket == null) {
+      throw SatelliteException(SatelliteErrorCode.unexpectedState, 'trying to send message, but no socket exists');
+    }
+    final msgType = getTypeFromSatObject(request);
+    if (msgType == null) {
+      throw SatelliteException(SatelliteErrorCode.unexpectedMessageType, "${request.runtimeType}");
+    }
+
+    final type = getSizeBuf(msgType);
+    final msg = encodeMessage(request);
+
+    final totalBufLen = type.length + msg.length;
+    final buffer = Uint8List(totalBufLen);
+    buffer.setRange(0, 1, type);
+    buffer.setRange(1, totalBufLen, msg);
+
+    _socket.write(buffer);
+  }
+
+  Future<T> rpc<T>(Object request) async {
+    Timer? timer;
+    Completer<T> completer = Completer();
+
+    try {
+      timer = Timer(Duration(milliseconds: opts.timeout), () {
+        print("${request.runtimeType}");
+        final error = SatelliteException(SatelliteErrorCode.timeout, "${request.runtimeType}");
+        throw error;
+      });
+
+      // reject on any error
+      late final EventListener errorListener;
+      errorListener = on('error', (error) {
+        errorListener.cancel();
+        completer.completeError(error as Object);
+      });
+
+      late final EventListener rpcRespListener;
+      rpcRespListener = on('rpc_response', (resp) {
+        rpcRespListener.cancel();
+
+        completer.complete(resp as T);
+      });
+
+      sendMessage(request);
+
+      return await completer.future;
+    } finally {
+      timer?.cancel();
+    }
+  }
+
+  AuthResponse handleAuthResp(Object message) {
+    Object? error;
+    String? serverId;
+    if (message is SatAuthResp) {
+      serverId = message.id;
+      inbound.authenticated = true;
+    } else if (message is SatErrorResp) {
+      error = SatelliteException(
+        SatelliteErrorCode.authError,
+        "${message.errorType}",
+      );
+    } else {
+      throw StateError("Unexpected message $message");
+    }
+
+    return AuthResponse(serverId, error);
+  }
 
   void handleInStartReplicationResp(SatInStartReplicationResp value) {}
 
