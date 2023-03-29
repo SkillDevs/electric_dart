@@ -67,7 +67,7 @@ class Client extends EventEmitter {
     switch (msgType) {
       case SatMsgType.authResp:
         return IncomingHandler(
-          handle: (v) => handleAuthResp(v as SatAuthResp),
+          handle: (v) => handleAuthResp(v),
           isRpc: true,
         );
 
@@ -96,13 +96,13 @@ class Client extends EventEmitter {
 
       case SatMsgType.pingReq:
         return IncomingHandler(
-          handle: (v) => handlePingReq(v as SatPingReq),
+          handle: (v) => handlePingReq(),
           isRpc: true,
         );
 
       case SatMsgType.pingResp:
         return IncomingHandler(
-          handle: (v) => handlePingResp(v as SatPingResp),
+          handle: (v) => handlePingResp(v),
           isRpc: false,
         );
 
@@ -273,7 +273,7 @@ class Client extends EventEmitter {
     }
   }
 
-  AuthResponse handleAuthResp(Object message) {
+  AuthResponse handleAuthResp(Object? message) {
     Object? error;
     String? serverId;
     if (message is SatAuthResp) {
@@ -299,9 +299,22 @@ class Client extends EventEmitter {
 
   void handleInStopReplicationResp(SatInStopReplicationResp value) {}
 
-  void handlePingReq(SatPingReq value) {}
+  void handlePingReq() {
+    print("respond to ping with last ack ${inbound.ackLsn}");
+    final pong = SatPingResp(lsn: inbound.ackLsn);
+    sendMessage(pong);
+  }
 
-  void handlePingResp(SatPingResp value) {}
+  void handlePingResp(Object? message) {
+    if (message is SatPingResp) {
+      if (message.lsn.isNotEmpty) {
+        outbound.ackLsn = Uint8List.fromList(message.lsn);
+        emit('ack_lsn', [message.lsn, AckType.remoteCommit]);
+      }
+    } else {
+      throw StateError("Unexpected ping resp message");
+    }
+  }
 
   void handleRelation(SatRelation value) {}
 

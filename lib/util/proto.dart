@@ -61,6 +61,28 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
 SatMsgType? getTypeFromSatObject(Object object) {
   if (object is SatAuthReq) {
     return SatMsgType.authReq;
+  } else if (object is SatPingReq) {
+    return SatMsgType.pingReq;
+  } else if (object is SatPingResp) {
+    return SatMsgType.pingResp;
+  } else if (object is SatErrorResp) {
+    return SatMsgType.errorResp;
+  } else if (object is SatAuthResp) {
+    return SatMsgType.authResp;
+  } else if (object is SatInStartReplicationResp) {
+    return SatMsgType.inStartReplicationResp;
+  } else if (object is SatInStartReplicationReq) {
+    return SatMsgType.inStartReplicationReq;
+  } else if (object is SatInStopReplicationReq) {
+    return SatMsgType.inStopReplicationReq;
+  } else if (object is SatInStopReplicationResp) {
+    return SatMsgType.inStopReplicationResp;
+  } else if (object is SatOpLog) {
+    return SatMsgType.opLog;
+  } else if (object is SatRelation) {
+    return SatMsgType.relation;
+  } else if (object is SatMigrationNotification) {
+    return SatMsgType.migrationNotification;
   }
 
   return null;
@@ -69,8 +91,12 @@ SatMsgType? getTypeFromSatObject(Object object) {
 Uint8List encodeMessage(Object message) {
   if (message is SatAuthReq) {
     return message.writeToBuffer();
+  } else if (message is SatPingReq) {
+    return message.writeToBuffer();
+  } else if (message is SatPingResp) {
+    return message.writeToBuffer();
   }
-  throw UnimplementedError();
+  throw UnimplementedError("Can't encode ${message.runtimeType}");
 }
 
 Uint8List getSizeBuf(SatMsgType msgType) {

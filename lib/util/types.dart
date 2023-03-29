@@ -40,6 +40,11 @@ class Replication {
   });
 }
 
+enum AckType {
+  localSend,
+  remoteCommit,
+}
+
 // class Relation {
 //   final int id;
 //   final String schema;
