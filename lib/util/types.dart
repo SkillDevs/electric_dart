@@ -57,7 +57,7 @@ class Replication {
 
 class Transaction {
   final int commitTimestamp;
-  final Uint8List lsn;
+  final LSN lsn;
   final List<Change> changes;
 
   Transaction(this.commitTimestamp, this.lsn, this.changes);
@@ -77,7 +77,7 @@ class Change {
   final Record? record;
   final Record? oldRecord;
 
-  Change(this.relation, this.type, this.record, this.oldRecord);
+  Change({required this.relation, required this.type, this.record, this.oldRecord});
 }
 
 class Relation {
@@ -87,7 +87,13 @@ class Relation {
   final SatRelation_RelationType tableType;
   final List<RelationColumn> columns;
 
-  Relation(this.id, this.schema, this.table, this.tableType, this.columns);
+  Relation({
+    required this.id,
+    required this.schema,
+    required this.table,
+    required this.tableType,
+    required this.columns,
+  });
 }
 
 class RelationColumn {
@@ -95,7 +101,11 @@ class RelationColumn {
   final String type;
   final bool? primaryKey;
 
-  RelationColumn(this.name, this.type, this.primaryKey);
+  RelationColumn({
+    required this.name,
+    required this.type,
+    this.primaryKey,
+  });
 }
 
 enum AckType {

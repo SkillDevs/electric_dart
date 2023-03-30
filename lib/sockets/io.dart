@@ -83,7 +83,7 @@ class IoSocket implements Socket {
     _subscriptions.add(connectionSubs);
 
     final msgSubscription = socket.messages.listen((rawData) {
-      print("Msg $rawData");
+      print("Raw Message $rawData");
       final bytes = rawData as Uint8List;
 
       for (final cb in _messageCallbacks) {
