@@ -1,14 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/sockets/io.dart';
 import 'package:electric_client/sockets/sockets.dart';
+import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
+import 'package:fixnum/fixnum.dart';
 
 class IncomingHandler {
   final Object? Function(Object?) handle;
@@ -28,29 +32,31 @@ class Client extends EventEmitter {
   Socket? socket;
   final SatelliteClientOpts opts;
 
-  late final Replication inbound;
-  late final Replication outbound;
+  late Replication inbound;
+  late Replication outbound;
+
+  void Function()? throttledPushTransaction;
+  void Function(Uint8List bytes)? socketHandler;
 
   Client(this.opts) {
-    inbound = resetReplication();
-    outbound = resetReplication();
+    inbound = resetReplication(null, null, null);
+    outbound = resetReplication(null, null, null);
   }
 
-  Replication resetReplication({
+  Replication resetReplication(
     LSN? enqueued,
     LSN? ack,
     ReplicationStatus? isReplicating,
-  }) {
+  ) {
     return Replication(
       authenticated: false,
       isReplicating: isReplicating ?? ReplicationStatus.stopped,
+      relations: {},
+      transactions: [],
       ackLsn: ack,
-      enqueuedlsn: enqueued,
-      // TODO: transactions
+      enqueuedLsn: enqueued,
     );
   }
-
-  void Function(Uint8List bytes)? socketHandler;
 
   DecodedMessage toMessage(Uint8List data) {
     final code = data[0];
@@ -218,6 +224,28 @@ class Client extends EventEmitter {
     return rpc<AuthResponse>(request);
   }
 
+  Future<void> startReplication(LSN? lsn) async {
+    if (inbound.isReplicating != ReplicationStatus.stopped) {
+      throw SatelliteException(SatelliteErrorCode.replicationAlreadyStarted, "replication already started");
+    }
+
+    inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
+
+    late final SatInStartReplicationReq request;
+    if (lsn == null || lsn.isEmpty) {
+      print("no previous LSN, start replication with option FIRST_LSN");
+
+      request = SatInStartReplicationReq(
+        options: [SatInStartReplicationReq_Option.FIRST_LSN],
+      );
+    } else {
+      print("starting replication with lsn: ${base64.encode(lsn)}");
+      request = SatInStartReplicationReq(lsn: lsn);
+    }
+
+    return rpc(request);
+  }
+
   void sendMessage(Object request) {
     print("Sending message $request");
     final _socket = socket;
@@ -293,7 +321,77 @@ class Client extends EventEmitter {
 
   void handleInStartReplicationResp(SatInStartReplicationResp value) {}
 
-  void handleInStartReplicationReq(SatInStartReplicationReq value) {}
+  void handleInStartReplicationReq(SatInStartReplicationReq message) {
+    print("received replication request $message");
+    if (outbound.isReplicating == ReplicationStatus.stopped) {
+      final replication = outbound.clone();
+      if (message.options.firstWhereOrNull((o) => o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED) == null) {
+        final lsnList = Uint8List.fromList(message.lsn);
+        replication.ackLsn = lsnList;
+        replication.enqueuedLsn = lsnList;
+      }
+      if (message.options.firstWhereOrNull((o) => o == SatInStartReplicationReq_Option.FIRST_LSN) == null) {
+        replication.ackLsn = kDefaultLogPos;
+        replication.enqueuedLsn = kDefaultLogPos;
+      }
+
+      outbound = resetReplication(replication.enqueuedLsn, replication.ackLsn, ReplicationStatus.active);
+
+      throttledPushTransaction = throttle(() => pushTransactions(), Duration(milliseconds: opts.pushPeriod));
+
+      final response = SatInStartReplicationResp();
+      sendMessage(response);
+      emit('outbound_started', replication.enqueuedLsn);
+    } else {
+      final response = SatErrorResp(
+        errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
+      );
+      sendMessage(response);
+
+      emit(
+          'error',
+          SatelliteException(SatelliteErrorCode.unexpectedState,
+              "unexpected state ${outbound.isReplicating} handling 'start' request"));
+    }
+  }
+
+  void pushTransactions() {
+    if (outbound.isReplicating != ReplicationStatus.active) {
+      throw SatelliteException(
+          SatelliteErrorCode.replicationNotStarted, 'sending a transaction while outbound replication has not started');
+    }
+
+    while (outbound.transactions.isNotEmpty) {
+      final next = outbound.transactions.removeAt(0);
+
+      // TODO: divide into SatOpLog array with max size
+      sendMissingRelations(next, outbound);
+      final SatOpLog satOpLog = transactionToSatOpLog(next);
+
+      // console.log(`sending message with lsn ${JSON.stringify(next.lsn)}`)
+      sendMessage(satOpLog);
+      emit('ack_lsn', [next.lsn, AckType.localSend]);
+    }
+  }
+
+  void sendMissingRelations(Transaction transaction, Replication replication) {
+    transaction.changes.forEach((change) {
+      final relation = change.relation;
+      if (!outbound.relations.containsKey(relation.id)) {
+        replication.relations[relation.id] = relation;
+
+        final satRelation = SatRelation(
+          relationId: relation.id,
+          schemaName: relation.schema, // TODO
+          tableName: relation.table,
+          tableType: relation.tableType,
+          columns: relation.columns.map((c) => SatRelationColumn(name: c.name, type: c.type)),
+        );
+
+        sendMessage(satRelation);
+      }
+    });
+  }
 
   void handleInStopReplicationReq(SatInStopReplicationReq value) {}
 
@@ -321,4 +419,159 @@ class Client extends EventEmitter {
   void handleOpLog(SatOpLog value) {}
 
   void handleErrorResp(SatErrorResp value) {}
+
+  SatOpLog transactionToSatOpLog(Transaction transaction) {
+    final List<SatTransOp> ops = [
+      SatTransOp(
+        begin: SatOpBegin(
+          commitTimestamp: Int64(transaction.commitTimestamp),
+          lsn: transaction.lsn,
+        ),
+      ),
+    ];
+
+    for (var tx in transaction.changes) {
+      //let txOp, oldRecord, record;
+      final relation = outbound.relations[tx.relation.id]!;
+
+      SatOpRow? oldRecord, record;
+      if (tx.oldRecord != null && tx.oldRecord!.isNotEmpty) {
+        oldRecord = serializeRow(tx.oldRecord!, relation);
+      }
+      if (tx.record != null && tx.record!.isNotEmpty) {
+        record = serializeRow(tx.record!, relation);
+      }
+
+      late final SatTransOp txOp;
+      switch (tx.type) {
+        case ChangeType.delete:
+          txOp = SatTransOp(
+            delete: SatOpDelete(
+              oldRowData: oldRecord,
+              relationId: relation.id,
+            ),
+          );
+          break;
+        case ChangeType.insert:
+          txOp = SatTransOp(
+            insert: SatOpInsert(
+              rowData: record,
+              relationId: relation.id,
+            ),
+          );
+          break;
+        case ChangeType.update:
+          txOp = SatTransOp(
+            update: SatOpUpdate(
+              rowData: record,
+              oldRowData: oldRecord,
+              relationId: relation.id,
+            ),
+          );
+          break;
+      }
+      ops.add(txOp);
+    }
+
+    ops.add(SatTransOp(commit: SatOpCommit()));
+    return SatOpLog(ops: ops);
+  }
+}
+
+SatOpRow serializeRow(Record rec, Relation relation) {
+  int recordNumColumn = 0;
+  final recordNullBitMask = Uint8List(calculateNumBytes(relation.columns.length));
+  final recordValues = relation.columns.fold<List<List<int>>>(
+    [],
+    (List<List<int>> acc, RelationColumn c) {
+      if (rec[c.name] != null) {
+        // TODO: Review this. This can be a number and it's treated as a string
+        acc.add(serializeColumnData(rec[c.name]!.toString()));
+      } else {
+        acc.add(serializeNullData());
+        setMaskBit(recordNullBitMask, recordNumColumn);
+      }
+      recordNumColumn = recordNumColumn + 1;
+      return acc;
+    },
+  );
+  return SatOpRow(
+    nullsBitmask: recordNullBitMask,
+    values: recordValues,
+  );
+}
+
+Record? deserializeRow(
+  SatOpRow? row,
+  Relation relation,
+) {
+  final _row = row;
+  if (_row == null) {
+    return null;
+  }
+  return Map.fromEntries(relation.columns.mapIndexed((i, c) {
+    Object? value;
+    if (getMaskBit(_row.nullsBitmask, i) == 1) {
+      value = null;
+    } else {
+      value = deserializeColumnData(_row.values[i], c);
+    }
+    return MapEntry(c.name, value);
+  }));
+}
+
+void setMaskBit(List<int> array, int indexFromStart) {
+  final byteIndex = (indexFromStart / 8).floor();
+  final bitIndex = 7 - (indexFromStart % 8);
+
+  final mask = 0x01 << bitIndex;
+  array[byteIndex] = array[byteIndex] | mask;
+}
+
+int getMaskBit(List<int> array, int indexFromStart) {
+  final byteIndex = (indexFromStart / 8).floor();
+  final bitIndex = 7 - (indexFromStart % 8);
+
+  return (array[byteIndex] >>> bitIndex) & 0x01;
+}
+
+int calculateNumBytes(int columnNum) {
+  final rem = columnNum % 8;
+  if (rem == 0) {
+    return (columnNum / 8).floor();
+  } else {
+    return (1 + (columnNum - rem) / 8).floor();
+  }
+}
+
+Object deserializeColumnData(
+  List<int> column,
+  RelationColumn columnInfo,
+) {
+  final columnType = columnInfo.type.toUpperCase();
+  switch (columnType) {
+    case 'CHAR':
+    case 'TEXT':
+    case 'UUID':
+    case 'VARCHAR':
+      return TypeDecoder.text(column);
+    case 'FLOAT4':
+    case 'FLOAT8':
+    case 'INT':
+    case 'INT2':
+    case 'INT4':
+    case 'INT8':
+    case 'INTEGER':
+      return num.parse(TypeDecoder.text(column));
+  }
+  throw SatelliteException(SatelliteErrorCode.unknownDataType, "can't deserialize ${columnInfo.type}");
+}
+
+// All values serialized as textual representation
+List<int> serializeColumnData(String column) {
+  return TypeEncoder.text(column);
+}
+
+List<int> serializeNullData() {
+  return TypeEncoder.text('');
 }

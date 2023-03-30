@@ -65,7 +65,7 @@ class Satellite {
         .connect()
         .then((_) => refreshAuthState(authState))
         .then((freshAuthState) => client.authenticate(freshAuthState))
-        //.then(() => client.startReplication(_lsn))
+        .then((_) => client.startReplication(_lsn))
         .then((_) => null)
         .onError(
       (error, st) {

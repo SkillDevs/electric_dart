@@ -95,7 +95,26 @@ Uint8List encodeMessage(Object message) {
     return message.writeToBuffer();
   } else if (message is SatPingResp) {
     return message.writeToBuffer();
+  } else if (message is SatErrorResp) {
+    return message.writeToBuffer();
+  } else if (message is SatAuthResp) {
+    return message.writeToBuffer();
+  } else if (message is SatInStartReplicationResp) {
+    return message.writeToBuffer();
+  } else if (message is SatInStartReplicationReq) {
+    return message.writeToBuffer();
+  } else if (message is SatInStopReplicationReq) {
+    return message.writeToBuffer();
+  } else if (message is SatInStopReplicationResp) {
+    return message.writeToBuffer();
+  } else if (message is SatOpLog) {
+    return message.writeToBuffer();
+  } else if (message is SatRelation) {
+    return message.writeToBuffer();
+  } else if (message is SatMigrationNotification) {
+    return message.writeToBuffer();
   }
+
   throw UnimplementedError("Can't encode ${message.runtimeType}");
 }
 

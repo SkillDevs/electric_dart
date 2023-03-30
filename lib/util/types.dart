@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
-typedef LSN = Uint8List;
+import 'package:electric_client/proto/satellite.pb.dart';
+
+typedef LSN = List<int>;
 
 class SatelliteException {
   final SatelliteErrorCode code;
@@ -27,17 +29,73 @@ enum SatelliteErrorCode {
 class Replication {
   bool authenticated;
   ReplicationStatus isReplicating;
-  //Map<int, Relation> relations;
+  Map<int, Relation> relations;
   LSN? ackLsn;
-  LSN? enqueuedlsn;
-  // List<Transaction> transactions;
+  LSN? enqueuedLsn;
+  List<Transaction> transactions;
 
   Replication({
     required this.authenticated,
     required this.isReplicating,
+    required this.relations,
+    required this.transactions,
     this.ackLsn,
-    this.enqueuedlsn,
+    this.enqueuedLsn,
   });
+
+  Replication clone() {
+    return Replication(
+      authenticated: authenticated,
+      isReplicating: isReplicating,
+      relations: relations,
+      transactions: transactions,
+      ackLsn: ackLsn,
+      enqueuedLsn: enqueuedLsn,
+    );
+  }
+}
+
+class Transaction {
+  final int commitTimestamp;
+  final Uint8List lsn;
+  final List<Change> changes;
+
+  Transaction(this.commitTimestamp, this.lsn, this.changes);
+}
+
+enum ChangeType {
+  insert,
+  update,
+  delete,
+}
+
+typedef Record = Map<String, Object?>;
+
+class Change {
+  final Relation relation;
+  final ChangeType type;
+  final Record? record;
+  final Record? oldRecord;
+
+  Change(this.relation, this.type, this.record, this.oldRecord);
+}
+
+class Relation {
+  final int id;
+  final String schema;
+  final String table;
+  final SatRelation_RelationType tableType;
+  final List<RelationColumn> columns;
+
+  Relation(this.id, this.schema, this.table, this.tableType, this.columns);
+}
+
+class RelationColumn {
+  final String name;
+  final String type;
+  final bool? primaryKey;
+
+  RelationColumn(this.name, this.type, this.primaryKey);
 }
 
 enum AckType {
