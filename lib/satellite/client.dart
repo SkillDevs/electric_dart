@@ -225,6 +225,14 @@ class Client extends EventEmitter {
     return rpc<AuthResponse>(request);
   }
 
+  void subscribeToTransactions(Future<void> Function(Transaction transaction) callback) {
+    on<TransactionEvent>('transaction', (txnEvent) async {
+      // move callback execution outside the message handling path
+      await callback(txnEvent.transaction);
+      txnEvent.ackCb();
+    });
+  }
+
   Future<void> startReplication(LSN? lsn) async {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(SatelliteErrorCode.replicationAlreadyStarted, "replication already started");
@@ -307,6 +315,17 @@ class Client extends EventEmitter {
     }
   }
 
+  void resetOutboundLogPositions(LSN sent, LSN ack) {
+    outbound = resetReplication(sent, ack, null);
+  }
+
+  LogPositions getOutboundLogPositions() {
+    return LogPositions(
+      ack: outbound.ackLsn ?? kDefaultLogPos,
+      enqueued: outbound.enqueuedLsn ?? kDefaultLogPos,
+    );
+  }
+
   AuthResponse handleAuthResp(Object? message) {
     Object? error;
     String? serverId;
@@ -386,8 +405,24 @@ class Client extends EventEmitter {
 
       // console.log(`sending message with lsn ${JSON.stringify(next.lsn)}`)
       sendMessage(satOpLog);
-      emit('ack_lsn', [next.lsn, AckType.localSend]);
+      emit<AckLsnEvent>('ack_lsn', AckLsnEvent(next.lsn, AckType.localSend));
     }
+  }
+
+  EventListener<AckLsnEvent> subscribeToAck(AckCallback callback) {
+    return on<AckLsnEvent>('ack_lsn', callback);
+  }
+
+  void unsubscribeToAck(EventListener<AckLsnEvent> eventListener) {
+    removeEventListener(eventListener);
+  }
+
+  EventListener<void> subscribeToOutboundEvent(void Function() callback) {
+    return on<void>('outbound_started', (_) => callback());
+  }
+
+  void unsubscribeToOutboundEvent(EventListener<void> eventListener) {
+    removeEventListener(eventListener);
   }
 
   void sendMissingRelations(Transaction transaction, Replication replication) {
@@ -410,10 +445,12 @@ class Client extends EventEmitter {
   }
 
   void handleInStopReplicationReq(SatInStopReplicationReq value) {
+    // TODO: Finish
     throw UnimplementedError("Handle stop replication Req");
   }
 
   void handleInStopReplicationResp(SatInStopReplicationResp value) {
+    //TODO: Finish
     throw UnimplementedError("Handle stop replication resp");
   }
 
@@ -462,6 +499,7 @@ class Client extends EventEmitter {
   }
 
   void handleErrorResp(SatErrorResp value) {
+    // TODO: Finish
     throw UnimplementedError("Handle error Resp");
   }
 
@@ -490,8 +528,15 @@ class Client extends EventEmitter {
           lastTx.lsn,
           lastTx.changes,
         );
+        print("we have commit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         // in the future, emitting this event can be decoupled
-        emit('transaction', [transaction, () => (inbound.ackLsn = transaction.lsn)]);
+        emit<TransactionEvent>(
+          'transaction',
+          TransactionEvent(
+            transaction,
+            () => (inbound.ackLsn = transaction.lsn),
+          ),
+        );
         replication.transactions.removeAt(lastTxnIdx);
       }
       if (op.hasInsert()) {

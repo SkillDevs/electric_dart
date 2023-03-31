@@ -2,6 +2,26 @@ import 'package:electric_client/proto/satellite.pb.dart';
 
 typedef LSN = List<int>;
 
+class Statement {
+  final String sql;
+  final List<Object?>? args;
+
+  Statement(this.sql, [this.args]);
+
+  @override
+  String toString() {
+    return "Statement($sql, $args)";
+  }
+}
+
+typedef Row = Map<String, Object?>;
+
+class RunResult {
+  final int rowsAffected;
+
+  RunResult({required this.rowsAffected});
+}
+
 class SatelliteException {
   final SatelliteErrorCode code;
   final String? message;
@@ -51,6 +71,16 @@ class Replication {
       enqueuedLsn: enqueuedLsn,
     );
   }
+}
+
+class LogPositions {
+  final LSN ack;
+  final LSN enqueued;
+
+  LogPositions({
+    required this.ack,
+    required this.enqueued,
+  });
 }
 
 class Transaction {
@@ -111,6 +141,8 @@ enum AckType {
   remoteCommit,
 }
 
+typedef AckCallback = Function(AckLsnEvent evt);
+
 // class Relation {
 //   final int id;
 //   final String schema;
@@ -118,6 +150,8 @@ enum AckType {
 //   tableType: SatRelation_RelationType
 //   columns: RelationColumn[]
 // }
+
+typedef RelationsCache = Map<String, Relation>;
 
 enum ReplicationStatus {
   stopped,
@@ -131,4 +165,18 @@ class AuthResponse {
   final Object? error;
 
   AuthResponse(this.serverId, this.error);
+}
+
+class TransactionEvent {
+  final Transaction transaction;
+  final void Function() ackCb;
+
+  TransactionEvent(this.transaction, this.ackCb);
+}
+
+class AckLsnEvent {
+  final LSN lsn;
+  final AckType ackType;
+
+  AckLsnEvent(this.lsn, this.ackType);
 }

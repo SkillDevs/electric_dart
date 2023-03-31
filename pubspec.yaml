@@ -14,9 +14,11 @@ dev_dependencies:
   test: ^1.21.0
 dependencies:
   collection: ^1.17.1
+  equatable: ^2.0.5
   events_emitter: ^0.5.2
   fixnum: ^1.1.0
   http: ^0.13.5
   protobuf: ^2.1.0
+  sqlite3: ^1.10.1
   uuid: ^3.0.7
   web_socket_client: ^0.1.0-dev.3

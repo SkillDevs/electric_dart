@@ -1,5 +1,6 @@
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/config/config.dart';
+import 'package:electric_client/electric/adapter.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/process.dart';
@@ -39,6 +40,8 @@ void main(List<String> arguments) async {
         replication: replicationConfig,
       ),
     ),
+    opts: kSatelliteDefaults,
+    adapter: DummyDatabaseAdapter(),
   );
 
   satellite.client.on("error", (data) => print("Client error $data"));
