@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:electric_client/proto/satellite.pb.dart';
 
 typedef LSN = List<int>;

@@ -9,6 +9,7 @@ import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/sockets/io.dart';
 import 'package:electric_client/sockets/sockets.dart';
 import 'package:electric_client/util/common.dart';
+import 'package:electric_client/util/extension.dart';
 import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
@@ -84,7 +85,7 @@ class Client extends EventEmitter {
         );
       case SatMsgType.inStartReplicationResp:
         return IncomingHandler(
-          handle: (v) => handleInStartReplicationResp(v as SatInStartReplicationResp),
+          handle: (v) => handleStartResp(v as SatInStartReplicationResp),
           isRpc: true,
         );
 
@@ -283,6 +284,8 @@ class Client extends EventEmitter {
 
       // reject on any error
       errorListener = on('error', (error) {
+        print("Error emitted $error");
+
         errorListener?.cancel();
         errorListener = null;
         completer.completeError(error as Object);
@@ -322,7 +325,17 @@ class Client extends EventEmitter {
     return AuthResponse(serverId, error);
   }
 
-  void handleInStartReplicationResp(SatInStartReplicationResp value) {}
+  void handleStartResp(SatInStartReplicationResp value) {
+    if (inbound.isReplicating == ReplicationStatus.starting) {
+      inbound.isReplicating = ReplicationStatus.active;
+    } else {
+      emit(
+        "error",
+        SatelliteException(
+            SatelliteErrorCode.unexpectedState, "unexpected state ${inbound.isReplicating} handling 'start' response"),
+      );
+    }
+  }
 
   void handleInStartReplicationReq(SatInStartReplicationReq message) {
     print("received replication request $message");
@@ -396,9 +409,13 @@ class Client extends EventEmitter {
     }
   }
 
-  void handleInStopReplicationReq(SatInStopReplicationReq value) {}
+  void handleInStopReplicationReq(SatInStopReplicationReq value) {
+    throw UnimplementedError("Handle stop replication Req");
+  }
 
-  void handleInStopReplicationResp(SatInStopReplicationResp value) {}
+  void handleInStopReplicationResp(SatInStopReplicationResp value) {
+    throw UnimplementedError("Handle stop replication resp");
+  }
 
   void handlePingReq() {
     print("respond to ping with last ack ${inbound.ackLsn}");
@@ -418,6 +435,7 @@ class Client extends EventEmitter {
   }
 
   void handleRelation(SatRelation message) {
+    print("handle relation ${message.relationId} Is replicating ${inbound.isReplicating} ");
     if (inbound.isReplicating != ReplicationStatus.active) {
       emit(
         'error',
@@ -435,6 +453,7 @@ class Client extends EventEmitter {
       columns: message.columns.map((c) => (RelationColumn(name: c.name, type: c.type))).toList(),
     );
 
+    print("ID SAVED: ${relation.id}");
     inbound.relations[relation.id] = relation;
   }
 
@@ -442,7 +461,9 @@ class Client extends EventEmitter {
     processOpLogMessage(message, inbound);
   }
 
-  void handleErrorResp(SatErrorResp value) {}
+  void handleErrorResp(SatErrorResp value) {
+    throw UnimplementedError("Handle error Resp");
+  }
 
   void processOpLogMessage(
     SatOpLog opLogMessage,
@@ -452,8 +473,7 @@ class Client extends EventEmitter {
     for (var op in opLogMessage.ops) {
       print(op.writeToJsonMap());
 
-      final opBeginMap = op.begin.writeToJsonMap();
-      if (opBeginMap.isNotEmpty) {
+      if (op.hasBegin()) {
         final transaction = Transaction(
           op.begin.commitTimestamp.toInt(),
           op.begin.lsn,
@@ -463,9 +483,7 @@ class Client extends EventEmitter {
       }
 
       final lastTxnIdx = replication.transactions.length - 1;
-      final opCommitMap = op.commit.writeToJsonMap();
-
-      if (opCommitMap.isNotEmpty) {
+      if (op.hasCommit()) {
         final lastTx = replication.transactions[lastTxnIdx];
         final Transaction transaction = Transaction(
           lastTx.commitTimestamp,
@@ -476,11 +494,10 @@ class Client extends EventEmitter {
         emit('transaction', [transaction, () => (inbound.ackLsn = transaction.lsn)]);
         replication.transactions.removeAt(lastTxnIdx);
       }
-      final opInsertMap = op.insert.writeToJsonMap();
-
-      if (opInsertMap.isNotEmpty) {
+      if (op.hasInsert()) {
         final rid = op.insert.relationId;
         final rel = replication.relations[rid];
+
         if (rel == null) {
           throw SatelliteException(
               SatelliteErrorCode.protocolViolation, "missing relation ${op.insert.relationId} for incoming operation");
@@ -489,15 +506,18 @@ class Client extends EventEmitter {
         final change = Change(
           relation: rel,
           type: ChangeType.insert,
-          record: deserializeRow(op.insert.rowData, rel),
+          record: deserializeRow(op.insert.getNullableRowData(), rel),
         );
 
         replication.transactions[lastTxnIdx].changes.add(change);
       }
-      final opUpdateMap = op.update.writeToJsonMap();
-      if (opUpdateMap.isNotEmpty) {
+
+      if (op.hasUpdate()) {
         final rid = op.update.relationId;
         final rel = replication.relations[rid];
+        final rowData = op.update.getNullableRowData();
+        final oldRowData = op.update.getNullableOldRowData();
+
         if (rel == null) {
           throw SatelliteException(SatelliteErrorCode.protocolViolation, 'missing relation for incoming operation');
         }
@@ -505,25 +525,26 @@ class Client extends EventEmitter {
         final change = Change(
           relation: rel,
           type: ChangeType.update,
-          record: deserializeRow(op.update.rowData, rel),
-          oldRecord: deserializeRow(op.update.oldRowData, rel),
+          record: deserializeRow(rowData, rel),
+          oldRecord: deserializeRow(oldRowData, rel),
         );
 
         replication.transactions[lastTxnIdx].changes.add(change);
       }
-      final opDeleteMap = op.delete.writeToJsonMap();
 
-      if (opDeleteMap.isNotEmpty) {
+      if (op.hasDelete()) {
         final rid = op.delete.relationId;
         final rel = replication.relations[rid];
         if (rel == null) {
           throw SatelliteException(SatelliteErrorCode.protocolViolation, 'missing relation for incoming operation');
         }
 
+        final oldRowData = op.delete.getNullableOldRowData();
+
         final change = Change(
           relation: rel,
           type: ChangeType.delete,
-          oldRecord: deserializeRow(op.delete.oldRowData, rel),
+          oldRecord: deserializeRow(oldRowData, rel),
         );
         replication.transactions[lastTxnIdx].changes.add(change);
       }
@@ -615,6 +636,7 @@ Record? deserializeRow(
   SatOpRow? row,
   Relation relation,
 ) {
+  print("Row ${row?.writeToJsonMap()}");
   final _row = row;
   if (_row == null) {
     return null;
@@ -624,6 +646,7 @@ Record? deserializeRow(
     if (getMaskBit(_row.nullsBitmask, i) == 1) {
       value = null;
     } else {
+      print(_row.values);
       value = deserializeColumnData(_row.values[i], c);
     }
     return MapEntry(c.name, value);
@@ -639,6 +662,7 @@ void setMaskBit(List<int> array, int indexFromStart) {
 }
 
 int getMaskBit(List<int> array, int indexFromStart) {
+  if (array.isEmpty) return 0;
   final byteIndex = (indexFromStart / 8).floor();
   final bitIndex = 7 - (indexFromStart % 8);
 
