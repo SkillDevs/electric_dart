@@ -3,7 +3,6 @@ import 'package:electric_client/config/config.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/process.dart';
-import 'package:electric_client/websocket.dart';
 
 void main(List<String> arguments) async {
   final appId = "my-todos";
@@ -41,6 +40,8 @@ void main(List<String> arguments) async {
       ),
     ),
   );
+
+  satellite.client.on("error", (data) => print("Client error $data"));
 
   await satellite.start(null);
 }
