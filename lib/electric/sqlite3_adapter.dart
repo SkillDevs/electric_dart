@@ -1,0 +1,184 @@
+import 'dart:async';
+
+import 'package:electric_client/electric/adapter.dart' as adp;
+import 'package:electric_client/util/tablename.dart';
+import 'package:electric_client/util/types.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:synchronized/synchronized.dart';
+
+class SqliteAdapter extends adp.DatabaseAdapter {
+  final sqlite.Database db;
+  final Lock txLock = Lock();
+
+  SqliteAdapter(this.db);
+
+  @override
+  Future<List<Row>> query(Statement statement) async {
+    return db.select(statement.sql, statement.args ?? []);
+  }
+
+  @override
+  Future<RunResult> run(Statement statement) async {
+    db.execute(statement.sql, statement.args ?? []);
+    final rowsAffected = db.getUpdatedRows();
+
+    return RunResult(rowsAffected: rowsAffected);
+  }
+
+  @override
+  Future<RunResult> runInTransaction(List<Statement> statements) async {
+    bool open = false;
+    try {
+      // SQL-js accepts multiple statements in a string and does
+      // not run them as transaction.
+      db.execute('BEGIN');
+      open = true;
+      for (var statement in statements) {
+        db.execute(statement.sql, statement.args ?? []);
+      }
+      final rowsAffected = db.getUpdatedRows();
+
+      return RunResult(rowsAffected: rowsAffected);
+    } catch (error) {
+      db.execute('ROLLBACK');
+      open = false;
+      rethrow; // rejects the promise with the reason for the rollback
+    } finally {
+      if (open) {
+        db.execute('COMMIT');
+      }
+    }
+  }
+
+  @override
+  List<QualifiedTablename> tableNames(Statement statement) {
+    // TODO: implement tableNames
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<T> transaction<T>(void Function(Transaction tx, void Function(T res) setResult) f) {
+    return txLock.synchronized(() async {
+      db.execute('BEGIN');
+
+      final completer = Completer<T>();
+
+      final tx = Transaction(this, (e) => completer.completeError(e));
+
+      f(tx, (T res) {
+        // Commit the transaction when the user sets the result.
+        // This assumes that the user does not execute any more queries after setting the result.
+        db.execute('COMMIT');
+
+        completer.complete(res);
+      });
+
+      return await completer.future;
+    });
+  }
+
+  // Do not use this uncoordinated version directly!
+  // It is only meant to be used within transactions.
+  Future<RunResult> _runUncoordinated(Statement stmt) async {
+    db.execute(stmt.sql, stmt.args ?? []);
+    return RunResult(
+      rowsAffected: db.getUpdatedRows(),
+    );
+  }
+
+  // Do not use this uncoordinated version directly!
+  // It is only meant to be used within transactions.
+  Future<List<Row>> _queryUncoordinated(Statement stmt) async {
+    return db.select(stmt.sql, stmt.args ?? []);
+  }
+}
+
+class DummyDatabaseAdapter extends adp.DatabaseAdapter {
+  @override
+  Future<List<Row>> query(Statement statement) async {
+    print("QUERY $statement");
+
+    return [];
+  }
+
+  @override
+  Future<RunResult> run(Statement statement) async {
+    print("RUN $statement");
+
+    return RunResult(rowsAffected: 0);
+  }
+
+  @override
+  Future<RunResult> runInTransaction(List<Statement> statements) async {
+    print("RUN In Transaction $statements");
+
+    return RunResult(rowsAffected: 0);
+  }
+
+  @override
+  List<QualifiedTablename> tableNames(Statement statement) {
+    print("Table names $statement");
+    return [];
+  }
+
+  @override
+  Future<T> transaction<T>(void Function(Transaction tx, void Function(T res) p1) setResult) {
+    print("Transaction $setResult");
+
+    throw UnimplementedError();
+    // return setResult();
+  }
+}
+
+class Transaction implements adp.Transaction {
+  final SqliteAdapter adapter;
+  final void Function(Object reason) signalFailure;
+
+  Transaction(
+    this.adapter,
+    this.signalFailure,
+  );
+
+  void rollback(Object err, void Function(Object)? errorCallback) {
+    invokeErrorCallbackAndSignalFailure() {
+      if (errorCallback != null) errorCallback(err);
+      signalFailure(err);
+    }
+
+    adapter._runUncoordinated(Statement('ROLLBACK')).whenComplete(() {
+      invokeErrorCallbackAndSignalFailure();
+    });
+  }
+
+  void invokeCallback<T>(
+    Future<T> prom,
+    void Function(Transaction tx, T result)? successCallback,
+    Function(Object error)? errorCallback,
+  ) {
+    prom.then((res) => {successCallback?.call(this, res)}).catchError((err, _) {
+      rollback(err, errorCallback);
+    });
+  }
+
+  @override
+  void run(
+    Statement statement,
+    void Function(Transaction tx, RunResult result)? successCallback,
+    void Function(Object error)? errorCallback,
+  ) {
+    // uses _runUncoordinated because we're in a transaction that already acquired the lock
+    final prom = adapter._runUncoordinated(statement);
+    invokeCallback(prom, successCallback, errorCallback);
+  }
+
+  @override
+  void query(
+    Statement statement,
+    void Function(Transaction tx, List<Row> res) successCallback,
+    void Function(Object error)? errorCallback,
+  ) {
+    // uses _queryUncoordinated because we're in a transaction that already acquired the lock
+    final prom = adapter._queryUncoordinated(statement);
+    invokeCallback(prom, successCallback, errorCallback);
+  }
+}

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:electric_client/auth/auth.dart';
-import 'package:electric_client/electric/adapter.dart';
+import 'package:electric_client/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/proto/satellite.pbenum.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
@@ -65,9 +65,8 @@ class Satellite {
     // For now, we do it only at initialization
     relations = await _getLocalRelations();
 
-// TODO:
-    // _lastAckdRowId = int.parse(await _getMeta('lastAckdRowId'));
-    // _lastSentRowId = int.parse(await _getMeta('lastSentRowId'));
+    _lastAckdRowId = int.parse(await _getMeta('lastAckdRowId'));
+    _lastSentRowId = int.parse(await _getMeta('lastSentRowId'));
 
     _lastAckdRowId = 0;
     _lastSentRowId = 0;
@@ -380,8 +379,6 @@ class Satellite {
   }
 
   Future<String> _getMeta(String key) async {
-    return "";
-
     final meta = opts.metaTable.toString();
 
     final sql = "SELECT value from $meta WHERE key = ?";

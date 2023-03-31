@@ -12,6 +12,7 @@ const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   migrationsTable: QualifiedTablename('main', '_electric_migrations'),
   oplogTable: QualifiedTablename('main', '_electric_oplog'),
   triggersTable: QualifiedTablename('main', '_electric_trigger_settings'),
+  shadowTable: QualifiedTablename('main', '_electric_shadow'),
   pollingInterval: 2000,
   minSnapshotWindow: 40,
 );
@@ -42,6 +43,8 @@ class SatelliteOpts {
   final QualifiedTablename oplogTable;
   // The database table that controls active opLog triggers.
   final QualifiedTablename triggersTable;
+  // The database table that contains dependency tracking information
+  final QualifiedTablename shadowTable;
   // Polls the database for changes every `pollingInterval` milliseconds.
   final int pollingInterval;
   // Throttle snapshotting to once per `minSnapshotWindow` milliseconds.
@@ -52,6 +55,7 @@ class SatelliteOpts {
     required this.migrationsTable,
     required this.oplogTable,
     required this.triggersTable,
+    required this.shadowTable,
     required this.pollingInterval,
     required this.minSnapshotWindow,
   });

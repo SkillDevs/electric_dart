@@ -20,5 +20,6 @@ dependencies:
   http: ^0.13.5
   protobuf: ^2.1.0
   sqlite3: ^1.10.1
+  synchronized: ^3.0.1
   uuid: ^3.0.7
   web_socket_client: ^0.1.0-dev.3

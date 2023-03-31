@@ -1,5 +1,7 @@
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:synchronized/synchronized.dart';
 
 abstract class DatabaseAdapter {
   //db: AnyDatabase
@@ -24,39 +26,16 @@ abstract class DatabaseAdapter {
   List<QualifiedTablename> tableNames(Statement statement);
 }
 
-class DummyDatabaseAdapter extends DatabaseAdapter {
-  @override
-  Future<List<Row>> query(Statement statement) async {
-    print("QUERY $statement");
+abstract class Transaction {
+  void run(
+    Statement statement,
+    void Function(Transaction tx, RunResult result)? successCallback,
+    void Function(Object error)? errorCallback,
+  );
 
-    return [];
-  }
-
-  @override
-  Future<RunResult> run(Statement statement) async {
-    print("RUN $statement");
-
-    return RunResult(rowsAffected: 0);
-  }
-
-  @override
-  Future<RunResult> runInTransaction(List<Statement> statements) async {
-    print("RUN In Transaction $statements");
-
-    return RunResult(rowsAffected: 0);
-  }
-
-  @override
-  List<QualifiedTablename> tableNames(Statement statement) {
-    print("Table names $statement");
-    return [];
-  }
-
-  @override
-  Future<T> transaction<T>(void Function(Transaction tx, void Function(T res) p1) setResult) {
-    print("Transaction $setResult");
-
-    throw UnimplementedError();
-    // return setResult();
-  }
+  void query(
+    Statement statement,
+    void Function(Transaction tx, List<Row> res) successCallback,
+    void Function(Object error)? errorCallback,
+  );
 }
