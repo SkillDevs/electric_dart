@@ -122,8 +122,8 @@ List<OplogEntry> fromTransaction(
       rowid: -1, // Not required
       optype: changeTypeToOpType(t.type),
       timestamp: DateTime.fromMillisecondsSinceEpoch(transaction.commitTimestamp).toIso8601String(), //TODO: Revisar
-      newRow: json.encode(t.record),
-      oldRow: json.encode(t.oldRecord),
+      newRow: t.record == null ? null : json.encode(t.record),
+      oldRow: t.oldRecord == null ? null : json.encode(t.oldRecord),
       clearTags: encodeTags(t.tags),
     );
   }).toList();
