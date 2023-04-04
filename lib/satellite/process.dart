@@ -42,24 +42,7 @@ class Satellite {
   }
 
   Future<void> start(AuthState? authState) async {
-    if (authState != null) {
-      throw UnimplementedError();
-      // this._authState = authState
-    } else {
-      final app = config.app;
-      final env = config.env;
-      final clientId = await _getClientId();
-      final token = await _getMeta('token');
-      final refreshToken = await _getMeta('refreshToken');
-
-      _authState = AuthState(
-        app: app,
-        env: env,
-        clientId: clientId,
-        token: token,
-        refreshToken: refreshToken,
-      );
-    }
+    await _setAuthState(authState);
 
     // Need to reload primary keys after schema migration
     // For now, we do it only at initialization
@@ -85,6 +68,27 @@ class Satellite {
     await _connectAndStartReplication();
   }
 
+  Future<void> _setAuthState(AuthState? authState) async {
+    if (authState != null) {
+      throw UnimplementedError();
+      // this._authState = authState
+    } else {
+      final app = config.app;
+      final env = config.env;
+      final clientId = await _getClientId();
+      final token = await _getMeta('token');
+      final refreshToken = await _getMeta('refreshToken');
+
+      _authState = AuthState(
+        app: app,
+        env: env,
+        clientId: clientId,
+        token: token,
+        refreshToken: refreshToken,
+      );
+    }
+  }
+
   void setClientListeners() {
     client.subscribeToTransactions((Transaction transaction) async {
       _applyTransaction(transaction);
@@ -99,10 +103,32 @@ class Satellite {
   }
 
   Future<void> _applyTransaction(Transaction transaction) async {
-    final opLogEntries = fromTransaction(transaction, relations);
+    final origin = transaction.origin!;
 
-    await _apply(opLogEntries, transaction.lsn);
-    _notifyChanges(opLogEntries);
+    final opLogEntries = fromTransaction(transaction, relations);
+    final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(transaction.commitTimestamp);
+    await _applyTransactionInternal(origin, commitTimestamp, opLogEntries, transaction.lsn);
+  }
+
+  Future<void> _applyTransactionInternal(
+      String origin, DateTime commitTimestamp, List<OplogEntry> opLogEntries, LSN lsn) async {
+    await _apply(opLogEntries, origin, lsn);
+    await _notifyChanges(opLogEntries);
+
+    if (origin == _authState!.clientId) {
+      /* Any outstanding transaction that originated on Satellite but haven't
+       * been received back from the Electric is considered to be concurrent with
+       * any other transaction coming from Electric.
+       *
+       * Thus we need to keep oplog entries in order to be able to do conflict
+       * resolution with add-wins semantics.
+       *
+       * Once we receive transaction that was originated on the Satellite, oplog
+       * entries that correspond to such transaction can be safely removed as
+       * they are no longer necessary for conflict resolution.
+       */
+      await _garbageCollectOplog(commitTimestamp);
+    }
   }
 
   // Fetch primary keys from local store and use them to identify incoming ops.
@@ -158,130 +184,72 @@ class Satellite {
   }
 
   Future<void> _ack(int lsn, bool isAck) async {
-    print("ACK UNIMPLEMENTED LSN $lsn IS ACK $isAck");
-    // if (lsn < this._lastAckdRowId || (lsn > this._lastSentRowId && isAck)) {
-    //   throw new Error('Invalid position')
-    // }
+    if (lsn < _lastAckdRowId || (lsn > _lastSentRowId && isAck)) {
+      throw Exception('Invalid position');
+    }
 
-    // const meta = this.opts.metaTable.toString()
+    final meta = opts.metaTable.toString();
 
-    // const sql = ` UPDATE ${meta} SET value = ? WHERE key = ?`
-    // const args = [
-    //   `${lsn.toString()}`,
-    //   isAck ? 'lastAckdRowId' : 'lastSentRowId',
-    // ]
+    final sql = " UPDATE $meta SET value = ? WHERE key = ?";
+    final args = <Object?>[
+      lsn.toString(),
+      isAck ? 'lastAckdRowId' : 'lastSentRowId',
+    ];
 
-    // if (isAck) {
-    //   const oplog = this.opts.oplogTable.toString()
-    //   const del = `DELETE FROM ${oplog} WHERE rowid <= ?`
-    //   const delArgs = [lsn]
+    if (isAck) {
+      final oplog = opts.oplogTable.toString();
+      final del = "DELETE FROM $oplog WHERE rowid <= ?";
+      final delArgs = <Object?>[lsn];
 
-    //   this._lastAckdRowId = lsn
-    //   await this.adapter.runInTransaction(
-    //     { sql, args },
-    //     { sql: del, args: delArgs }
-    //   )
-    // } else {
-    //   this._lastSentRowId = lsn
-    //   await this.adapter.runInTransaction({ sql, args })
-    // }
+      _lastAckdRowId = lsn;
+      await adapter.runInTransaction([
+        Statement(sql, args),
+        Statement(del, delArgs),
+      ]);
+    } else {
+      _lastSentRowId = lsn;
+      await adapter.runInTransaction([Statement(sql, args)]);
+    }
   }
 
   // Apply a set of incoming transactions against pending local operations,
-  // applying conflict resolution rules. Takes all changes per each key
-  // before merging, for local and remote operations.
-  Future<void> _apply(List<OplogEntry> incoming, LSN lsn) async {
-    print("APPLY MOCKED $incoming LSN $lsn");
-    // assign timestamp to pending operations before apply
-    //
-    // Log.info(`apply incoming changes for LSN: ${lsn}`)
-    // await this._performSnapshot()
+  // applying conflict resolution rules. Takes all changes per each key before
+  // merging, for local and remote operations.
+  Future<void> _apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
+    throw UnimplementedError();
+  }
 
-    // const local = await this._getEntries()
-    // const merged = this._mergeEntries(local, incoming)
+  Future<List<OplogEntry>> _getEntries({int? since}) async {
+    since ??= _lastAckdRowId;
+    final oplog = opts.oplogTable.toString();
 
-    // const stmts: Statement[] = []
-    // // switches off on transaction commit/abort
-    // stmts.push({ sql: 'PRAGMA defer_foreign_keys = ON' })
-    // // update lsn.
-    // this._lsn = lsn
-    // const lsn_base64 = base64.fromBytes(lsn)
-    // stmts.push({
-    //   sql: `UPDATE ${this.opts.metaTable.tablename} set value = ? WHERE key = ?`,
-    //   args: [lsn_base64, 'lsn'],
-    // })
-
-    // for (const [tablenameStr, mapping] of Object.entries(merged)) {
-    //   for (const entryChanges of Object.values(mapping)) {
-    //     switch (entryChanges.optype) {
-    //       case OPTYPES.delete:
-    //         stmts.push(_applyDeleteOperation(entryChanges, tablenameStr))
-    //         break
-
-    //       default:
-    //         stmts.push(_applyNonDeleteOperation(entryChanges, tablenameStr))
-    //     }
-    //   }
-    // }
-
-    // const tablenames = Object.keys(merged)
-
-    // await this.adapter.runInTransaction(
-    //   ...this._disableTriggers(tablenames),
-    //   ...stmts,
-    //   ...this._enableTriggers(tablenames)
-    // )
+    final selectEntries = '''
+      SELECT * FROM $oplog
+        WHERE timestamp IS NOT NULL
+          AND rowid > ?
+        ORDER BY rowid ASC
+    ''';
+    final rows = await adapter.query(Statement(selectEntries, [since]));
+    return rows
+        .map(
+          (r) => OplogEntry(
+            namespace: r['namespace'] as String,
+            tablename: r['tablename'] as String,
+            primaryKey: r['primaryKey'] as String,
+            rowid: r['rowid'] as int,
+            optype: opTypeStrToOpType(r['optype'] as String),
+            timestamp: r['timestamp'] as String,
+            newRow: r['newRow'] as String?,
+            oldRow: r['oldRow'] as String?,
+            clearTags: r['clearTags'] as String,
+          ),
+        )
+        .toList();
   }
 
   // Perform a snapshot and notify which data actually changed.
   Future<void> _performSnapshot() async {
     print("Perform snapshot");
-
-    // const oplog = this.opts.oplogTable.toString()
-    // const timestamp = new Date().toISOString()
-
-    // const updateTimestamps = `
-    //   UPDATE ${oplog} set timestamp = ?
-    //     WHERE rowid in (
-    //       SELECT rowid FROM ${oplog}
-    //           WHERE timestamp is NULL
-    //           AND rowid > ?
-    //       ORDER BY rowid ASC
-    //       )
-    // `
-
-    // const updateArgs = [timestamp, `${this._lastAckdRowId}`]
-    // await this.adapter.run({ sql: updateTimestamps, args: updateArgs })
-
-    // const selectChanges = `
-    //   SELECT * FROM ${oplog}
-    //   WHERE timestamp = ? ORDER BY rowid ASC
-    // `
-
-    // const rows = await this.adapter.query({
-    //   sql: selectChanges,
-    //   args: [timestamp],
-    // })
-    // const results = rows as unknown as OplogEntry[]
-
-    // const promises: Promise<void | SatelliteError>[] = []
-
-    // if (results.length !== 0) {
-    //   promises.push(this._notifyChanges(results))
-    // }
-
-    // if (!this.client.isClosed()) {
-    //   const { enqueued } = this.client.getOutboundLogPositions()
-    //   const enqueuedLogPos = bytesToNumber(enqueued)
-
-    //   // TODO: take next N transactions instead of all
-    //   const promise = this._getEntries(enqueuedLogPos).then((missing) =>
-    //     this._replicateSnapshotChanges(missing)
-    //   )
-    //   promises.push(promise)
-    // }
-
-    // await Promise.all(promises)
   }
 
   Future<void> _notifyChanges(List<OplogEntry> results) async {
@@ -418,4 +386,72 @@ class Satellite {
   //       Log.warn(`couldn't start replication: ${error}`)
   //     })
   // }
+
+  Future<void> _garbageCollectOplog(DateTime commitTimestamp) async {
+    final isoString = commitTimestamp.toIso8601String();
+    final oplog = opts.oplogTable.tablename.toString();
+    final stmt = '''
+      DELETE FROM $oplog
+      WHERE timestamp = ?;
+    ''';
+    await adapter.run(Statement(stmt, <Object?>[isoString]));
+  }
+}
+
+Statement _applyDeleteOperation(ShadowEntryChanges entryChanges, String tablenameStr) {
+  final pkEntries = entryChanges.primaryKeyCols.entries;
+  final params = pkEntries.fold<_WhereAndValues>(
+    _WhereAndValues([], []),
+    (acc, entry) {
+      final column = entry.key;
+      final value = entry.value;
+      acc.where.add("$column = ?");
+      acc.values.add(value);
+      return acc;
+    },
+  );
+
+  return Statement(
+    "DELETE FROM $tablenameStr WHERE ${params.where.join(' AND ')}",
+    params.values,
+  );
+}
+
+Statement _applyNonDeleteOperation(ShadowEntryChanges shadowEntryChanges, String tablenameStr) {
+  final changes = shadowEntryChanges.changes;
+  final primaryKeyCols = shadowEntryChanges.primaryKeyCols;
+
+  final columnNames = changes.keys;
+  final List<Object?> columnValues = changes.values.map((c) => c.value).toList();
+  String insertStmt =
+      '''INTO $tablenameStr(${columnNames.join(', ')}) VALUES (${columnValues.map((_) => '?').join(',')})''';
+
+  final updateColumnStmts = columnNames.where((c) => !(primaryKeyCols.containsKey(c))).fold(
+    _WhereAndValues([], []),
+    (acc, c) {
+      acc.where.add("$c = ?");
+      acc.values.add(changes[c]!.value);
+      return acc;
+    },
+  );
+
+  if (updateColumnStmts.values.isNotEmpty) {
+    insertStmt = '''
+                INSERT $insertStmt 
+                ON CONFLICT DO UPDATE SET ${updateColumnStmts.where.join(', ')}
+              ''';
+    columnValues.addAll(updateColumnStmts.values);
+  } else {
+    // no changes, can ignore statement if exists
+    insertStmt = "INSERT OR IGNORE $insertStmt";
+  }
+
+  return Statement(insertStmt, columnValues);
+}
+
+class _WhereAndValues {
+  final List<String> where;
+  final List<SqlValue> values;
+
+  _WhereAndValues(this.where, this.values);
 }

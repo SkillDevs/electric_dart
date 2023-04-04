@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/config/config.dart';
 import 'package:electric_client/electric/adapter.dart';
@@ -27,9 +29,14 @@ void main(List<String> arguments) async {
     ),
   );
 
-  final db = sqlite3.open("electric.db");
+  final dbFile = File("electric.db");
+  final needToInitDb = !dbFile.existsSync();
+  final db = sqlite3.open(dbFile.path);
 
-  initDb(db);
+  if (needToInitDb) {
+    print("Creating Db");
+    initDb(db);
+  }
 
   final satellite = Satellite(
     client: client,

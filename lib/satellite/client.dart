@@ -516,6 +516,7 @@ class Client extends EventEmitter {
           op.begin.commitTimestamp.toInt(),
           op.begin.lsn,
           [],
+          op.begin.origin,
         );
         replication.transactions.add(transaction);
       }
@@ -527,6 +528,7 @@ class Client extends EventEmitter {
           lastTx.commitTimestamp,
           lastTx.lsn,
           lastTx.changes,
+          lastTx.origin,
         );
         print("we have commit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         // in the future, emitting this event can be decoupled
@@ -552,6 +554,7 @@ class Client extends EventEmitter {
           relation: rel,
           type: ChangeType.insert,
           record: deserializeRow(op.insert.getNullableRowData(), rel),
+          tags: op.insert.tags,
         );
 
         replication.transactions[lastTxnIdx].changes.add(change);
@@ -572,6 +575,7 @@ class Client extends EventEmitter {
           type: ChangeType.update,
           record: deserializeRow(rowData, rel),
           oldRecord: deserializeRow(oldRowData, rel),
+          tags: op.update.tags,
         );
 
         replication.transactions[lastTxnIdx].changes.add(change);
@@ -590,6 +594,7 @@ class Client extends EventEmitter {
           relation: rel,
           type: ChangeType.delete,
           oldRecord: deserializeRow(oldRowData, rel),
+          tags: op.delete.tags,
         );
         replication.transactions[lastTxnIdx].changes.add(change);
       }
@@ -606,47 +611,51 @@ class Client extends EventEmitter {
       ),
     ];
 
-    for (var tx in transaction.changes) {
+    for (var change in transaction.changes) {
       //let txOp, oldRecord, record;
-      final relation = outbound.relations[tx.relation.id]!;
+      final relation = outbound.relations[change.relation.id]!;
+      final tags = change.tags;
 
       SatOpRow? oldRecord, record;
-      if (tx.oldRecord != null && tx.oldRecord!.isNotEmpty) {
-        oldRecord = serializeRow(tx.oldRecord!, relation);
+      if (change.oldRecord != null && change.oldRecord!.isNotEmpty) {
+        oldRecord = serializeRow(change.oldRecord!, relation);
       }
-      if (tx.record != null && tx.record!.isNotEmpty) {
-        record = serializeRow(tx.record!, relation);
+      if (change.record != null && change.record!.isNotEmpty) {
+        record = serializeRow(change.record!, relation);
       }
 
-      late final SatTransOp txOp;
-      switch (tx.type) {
+      late final SatTransOp changeOp;
+      switch (change.type) {
         case ChangeType.delete:
-          txOp = SatTransOp(
+          changeOp = SatTransOp(
             delete: SatOpDelete(
               oldRowData: oldRecord,
               relationId: relation.id,
+              tags: tags,
             ),
           );
           break;
         case ChangeType.insert:
-          txOp = SatTransOp(
+          changeOp = SatTransOp(
             insert: SatOpInsert(
               rowData: record,
               relationId: relation.id,
+              tags: tags,
             ),
           );
           break;
         case ChangeType.update:
-          txOp = SatTransOp(
+          changeOp = SatTransOp(
             update: SatOpUpdate(
               rowData: record,
               oldRowData: oldRecord,
               relationId: relation.id,
+              tags: tags,
             ),
           );
           break;
       }
-      ops.add(txOp);
+      ops.add(changeOp);
     }
 
     ops.add(SatTransOp(commit: SatOpCommit()));

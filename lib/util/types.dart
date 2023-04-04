@@ -2,6 +2,8 @@ import 'package:electric_client/proto/satellite.pb.dart';
 
 typedef LSN = List<int>;
 
+typedef SqlValue = Object?;
+
 class Statement {
   final String sql;
   final List<Object?>? args;
@@ -88,7 +90,10 @@ class Transaction {
   final LSN lsn;
   final List<Change> changes;
 
-  Transaction(this.commitTimestamp, this.lsn, this.changes);
+  // This field is only set by transactions coming from Electric
+  final String? origin;
+
+  Transaction(this.commitTimestamp, this.lsn, this.changes, this.origin);
 }
 
 enum ChangeType {
@@ -99,13 +104,16 @@ enum ChangeType {
 
 typedef Record = Map<String, Object?>;
 
+typedef Tag = String;
+
 class Change {
   final Relation relation;
   final ChangeType type;
   final Record? record;
   final Record? oldRecord;
+  final List<Tag> tags;
 
-  Change({required this.relation, required this.type, this.record, this.oldRecord});
+  Change({required this.relation, required this.type, this.record, this.oldRecord, required this.tags});
 }
 
 class Relation {
