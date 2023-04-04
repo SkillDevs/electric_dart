@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:electric_client/util/sets.dart';
+import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart';
 
 // format: UUID@timestamp_in_milliseconds
@@ -18,6 +20,26 @@ enum OpType {
 enum ChangesOpType {
   delete,
   upsert,
+}
+
+class OplogEntryChanges {
+  final String namespace;
+  final String tablename;
+  final Map<String, Object> primaryKeyCols;
+  ChangesOpType optype;
+  final OplogColumnChanges changes;
+  Tag? tag;
+  List<Tag> clearTags;
+
+  OplogEntryChanges({
+    required this.namespace,
+    required this.tablename,
+    required this.primaryKeyCols,
+    required this.optype,
+    required this.changes,
+    required this.tag,
+    required this.clearTags,
+  });
 }
 
 class OplogEntry {
@@ -102,65 +124,102 @@ List<OplogEntry> fromTransaction(
       timestamp: DateTime.fromMillisecondsSinceEpoch(transaction.commitTimestamp).toIso8601String(), //TODO: Revisar
       newRow: json.encode(t.record),
       oldRow: json.encode(t.oldRecord),
-      clearTags: json.encode(t.tags),
+      clearTags: encodeTags(t.tags),
     );
   }).toList();
 }
 
-// // Convert a list of `OplogEntry`s into a nested `OplogTableChanges` map of
-// // `{tableName: {primaryKey: entryChanges}}` where the entryChanges has the
-// // most recent `optype` and column `value`` from all of the operations.
-// // Multiple OplogEntries that point to the same row will be merged to a
-// // single OpLogEntryChanges object.
-// OplogTableChanges localOperationsToTableChanges = (
-//   List<OplogEntry> operations,
-//   Tag Function(DateTime timestamp) genTag,
-// ) {
-//   var initialValue: OplogTableChanges;
+// Convert a list of `OplogEntry`s into a nested `OplogTableChanges` map of
+// `{tableName: {primaryKey: entryChanges}}` where the entryChanges has the
+// most recent `optype` and column `value`` from all of the operations.
+// Multiple OplogEntries that point to the same row will be merged to a
+// single OpLogEntryChanges object.
+OplogTableChanges localOperationsToTableChanges(
+  List<OplogEntry> operations,
+  Tag Function(DateTime timestamp) genTag,
+) {
+  final OplogTableChanges initialValue = {};
 
-//   return operations.reduce((acc, entry) {
-//     const entryChanges = localEntryToChanges(
-//       entry,
-//       genTag(new Date(entry.timestamp))
-//     )
+  return operations.fold(initialValue, (acc, entry) {
+    final entryChanges = localEntryToChanges(entry, genTag(DateTime.parse(entry.timestamp)));
 
-//     // Sort for deterministic key generation.
-//     const primaryKeyStr = primaryKeyToStr(entryChanges.primaryKeyCols)
-//     const qualifiedTablename = new QualifiedTablename(
-//       entryChanges.namespace,
-//       entryChanges.tablename
-//     )
-//     const tablenameStr = qualifiedTablename.toString()
+    // Sort for deterministic key generation.
+    final primaryKeyStr = primaryKeyToStr(entryChanges.primaryKeyCols);
+    final qualifiedTablename = QualifiedTablename(entryChanges.namespace, entryChanges.tablename);
+    final tablenameStr = qualifiedTablename.toString();
 
-//     if (acc[tablenameStr] === undefined) {
-//       acc[tablenameStr] = {}
-//     }
+    if (acc[tablenameStr] == null) {
+      acc[tablenameStr] = {};
+    }
 
-//     if (acc[tablenameStr][primaryKeyStr] === undefined) {
-//       acc[tablenameStr][primaryKeyStr] = [entry.timestamp, entryChanges]
-//     } else {
-//       const [timestamp, existing] = acc[tablenameStr][primaryKeyStr]
-//       existing.optype = entryChanges.optype
-//       for (const [key, value] of Object.entries(entryChanges.changes)) {
-//         existing.changes[key] = value
-//       }
-//       if (entryChanges.optype == 'DELETE') {
-//         existing.tag = null
-//       } else {
-//         existing.tag = genTag(new Date(entry.timestamp))
-//       }
+    if (acc[tablenameStr]![primaryKeyStr] == null) {
+      acc[tablenameStr]![primaryKeyStr] = OplogTableChange(timestamp: entry.timestamp, oplogEntryChanges: entryChanges);
+    } else {
+      final oplogTableChange = acc[tablenameStr]![primaryKeyStr]!;
+      final timestamp = oplogTableChange.timestamp;
+      final OplogEntryChanges existing = oplogTableChange.oplogEntryChanges;
 
-//       if (timestamp == entry.timestamp) {
-//         // within the same transaction overwirte
-//         existing.clearTags = entryChanges.clearTags
-//       } else {
-//         existing.clearTags = union(entryChanges.clearTags, existing.clearTags)
-//       }
-//     }
+      existing.optype = entryChanges.optype;
+      for (final entry in entryChanges.changes.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        existing.changes[key] = value;
+      }
+      if (entryChanges.optype == OpType.delete) {
+        existing.tag = null;
+      } else {
+        existing.tag = genTag(DateTime.parse(entry.timestamp));
+      }
 
-//     return acc
-//   }, initialValue)
-// }
+      if (timestamp == entry.timestamp) {
+        // within the same transaction overwirte
+        existing.clearTags = entryChanges.clearTags;
+      } else {
+        existing.clearTags = union(entryChanges.clearTags, existing.clearTags);
+      }
+    }
+
+    return acc;
+  });
+}
+
+ShadowTableChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
+  final ShadowTableChanges initialValue = {};
+
+  return operations.fold<ShadowTableChanges>(initialValue, (acc, entry) {
+    final entryChanges = remoteEntryToChanges(entry);
+
+    // Sort for deterministic key generation.
+    final primaryKeyStr = primaryKeyToStr(entryChanges.primaryKeyCols);
+    final qualifiedTablename = QualifiedTablename(entryChanges.namespace, entryChanges.tablename);
+    final tablenameStr = qualifiedTablename.toString();
+
+    if (acc[tablenameStr] == null) {
+      acc[tablenameStr] = {};
+    }
+    if (acc[tablenameStr]![primaryKeyStr] == null) {
+      acc[tablenameStr]![primaryKeyStr] = entryChanges;
+    } else {
+      final ShadowEntryChanges existing = acc[tablenameStr]![primaryKeyStr]!;
+      existing.optype = entryChanges.optype;
+      for (final entry in entryChanges.changes.entries) {
+        existing.changes[entry.key] = entry.value;
+      }
+    }
+
+    return acc;
+  });
+}
+
+class OplogTableChange {
+  final Timestamp timestamp;
+  final OplogEntryChanges oplogEntryChanges;
+
+  OplogTableChange({
+    required this.timestamp,
+    required this.oplogEntryChanges,
+  });
+}
 
 class OplogColumnChange {
   final SqlValue value;
@@ -171,13 +230,86 @@ class OplogColumnChange {
 
 typedef OplogColumnChanges = Map<String, OplogColumnChange>;
 
+// First key qualifiedTablenameStr
+// Second key primaryKey
+typedef ShadowTableChanges = Map<String, Map<String, ShadowEntryChanges>>;
+typedef OplogTableChanges = Map<String, Map<String, OplogTableChange>>;
+
+class ShadowEntry {
+  final String namespace;
+  final String tablename;
+  final String primaryKey;
+  final String tags;
+
+  ShadowEntry({
+    required this.namespace,
+    required this.tablename,
+    required this.primaryKey,
+    required this.tags,
+  }); // json object
+}
+
+// Convert an `OplogEntry` to an `OplogEntryChanges` structure,
+// parsing out the changed columns from the oldRow and the newRow.
+OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
+  final OplogEntryChanges result = OplogEntryChanges(
+    namespace: entry.namespace,
+    tablename: entry.tablename,
+    primaryKeyCols: (json.decode(entry.primaryKey) as Map<String, dynamic>).cast<String, Object>(),
+    optype: entry.optype == OpType.delete ? ChangesOpType.delete : ChangesOpType.upsert,
+    changes: {},
+    tag: entry.optype == OpType.delete ? null : tag,
+    clearTags: (json.decode(entry.clearTags) as List<dynamic>).cast<String>(),
+  );
+
+  final Row oldRow = entry.oldRow != null ? json.decode(entry.oldRow!) : {};
+  final Row newRow = entry.newRow != null ? json.decode(entry.newRow!) : {};
+
+  final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
+
+  for (final entry in newRow.entries) {
+    final key = entry.key;
+    final value = entry.value;
+    if (oldRow[key] == value) {
+      result.changes[key] = OplogColumnChange(value, timestamp);
+    }
+  }
+  return result;
+}
+
+// Convert an `OplogEntry` to a `ShadowEntryChanges` structure,
+// parsing out the changed columns from the oldRow and the newRow.
+ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
+  final result = ShadowEntryChanges(
+    namespace: entry.namespace,
+    tablename: entry.tablename,
+    primaryKeyCols: (json.decode(entry.primaryKey) as Map<String, dynamic>).cast<String, Object>(),
+    optype: entry.optype == OpType.delete ? ChangesOpType.delete : ChangesOpType.upsert,
+    changes: {},
+    tags: decodeTags(entry.clearTags),
+  );
+
+  final Row oldRow = entry.oldRow != null ? json.decode(entry.oldRow!) : {};
+  final Row newRow = entry.newRow != null ? json.decode(entry.newRow!) : {};
+
+  final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
+
+  for (final entry in newRow.entries) {
+    if (oldRow[entry.key] != entry.value) {
+      result.changes[entry.key] = OplogColumnChange(entry.value, timestamp);
+    }
+  }
+
+  return result;
+}
+
 class ShadowEntryChanges {
   final String namespace;
   final String tablename;
   final Map<String, Object> primaryKeyCols;
-  final ChangesOpType optype;
-  final OplogColumnChanges changes;
-  final List<Tag> tags;
+  ChangesOpType optype;
+  OplogColumnChanges changes;
+  List<Tag> tags;
 
   ShadowEntryChanges({
     required this.namespace,
@@ -187,4 +319,36 @@ class ShadowEntryChanges {
     required this.changes,
     required this.tags,
   });
+}
+
+String primaryKeyToStr(Map<String, Object> primaryKeyJson) {
+  final sortedValues = primaryKeyJson.values.toList()..sort();
+  return sortedValues.join("_");
+}
+
+ShadowKey getShadowPrimaryKey(
+  Object oplogEntry,
+) {
+  if (oplogEntry is OplogEntry) {
+    return primaryKeyToStr(json.decode(oplogEntry.primaryKey));
+  } else if (oplogEntry is OplogEntryChanges) {
+    return primaryKeyToStr(oplogEntry.primaryKeyCols);
+  } else if (oplogEntry is ShadowEntryChanges) {
+    return primaryKeyToStr(oplogEntry.primaryKeyCols);
+  } else {
+    throw StateError("Unknown class");
+  }
+}
+
+Tag generateTag(String instanceId, DateTime timestamp) {
+  final milliseconds = timestamp.millisecondsSinceEpoch;
+  return '$instanceId@$milliseconds';
+}
+
+String encodeTags(List<Tag> tags) {
+  return json.encode(tags);
+}
+
+List<Tag> decodeTags(String tags) {
+  return (json.decode(tags) as List<dynamic>).cast<Tag>();
 }

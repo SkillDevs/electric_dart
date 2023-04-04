@@ -6,6 +6,7 @@ import 'package:electric_client/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/proto/satellite.pbenum.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
+import 'package:electric_client/satellite/merge.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/types.dart';
@@ -102,6 +103,58 @@ class Satellite {
     client.subscribeToOutboundEvent(() => _throttledSnapshot());
   }
 
+  // Merge changes, with last-write-wins and add-wins semantics.
+  // clearTags field is used by the calling code to determine new value of
+  // the shadowTags
+  ShadowTableChanges _mergeEntries(
+    String local_origin,
+    List<OplogEntry> local,
+    String incoming_origin,
+    List<OplogEntry> incoming,
+  ) {
+    final localTableChanges = localOperationsToTableChanges(local, (DateTime timestamp) {
+      return generateTag(local_origin, timestamp);
+    });
+    final incomingTableChanges = remoteOperationsToTableChanges(incoming);
+
+    for (final incomingTableChangeEntry in incomingTableChanges.entries) {
+      final tablename = incomingTableChangeEntry.key;
+      final incomingMapping = incomingTableChangeEntry.value;
+      final localMapping = localTableChanges[tablename];
+
+      if (localMapping == null) {
+        continue;
+      }
+
+      for (final incomingMappingEntry in incomingMapping.entries) {
+        final primaryKey = incomingMappingEntry.key;
+        final incomingChanges = incomingMappingEntry.value;
+        final localInfo = localMapping[primaryKey];
+        if (localInfo == null) {
+          continue;
+        }
+        final localChanges = localInfo.oplogEntryChanges;
+
+        final changes =
+            mergeChangesLastWriteWins(local_origin, localChanges.changes, incoming_origin, incomingChanges.changes);
+        late final ChangesOpType optype;
+
+        final tags = mergeOpTags(localChanges, incomingChanges);
+        if (tags.isEmpty) {
+          optype = ChangesOpType.delete;
+        } else {
+          optype = ChangesOpType.upsert;
+        }
+
+        incomingChanges.changes = changes;
+        incomingChanges.optype = optype;
+        incomingChanges.tags = tags;
+      }
+    }
+
+    return incomingTableChanges;
+  }
+
   Future<void> _applyTransaction(Transaction transaction) async {
     final origin = transaction.origin!;
 
@@ -129,6 +182,25 @@ class Satellite {
        */
       await _garbageCollectOplog(commitTimestamp);
     }
+  }
+
+  List<Statement> _disableTriggers(List<String> tablenames) {
+    return _updateTriggerSettings(tablenames, false);
+  }
+
+  List<Statement> _enableTriggers(List<String> tablenames) {
+    return _updateTriggerSettings(tablenames, true);
+  }
+
+  List<Statement> _updateTriggerSettings(List<String> tablenames, bool flag) {
+    final triggers = opts.triggersTable.toString();
+    final stmts = tablenames
+        .map((tablenameStr) => (Statement(
+              "UPDATE $triggers SET flag = ? WHERE tablename = ?",
+              [flag ? 1 : 0, tablenameStr],
+            )))
+        .toList();
+    return stmts;
   }
 
   // Fetch primary keys from local store and use them to identify incoming ops.
@@ -183,6 +255,12 @@ class Satellite {
     return relations;
   }
 
+  String _generateTag(DateTime timestamp) {
+    final instanceId = _authState!.clientId;
+
+    return generateTag(instanceId, timestamp);
+  }
+
   Future<void> _ack(int lsn, bool isAck) async {
     if (lsn < _lastAckdRowId || (lsn > _lastSentRowId && isAck)) {
       throw Exception('Invalid position');
@@ -216,7 +294,52 @@ class Satellite {
   // applying conflict resolution rules. Takes all changes per each key before
   // merging, for local and remote operations.
   Future<void> _apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
-    throw UnimplementedError();
+    print("apply incoming changes for LSN: $lsn");
+    // assign timestamp to pending operations before apply
+    await _performSnapshot();
+
+    final local = await _getEntries();
+    final merged = _mergeEntries(_authState!.clientId, local, incoming_origin, incoming);
+
+    final List<Statement> stmts = [];
+    // switches off on transaction commit/abort
+    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
+    // update lsn.
+    _lsn = lsn;
+    final lsn_base64 = base64.encode(lsn);
+    stmts
+        .add(Statement("UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?", <Object?>[lsn_base64, 'lsn']));
+
+    for (final entry in merged.entries) {
+      final tablenameStr = entry.key;
+      final mapping = entry.value;
+      for (final entryChanges in mapping.values) {
+        final ShadowEntry shadowEntry = ShadowEntry(
+          namespace: entryChanges.namespace,
+          tablename: entryChanges.tablename,
+          primaryKey: getShadowPrimaryKey(entryChanges),
+          tags: encodeTags(entryChanges.tags),
+        );
+        switch (entryChanges.optype) {
+          case ChangesOpType.delete:
+            stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
+            stmts.add(_deleteShadowTagsQuery(shadowEntry));
+            break;
+
+          default:
+            stmts.add(_applyNonDeleteOperation(entryChanges, tablenameStr));
+            stmts.add(_updateShadowTagsQuery(shadowEntry));
+        }
+      }
+    }
+
+    final tablenames = merged.keys;
+
+    await adapter.runInTransaction([
+      ..._disableTriggers(tablenames.toList()),
+      ...stmts,
+      ..._enableTriggers(tablenames.toList()),
+    ]);
   }
 
   Future<List<OplogEntry>> _getEntries({int? since}) async {
@@ -395,6 +518,37 @@ class Satellite {
       WHERE timestamp = ?;
     ''';
     await adapter.run(Statement(stmt, <Object?>[isoString]));
+  }
+
+  Statement _deleteShadowTagsQuery(ShadowEntry shadow) {
+    final shadowTable = opts.shadowTable.toString();
+    final deleteRow = '''
+      DELETE FROM $shadowTable
+      WHERE namespace = ? AND
+            tablename = ? AND
+            primaryKey = ?;
+    ''';
+    return Statement(
+      deleteRow,
+      [shadow.namespace, shadow.tablename, shadow.primaryKey],
+    );
+  }
+
+  Statement _updateShadowTagsQuery(ShadowEntry shadow) {
+    final shadowTable = opts.shadowTable.toString();
+    final updateTags = '''
+      INSERT or REPLACE INTO $shadowTable (namespace, tablename, primaryKey, tags) VALUES
+      (?, ?, ?, ?);
+    ''';
+    return Statement(
+      updateTags,
+      <Object?>[
+        shadow.namespace,
+        shadow.tablename,
+        shadow.primaryKey,
+        shadow.tags,
+      ],
+    );
   }
 }
 
