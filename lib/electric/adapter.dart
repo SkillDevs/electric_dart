@@ -1,7 +1,5 @@
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart';
-import 'package:sqlite3/sqlite3.dart' as sqlite;
-import 'package:synchronized/synchronized.dart';
 
 abstract class DatabaseAdapter {
   //db: AnyDatabase

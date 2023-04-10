@@ -74,7 +74,7 @@ class BundleMigrator implements Migrator {
     for (var i = 0; i < existing.length; i++) {
       final migrationRecord = existing[i];
       final name = migrationRecord.name;
-      final sha256 = migrationRecord.name;
+      final sha256 = migrationRecord.sha256;
 
       final migration = migrations[i];
 
