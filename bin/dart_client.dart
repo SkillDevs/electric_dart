@@ -4,10 +4,13 @@ import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/config/config.dart';
 import 'package:electric_client/electric/adapter.dart';
 import 'package:electric_client/electric/sqlite3_adapter.dart';
+import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/process.dart';
 import 'package:sqlite3/sqlite3.dart';
+
+import 'todo_migrations.dart';
 
 void main(List<String> arguments) async {
   final appId = "my-todos";
@@ -30,17 +33,15 @@ void main(List<String> arguments) async {
   );
 
   final dbFile = File("electric.db");
-  final needToInitDb = !dbFile.existsSync();
   final db = sqlite3.open(dbFile.path);
 
-  if (needToInitDb) {
-    print("Creating Db");
-    initDb(db);
-  }
+  final adapter = SqliteAdapter(db);
+  final migrator = BundleMigrator(adapter: adapter, migrations: todoMigrations);
 
   final satellite = Satellite(
     client: client,
     config: SatelliteConfig(app: appId, env: env),
+    migrator: migrator,
     console: ConsoleClient(
       ElectricConfig(
         app: appId,
@@ -54,7 +55,7 @@ void main(List<String> arguments) async {
       ),
     ),
     opts: kSatelliteDefaults,
-    adapter: SqliteAdapter(db),
+    adapter: adapter,
   );
 
   satellite.client.on("error", (data) => print("Client error $data"));

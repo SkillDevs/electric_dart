@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/electric/adapter.dart' hide Transaction;
+import 'package:electric_client/migrators/migrators.dart';
 import 'package:electric_client/proto/satellite.pbenum.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
@@ -16,6 +17,7 @@ class Satellite {
   final Client client;
   final SatelliteConfig config;
   final DatabaseAdapter adapter;
+  final Migrator migrator;
 
   AuthState? _authState;
   LSN? _lsn;
@@ -35,6 +37,7 @@ class Satellite {
     required this.config,
     required this.opts,
     required this.adapter,
+    required this.migrator,
   }) {
     _throttledSnapshot = throttle(
       _performSnapshot,
@@ -43,6 +46,13 @@ class Satellite {
   }
 
   Future<void> start(AuthState? authState) async {
+    await migrator.up();
+
+    final isVerified = await _verifyTableStructure();
+    if (!isVerified) {
+      throw Exception('Invalid database schema.');
+    }
+
     await _setAuthState(authState);
 
     // Need to reload primary keys after schema migration
@@ -455,6 +465,25 @@ class Satellite {
     }
 
     return authState;
+  }
+
+  Future<bool> _verifyTableStructure() async {
+    final meta = opts.metaTable.tablename;
+    final oplog = opts.oplogTable.tablename;
+    final shadow = opts.shadowTable.tablename;
+
+    const tablesExist = '''
+      SELECT count(name) as numTables FROM sqlite_master
+        WHERE type='table'
+        AND name IN (?, ?, ?)
+    ''';
+
+    final res = await adapter.query(Statement(
+      tablesExist,
+      [meta, oplog, shadow],
+    ));
+    final numTables = res.first["numTables"]! as int;
+    return numTables == 3;
   }
 
   Future<String> _getClientId() async {
