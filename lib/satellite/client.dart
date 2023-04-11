@@ -189,12 +189,12 @@ class SatelliteClient extends EventEmitter {
     await connectCompleter.future;
 
     // TODO: Retry policy
-    // const retryPolicy = { ...this.connectionRetryPolicy }
+    // const retryPolicy = { ...connectionRetryPolicy };
     // if (retryHandler) {
     //   retryPolicy.retry = retryHandler
     // }
 
-    // return backOff(() => connectPromise, retryPolicy)
+    // await  backOff(() => connectCompleter.future, retryPolicy);
   }
 
   Future<void> close() async {

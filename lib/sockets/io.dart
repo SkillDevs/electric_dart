@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:electric_client/sockets/sockets.dart';
-import 'package:web_socket_client/web_socket_client.dart';
+import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:io' as io;
 
 class WebSocketIOFactory implements SocketFactory {
   @override
@@ -12,20 +14,29 @@ class WebSocketIOFactory implements SocketFactory {
 }
 
 class WebSocketIO implements Socket {
-  WebSocket? socket;
-  final List<StreamSubscription<dynamic>> _subscriptions = [];
+  IOWebSocketChannel? _channel;
+  List<StreamSubscription<dynamic>> _subscriptions = [];
 
-  final List<void Function()> _onceConnectCallbacks = [];
-  final List<void Function(Object error)> _onceErrorCallbacks = [];
+  List<void Function()> _onceConnectCallbacks = [];
+  List<void Function(Object error)> _onceErrorCallbacks = [];
 
-  final List<void Function(Object error)> _errorCallbacks = [];
-  final List<void Function()> _closeCallbacks = [];
-  final List<void Function(Data data)> _messageCallbacks = [];
+  List<void Function(Object error)> _errorCallbacks = [];
+  List<void Function()> _closeCallbacks = [];
+  List<void Function(Data data)> _messageCallbacks = [];
 
   @override
   Socket closeAndRemoveListeners() {
-    socket?.close();
+    _channel?.sink.close();
+    for (final cb in _closeCallbacks) {
+      cb();
+    }
 
+    _subscriptions = [];
+    _onceConnectCallbacks = [];
+    _onceErrorCallbacks = [];
+    _errorCallbacks = [];
+    _closeCallbacks = [];
+    _messageCallbacks = [];
     return this;
   }
 
@@ -56,23 +67,29 @@ class WebSocketIO implements Socket {
 
   @override
   Socket open(ConnectionOptions opts) {
-    final socket = WebSocket(Uri.parse(opts.url));
-    this.socket = socket;
-    //socket.binaryType = 'arraybuffer'
-
-    final connectionSubs = socket.connection.listen(
-      (ConnectionState connectionState) {
-        // TODO: Reconnected state === open ??
-        print(connectionState);
-        if (connectionState is Connected) {
-          while (_onceConnectCallbacks.isNotEmpty) {
-            _onceConnectCallbacks.removeLast()();
-          }
+    () async {
+      try {
+        final ws = await io.WebSocket.connect(
+          opts.url,
+        );
+        while (_onceConnectCallbacks.isNotEmpty) {
+          _onceConnectCallbacks.removeLast()();
         }
-      },
-      onError: (Object e, st) {
-        print("On error connction $e");
 
+        _channel = IOWebSocketChannel(ws);
+        final msgSubscription = _channel!.stream.listen(
+          (rawData) {
+            print("Raw Message $rawData");
+            final bytes = rawData as Uint8List;
+
+            for (final cb in _messageCallbacks) {
+              cb(bytes);
+            }
+          },
+          cancelOnError: true,
+        );
+        _subscriptions.add(msgSubscription);
+      } catch (e) {
         for (final cb in _errorCallbacks) {
           cb(e);
         }
@@ -80,31 +97,48 @@ class WebSocketIO implements Socket {
         while (_onceErrorCallbacks.isNotEmpty) {
           _onceErrorCallbacks.removeLast()(Exception('failed to establish connection'));
         }
-      },
-      onDone: () {
-        for (final cb in _closeCallbacks) {
-          cb();
-        }
-      },
-    );
-    _subscriptions.add(connectionSubs);
-
-    final msgSubscription = socket.messages.listen((rawData) {
-      print("Raw Message $rawData");
-      final bytes = rawData as Uint8List;
-
-      for (final cb in _messageCallbacks) {
-        cb(bytes);
       }
-    });
-    _subscriptions.add(msgSubscription);
 
+      //.timeout(opts.);
+
+      // this.socket = socket;
+      // //socket.binaryType = 'arraybuffer'
+
+      // final connectionSubs = socket.stream.listen(
+      //   (ConnectionState connectionState) {
+      //     // TODO: Reconnected state === open ??
+      //     print(connectionState);
+      //     if (connectionState is Connected) {
+      //       while (_onceConnectCallbacks.isNotEmpty) {
+      //         _onceConnectCallbacks.removeLast()();
+      //       }
+      //     }
+      //   },
+      //   onError: (Object e, st) {
+      //     print("On error connction $e");
+
+      //     for (final cb in _errorCallbacks) {
+      //       cb(e);
+      //     }
+
+      //     while (_onceErrorCallbacks.isNotEmpty) {
+      //       _onceErrorCallbacks.removeLast()(Exception('failed to establish connection'));
+      //     }
+      //   },
+      //   onDone: () {
+      //     for (final cb in _closeCallbacks) {
+      //       cb();
+      //     }
+      //   },
+      // );
+      // _subscriptions.add(connectionSubs);
+    }();
     return this;
   }
 
   @override
   Socket write(Data data) {
-    socket?.send(data);
+    _channel?.sink.add(data);
     return this;
   }
 }

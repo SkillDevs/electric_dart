@@ -22,4 +22,5 @@ dependencies:
   sqlite3: ^1.10.1
   synchronized: ^3.0.1
   uuid: ^3.0.7
-  web_socket_client: ^0.1.0-dev.3
+  web_socket_channel: ^2.3.0
+  # web_socket_client: ^0.1.0-dev.3

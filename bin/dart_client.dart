@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/config/config.dart';
-import 'package:electric_client/electric/adapter.dart';
 import 'package:electric_client/electric/sqlite3_adapter.dart';
 import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/satellite/client.dart';

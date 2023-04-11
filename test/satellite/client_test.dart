@@ -49,6 +49,46 @@ void main() {
     await client.connect();
   });
 
+  /* test('connection backoff success', () async {
+    server.close();
+
+    bool passed = false;
+
+    bool retry(Object _e, int a) {
+      if (a > 0) {
+        passed = true;
+        return false;
+      }
+      return true;
+    }
+
+    try {
+      await client.connect(retryHandler: retry);
+    } catch (e) {
+      //
+    }
+
+    expect(passed, isTrue);
+  });
+
+  test('connection backoff failure', () async {
+    server.close();
+
+    bool retry(Object _e, int a) {
+      if (a > 0) {
+        return false;
+      }
+      return true;
+    }
+
+    try {
+      await client.connect(retryHandler: retry);
+      fail("Should have failed");
+    } catch (e) {
+      // Should pass
+    }
+  }); */
+
   test('authentication success', () async {
     await client.connect();
 
