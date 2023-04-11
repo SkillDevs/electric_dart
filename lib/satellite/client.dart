@@ -29,9 +29,12 @@ class DecodedMessage {
   DecodedMessage(this.msg, this.msgType);
 }
 
-class Client extends EventEmitter {
-  Socket? socket;
+class SatelliteClient extends EventEmitter {
+  final String dbName;
+  final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
+
+  Socket? socket;
 
   late Replication inbound;
   late Replication outbound;
@@ -39,7 +42,12 @@ class Client extends EventEmitter {
   void Function()? throttledPushTransaction;
   void Function(Uint8List bytes)? socketHandler;
 
-  Client(this.opts) {
+  SatelliteClient({
+    required this.dbName,
+    required this.socketFactory,
+    //required this.notifier,
+    required this.opts,
+  }) {
     inbound = resetReplication(null, null, null);
     outbound = resetReplication(null, null, null);
   }
@@ -140,44 +148,45 @@ class Client extends EventEmitter {
   Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
-    final connectPromise = Future<void>(() {
-      // TODO: ensure any previous socket is closed, or reject
-      if (this.socket != null) {
-        throw SatelliteException(
-            SatelliteErrorCode.unexpectedState, 'a socket already exist. ensure it is closed before reconnecting.');
+    final Completer<void> connectCompleter = Completer();
+
+    // TODO: ensure any previous socket is closed, or reject
+    if (this.socket != null) {
+      throw SatelliteException(
+          SatelliteErrorCode.unexpectedState, 'a socket already exist. ensure it is closed before reconnecting.');
+    }
+    final socket = socketFactory.create();
+    this.socket = socket;
+
+    socket.onceConnect(() {
+      if (this.socket == null) {
+        throw SatelliteException(SatelliteErrorCode.unexpectedState, 'socket got unassigned somehow');
       }
-      final socket = IoSocket();
-      this.socket = socket;
-
-      socket.onceConnect(() {
-        if (this.socket == null) {
-          throw SatelliteException(SatelliteErrorCode.unexpectedState, 'socket got unassigned somehow');
-        }
-        socketHandler = (Uint8List message) => handleIncoming(message);
-        //notifier.connectivityStateChange(this.dbName, 'connected')
-        socket.onMessage(socketHandler!);
-        socket.onError((error) {
-          // this.notifier.connectivityStateChange(this.dbName, 'error')
-        });
-        socket.onClose(() {
-          // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
-        });
+      socketHandler = (Uint8List message) => handleIncoming(message);
+      //notifier.connectivityStateChange(this.dbName, 'connected')
+      socket.onMessage(socketHandler!);
+      socket.onError((error) {
+        // this.notifier.connectivityStateChange(this.dbName, 'error')
       });
-
-      socket.onceError((error) {
-        this.socket = null;
+      socket.onClose(() {
         // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
-        throw error;
       });
-
-      final host = opts.host;
-      final port = opts.port;
-      final ssl = opts.ssl;
-      final url = "${ssl ? 'wss' : 'ws'}://$host:$port/ws";
-      socket.open(ConnectionOptions(url));
+      connectCompleter.complete();
     });
 
-    await connectPromise;
+    socket.onceError((error) {
+      this.socket = null;
+      // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
+      connectCompleter.completeError(error);
+    });
+
+    final host = opts.host;
+    final port = opts.port;
+    final ssl = opts.ssl;
+    final url = "${ssl ? 'wss' : 'ws'}://$host:$port/ws";
+    socket.open(ConnectionOptions(url));
+
+    await connectCompleter.future;
 
     // TODO: Retry policy
     // const retryPolicy = { ...this.connectionRetryPolicy }
@@ -186,6 +195,35 @@ class Client extends EventEmitter {
     // }
 
     // return backOff(() => connectPromise, retryPolicy)
+  }
+
+  Future<void> close() async {
+    print('closing client');
+
+    outbound = resetReplication(outbound.enqueuedLsn, outbound.ackLsn, null);
+    inbound = resetReplication(
+      inbound.enqueuedLsn,
+      inbound.ackLsn,
+      null,
+    );
+
+    socketHandler = null;
+    removeAllListeners();
+
+    if (socket != null) {
+      socket!.closeAndRemoveListeners();
+      socket = null;
+    }
+  }
+
+  bool isClosed() {
+    return socketHandler == null;
+  }
+
+  void removeAllListeners() {
+    for (final listener in listeners) {
+      removeEventListener(listener);
+    }
   }
 
   void handleIncoming(Uint8List data) {
@@ -266,14 +304,7 @@ class Client extends EventEmitter {
       throw SatelliteException(SatelliteErrorCode.unexpectedMessageType, "${request.runtimeType}");
     }
 
-    final type = getSizeBuf(msgType);
-    final msg = encodeMessage(request);
-
-    final totalBufLen = type.length + msg.length;
-    final buffer = Uint8List(totalBufLen);
-    buffer.setRange(0, 1, type);
-    buffer.setRange(1, totalBufLen, msg);
-
+    final buffer = encodeSocketMessage(msgType, request);
     _socket.write(buffer);
   }
 
@@ -762,4 +793,16 @@ List<int> serializeColumnData(String column) {
 
 List<int> serializeNullData() {
   return TypeEncoder.text('');
+}
+
+Uint8List encodeSocketMessage(SatMsgType msgType, Object msg) {
+  final typeEncoded = getSizeBuf(msgType);
+  final msgEncoded = encodeMessage(msg);
+  final totalBufLen = typeEncoded.length + msgEncoded.length;
+
+  final buffer = Uint8List(totalBufLen);
+  buffer.setRange(0, 1, typeEncoded);
+  buffer.setRange(1, totalBufLen, msgEncoded);
+
+  return buffer;
 }

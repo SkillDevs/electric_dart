@@ -20,3 +20,7 @@ class ConnectionOptions {
 
   ConnectionOptions(this.url);
 }
+
+abstract class SocketFactory {
+  Socket create();
+}

@@ -17,6 +17,9 @@ const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   minSnapshotWindow: 40,
 );
 
+const kDefaultSatelliteTimeout = 3000;
+const kDefaultSatellitePushPeriod = 500;
+
 class SatelliteClientOpts {
   final String host;
   final int port;
@@ -28,8 +31,8 @@ class SatelliteClientOpts {
     required this.host,
     required this.port,
     required this.ssl,
-    required this.timeout,
-    required this.pushPeriod,
+    this.timeout = kDefaultSatelliteTimeout,
+    this.pushPeriod = kDefaultSatellitePushPeriod,
   });
 }
 

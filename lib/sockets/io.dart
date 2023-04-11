@@ -4,7 +4,14 @@ import 'dart:typed_data';
 import 'package:electric_client/sockets/sockets.dart';
 import 'package:web_socket_client/web_socket_client.dart';
 
-class IoSocket implements Socket {
+class WebSocketIOFactory implements SocketFactory {
+  @override
+  Socket create() {
+    return WebSocketIO();
+  }
+}
+
+class WebSocketIO implements Socket {
   WebSocket? socket;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 

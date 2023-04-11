@@ -5,7 +5,7 @@ import 'package:events_emitter/events_emitter.dart';
 import 'package:web_socket_client/web_socket_client.dart';
 
 class WebsocketIO extends EventEmitter {
-  final Client client;
+  final SatelliteClient client;
 
   WebsocketIO(this.client);
 

@@ -14,7 +14,7 @@ import 'package:electric_client/util/types.dart';
 
 class Satellite {
   final ConsoleClient console;
-  final Client client;
+  final SatelliteClient client;
   final SatelliteConfig config;
   final DatabaseAdapter adapter;
   final Migrator migrator;

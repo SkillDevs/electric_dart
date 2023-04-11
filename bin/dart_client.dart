@@ -8,6 +8,7 @@ import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/process.dart';
+import 'package:electric_client/sockets/io.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'todo_migrations.dart';
@@ -21,9 +22,12 @@ void main(List<String> arguments) async {
     port: 5133,
     ssl: false,
   );
+  final dbName = "electric.db";
 
-  final client = Client(
-    SatelliteClientOpts(
+  final client = SatelliteClient(
+    dbName: dbName,
+    socketFactory: WebSocketIOFactory(),
+    opts: SatelliteClientOpts(
       host: replicationConfig.host,
       port: replicationConfig.port,
       ssl: replicationConfig.ssl,
@@ -32,7 +36,7 @@ void main(List<String> arguments) async {
     ),
   );
 
-  final dbFile = File("electric.db");
+  final dbFile = File(dbName);
   final db = sqlite3.open(dbFile.path);
 
   final adapter = SqliteAdapter(db);
