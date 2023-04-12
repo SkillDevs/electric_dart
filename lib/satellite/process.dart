@@ -169,7 +169,7 @@ class Satellite {
     final origin = transaction.origin!;
 
     final opLogEntries = fromTransaction(transaction, relations);
-    final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(transaction.commitTimestamp);
+    final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(transaction.commitTimestamp.toInt());
     await _applyTransactionInternal(origin, commitTimestamp, opLogEntries, transaction.lsn);
   }
 

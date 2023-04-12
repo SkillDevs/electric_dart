@@ -1,4 +1,5 @@
 import 'package:electric_client/proto/satellite.pb.dart';
+import 'package:fixnum/fixnum.dart';
 
 typedef LSN = List<int>;
 
@@ -86,14 +87,19 @@ class LogPositions {
 }
 
 class Transaction {
-  final int commitTimestamp;
-  final LSN lsn;
+  final Int64 commitTimestamp;
+  LSN lsn;
   final List<Change> changes;
 
   // This field is only set by transactions coming from Electric
   final String? origin;
 
-  Transaction(this.commitTimestamp, this.lsn, this.changes, this.origin);
+  Transaction({
+    required this.commitTimestamp,
+    required this.lsn,
+    required this.changes,
+    this.origin,
+  });
 }
 
 enum ChangeType {

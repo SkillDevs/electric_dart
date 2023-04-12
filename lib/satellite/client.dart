@@ -12,7 +12,6 @@ import 'package:electric_client/util/extension.dart';
 import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
-import 'package:fixnum/fixnum.dart';
 import 'package:retry/retry.dart' as retry_lib;
 
 class IncomingHandler {
@@ -284,6 +283,20 @@ class SatelliteClient extends EventEmitter {
       await callback(txnEvent.transaction);
       txnEvent.ackCb();
     });
+  }
+
+  void enqueueTransaction(Transaction transaction) {
+    if (outbound.isReplicating != ReplicationStatus.active) {
+      throw SatelliteException(SatelliteErrorCode.replicationNotStarted,
+          'enqueuing a transaction while outbound replication has not started');
+    }
+
+    outbound.transactions.add(transaction);
+    outbound.enqueuedLsn = transaction.lsn;
+
+    if (throttledPushTransaction != null) {
+      throttledPushTransaction!.call();
+    }
   }
 
   Future<void> startReplication(LSN? lsn) async {
@@ -593,10 +606,10 @@ class SatelliteClient extends EventEmitter {
 
       if (op.hasBegin()) {
         final transaction = Transaction(
-          op.begin.commitTimestamp.toInt(),
-          op.begin.lsn,
-          [],
-          op.begin.origin,
+          commitTimestamp: op.begin.commitTimestamp,
+          lsn: op.begin.lsn,
+          changes: [],
+          origin: op.begin.origin,
         );
         replication.transactions.add(transaction);
       }
@@ -605,10 +618,10 @@ class SatelliteClient extends EventEmitter {
       if (op.hasCommit()) {
         final lastTx = replication.transactions[lastTxnIdx];
         final Transaction transaction = Transaction(
-          lastTx.commitTimestamp,
-          lastTx.lsn,
-          lastTx.changes,
-          lastTx.origin,
+          commitTimestamp: lastTx.commitTimestamp,
+          lsn: lastTx.lsn,
+          changes: lastTx.changes,
+          origin: lastTx.origin,
         );
         print("we have commit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         // in the future, emitting this event can be decoupled
@@ -685,7 +698,7 @@ class SatelliteClient extends EventEmitter {
     final List<SatTransOp> ops = [
       SatTransOp(
         begin: SatOpBegin(
-          commitTimestamp: Int64(transaction.commitTimestamp),
+          commitTimestamp: transaction.commitTimestamp,
           lsn: transaction.lsn,
         ),
       ),

@@ -1,16 +1,20 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
+import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/sockets/io.dart';
+import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:test/test.dart';
 
+import 'common.dart';
 import 'server_ws_stub.dart';
 
 late SatelliteWSServerStub server;
@@ -204,6 +208,250 @@ void main() {
         isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.replicationNotStarted),
       );
     }
+  });
+
+  test('server pings client', () async {
+    await connectAndAuth();
+
+    final start = SatInStartReplicationResp();
+    final ping = SatPingReq();
+    final stop = SatInStopReplicationResp();
+    final completer = Completer();
+
+    server.nextResponses([start, ping]);
+    server.nextResponses([
+      (_) {
+        completer.complete();
+      },
+    ]);
+    server.nextResponses([stop]);
+
+    await client.startReplication(null);
+    await client.stopReplication();
+
+    await completer.future;
+  });
+
+  test('receive transaction over multiple messages', () async {
+    await connectAndAuth();
+
+    final start = SatInStartReplicationResp();
+    final begin = SatOpBegin(commitTimestamp: Int64.ZERO);
+    final commit = SatOpCommit();
+
+    final Relation rel = Relation(
+      id: 1,
+      schema: 'schema',
+      table: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        RelationColumn(name: 'name1', type: 'TEXT'),
+        RelationColumn(name: 'name2', type: 'TEXT'),
+      ],
+    );
+
+    final relation = SatRelation(
+      relationId: 1,
+      schemaName: 'schema',
+      tableName: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        SatRelationColumn(name: 'name1', type: 'TEXT'),
+        SatRelationColumn(name: 'name2', type: 'TEXT'),
+      ],
+    );
+
+    final insertOp = SatOpInsert(
+      relationId: 1,
+      rowData: serializeRow({"name1": 'Foo', "name2": 'Bar'}, rel),
+    );
+
+    final updateOp = SatOpUpdate(
+      relationId: 1,
+      rowData: serializeRow({"name1": 'Hello', "name2": 'World!'}, rel),
+      oldRowData: serializeRow({"name1": '', "name2": ''}, rel),
+    );
+    final deleteOp = SatOpDelete(
+      relationId: 1,
+      oldRowData: serializeRow({"name1": 'Hello', "name2": 'World!'}, rel),
+    );
+
+    final firstOpLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(insert: insertOp),
+      ],
+    );
+
+    final secondOpLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(update: updateOp),
+        SatTransOp(delete: deleteOp),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    final stop = SatInStopReplicationResp();
+
+    server.nextResponses([start, relation, firstOpLogMessage, secondOpLogMessage]);
+    server.nextResponses([stop]);
+
+    final completer = Completer();
+
+    client.on('transaction', (TransactionEvent event) {
+      expect(event.transaction.changes.length, 3);
+      completer.complete();
+    });
+
+    await client.startReplication(null);
+    await completer.future;
+  });
+
+  test('acknowledge lsn', () async {
+    await connectAndAuth();
+
+    final lsn = base64.decode('FAKE');
+
+    final start = SatInStartReplicationResp();
+    final begin = SatOpBegin(
+      lsn: lsn,
+      commitTimestamp: Int64.ZERO,
+    );
+    final commit = SatOpCommit();
+
+    final opLog = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    final stop = SatInStopReplicationResp();
+
+    server.nextResponses([start, opLog]);
+    server.nextResponses([stop]);
+
+    final completer = Completer();
+    client.on('transaction', (TransactionEvent event) {
+      final ack = event.ackCb;
+      final lsn0 = client.inbound.ackLsn;
+      expect(lsn0, null);
+      ack();
+      final lsn1 = base64.encode(client.inbound.ackLsn!);
+      expect(lsn1, 'FAKE');
+      completer.complete();
+    });
+
+    await client.startReplication(null);
+    await completer.future;
+  });
+
+  test('send transaction', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+
+    final List<OplogEntry> opLogEntries = [
+      OplogEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        optype: OpType.insert,
+        newRow: '{"id":0}',
+        primaryKey: '{"id":0}',
+        rowid: 0,
+        timestamp: '1970-01-01T00:00:01.000Z',
+        clearTags: '[]',
+      ),
+      OplogEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        optype: OpType.update,
+        newRow: '{"id":1}',
+        oldRow: '{"id":1}',
+        primaryKey: '{"id":1}',
+        rowid: 1,
+        timestamp: '1970-01-01T00:00:01.000Z',
+        clearTags: '["origin@1231232347"]',
+      ),
+      OplogEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        optype: OpType.update,
+        newRow: '{"id":1}',
+        oldRow: '{"id":1}',
+        primaryKey: '{"id":1}',
+        rowid: 2,
+        timestamp: '1970-01-01T00:00:02.000Z',
+        clearTags: '["origin@1231232347"]',
+      ),
+    ];
+
+    final transaction = toTransactions(opLogEntries, kTestRelations);
+
+    final completer = Completer();
+    server.nextResponses([startResp]);
+    server.nextResponses([]);
+
+    // first message is a relation
+    server.nextResponses([
+      (Uint8List data) {
+        final code = data[0];
+        final msgType = getMsgFromCode(code);
+
+        if (msgType == SatMsgType.relation) {
+          final decodedMsg = client.toMessage(data);
+          expect((decodedMsg.msg as SatRelation).relationId, 1);
+        }
+      },
+    ]);
+
+    // second message is a transaction
+    server.nextResponses([
+      (Uint8List data) {
+        final code = data[0];
+        final msgType = getMsgFromCode(code);
+
+        if (msgType == SatMsgType.opLog) {
+          print(client.toMessage(data));
+          final satOpLog = (client.toMessage(data).msg as SatOpLog).ops;
+
+          final lsn = satOpLog[0].begin.lsn;
+          expect(bytesToNumber(lsn), 1);
+          // TODO: Comparar los valores obtenidos en Javascript y aqui
+          expect(satOpLog[0].begin.commitTimestamp, Int64.ZERO + 1000);
+          // TODO: check values
+        }
+      },
+    ]);
+
+    // third message after new enqueue does not send relation
+    server.nextResponses([
+      (Uint8List data) {
+        final code = data[0];
+        final msgType = getMsgFromCode(code);
+
+        if (msgType == SatMsgType.opLog) {
+          final satOpLog = (client.toMessage(data).msg as SatOpLog).ops;
+
+          final lsn = satOpLog[0].begin.lsn;
+          expect(bytesToNumber(lsn), 2);
+          expect(satOpLog[0].begin.commitTimestamp, Int64.ZERO + 2000);
+          // TODO: check values
+        }
+        completer.complete();
+      },
+    ]);
+
+    await client.startReplication(null);
+
+    // wait a little for replication to start in the opposite direction
+    await Future.delayed(
+      Duration(milliseconds: 100),
+      () {
+        client.enqueueTransaction(transaction[0]);
+        client.enqueueTransaction(transaction[1]);
+      },
+    );
   });
 }
 

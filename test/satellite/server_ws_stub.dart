@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/client.dart';

@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/sets.dart';
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart';
+import 'package:fixnum/fixnum.dart';
 
 // format: UUID@timestamp_in_milliseconds
 typedef Timestamp = String;
@@ -121,12 +123,75 @@ List<OplogEntry> fromTransaction(
       primaryKey: pk,
       rowid: -1, // Not required
       optype: changeTypeToOpType(t.type),
-      timestamp: DateTime.fromMillisecondsSinceEpoch(transaction.commitTimestamp).toIso8601String(), //TODO: Revisar
+      timestamp:
+          DateTime.fromMillisecondsSinceEpoch(transaction.commitTimestamp.toInt()).toIso8601String(), //TODO: Revisar
       newRow: t.record == null ? null : json.encode(t.record),
       oldRow: t.oldRecord == null ? null : json.encode(t.oldRecord),
       clearTags: encodeTags(t.tags),
     );
   }).toList();
+}
+
+List<Transaction> toTransactions(List<OplogEntry> opLogEntries, RelationsCache relations) {
+  if (opLogEntries.isEmpty) {
+    return [];
+  }
+
+  Int64 to_commit_timestamp(String timestamp) {
+    // TODO: Uint64 dart protobuf doesn't have a explicit type for this
+    return Int64(DateTime.parse(timestamp).millisecondsSinceEpoch);
+  }
+
+  Change opLogEntryToChange(OplogEntry entry) {
+    Map<String, Object?>? record, oldRecord;
+    if (entry.newRow != null) {
+      record = json.decode(entry.newRow!);
+    }
+
+    if (entry.oldRow != null) {
+      oldRecord = json.decode(entry.oldRow!);
+    }
+
+    // FIXME: We should not loose UPDATE information here, as otherwise
+    // it will be identical to setting all values in a transaction, instead
+    // of updating values (different CR outcome)
+    return Change(
+      type: entry.optype == OpType.delete ? ChangeType.delete : ChangeType.insert,
+      relation: relations[entry.tablename]!,
+      record: record,
+      oldRecord: oldRecord,
+      tags: decodeTags(entry.clearTags),
+    );
+  }
+
+  final Transaction init = Transaction(
+    commitTimestamp: to_commit_timestamp(opLogEntries[0].timestamp),
+    lsn: numberToBytes(opLogEntries[0].rowid),
+    changes: [],
+  );
+
+  return opLogEntries.fold(
+    [init],
+    (acc, txn) {
+      var currTxn = acc[acc.length - 1];
+
+      final nextTs = to_commit_timestamp(txn.timestamp);
+      if (nextTs != currTxn.commitTimestamp) {
+        final nextTxn = Transaction(
+          commitTimestamp: to_commit_timestamp(txn.timestamp),
+          lsn: numberToBytes(txn.rowid),
+          changes: [],
+        );
+        acc.add(nextTxn);
+        currTxn = nextTxn;
+      }
+
+      final change = opLogEntryToChange(txn);
+      currTxn.changes.add(change);
+      currTxn.lsn = numberToBytes(txn.rowid);
+      return acc;
+    },
+  );
 }
 
 // Convert a list of `OplogEntry`s into a nested `OplogTableChanges` map of
