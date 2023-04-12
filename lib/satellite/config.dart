@@ -24,7 +24,7 @@ class SatelliteClientOpts {
   final String host;
   final int port;
   final bool ssl;
-  final int timeout;
+  int timeout;
   final int pushPeriod;
 
   SatelliteClientOpts({

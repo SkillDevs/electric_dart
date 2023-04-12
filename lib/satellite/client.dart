@@ -6,7 +6,6 @@ import 'package:collection/collection.dart';
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/config.dart';
-import 'package:electric_client/sockets/io.dart';
 import 'package:electric_client/sockets/sockets.dart';
 import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/extension.dart';
@@ -14,7 +13,7 @@ import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 import 'package:fixnum/fixnum.dart';
-import 'package:retry/retry.dart' as retryLib;
+import 'package:retry/retry.dart' as retry_lib;
 
 class IncomingHandler {
   final Object? Function(Object?) handle;
@@ -195,7 +194,7 @@ class SatelliteClient extends EventEmitter {
     }
 
     int retryAttempt = 0;
-    await retryLib.retry(
+    await retry_lib.retry(
       () {
         retryAttempt++;
         return _attemptBody();
@@ -236,7 +235,8 @@ class SatelliteClient extends EventEmitter {
   }
 
   void removeAllListeners() {
-    for (final listener in listeners) {
+    // Prevent concurrent modification
+    for (final listener in [...listeners]) {
       removeEventListener(listener);
     }
   }
@@ -333,7 +333,7 @@ class SatelliteClient extends EventEmitter {
       timer = Timer(Duration(milliseconds: opts.timeout), () {
         print("${request.runtimeType}");
         final error = SatelliteException(SatelliteErrorCode.timeout, "${request.runtimeType}");
-        throw error;
+        completer.completeError(error);
       });
 
       // reject on any error

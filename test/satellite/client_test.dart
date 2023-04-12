@@ -1,8 +1,14 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/sockets/io.dart';
+import 'package:electric_client/util/proto.dart';
+import 'package:electric_client/util/types.dart';
+import 'package:electric_client/util/types.dart';
 import 'package:test/test.dart';
 
 import 'server_ws_stub.dart';
@@ -42,7 +48,7 @@ void main() {
 
   tearDown(() async {
     await client.close();
-    server.close();
+    await server.close();
   });
 
   test('connect success', () async {
@@ -89,6 +95,31 @@ void main() {
     }
   });
 
+  // TODO: handle connection errors scenarios
+
+  Future<void> connectAndAuth() async {
+    await client.connect();
+
+    final authResp = SatAuthResp();
+    server.nextResponses([authResp]);
+    await client.authenticate(createAuthState());
+  }
+
+  test('replication start timeout', () async {
+    client.opts.timeout = 10;
+    await client.connect();
+
+    // empty response will trigger client timeout
+    server.nextResponses([]);
+    try {
+      await client.startReplication(null);
+      fail("start replication should throw");
+    } catch (error) {
+      print("HEYE");
+      expect(error, isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.timeout));
+    }
+  });
+
   test('authentication success', () async {
     await client.connect();
 
@@ -98,6 +129,35 @@ void main() {
     final res = await client.authenticate(createAuthState());
     expect(res.serverId, 'server_identity');
     expect(client.inbound.authenticated, isTrue);
+  });
+
+  test('replication start success', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+    server.nextResponses([startResp]);
+
+    await client.startReplication(null);
+  });
+
+  test('replication start sends FIRST_LSN', () async {
+    await connectAndAuth();
+    final completer = Completer();
+
+    server.nextResponses([
+      (Uint8List data) {
+        final code = data[0];
+        final msgType = getMsgFromCode(code);
+
+        if (msgType == SatMsgType.inStartReplicationReq) {
+          final decodedMsg = client.toMessage(data);
+          expect((decodedMsg.msg as SatInStartReplicationReq).options[0], SatInStartReplicationReq_Option.FIRST_LSN);
+          completer.complete();
+        }
+      },
+    ]);
+    client.startReplication(null);
+    await completer.future;
   });
 }
 
