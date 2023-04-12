@@ -14,6 +14,7 @@ import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:retry/retry.dart' as retryLib;
 
 class IncomingHandler {
   final Object? Function(Object?) handle;
@@ -148,53 +149,67 @@ class SatelliteClient extends EventEmitter {
   Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
-    final Completer<void> connectCompleter = Completer();
+    Future<void> _attemptBody() {
+      final Completer<void> connectCompleter = Completer();
 
-    // TODO: ensure any previous socket is closed, or reject
-    if (this.socket != null) {
-      throw SatelliteException(
-          SatelliteErrorCode.unexpectedState, 'a socket already exist. ensure it is closed before reconnecting.');
-    }
-    final socket = socketFactory.create();
-    this.socket = socket;
-
-    socket.onceConnect(() {
-      if (this.socket == null) {
-        throw SatelliteException(SatelliteErrorCode.unexpectedState, 'socket got unassigned somehow');
+      // TODO: ensure any previous socket is closed, or reject
+      if (this.socket != null) {
+        throw SatelliteException(
+            SatelliteErrorCode.unexpectedState, 'a socket already exist. ensure it is closed before reconnecting.');
       }
-      socketHandler = (Uint8List message) => handleIncoming(message);
-      //notifier.connectivityStateChange(this.dbName, 'connected')
-      socket.onMessage(socketHandler!);
-      socket.onError((error) {
-        // this.notifier.connectivityStateChange(this.dbName, 'error')
+      final socket = socketFactory.create();
+      this.socket = socket;
+
+      socket.onceConnect(() {
+        if (this.socket == null) {
+          throw SatelliteException(SatelliteErrorCode.unexpectedState, 'socket got unassigned somehow');
+        }
+        socketHandler = (Uint8List message) => handleIncoming(message);
+        //notifier.connectivityStateChange(this.dbName, 'connected')
+        socket.onMessage(socketHandler!);
+        socket.onError((error) {
+          // this.notifier.connectivityStateChange(this.dbName, 'error')
+        });
+        socket.onClose(() {
+          // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
+        });
+        connectCompleter.complete();
       });
-      socket.onClose(() {
+
+      socket.onceError((error) {
+        // print("Once Error $error");
+        this.socket = null;
         // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
+        if (!connectCompleter.isCompleted) {
+          connectCompleter.completeError(error);
+        }
       });
-      connectCompleter.complete();
-    });
 
-    socket.onceError((error) {
-      this.socket = null;
-      // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
-      connectCompleter.completeError(error);
-    });
+      final host = opts.host;
+      final port = opts.port;
+      final ssl = opts.ssl;
+      final url = "${ssl ? 'wss' : 'ws'}://$host:$port/ws";
+      socket.open(ConnectionOptions(url));
 
-    final host = opts.host;
-    final port = opts.port;
-    final ssl = opts.ssl;
-    final url = "${ssl ? 'wss' : 'ws'}://$host:$port/ws";
-    socket.open(ConnectionOptions(url));
+      return connectCompleter.future;
+    }
 
-    await connectCompleter.future;
-
-    // TODO: Retry policy
-    // const retryPolicy = { ...connectionRetryPolicy };
-    // if (retryHandler) {
-    //   retryPolicy.retry = retryHandler
-    // }
-
-    // await  backOff(() => connectCompleter.future, retryPolicy);
+    int retryAttempt = 0;
+    await retryLib.retry(
+      () {
+        retryAttempt++;
+        return _attemptBody();
+      },
+      maxAttempts: 10,
+      maxDelay: Duration(milliseconds: 100),
+      delayFactor: Duration(milliseconds: 100),
+      retryIf: (e) {
+        if (retryHandler != null) {
+          return retryHandler(e, retryAttempt);
+        }
+        return true;
+      },
+    );
   }
 
   Future<void> close() async {

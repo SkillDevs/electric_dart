@@ -67,73 +67,60 @@ class WebSocketIO implements Socket {
 
   @override
   Socket open(ConnectionOptions opts) {
-    () async {
-      try {
-        final ws = await io.WebSocket.connect(
-          opts.url,
-        );
-        while (_onceConnectCallbacks.isNotEmpty) {
-          _onceConnectCallbacks.removeLast()();
-        }
-
-        _channel = IOWebSocketChannel(ws);
-        final msgSubscription = _channel!.stream.listen(
-          (rawData) {
-            print("Raw Message $rawData");
-            final bytes = rawData as Uint8List;
-
-            for (final cb in _messageCallbacks) {
-              cb(bytes);
-            }
-          },
-          cancelOnError: true,
-        );
-        _subscriptions.add(msgSubscription);
-      } catch (e) {
-        for (final cb in _errorCallbacks) {
-          cb(e);
-        }
-
-        while (_onceErrorCallbacks.isNotEmpty) {
-          _onceErrorCallbacks.removeLast()(Exception('failed to establish connection'));
-        }
-      }
-
-      //.timeout(opts.);
-
-      // this.socket = socket;
-      // //socket.binaryType = 'arraybuffer'
-
-      // final connectionSubs = socket.stream.listen(
-      //   (ConnectionState connectionState) {
-      //     // TODO: Reconnected state === open ??
-      //     print(connectionState);
-      //     if (connectionState is Connected) {
-      //       while (_onceConnectCallbacks.isNotEmpty) {
-      //         _onceConnectCallbacks.removeLast()();
-      //       }
-      //     }
-      //   },
-      //   onError: (Object e, st) {
-      //     print("On error connction $e");
-
-      //     for (final cb in _errorCallbacks) {
-      //       cb(e);
-      //     }
-
-      //     while (_onceErrorCallbacks.isNotEmpty) {
-      //       _onceErrorCallbacks.removeLast()(Exception('failed to establish connection'));
-      //     }
-      //   },
-      //   onDone: () {
-      //     for (final cb in _closeCallbacks) {
-      //       cb();
-      //     }
-      //   },
-      // );
-      // _subscriptions.add(connectionSubs);
-    }();
+    _asyncStart(opts);
     return this;
+  }
+
+  Future<void> _asyncStart(ConnectionOptions opts) async {
+    late final io.WebSocket ws;
+    try {
+      ws = await io.WebSocket.connect(
+        opts.url,
+      );
+    } catch (e) {
+      _notifyErrorAndCloseSocket(Exception('failed to establish connection'));
+      return;
+    }
+
+    // Notify connected
+    while (_onceConnectCallbacks.isNotEmpty) {
+      _onceConnectCallbacks.removeLast()();
+    }
+
+    _channel = IOWebSocketChannel(ws);
+    final msgSubscription = _channel!.stream //
+        .listen(
+      (rawData) {
+        try {
+          final bytes = rawData as Uint8List;
+
+          // Notify message
+          for (final cb in _messageCallbacks) {
+            cb(bytes);
+          }
+        } catch (e) {
+          _notifyErrorAndCloseSocket(e);
+        }
+      },
+      cancelOnError: true,
+      onError: (e) {
+        _notifyErrorAndCloseSocket(e);
+      },
+    );
+    _subscriptions.add(msgSubscription);
+  }
+
+  void _notifyErrorAndCloseSocket(Object e) {
+    for (final cb in _errorCallbacks) {
+      cb(e);
+    }
+
+    while (_onceErrorCallbacks.isNotEmpty) {
+      _onceErrorCallbacks.removeLast()(e);
+    }
+
+    _channel?.sink.close();
+    _channel = null;
   }
 
   @override

@@ -49,7 +49,7 @@ void main() {
     await client.connect();
   });
 
-  /* test('connection backoff success', () async {
+  test('connection backoff success', () async {
     server.close();
 
     bool passed = false;
@@ -87,7 +87,7 @@ void main() {
     } catch (e) {
       // Should pass
     }
-  }); */
+  });
 
   test('authentication success', () async {
     await client.connect();

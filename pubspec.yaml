@@ -19,6 +19,7 @@ dependencies:
   fixnum: ^1.1.0
   http: ^0.13.5
   protobuf: ^2.1.0
+  retry: ^3.1.1
   sqlite3: ^1.10.1
   synchronized: ^3.0.1
   uuid: ^3.0.7
