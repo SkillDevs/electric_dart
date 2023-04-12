@@ -99,13 +99,13 @@ class SatelliteClient extends EventEmitter {
 
       case SatMsgType.inStopReplicationReq:
         return IncomingHandler(
-          handle: (v) => handleInStopReplicationReq(v as SatInStopReplicationReq),
+          handle: (v) => handleStopReq(v as SatInStopReplicationReq),
           isRpc: false,
         );
 
       case SatMsgType.inStopReplicationResp:
         return IncomingHandler(
-          handle: (v) => handleInStopReplicationResp(v as SatInStopReplicationResp),
+          handle: (v) => handleStopResp(v as SatInStopReplicationResp),
           isRpc: true,
         );
 
@@ -308,6 +308,16 @@ class SatelliteClient extends EventEmitter {
     return rpc(request);
   }
 
+  Future<void> stopReplication() {
+    if (inbound.isReplicating != ReplicationStatus.active) {
+      return Future.error(SatelliteException(SatelliteErrorCode.replicationNotStarted, "replication not active"));
+    }
+
+    inbound.isReplicating = ReplicationStatus.stopping;
+    final request = SatInStopReplicationReq();
+    return rpc(request);
+  }
+
   void sendMessage(Object request) {
     print("Sending message $request");
     final _socket = socket;
@@ -490,14 +500,39 @@ class SatelliteClient extends EventEmitter {
     }
   }
 
-  void handleInStopReplicationReq(SatInStopReplicationReq value) {
-    // TODO: Finish
-    throw UnimplementedError("Handle stop replication Req");
+  void handleStopReq(SatInStopReplicationReq value) {
+    if (outbound.isReplicating == ReplicationStatus.active) {
+      outbound.isReplicating = ReplicationStatus.stopped;
+
+      if (throttledPushTransaction != null) {
+        throttledPushTransaction = null;
+      }
+
+      final response = SatInStopReplicationResp();
+      sendMessage(response);
+    } else {
+      final response = SatErrorResp(
+        errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
+      );
+      sendMessage(response);
+
+      emit(
+          'error',
+          SatelliteException(
+              SatelliteErrorCode.unexpectedState, "unexpected state ${inbound.isReplicating} handling 'stop' request"));
+    }
   }
 
-  void handleInStopReplicationResp(SatInStopReplicationResp value) {
-    //TODO: Finish
-    throw UnimplementedError("Handle stop replication resp");
+  void handleStopResp(SatInStopReplicationResp value) {
+    if (inbound.isReplicating == ReplicationStatus.stopping) {
+      inbound.isReplicating = ReplicationStatus.stopped;
+    } else {
+      emit(
+        'error',
+        SatelliteException(
+            SatelliteErrorCode.unexpectedState, "unexpected state ${inbound.isReplicating} handling 'stop' response"),
+      );
+    }
   }
 
   void handlePingReq() {
@@ -544,9 +579,8 @@ class SatelliteClient extends EventEmitter {
     processOpLogMessage(message, inbound);
   }
 
-  void handleErrorResp(SatErrorResp value) {
-    // TODO: Finish
-    throw UnimplementedError("Handle error Resp");
+  void handleErrorResp(SatErrorResp error) {
+    emit('error', Exception("server replied with error code: ${error.errorType}"));
   }
 
   void processOpLogMessage(

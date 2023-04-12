@@ -159,6 +159,52 @@ void main() {
     client.startReplication(null);
     await completer.future;
   });
+
+  test('replication start failure', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+    server.nextResponses([startResp]);
+
+    try {
+      await client.startReplication(null);
+      await client.startReplication(null); // fails
+    } catch (error) {
+      expect(
+        error,
+        isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.replicationAlreadyStarted),
+      );
+    }
+  });
+
+  test('replication stop success', () async {
+    await connectAndAuth();
+
+    final start = SatInStartReplicationResp();
+    final stop = SatInStopReplicationResp();
+    server.nextResponses([start]);
+    server.nextResponses([stop]);
+
+    await client.startReplication(null);
+    await client.stopReplication();
+  });
+
+  test('replication stop failure', () async {
+    await connectAndAuth();
+
+    final stop = SatInStopReplicationResp();
+    server.nextResponses([stop]);
+
+    try {
+      await client.stopReplication();
+      fail("stop replication should throw");
+    } catch (error) {
+      expect(
+        error,
+        isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.replicationNotStarted),
+      );
+    }
+  });
 }
 
 AuthState createAuthState() {
