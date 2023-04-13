@@ -32,3 +32,7 @@ abstract class Client {
   EventListener<void> subscribeToOutboundEvent(void Function() callback);
   void unsubscribeToOutboundEvent(EventListener<void> eventListener);
 }
+
+abstract class ConsoleClient {
+  Future<TokenResponse> token(TokenRequest req);
+}

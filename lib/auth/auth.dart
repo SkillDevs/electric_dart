@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:electric_client/config/config.dart';
+import 'package:electric_client/satellite/satellite.dart';
 import 'package:http/http.dart' as http;
 
 class AuthState {
@@ -38,11 +39,12 @@ class TokenResponse {
   TokenResponse({required this.token, required this.refreshToken});
 }
 
-class ConsoleClient {
+class ConsoleHttpClient implements ConsoleClient {
   final ElectricConfig config;
 
-  ConsoleClient(this.config);
+  ConsoleHttpClient(this.config);
 
+  @override
   Future<TokenResponse> token(TokenRequest req) async {
     print("fetching token for ${req.app} ${req.env} ${req.clientId}");
 

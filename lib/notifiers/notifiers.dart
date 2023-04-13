@@ -10,7 +10,7 @@ class AuthStateNotification extends Notification {
 
 class Change {
   final QualifiedTablename qualifiedTablename;
-  final List<RowId>? rowids;
+  List<RowId>? rowids;
 
   Change({
     required this.qualifiedTablename,

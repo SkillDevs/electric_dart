@@ -4,6 +4,7 @@ import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/config/config.dart';
 import 'package:electric_client/electric/sqlite3_adapter.dart';
 import 'package:electric_client/migrators/bundle.dart';
+import 'package:electric_client/notifiers/event.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/process.dart';
@@ -41,11 +42,11 @@ void main(List<String> arguments) async {
   final adapter = SqliteAdapter(db);
   final migrator = BundleMigrator(adapter: adapter, migrations: todoMigrations);
 
-  final satellite = Satellite(
+  final satellite = SatelliteProcess(
     client: client,
     config: SatelliteConfig(app: appId, env: env),
     migrator: migrator,
-    console: ConsoleClient(
+    console: ConsoleHttpClient(
       ElectricConfig(
         app: appId,
         env: env,
@@ -59,9 +60,9 @@ void main(List<String> arguments) async {
     ),
     opts: kSatelliteDefaults,
     adapter: adapter,
+    dbName: dbName,
+    notifier: EventNotifier(dbName: dbName),
   );
-
-  satellite.client.on("error", (data) => print("Client error $data"));
 
   await satellite.start(null);
 }

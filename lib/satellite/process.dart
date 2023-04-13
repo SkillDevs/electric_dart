@@ -11,10 +11,15 @@ import 'package:electric_client/satellite/merge.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/satellite/satellite.dart';
 import 'package:electric_client/util/common.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:electric_client/util/tablename.dart';
+import 'package:electric_client/util/types.dart' hide Change;
 import 'package:fpdart/fpdart.dart';
 
-class SatelliteProcess extends Satellite {
+typedef ChangeAccumulator = Map<String, Change>;
+
+class SatelliteProcess implements Satellite {
+  @override
+  final DbName dbName;
   final ConsoleClient console;
   final Client client;
   final SatelliteConfig config;
@@ -23,6 +28,9 @@ class SatelliteProcess extends Satellite {
   final DatabaseAdapter adapter;
   @override
   final Migrator migrator;
+
+  @override
+  final Notifier notifier;
 
   AuthState? _authState;
   LSN? _lsn;
@@ -37,12 +45,14 @@ class SatelliteProcess extends Satellite {
   late void Function() _throttledSnapshot;
 
   SatelliteProcess({
+    required this.dbName,
     required this.console,
     required this.client,
     required this.config,
     required this.opts,
     required this.adapter,
     required this.migrator,
+    required this.notifier,
   }) {
     _throttledSnapshot = throttle(
       _performSnapshot,
@@ -393,34 +403,33 @@ class SatelliteProcess extends Satellite {
 
   Future<void> _notifyChanges(List<OplogEntry> results) async {
     print('notify changes');
-    // final ChangeAccumulator acc = {};
+    final ChangeAccumulator acc = {};
 
-    // // Would it be quicker to do this using a second SQL query that
-    // // returns results in `Change` format?!
-    // const reduceFn = (acc: ChangeAccumulator, entry: OplogEntry) => {
-    //   const qt = new QualifiedTablename(entry.namespace, entry.tablename)
-    //   const key = qt.toString()
+    // Would it be quicker to do this using a second SQL query that
+    // returns results in `Change` format?!
+    reduceFn(ChangeAccumulator acc, OplogEntry entry) {
+      final qt = QualifiedTablename(entry.namespace, entry.tablename);
+      final key = qt.toString();
 
-    //   if (key in acc) {
-    //     const change: Change = acc[key]
+      if (acc.containsKey(key)) {
+        final Change change = acc[key]!;
 
-    //     if (change.rowids === undefined) {
-    //       change.rowids = []
-    //     }
+        change.rowids ??= [];
 
-    //     change.rowids.push(entry.rowid)
-    //   } else {
-    //     acc[key] = {
-    //       qualifiedTablename: qt,
-    //       rowids: [entry.rowid],
-    //     }
-    //   }
+        change.rowids!.add(entry.rowid);
+      } else {
+        acc[key] = Change(
+          qualifiedTablename: qt,
+          rowids: [entry.rowid],
+        );
+      }
 
-    //   return acc
-    // }
+      return acc;
+    }
+    // final changes = Object.values(results.reduce(reduceFn, acc))
 
-    // const changes = Object.values(results.reduce(reduceFn, acc))
-    // this.notifier.actuallyChanged(this.dbName, changes)
+    final changes = results.fold(acc, reduceFn).values.toList();
+    notifier.actuallyChanged(dbName, changes);
   }
 
   Future<Either<Exception, void>> _connectAndStartReplication() async {
@@ -586,17 +595,21 @@ class SatelliteProcess extends Satellite {
   }
 
   @override
-  // TODO: implement dbName
-  DbName get dbName => throw UnimplementedError();
+  Future<void> stop() async {
+    print('stop polling');
+    // if (_pollingInterval != null) {
+    //   clearInterval(this._pollingInterval);
+    //   this._pollingInterval = undefined
+    // }
 
-  @override
-  // TODO: implement notifier
-  Notifier get notifier => throw UnimplementedError();
+    // if (_potentialDataChangeSubscription != null) {
+    //   notifier.unsubscribeFromPotentialDataChanges(
+    //     _potentialDataChangeSubscription
+    //   );
+    //   _potentialDataChangeSubscription = null;
+    // }
 
-  @override
-  Future<void> stop() {
-    // TODO: implement stop
-    throw UnimplementedError();
+    // await client.close();
   }
 }
 
