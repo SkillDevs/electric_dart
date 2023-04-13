@@ -1,9 +1,11 @@
 import 'package:electric_client/proto/satellite.pb.dart';
+import 'package:events_emitter/listener.dart';
 import 'package:fixnum/fixnum.dart';
 
 typedef LSN = List<int>;
-
+typedef DbName = String;
 typedef SqlValue = Object?;
+typedef RowId = int;
 
 class Statement {
   final String sql;
@@ -25,7 +27,7 @@ class RunResult {
   RunResult({required this.rowsAffected});
 }
 
-class SatelliteException {
+class SatelliteException implements Exception {
   final SatelliteErrorCode code;
   final String? message;
 
@@ -155,7 +157,7 @@ enum AckType {
   remoteCommit,
 }
 
-typedef AckCallback = Function(AckLsnEvent evt);
+typedef AckCallback = EventCallback<AckLsnEvent>;
 
 // class Relation {
 //   final int id;
@@ -193,4 +195,11 @@ class AckLsnEvent {
   final AckType ackType;
 
   AckLsnEvent(this.lsn, this.ackType);
+}
+
+enum ConnectivityState {
+  available,
+  connected,
+  disconnected,
+  error,
 }

@@ -131,7 +131,7 @@ void main() {
     server.nextResponses([authResp]);
 
     final res = await client.authenticate(createAuthState());
-    expect(res.serverId, 'server_identity');
+    expect(res.getOrElse((l) => throw StateError("auth error")).serverId, 'server_identity');
     expect(client.inbound.authenticated, isTrue);
   });
 

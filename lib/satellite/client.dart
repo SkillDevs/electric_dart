@@ -6,12 +6,14 @@ import 'package:collection/collection.dart';
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/config.dart';
+import 'package:electric_client/satellite/satellite.dart';
 import 'package:electric_client/sockets/sockets.dart';
 import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/extension.dart';
 import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:retry/retry.dart' as retry_lib;
 
 class IncomingHandler {
@@ -28,7 +30,7 @@ class DecodedMessage {
   DecodedMessage(this.msg, this.msgType);
 }
 
-class SatelliteClient extends EventEmitter {
+class SatelliteClient extends EventEmitter implements Client {
   final String dbName;
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
@@ -144,7 +146,8 @@ class SatelliteClient extends EventEmitter {
     }
   }
 
-  Future<void> connect({
+  @override
+  Future<Either<SatelliteException, void>> connect({
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
     Future<void> _attemptBody() {
@@ -208,9 +211,12 @@ class SatelliteClient extends EventEmitter {
         return true;
       },
     );
+
+    return Right(null);
   }
 
-  Future<void> close() async {
+  @override
+  Future<Either<SatelliteException, void>> close() async {
     print('closing client');
 
     outbound = resetReplication(outbound.enqueuedLsn, outbound.ackLsn, null);
@@ -227,8 +233,11 @@ class SatelliteClient extends EventEmitter {
       socket!.closeAndRemoveListeners();
       socket = null;
     }
+
+    return Right(null);
   }
 
+  @override
   bool isClosed() {
     return socketHandler == null;
   }
@@ -262,7 +271,8 @@ class SatelliteClient extends EventEmitter {
     }
   }
 
-  Future<AuthResponse> authenticate(AuthState authState) async {
+  @override
+  Future<Either<SatelliteException, AuthResponse>> authenticate(AuthState authState) async {
     final headers = [
       SatAuthHeaderPair(
         key: SatAuthHeader.PROTO_VERSION,
@@ -274,9 +284,10 @@ class SatelliteClient extends EventEmitter {
       token: authState.token,
       headers: headers,
     );
-    return rpc<AuthResponse>(request);
+    return Right(await rpc<AuthResponse>(request));
   }
 
+  @override
   void subscribeToTransactions(Future<void> Function(Transaction transaction) callback) {
     on<TransactionEvent>('transaction', (txnEvent) async {
       // move callback execution outside the message handling path
@@ -285,7 +296,8 @@ class SatelliteClient extends EventEmitter {
     });
   }
 
-  void enqueueTransaction(Transaction transaction) {
+  @override
+  Either<SatelliteException, void> enqueueTransaction(Transaction transaction) {
     if (outbound.isReplicating != ReplicationStatus.active) {
       throw SatelliteException(SatelliteErrorCode.replicationNotStarted,
           'enqueuing a transaction while outbound replication has not started');
@@ -297,9 +309,12 @@ class SatelliteClient extends EventEmitter {
     if (throttledPushTransaction != null) {
       throttledPushTransaction!.call();
     }
+
+    return Right(null);
   }
 
-  Future<void> startReplication(LSN? lsn) async {
+  @override
+  Future<Either<SatelliteException, void>> startReplication(LSN? lsn) async {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(SatelliteErrorCode.replicationAlreadyStarted, "replication already started");
     }
@@ -318,17 +333,22 @@ class SatelliteClient extends EventEmitter {
       request = SatInStartReplicationReq(lsn: lsn);
     }
 
-    return rpc(request);
+    await rpc(request);
+
+    return Right(null);
   }
 
-  Future<void> stopReplication() {
+  @override
+  Future<Either<SatelliteException, void>> stopReplication() async {
     if (inbound.isReplicating != ReplicationStatus.active) {
       return Future.error(SatelliteException(SatelliteErrorCode.replicationNotStarted, "replication not active"));
     }
 
     inbound.isReplicating = ReplicationStatus.stopping;
     final request = SatInStopReplicationReq();
-    return rpc(request);
+    await rpc(request);
+
+    return Right(null);
   }
 
   void sendMessage(Object request) {
@@ -384,10 +404,12 @@ class SatelliteClient extends EventEmitter {
     }
   }
 
+  @override
   void resetOutboundLogPositions(LSN sent, LSN ack) {
     outbound = resetReplication(sent, ack, null);
   }
 
+  @override
   LogPositions getOutboundLogPositions() {
     return LogPositions(
       ack: outbound.ackLsn ?? kDefaultLogPos,
@@ -478,18 +500,22 @@ class SatelliteClient extends EventEmitter {
     }
   }
 
+  @override
   EventListener<AckLsnEvent> subscribeToAck(AckCallback callback) {
     return on<AckLsnEvent>('ack_lsn', callback);
   }
 
+  @override
   void unsubscribeToAck(EventListener<AckLsnEvent> eventListener) {
     removeEventListener(eventListener);
   }
 
+  @override
   EventListener<void> subscribeToOutboundEvent(void Function() callback) {
     return on<void>('outbound_started', (_) => callback());
   }
 
+  @override
   void unsubscribeToOutboundEvent(EventListener<void> eventListener) {
     removeEventListener(eventListener);
   }

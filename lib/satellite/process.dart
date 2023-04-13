@@ -4,19 +4,24 @@ import 'dart:convert';
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/migrators/migrators.dart';
+import 'package:electric_client/notifiers/notifiers.dart';
 import 'package:electric_client/proto/satellite.pbenum.dart';
-import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/merge.dart';
 import 'package:electric_client/satellite/oplog.dart';
+import 'package:electric_client/satellite/satellite.dart';
 import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/types.dart';
+import 'package:fpdart/fpdart.dart';
 
-class Satellite {
+class SatelliteProcess extends Satellite {
   final ConsoleClient console;
-  final SatelliteClient client;
+  final Client client;
   final SatelliteConfig config;
+
+  @override
   final DatabaseAdapter adapter;
+  @override
   final Migrator migrator;
 
   AuthState? _authState;
@@ -31,7 +36,7 @@ class Satellite {
 
   late void Function() _throttledSnapshot;
 
-  Satellite({
+  SatelliteProcess({
     required this.console,
     required this.client,
     required this.config,
@@ -45,7 +50,8 @@ class Satellite {
     );
   }
 
-  Future<void> start(AuthState? authState) async {
+  @override
+  Future<Either<Exception, void>> start(AuthState? authState) async {
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -76,7 +82,7 @@ class Satellite {
       print("no lsn retrieved from store");
     }
 
-    await _connectAndStartReplication();
+    return await _connectAndStartReplication();
   }
 
   Future<void> _setAuthState(AuthState? authState) async {
@@ -417,7 +423,7 @@ class Satellite {
     // this.notifier.actuallyChanged(this.dbName, changes)
   }
 
-  Future<void> _connectAndStartReplication() async {
+  Future<Either<Exception, void>> _connectAndStartReplication() async {
     print("connecting and starting replication");
 
     final authState = _authState;
@@ -431,11 +437,10 @@ class Satellite {
         .then((_) => refreshAuthState(authState))
         .then((freshAuthState) => client.authenticate(freshAuthState))
         .then((_) => client.startReplication(_lsn))
-        .then((_) => null)
         .onError(
       (error, st) {
         print("couldn't start replication: $error");
-        return null;
+        return Right(null);
       },
     );
   }
@@ -578,6 +583,20 @@ class Satellite {
         shadow.tags,
       ],
     );
+  }
+
+  @override
+  // TODO: implement dbName
+  DbName get dbName => throw UnimplementedError();
+
+  @override
+  // TODO: implement notifier
+  Notifier get notifier => throw UnimplementedError();
+
+  @override
+  Future<void> stop() {
+    // TODO: implement stop
+    throw UnimplementedError();
   }
 }
 
