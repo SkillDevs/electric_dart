@@ -40,7 +40,7 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
     case SatMsgType.pingReq:
       return SatPingReq.fromBuffer(data);
     case SatMsgType.pingResp:
-      return SatPingReq.fromBuffer(data);
+      return SatPingResp.fromBuffer(data);
     case SatMsgType.inStartReplicationReq:
       return SatInStartReplicationReq.fromBuffer(data);
     case SatMsgType.inStartReplicationResp:

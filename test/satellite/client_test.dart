@@ -418,7 +418,7 @@ void main() {
           final lsn = satOpLog[0].begin.lsn;
           expect(bytesToNumber(lsn), 1);
           // TODO: Comparar los valores obtenidos en Javascript y aqui
-          expect(satOpLog[0].begin.commitTimestamp, Int64.ZERO + 1000);
+          expect(satOpLog[0].begin.commitTimestamp, Int64(1000));
           // TODO: check values
         }
       },
@@ -435,7 +435,7 @@ void main() {
 
           final lsn = satOpLog[0].begin.lsn;
           expect(bytesToNumber(lsn), 2);
-          expect(satOpLog[0].begin.commitTimestamp, Int64.ZERO + 2000);
+          expect(satOpLog[0].begin.commitTimestamp, Int64(2000));
           // TODO: check values
         }
         completer.complete();
@@ -452,6 +452,57 @@ void main() {
         client.enqueueTransaction(transaction[1]);
       },
     );
+  });
+
+  test('ack on send and pong', () async {
+    await connectAndAuth();
+
+    final lsn_1 = numberToBytes(1);
+
+    final startResp = SatInStartReplicationResp();
+    final pingResponse = SatPingResp(lsn: lsn_1);
+
+    server.nextResponses([startResp]);
+    server.nextResponses([]);
+    server.nextResponses([pingResponse]);
+
+    await client.startReplication(null);
+
+    final transaction = Transaction(
+      lsn: lsn_1,
+      commitTimestamp: Int64.ZERO,
+      changes: [
+        Change(
+          relation: kTestRelations["parent"]!,
+          type: ChangeType.insert,
+          record: {"id": 0},
+          tags: [], // actual value is not relevent here
+        ),
+      ],
+    );
+
+    final completer = Completer();
+
+    var sent = false;
+    client.subscribeToAck((event) {
+      final lsn = event.lsn;
+      final type = event.ackType;
+
+      if (type == AckType.localSend) {
+        expect(bytesToNumber(lsn), 1);
+        sent = true;
+      } else if (sent && type == AckType.remoteCommit) {
+        expect(bytesToNumber(lsn), 1);
+        expect(sent, true);
+        completer.complete();
+      }
+    });
+
+    await Future.delayed(Duration(milliseconds: 100), () {
+      client.enqueueTransaction(transaction);
+    });
+
+    await completer.future;
   });
 }
 

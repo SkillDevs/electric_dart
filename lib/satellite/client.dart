@@ -558,7 +558,7 @@ class SatelliteClient extends EventEmitter {
     if (message is SatPingResp) {
       if (message.lsn.isNotEmpty) {
         outbound.ackLsn = Uint8List.fromList(message.lsn);
-        emit('ack_lsn', [message.lsn, AckType.remoteCommit]);
+        emit('ack_lsn', AckLsnEvent(message.lsn, AckType.remoteCommit));
       }
     } else {
       throw StateError("Unexpected ping resp message");
