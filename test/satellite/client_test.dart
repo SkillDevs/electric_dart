@@ -504,6 +504,159 @@ void main() {
 
     await completer.future;
   });
+
+  test('default and null test', () async {
+    await connectAndAuth();
+
+    final start = SatInStartReplicationResp();
+    final begin = SatOpBegin(commitTimestamp: Int64.ZERO);
+    final commit = SatOpCommit();
+    final stop = SatInStopReplicationResp();
+
+    final rel = Relation(
+      id: 1,
+      schema: 'schema',
+      table: 'items',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        RelationColumn(name: 'id', type: 'uuid'),
+        RelationColumn(name: 'content', type: 'text'),
+        RelationColumn(name: 'text_null', type: 'text'),
+        RelationColumn(name: 'text_null_default', type: 'text'),
+        RelationColumn(name: 'intvalue_null', type: 'integer'),
+        RelationColumn(name: 'intvalue_null_default', type: 'integer'),
+      ],
+    );
+
+    final relation = SatRelation(
+      relationId: 1,
+      schemaName: 'schema',
+      tableName: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        SatRelationColumn(name: 'id', type: 'uuid'),
+        SatRelationColumn(name: 'content', type: 'varchar'),
+        SatRelationColumn(name: 'text_null', type: 'text'),
+        SatRelationColumn(
+          name: 'text_null_default',
+          type: 'text',
+        ),
+        SatRelationColumn(
+          name: 'intvalue_null',
+          type: 'int4',
+        ),
+        SatRelationColumn(
+          name: 'intvalue_null_default',
+          type: 'int4',
+        ),
+      ],
+    );
+
+    final insertOp = SatOpInsert(
+      relationId: 1,
+      rowData: serializeRow({
+        "id": 'f989b58b-980d-4d3c-b178-adb6ae8222f1',
+        "content": 'hello from pg_1',
+        "text_null": null,
+        "text_null_default": '',
+        "intvalue_null": null,
+        "intvalue_null_default": '10',
+      }, rel),
+    );
+
+    final serializedRow = SatOpRow(
+      //$type: 'Electric.Satellite.v1_0.SatOpRow',
+      nullsBitmask: Uint8List.fromList([40]),
+      values: [
+        Uint8List.fromList([
+          102,
+          57,
+          56,
+          57,
+          98,
+          53,
+          56,
+          98,
+          45,
+          57,
+          56,
+          48,
+          100,
+          45,
+          52,
+          100,
+          51,
+          99,
+          45,
+          98,
+          49,
+          55,
+          56,
+          45,
+          97,
+          100,
+          98,
+          54,
+          97,
+          101,
+          56,
+          50,
+          50,
+          50,
+          102,
+          49,
+        ]),
+        Uint8List.fromList([
+          104,
+          101,
+          108,
+          108,
+          111,
+          32,
+          102,
+          114,
+          111,
+          109,
+          32,
+          112,
+          103,
+          95,
+          49,
+        ]),
+        Uint8List.fromList([]),
+        Uint8List.fromList([]),
+        Uint8List.fromList([]),
+        Uint8List.fromList([49, 48]),
+      ],
+    );
+
+    final record = deserializeRow(serializedRow, rel);
+
+    print("record: $record");
+    print("insert: ${insertOp.writeToJsonMap()}");
+
+    final firstOpLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(insert: insertOp),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    server.nextResponses([start, relation, firstOpLogMessage]);
+    server.nextResponses([stop]);
+    final completer = Completer();
+
+    client.on('transaction', (TransactionEvent transactionEvent) {
+      final transaction = transactionEvent.transaction;
+      expect(record!['id'], transaction.changes[0].record!['id']);
+      expect(record['content'], transaction.changes[0].record!['content']);
+      expect(record['text_null'], transaction.changes[0].record!['text_null']);
+      completer.complete();
+    });
+
+    await client.startReplication(null);
+  });
 }
 
 AuthState createAuthState() {
