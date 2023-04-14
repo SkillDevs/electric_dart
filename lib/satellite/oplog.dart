@@ -365,8 +365,8 @@ ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
     tags: decodeTags(entry.clearTags),
   );
 
-  final Row oldRow = entry.oldRow != null ? json.decode(entry.oldRow!) : {};
-  final Row newRow = entry.newRow != null ? json.decode(entry.newRow!) : {};
+  final Row oldRow = _decodeRow(entry.oldRow);
+  final Row newRow = _decodeRow(entry.newRow);
 
   final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
 
@@ -377,6 +377,16 @@ ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
   }
 
   return result;
+}
+
+Row _decodeRow(String? row) {
+  if (row == null) {
+    return {};
+  }
+
+  final decoded = json.decode(row) as Row?;
+
+  return decoded ?? {};
 }
 
 class ShadowEntryChanges {

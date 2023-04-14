@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:electric_client/auth/mock.dart';
@@ -134,5 +135,101 @@ void main() {
     expect(txDate1, isNot(txDate2));
     expect(txDate2, isNot(txDate3));
     expect(txDate3, isNot(txDate4));
+  });
+
+  test('TX1=INSERT, TX2=DELETE, TX3=INSERT, ack TX1', () async {
+    await runMigrations();
+    await satellite.setAuthState(null);
+
+    final clientId = satellite.authState!.clientId;
+
+    // Local INSERT
+    final stmts1 = Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?)",
+      <Object?>['1', 'local', null],
+    );
+    await adapter.runInTransaction([stmts1]);
+    final txDate1 = await satellite.performSnapshot();
+
+    final localEntries1 = await satellite.getEntries();
+    final shadowEntry1 = await satellite.getOplogShadowEntry(oplog: localEntries1[0]);
+
+    // shadow tag is time of snapshot
+    final tag1 = genEncodedTags(clientId, [txDate1]);
+    expect(tag1, shadowEntry1[0].tags);
+    // clearTag is empty
+    final localEntries10 = localEntries1[0];
+    expect(localEntries10.clearTags, json.encode([]));
+    expect(localEntries10.timestamp, txDate1.toIso8601String());
+
+    // Local DELETE
+    final stmts2 = Statement(
+      "DELETE FROM parent WHERE id=?",
+      ['1'],
+    );
+    await adapter.runInTransaction([stmts2]);
+    final txDate2 = await satellite.performSnapshot();
+
+    final localEntries2 = await satellite.getEntries();
+    final shadowEntry2 = await satellite.getOplogShadowEntry(oplog: localEntries2[1]);
+
+    // shadowTag is empty
+    expect(0, shadowEntry2.length);
+    // clearTags contains previous shadowTag
+    final localEntry21 = localEntries2[1];
+
+    expect(localEntry21.clearTags, tag1);
+    expect(localEntry21.timestamp, txDate2.toIso8601String());
+
+    // Local INSERT
+    final stmts3 = Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?)",
+      <Object?>['1', 'local', null],
+    );
+    await adapter.runInTransaction([stmts3]);
+    final txDate3 = await satellite.performSnapshot();
+
+    final localEntries3 = await satellite.getEntries();
+    final shadowEntry3 = await satellite.getOplogShadowEntry(oplog: localEntries3[1]);
+
+    final tag3 = genEncodedTags(clientId, [txDate3]);
+    // shadow tag is tag3
+    expect(tag3, shadowEntry3[0].tags);
+
+    // clearTags is empty after a DELETE
+    final localEntry32 = localEntries3[2];
+
+    expect(localEntry32.clearTags, json.encode([]));
+    expect(localEntry32.timestamp, txDate3.toIso8601String());
+
+    // apply incomig operation (local operation ack)
+    final ackEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      txDate1.millisecondsSinceEpoch,
+      tag1,
+      newValues: {
+        "id": 1,
+        "value": 'local',
+        "other": null,
+      },
+      oldValues: {},
+    );
+
+    await satellite.applyTransactionInternal(
+      clientId,
+      txDate1,
+      [ackEntry],
+      [],
+    );
+
+    // validat that garbage collection have triggered
+    expect(2, (await satellite.getEntries()).length);
+
+    final shadow = await satellite.getOplogShadowEntry();
+    expect(shadow[0].tags, genEncodedTags(clientId, [txDate3]),
+        reason: 'error: tag1 was reintroduced after merging acked operation');
   });
 }

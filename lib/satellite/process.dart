@@ -674,10 +674,11 @@ class SatelliteProcess implements Satellite {
 
     final opLogEntries = fromTransaction(transaction, relations);
     final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(transaction.commitTimestamp.toInt());
-    await _applyTransactionInternal(origin, commitTimestamp, opLogEntries, transaction.lsn);
+    await applyTransactionInternal(origin, commitTimestamp, opLogEntries, transaction.lsn);
   }
 
-  Future<void> _applyTransactionInternal(
+  @visibleForTesting
+  Future<void> applyTransactionInternal(
       String origin, DateTime commitTimestamp, List<OplogEntry> opLogEntries, LSN lsn) async {
     await _apply(opLogEntries, origin, lsn);
     await _notifyChanges(opLogEntries);
