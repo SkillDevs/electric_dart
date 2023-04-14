@@ -91,7 +91,7 @@ OpType opTypeStrToOpType(String str) {
     case "delete":
       return OpType.delete;
     case "update":
-      return OpType.delete;
+      return OpType.update;
     case "upsert":
       return OpType.upsert;
     case "insert":
