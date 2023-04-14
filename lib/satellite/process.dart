@@ -11,38 +11,46 @@ import 'package:electric_client/satellite/merge.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/satellite/satellite.dart';
 import 'package:electric_client/util/common.dart';
+import 'package:electric_client/util/sets.dart';
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart' hide Change;
 import 'package:fpdart/fpdart.dart';
+import 'package:meta/meta.dart';
 
 typedef ChangeAccumulator = Map<String, Change>;
 
 class SatelliteProcess implements Satellite {
   @override
   final DbName dbName;
-  final ConsoleClient console;
-  final Client client;
-  final SatelliteConfig config;
-
   @override
   final DatabaseAdapter adapter;
   @override
   final Migrator migrator;
-
   @override
   final Notifier notifier;
+  final Client client;
+  final ConsoleClient console;
 
-  AuthState? _authState;
-  LSN? _lsn;
+  final SatelliteConfig config;
+  final SatelliteOpts opts;
+
+  @visibleForTesting
+  AuthState? authState;
+
+  // TODO: Unused in typescript
+  //DateTime? _lastSnapshotTimestamp;
+
+  Timer? _pollingInterval;
+  String? _potentialDataChangeSubscription;
+  String? _connectivityChangeSubscription;
+
+  late void Function() _throttledSnapshot;
 
   int _lastAckdRowId = 0;
   int _lastSentRowId = 0;
+  LSN? _lsn;
 
   RelationsCache relations = {};
-
-  final SatelliteOpts opts;
-
-  late void Function() _throttledSnapshot;
 
   SatelliteProcess({
     required this.dbName,
@@ -54,14 +62,19 @@ class SatelliteProcess implements Satellite {
     required this.migrator,
     required this.notifier,
   }) {
+    // Create a throttled function that performs a snapshot at most every
+    // `minSnapshotWindow` ms. This function runs immediately when you
+    // first call it and then every `minSnapshotWindow` ms as long as
+    // you keep calling it within the window. If you don't call it within
+    // the window, it will then run immediately the next time you call it.
     _throttledSnapshot = throttle(
-      _performSnapshot,
+      performSnapshot,
       Duration(milliseconds: opts.minSnapshotWindow),
     );
   }
 
   @override
-  Future<Either<Exception, void>> start(AuthState? authState) async {
+  Future<Either<Exception, void>> start(AuthState? authStateParam) async {
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -69,7 +82,30 @@ class SatelliteProcess implements Satellite {
       throw Exception('Invalid database schema.');
     }
 
-    await _setAuthState(authState);
+    await setAuthState(authStateParam);
+
+    // XXX establish replication connection,
+    // validate auth state, etc here.
+
+    // Request a snapshot whenever the data in our database potentially changes.
+    _potentialDataChangeSubscription = notifier.subscribeToPotentialDataChanges((_) => _throttledSnapshot());
+
+    void connectivityChangeCallback(
+      ConnectivityStateChangeNotification notification,
+    ) {
+      _connectivityStateChange(notification.connectivityState);
+    }
+
+    _connectivityChangeSubscription = notifier.subscribeToConnectivityStateChange(connectivityChangeCallback);
+
+    // Start polling to request a snapshot every `pollingInterval` ms.
+    _pollingInterval = Timer.periodic(
+      Duration(milliseconds: opts.pollingInterval),
+      (_) => _throttledSnapshot(),
+    );
+
+    // Starting now!
+    Future(() => _throttledSnapshot());
 
     // Need to reload primary keys after schema migration
     // For now, we do it only at initialization
@@ -77,9 +113,6 @@ class SatelliteProcess implements Satellite {
 
     _lastAckdRowId = int.parse(await _getMeta('lastAckdRowId'));
     _lastSentRowId = int.parse(await _getMeta('lastSentRowId'));
-
-    _lastAckdRowId = 0;
-    _lastSentRowId = 0;
 
     setClientListeners();
     client.resetOutboundLogPositions(numberToBytes(_lastAckdRowId), numberToBytes(_lastSentRowId));
@@ -95,8 +128,9 @@ class SatelliteProcess implements Satellite {
     return await _connectAndStartReplication();
   }
 
-  Future<void> _setAuthState(AuthState? authState) async {
-    if (authState != null) {
+  @visibleForTesting
+  Future<void> setAuthState(AuthState? newAuthState) async {
+    if (newAuthState != null) {
       throw UnimplementedError();
       // this._authState = authState
     } else {
@@ -106,7 +140,7 @@ class SatelliteProcess implements Satellite {
       final token = await _getMeta('token');
       final refreshToken = await _getMeta('refreshToken');
 
-      _authState = AuthState(
+      authState = AuthState(
         app: app,
         env: env,
         clientId: clientId,
@@ -127,6 +161,460 @@ class SatelliteProcess implements Satellite {
       await _ack(decoded, evt.ackType == AckType.remoteCommit);
     });
     client.subscribeToOutboundEvent(() => _throttledSnapshot());
+  }
+
+  @override
+  Future<void> stop() async {
+    print('stop polling');
+    if (_pollingInterval != null) {
+      _pollingInterval!.cancel();
+      _pollingInterval = null;
+    }
+
+    if (_potentialDataChangeSubscription != null) {
+      notifier.unsubscribeFromPotentialDataChanges(_potentialDataChangeSubscription!);
+      _potentialDataChangeSubscription = null;
+    }
+
+    // TODO: Missing in typescript client
+    if (_connectivityChangeSubscription != null) {
+      notifier.unsubscribeFromConnectivityStateChange(_connectivityChangeSubscription!);
+      _connectivityChangeSubscription = null;
+    }
+
+    await client.close();
+  }
+
+  Future<Either<SatelliteException, void>> _connectivityStateChange(
+    ConnectivityState status,
+  ) async {
+    // TODO: no op if state is the same
+    switch (status) {
+      case ConnectivityState.available:
+        {
+          setClientListeners();
+          return _connectAndStartReplication();
+        }
+      case ConnectivityState.error:
+      case ConnectivityState.disconnected:
+        {
+          return client.close();
+        }
+      case ConnectivityState.connected:
+        {
+          return Right(null);
+        }
+      default:
+        {
+          throw Exception("unexpected connectivity state: $status");
+        }
+    }
+  }
+
+  Future<Either<SatelliteException, void>> _connectAndStartReplication() async {
+    print("connecting and starting replication");
+
+    final localAuthState = authState;
+    if (localAuthState == null) {
+      throw Exception("trying to connect before authentication");
+    }
+
+    // TODO: Connect to client
+    return client
+        .connect()
+        .then((_) => refreshAuthState(localAuthState))
+        .then((freshAuthState) => client.authenticate(freshAuthState))
+        .then((_) => client.startReplication(_lsn))
+        .onError(
+      (error, st) {
+        print("couldn't start replication: $error");
+        return Right(null);
+      },
+    );
+  }
+
+  FutureOr<AuthState> refreshAuthState(AuthState authStateParam) async {
+    try {
+      final tokenResponse = await console.token(
+        TokenRequest(
+          app: authStateParam.app,
+          env: authStateParam.env,
+          clientId: authStateParam.clientId,
+        ),
+      );
+      await _setMeta('token', tokenResponse.token);
+      // TODO: Bug
+      await _setMeta('refreshToken', tokenResponse.token);
+
+      return AuthState(
+        app: authStateParam.app,
+        env: authStateParam.env,
+        clientId: authStateParam.clientId,
+        token: tokenResponse.token,
+        refreshToken: tokenResponse.refreshToken,
+      );
+    } catch (error) {
+      print("unable to refresh token: $error");
+    }
+
+    return authStateParam;
+  }
+
+  Future<bool> _verifyTableStructure() async {
+    final meta = opts.metaTable.tablename;
+    final oplog = opts.oplogTable.tablename;
+    final shadow = opts.shadowTable.tablename;
+
+    const tablesExist = '''
+      SELECT count(name) as numTables FROM sqlite_master
+        WHERE type='table'
+        AND name IN (?, ?, ?)
+    ''';
+
+    final res = await adapter.query(Statement(
+      tablesExist,
+      [meta, oplog, shadow],
+    ));
+    final numTables = res.first["numTables"]! as int;
+    return numTables == 3;
+  }
+
+// TODO: Migrate
+/*
+    // Handle auth state changes.
+  async _updateAuthState({ authState }: AuthStateNotification): Promise<void> {
+    // XXX do whatever we need to stop/start or reconnect the replication
+    // connection with the new auth state.
+
+    // XXX Maybe we need to auto-start processing and/or replication
+    // when we get the right authState?
+
+    this._authState = authState
+  }
+  */
+
+  // Perform a snapshot and notify which data actually changed.
+  @visibleForTesting
+  Future<DateTime> performSnapshot() async {
+    final timestamp = DateTime.now();
+
+    await _updateOplogTimestamp(timestamp);
+    final oplogEntries = await _getUpdatedEntries(timestamp);
+
+    final List<Future> promises = [];
+
+    if (oplogEntries.isNotEmpty) {
+      promises.add(_notifyChanges(oplogEntries));
+
+      final shadowEntries = <String, ShadowEntry>{};
+
+      for (final oplogEntry in oplogEntries) {
+        final shadowEntryLookup = await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
+        final cached = shadowEntryLookup.cached;
+        final shadowEntry = shadowEntryLookup.entry;
+
+        // Clear should not contain the tag for this timestamp, so if
+        // the entry was previously in cache - it means, that we already
+        // read it within the same snapshot
+        if (cached) {
+          oplogEntry.clearTags = encodeTags(difference(decodeTags(shadowEntry.tags), [
+            _generateTag(timestamp),
+          ]));
+        } else {
+          oplogEntry.clearTags = shadowEntry.tags;
+        }
+
+        if (oplogEntry.optype == OpType.delete) {
+          shadowEntry.tags = shadowTagsDefault;
+        } else {
+          final newTag = _generateTag(timestamp);
+          shadowEntry.tags = encodeTags([newTag]);
+        }
+
+        promises.add(_updateOplogEntryTags(oplogEntry));
+        _updateCachedShadowEntry(oplogEntry, shadowEntry, shadowEntries);
+      }
+
+      shadowEntries.forEach((String _key, ShadowEntry value) {
+        if (value.tags == shadowTagsDefault) {
+          promises.add(adapter.run(_deleteShadowTagsQuery(value)));
+        } else {
+          promises.add(_updateShadowTags(value));
+        }
+      });
+    }
+    await Future.wait(promises);
+
+    if (!client.isClosed()) {
+      final enqueued = client.getOutboundLogPositions().enqueued;
+      final enqueuedLogPos = bytesToNumber(enqueued);
+
+      // TODO: take next N transactions instead of all
+      await getEntries(since: enqueuedLogPos).then((missing) => _replicateSnapshotChanges(missing));
+    }
+    return timestamp;
+  }
+
+  _updateCachedShadowEntry(
+    OplogEntry oplogEntry,
+    ShadowEntry shadowEntry,
+    Map<String, ShadowEntry> shadowEntries,
+  ) {
+    final pk = getShadowPrimaryKey(oplogEntry);
+    final key = [oplogEntry.namespace, oplogEntry.tablename, pk].join('.');
+
+    shadowEntries[key] = shadowEntry;
+  }
+
+  // Promise<[boolean, ShadowEntry]
+  Future<ShadowEntryLookup> _lookupCachedShadowEntry(
+      OplogEntry oplogEntry, Map<String, ShadowEntry> shadowEntries) async {
+    final pk = getShadowPrimaryKey(oplogEntry);
+    final String key = [oplogEntry.namespace, oplogEntry.tablename, pk].join('.');
+
+    if (shadowEntries.containsKey(key)) {
+      return ShadowEntryLookup(cached: true, entry: shadowEntries[key]!);
+    } else {
+      late final ShadowEntry shadowEntry;
+      final shadowEntriesList = await getOplogShadowEntry(oplog: oplogEntry);
+      if (shadowEntriesList.isEmpty) {
+        shadowEntry = newShadowEntry(oplogEntry);
+      } else {
+        shadowEntry = shadowEntriesList[0];
+      }
+      shadowEntries[key] = shadowEntry;
+      return ShadowEntryLookup(cached: false, entry: shadowEntry);
+    }
+  }
+
+  Future<void> _notifyChanges(List<OplogEntry> results) async {
+    print('notify changes');
+    final ChangeAccumulator acc = {};
+
+    // Would it be quicker to do this using a second SQL query that
+    // returns results in `Change` format?!
+    reduceFn(ChangeAccumulator acc, OplogEntry entry) {
+      final qt = QualifiedTablename(entry.namespace, entry.tablename);
+      final key = qt.toString();
+
+      if (acc.containsKey(key)) {
+        final Change change = acc[key]!;
+
+        change.rowids ??= [];
+
+        change.rowids!.add(entry.rowid);
+      } else {
+        acc[key] = Change(
+          qualifiedTablename: qt,
+          rowids: [entry.rowid],
+        );
+      }
+
+      return acc;
+    }
+    // final changes = Object.values(results.reduce(reduceFn, acc))
+
+    final changes = results.fold(acc, reduceFn).values.toList();
+    notifier.actuallyChanged(dbName, changes);
+  }
+
+  Future<Either<SatelliteException, void>> _replicateSnapshotChanges(
+    List<OplogEntry> results,
+  ) async {
+    // TODO: Don't try replicating when outbound is inactive
+    if (client.isClosed()) {
+      return Right(null);
+    }
+
+    final transactions = toTransactions(results, relations);
+    for (final txn in transactions) {
+      return client.enqueueTransaction(txn);
+    }
+
+    return Right(null);
+  }
+
+  // Apply a set of incoming transactions against pending local operations,
+  // applying conflict resolution rules. Takes all changes per each key before
+  // merging, for local and remote operations.
+  Future<void> _apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
+    print("apply incoming changes for LSN: $lsn");
+    // assign timestamp to pending operations before apply
+    await performSnapshot();
+
+    final local = await getEntries();
+    final merged = _mergeEntries(authState!.clientId, local, incoming_origin, incoming);
+
+    final List<Statement> stmts = [];
+    // switches off on transaction commit/abort
+    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
+    // update lsn.
+    _lsn = lsn;
+    final lsn_base64 = base64.encode(lsn);
+    stmts
+        .add(Statement("UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?", <Object?>[lsn_base64, 'lsn']));
+
+    for (final entry in merged.entries) {
+      final tablenameStr = entry.key;
+      final mapping = entry.value;
+      for (final entryChanges in mapping.values) {
+        final ShadowEntry shadowEntry = ShadowEntry(
+          namespace: entryChanges.namespace,
+          tablename: entryChanges.tablename,
+          primaryKey: getShadowPrimaryKey(entryChanges),
+          tags: encodeTags(entryChanges.tags),
+        );
+        switch (entryChanges.optype) {
+          case ChangesOpType.delete:
+            stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
+            stmts.add(_deleteShadowTagsQuery(shadowEntry));
+            break;
+
+          default:
+            stmts.add(_applyNonDeleteOperation(entryChanges, tablenameStr));
+            stmts.add(_updateShadowTagsQuery(shadowEntry));
+        }
+      }
+    }
+
+    final tablenames = merged.keys;
+
+    await adapter.runInTransaction([
+      ..._disableTriggers(tablenames.toList()),
+      ...stmts,
+      ..._enableTriggers(tablenames.toList()),
+    ]);
+  }
+
+  @visibleForTesting
+  Future<List<OplogEntry>> getEntries({int? since}) async {
+    since ??= _lastAckdRowId;
+    final oplog = opts.oplogTable.toString();
+
+    final selectEntries = '''
+      SELECT * FROM $oplog
+        WHERE timestamp IS NOT NULL
+          AND rowid > ?
+        ORDER BY rowid ASC
+    ''';
+    final rows = await adapter.query(Statement(selectEntries, [since]));
+    return rows.map(_opLogEntryFromRow).toList();
+  }
+// TODO:
+
+  Future<List<OplogEntry>> _getUpdatedEntries(DateTime timestamp, {int? since}) async {
+    since ??= _lastAckdRowId;
+    final oplog = opts.oplogTable.toString();
+
+    final selectChanges = '''
+      SELECT * FROM $oplog
+      WHERE timestamp = ? AND
+            rowid > ?
+      ORDER BY rowid ASC
+    ''';
+
+    final rows = await adapter.query(Statement(
+      selectChanges,
+      [timestamp.toIso8601String(), since],
+    ));
+    return rows.map(_opLogEntryFromRow).toList();
+  }
+
+  @visibleForTesting
+  Future<List<ShadowEntry>> getOplogShadowEntry({OplogEntry? oplog}) async {
+    final shadow = opts.shadowTable.toString();
+    Statement query;
+    var selectTags = "SELECT * FROM $shadow";
+    if (oplog != null) {
+      selectTags = '''$selectTags WHERE
+         namespace = ? AND
+         tablename = ? AND
+         primaryKey = ?
+      ''';
+      final args = [
+        oplog.namespace,
+        oplog.tablename,
+        getShadowPrimaryKey(oplog),
+      ];
+      query = Statement(selectTags, args);
+    } else {
+      query = Statement(selectTags);
+    }
+
+    final shadowTags = await adapter.query(query);
+    return shadowTags.map((e) {
+      print("Row $e");
+      return ShadowEntry(
+        namespace: e['namespace'] as String,
+        tablename: e['tablename'] as String,
+        primaryKey: e['primaryKey'] as String,
+        tags: e['tags'] as String,
+      );
+    }).toList();
+  }
+
+  Future<RunResult> _updateShadowTags(ShadowEntry shadow) async {
+    return await adapter.run(_updateShadowTagsQuery(shadow));
+  }
+
+  Statement _deleteShadowTagsQuery(ShadowEntry shadow) {
+    final shadowTable = opts.shadowTable.toString();
+    final deleteRow = '''
+      DELETE FROM $shadowTable
+      WHERE namespace = ? AND
+            tablename = ? AND
+            primaryKey = ?;
+    ''';
+    return Statement(
+      deleteRow,
+      [shadow.namespace, shadow.tablename, shadow.primaryKey],
+    );
+  }
+
+  Statement _updateShadowTagsQuery(ShadowEntry shadow) {
+    final shadowTable = opts.shadowTable.toString();
+    final updateTags = '''
+      INSERT or REPLACE INTO $shadowTable (namespace, tablename, primaryKey, tags) VALUES
+      (?, ?, ?, ?);
+    ''';
+    return Statement(
+      updateTags,
+      <Object?>[
+        shadow.namespace,
+        shadow.tablename,
+        shadow.primaryKey,
+        shadow.tags,
+      ],
+    );
+  }
+
+  Future<RunResult> _updateOplogEntryTags(OplogEntry oplog) async {
+    final oplogTable = opts.oplogTable.toString();
+    final updateTags = '''
+      UPDATE $oplogTable set clearTags = ?
+        WHERE rowid = ?
+    ''';
+    return await adapter.run(Statement(
+      updateTags,
+      <Object?>[oplog.clearTags, oplog.rowid],
+    ));
+  }
+
+  Future<void> _updateOplogTimestamp(DateTime timestamp) async {
+    final oplog = opts.oplogTable.toString();
+
+    final updateTimestamps = '''
+      UPDATE $oplog set timestamp = ?
+        WHERE rowid in (
+          SELECT rowid FROM $oplog
+              WHERE timestamp is NULL
+              AND rowid > ?
+          ORDER BY rowid ASC
+          )
+    ''';
+
+    final updateArgs = <Object?>[timestamp.toIso8601String(), _lastAckdRowId.toString()];
+    await adapter.run(Statement(updateTimestamps, updateArgs));
   }
 
   // Merge changes, with last-write-wins and add-wins semantics.
@@ -194,7 +682,7 @@ class SatelliteProcess implements Satellite {
     await _apply(opLogEntries, origin, lsn);
     await _notifyChanges(opLogEntries);
 
-    if (origin == _authState!.clientId) {
+    if (origin == authState!.clientId) {
       /* Any outstanding transaction that originated on Satellite but haven't
        * been received back from the Electric is considered to be concurrent with
        * any other transaction coming from Electric.
@@ -227,6 +715,70 @@ class SatelliteProcess implements Satellite {
             )))
         .toList();
     return stmts;
+  }
+
+  Future<void> _ack(int lsn, bool isAck) async {
+    if (lsn < _lastAckdRowId || (lsn > _lastSentRowId && isAck)) {
+      throw Exception('Invalid position');
+    }
+
+    final meta = opts.metaTable.toString();
+
+    final sql = " UPDATE $meta SET value = ? WHERE key = ?";
+    final args = <Object?>[
+      lsn.toString(),
+      isAck ? 'lastAckdRowId' : 'lastSentRowId',
+    ];
+
+    if (isAck) {
+      final oplog = opts.oplogTable.toString();
+      final del = "DELETE FROM $oplog WHERE rowid <= ?";
+      final delArgs = <Object?>[lsn];
+
+      _lastAckdRowId = lsn;
+      await adapter.runInTransaction([
+        Statement(sql, args),
+        Statement(del, delArgs),
+      ]);
+    } else {
+      _lastSentRowId = lsn;
+      await adapter.runInTransaction([Statement(sql, args)]);
+    }
+  }
+
+  Future<void> _setMeta(String key, Object? value) async {
+    final meta = opts.metaTable.toString();
+
+    final sql = "UPDATE $meta SET value = ? WHERE key = ?";
+    final args = <Object?>[value, key];
+
+    await adapter.run(Statement(sql, args));
+  }
+
+  Future<String> _getMeta(String key) async {
+    final meta = opts.metaTable.toString();
+
+    final sql = "SELECT value from $meta WHERE key = ?";
+    final args = [key];
+    final rows = await adapter.query(Statement(sql, args));
+
+    if (rows.length != 1) {
+      throw "Invalid metadata table: missing $key";
+    }
+
+    return rows.first["value"]! as String;
+  }
+
+  Future<String> _getClientId() async {
+    const clientIdKey = 'clientId';
+
+    String clientId = await _getMeta(clientIdKey);
+
+    if (clientId.isEmpty) {
+      clientId = uuid();
+      await _setMeta(clientIdKey, clientId);
+    }
+    return clientId;
   }
 
   // Fetch primary keys from local store and use them to identify incoming ops.
@@ -282,276 +834,10 @@ class SatelliteProcess implements Satellite {
   }
 
   String _generateTag(DateTime timestamp) {
-    final instanceId = _authState!.clientId;
+    final instanceId = authState!.clientId;
 
     return generateTag(instanceId, timestamp);
   }
-
-  Future<void> _ack(int lsn, bool isAck) async {
-    if (lsn < _lastAckdRowId || (lsn > _lastSentRowId && isAck)) {
-      throw Exception('Invalid position');
-    }
-
-    final meta = opts.metaTable.toString();
-
-    final sql = " UPDATE $meta SET value = ? WHERE key = ?";
-    final args = <Object?>[
-      lsn.toString(),
-      isAck ? 'lastAckdRowId' : 'lastSentRowId',
-    ];
-
-    if (isAck) {
-      final oplog = opts.oplogTable.toString();
-      final del = "DELETE FROM $oplog WHERE rowid <= ?";
-      final delArgs = <Object?>[lsn];
-
-      _lastAckdRowId = lsn;
-      await adapter.runInTransaction([
-        Statement(sql, args),
-        Statement(del, delArgs),
-      ]);
-    } else {
-      _lastSentRowId = lsn;
-      await adapter.runInTransaction([Statement(sql, args)]);
-    }
-  }
-
-  // Apply a set of incoming transactions against pending local operations,
-  // applying conflict resolution rules. Takes all changes per each key before
-  // merging, for local and remote operations.
-  Future<void> _apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
-    print("apply incoming changes for LSN: $lsn");
-    // assign timestamp to pending operations before apply
-    await _performSnapshot();
-
-    final local = await _getEntries();
-    final merged = _mergeEntries(_authState!.clientId, local, incoming_origin, incoming);
-
-    final List<Statement> stmts = [];
-    // switches off on transaction commit/abort
-    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
-    // update lsn.
-    _lsn = lsn;
-    final lsn_base64 = base64.encode(lsn);
-    stmts
-        .add(Statement("UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?", <Object?>[lsn_base64, 'lsn']));
-
-    for (final entry in merged.entries) {
-      final tablenameStr = entry.key;
-      final mapping = entry.value;
-      for (final entryChanges in mapping.values) {
-        final ShadowEntry shadowEntry = ShadowEntry(
-          namespace: entryChanges.namespace,
-          tablename: entryChanges.tablename,
-          primaryKey: getShadowPrimaryKey(entryChanges),
-          tags: encodeTags(entryChanges.tags),
-        );
-        switch (entryChanges.optype) {
-          case ChangesOpType.delete:
-            stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
-            stmts.add(_deleteShadowTagsQuery(shadowEntry));
-            break;
-
-          default:
-            stmts.add(_applyNonDeleteOperation(entryChanges, tablenameStr));
-            stmts.add(_updateShadowTagsQuery(shadowEntry));
-        }
-      }
-    }
-
-    final tablenames = merged.keys;
-
-    await adapter.runInTransaction([
-      ..._disableTriggers(tablenames.toList()),
-      ...stmts,
-      ..._enableTriggers(tablenames.toList()),
-    ]);
-  }
-
-  Future<List<OplogEntry>> _getEntries({int? since}) async {
-    since ??= _lastAckdRowId;
-    final oplog = opts.oplogTable.toString();
-
-    final selectEntries = '''
-      SELECT * FROM $oplog
-        WHERE timestamp IS NOT NULL
-          AND rowid > ?
-        ORDER BY rowid ASC
-    ''';
-    final rows = await adapter.query(Statement(selectEntries, [since]));
-    return rows
-        .map(
-          (r) => OplogEntry(
-            namespace: r['namespace'] as String,
-            tablename: r['tablename'] as String,
-            primaryKey: r['primaryKey'] as String,
-            rowid: r['rowid'] as int,
-            optype: opTypeStrToOpType(r['optype'] as String),
-            timestamp: r['timestamp'] as String,
-            newRow: r['newRow'] as String?,
-            oldRow: r['oldRow'] as String?,
-            clearTags: r['clearTags'] as String,
-          ),
-        )
-        .toList();
-  }
-
-  // Perform a snapshot and notify which data actually changed.
-  Future<void> _performSnapshot() async {
-    print("Perform snapshot");
-  }
-
-  Future<void> _notifyChanges(List<OplogEntry> results) async {
-    print('notify changes');
-    final ChangeAccumulator acc = {};
-
-    // Would it be quicker to do this using a second SQL query that
-    // returns results in `Change` format?!
-    reduceFn(ChangeAccumulator acc, OplogEntry entry) {
-      final qt = QualifiedTablename(entry.namespace, entry.tablename);
-      final key = qt.toString();
-
-      if (acc.containsKey(key)) {
-        final Change change = acc[key]!;
-
-        change.rowids ??= [];
-
-        change.rowids!.add(entry.rowid);
-      } else {
-        acc[key] = Change(
-          qualifiedTablename: qt,
-          rowids: [entry.rowid],
-        );
-      }
-
-      return acc;
-    }
-    // final changes = Object.values(results.reduce(reduceFn, acc))
-
-    final changes = results.fold(acc, reduceFn).values.toList();
-    notifier.actuallyChanged(dbName, changes);
-  }
-
-  Future<Either<Exception, void>> _connectAndStartReplication() async {
-    print("connecting and starting replication");
-
-    final authState = _authState;
-    if (authState == null) {
-      throw Exception("trying to connect before authentication");
-    }
-
-// TODO: Connect to client
-    return client
-        .connect()
-        .then((_) => refreshAuthState(authState))
-        .then((freshAuthState) => client.authenticate(freshAuthState))
-        .then((_) => client.startReplication(_lsn))
-        .onError(
-      (error, st) {
-        print("couldn't start replication: $error");
-        return Right(null);
-      },
-    );
-  }
-
-  FutureOr<AuthState> refreshAuthState(AuthState authState) async {
-    try {
-      final tokenResponse = await console.token(
-        TokenRequest(
-          app: authState.app,
-          env: authState.env,
-          clientId: authState.clientId,
-        ),
-      );
-      await _setMeta('token', tokenResponse.token);
-      // TODO: Bug
-      await _setMeta('refreshToken', tokenResponse.token);
-
-      return AuthState(
-        app: authState.app,
-        env: authState.env,
-        clientId: authState.clientId,
-        token: tokenResponse.token,
-        refreshToken: tokenResponse.refreshToken,
-      );
-    } catch (error) {
-      print("unable to refresh token: $error");
-    }
-
-    return authState;
-  }
-
-  Future<bool> _verifyTableStructure() async {
-    final meta = opts.metaTable.tablename;
-    final oplog = opts.oplogTable.tablename;
-    final shadow = opts.shadowTable.tablename;
-
-    const tablesExist = '''
-      SELECT count(name) as numTables FROM sqlite_master
-        WHERE type='table'
-        AND name IN (?, ?, ?)
-    ''';
-
-    final res = await adapter.query(Statement(
-      tablesExist,
-      [meta, oplog, shadow],
-    ));
-    final numTables = res.first["numTables"]! as int;
-    return numTables == 3;
-  }
-
-  Future<String> _getClientId() async {
-    const clientIdKey = 'clientId';
-
-    String clientId = await _getMeta(clientIdKey);
-
-    if (clientId.isEmpty) {
-      clientId = uuid();
-      await _setMeta(clientIdKey, clientId);
-    }
-    return clientId;
-  }
-
-  Future<String> _getMeta(String key) async {
-    final meta = opts.metaTable.toString();
-
-    final sql = "SELECT value from $meta WHERE key = ?";
-    final args = [key];
-    final rows = await adapter.query(Statement(sql, args));
-
-    if (rows.length != 1) {
-      throw "Invalid metadata table: missing $key";
-    }
-
-    return rows.first["value"]! as String;
-  }
-
-  Future<void> _setMeta(String key, Object? value) async {
-    final meta = opts.metaTable.toString();
-
-    final sql = "UPDATE $meta SET value = ? WHERE key = ?";
-    final args = <Object?>[value, key];
-
-    await adapter.run(Statement(sql, args));
-  }
-
-  //   async _connectAndStartReplication(): Promise<void | SatelliteError> {
-  //   Log.info(`connecting and starting replication`)
-
-  //   if (!this._authState) {
-  //     throw new Error(`trying to connect before authentication`)
-  //   }
-  //   const authState = this._authState
-
-  //   return this.client
-  //     .connect()
-  //     .then(() => this.refreshAuthState(authState))
-  //     .then((freshAuthState) => this.client.authenticate(freshAuthState))
-  //     .then(() => this.client.startReplication(this._lsn))
-  //     .catch((error) => {
-  //       Log.warn(`couldn't start replication: ${error}`)
-  //     })
-  // }
 
   Future<void> _garbageCollectOplog(DateTime commitTimestamp) async {
     final isoString = commitTimestamp.toIso8601String();
@@ -561,55 +847,6 @@ class SatelliteProcess implements Satellite {
       WHERE timestamp = ?;
     ''';
     await adapter.run(Statement(stmt, <Object?>[isoString]));
-  }
-
-  Statement _deleteShadowTagsQuery(ShadowEntry shadow) {
-    final shadowTable = opts.shadowTable.toString();
-    final deleteRow = '''
-      DELETE FROM $shadowTable
-      WHERE namespace = ? AND
-            tablename = ? AND
-            primaryKey = ?;
-    ''';
-    return Statement(
-      deleteRow,
-      [shadow.namespace, shadow.tablename, shadow.primaryKey],
-    );
-  }
-
-  Statement _updateShadowTagsQuery(ShadowEntry shadow) {
-    final shadowTable = opts.shadowTable.toString();
-    final updateTags = '''
-      INSERT or REPLACE INTO $shadowTable (namespace, tablename, primaryKey, tags) VALUES
-      (?, ?, ?, ?);
-    ''';
-    return Statement(
-      updateTags,
-      <Object?>[
-        shadow.namespace,
-        shadow.tablename,
-        shadow.primaryKey,
-        shadow.tags,
-      ],
-    );
-  }
-
-  @override
-  Future<void> stop() async {
-    print('stop polling');
-    // if (_pollingInterval != null) {
-    //   clearInterval(this._pollingInterval);
-    //   this._pollingInterval = undefined
-    // }
-
-    // if (_potentialDataChangeSubscription != null) {
-    //   notifier.unsubscribeFromPotentialDataChanges(
-    //     _potentialDataChangeSubscription
-    //   );
-    //   _potentialDataChangeSubscription = null;
-    // }
-
-    // await client.close();
   }
 }
 
@@ -669,4 +906,25 @@ class _WhereAndValues {
   final List<SqlValue> values;
 
   _WhereAndValues(this.where, this.values);
+}
+
+class ShadowEntryLookup {
+  final bool cached;
+  final ShadowEntry entry;
+
+  ShadowEntryLookup({required this.cached, required this.entry});
+}
+
+OplogEntry _opLogEntryFromRow(Map<String, Object?> row) {
+  return OplogEntry(
+    namespace: row['namespace'] as String,
+    tablename: row['tablename'] as String,
+    primaryKey: row['primaryKey'] as String,
+    rowid: row['rowid'] as int,
+    optype: opTypeStrToOpType(row['optype'] as String),
+    timestamp: row['timestamp'] as String,
+    newRow: row['newRow'] as String?,
+    oldRow: row['oldRow'] as String?,
+    clearTags: row['clearTags'] as String,
+  );
 }

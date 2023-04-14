@@ -84,8 +84,10 @@ OpType changeTypeToOpType(ChangeType opTypeStr) {
   }
 }
 
+const shadowTagsDefault = '[]';
+
 OpType opTypeStrToOpType(String str) {
-  switch (str) {
+  switch (str.toLowerCase()) {
     case "delete":
       return OpType.delete;
     case "update":
@@ -96,7 +98,7 @@ OpType opTypeStrToOpType(String str) {
       return OpType.insert;
   }
 
-  assert(false, "OpType $str not hanlded");
+  assert(false, "OpType $str not handled");
   return OpType.insert;
 }
 
@@ -191,6 +193,15 @@ List<Transaction> toTransactions(List<OplogEntry> opLogEntries, RelationsCache r
       currTxn.lsn = numberToBytes(txn.rowid);
       return acc;
     },
+  );
+}
+
+ShadowEntry newShadowEntry(OplogEntry oplogEntry) {
+  return ShadowEntry(
+    namespace: oplogEntry.namespace,
+    tablename: oplogEntry.tablename,
+    primaryKey: primaryKeyToStr((json.decode(oplogEntry.primaryKey) as Map<String, dynamic>).cast<String, Object>()),
+    tags: shadowTagsDefault,
   );
 }
 
@@ -304,7 +315,7 @@ class ShadowEntry {
   final String namespace;
   final String tablename;
   final String primaryKey;
-  final String tags;
+  String tags;
 
   ShadowEntry({
     required this.namespace,
@@ -395,7 +406,7 @@ ShadowKey getShadowPrimaryKey(
   Object oplogEntry,
 ) {
   if (oplogEntry is OplogEntry) {
-    return primaryKeyToStr(json.decode(oplogEntry.primaryKey));
+    return primaryKeyToStr((json.decode(oplogEntry.primaryKey) as Map<String, dynamic>).cast<String, Object>());
   } else if (oplogEntry is OplogEntryChanges) {
     return primaryKeyToStr(oplogEntry.primaryKeyCols);
   } else if (oplogEntry is ShadowEntryChanges) {
