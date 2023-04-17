@@ -437,7 +437,8 @@ class SatelliteProcess implements Satellite {
   // Apply a set of incoming transactions against pending local operations,
   // applying conflict resolution rules. Takes all changes per each key before
   // merging, for local and remote operations.
-  Future<void> _apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
+  @visibleForTesting
+  Future<void> apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
     print("apply incoming changes for LSN: $lsn");
     // assign timestamp to pending operations before apply
     await performSnapshot();
@@ -680,7 +681,7 @@ class SatelliteProcess implements Satellite {
   @visibleForTesting
   Future<void> applyTransactionInternal(
       String origin, DateTime commitTimestamp, List<OplogEntry> opLogEntries, LSN lsn) async {
-    await _apply(opLogEntries, origin, lsn);
+    await apply(opLogEntries, origin, lsn);
     await _notifyChanges(opLogEntries);
 
     if (origin == authState!.clientId) {

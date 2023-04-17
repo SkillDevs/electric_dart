@@ -232,4 +232,94 @@ void main() {
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate3]),
         reason: 'error: tag1 was reintroduced after merging acked operation');
   });
+
+  test('remote tx (INSERT) concurrently with local tx (INSERT -> DELETE)', () async {
+    await runMigrations();
+    await satellite.setAuthState(null);
+
+    final List<Statement> stmts = [];
+
+    // For this key we will choose remote Tx, such that: Local TM > Remote TX
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['1', 'local', null],
+    ));
+    stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
+    // For this key we will choose remote Tx, such that: Local TM < Remote TX
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['2', 'local', null],
+    ));
+    stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
+    await adapter.runInTransaction(stmts);
+
+    final txDate1 = await satellite.performSnapshot();
+
+    final prevTs = txDate1.millisecondsSinceEpoch - 1;
+    final nextTs = txDate1.millisecondsSinceEpoch + 1;
+
+    final prevEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      prevTs,
+      genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(prevTs)]),
+      newValues: {
+        "id": 1,
+        "value": 'remote',
+        "other": 1,
+      },
+      oldValues: {},
+    );
+    final nextEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      nextTs,
+      genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(nextTs)]),
+      newValues: {
+        "id": 2,
+        "value": 'remote',
+        "other": 2,
+      },
+      oldValues: {},
+    );
+
+    await satellite.apply([prevEntry], 'remote', []);
+    await satellite.apply([nextEntry], 'remote', []);
+
+    final shadow = await satellite.getOplogShadowEntry();
+    final expectedShadow = [
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "1",
+        tags: genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(prevTs)]),
+      ),
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "2",
+        tags: genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(nextTs)]),
+      ),
+    ];
+    expect(shadow, expectedShadow);
+
+    //let entries= await satellite._getEntries()
+    //console.log(entries)
+    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+    //console.log(table)
+
+    // In both cases insert wins over delete, but
+    // for id = 1 CR picks local data before delete, while
+    // for id = 2 CR picks remote data
+    final List<Map<String, Object?>> expectedUserTable = [
+      {"id": 1, "value": 'local', "other": null},
+      {"id": 2, "value": 'remote', "other": 2},
+    ];
+
+    expect(userTable, expectedUserTable);
+  });
 }

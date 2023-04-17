@@ -4,6 +4,7 @@ import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/sets.dart';
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart';
+import 'package:equatable/equatable.dart';
 import 'package:fixnum/fixnum.dart';
 
 // format: UUID@timestamp_in_milliseconds
@@ -241,7 +242,7 @@ OplogTableChanges localOperationsToTableChanges(
         final value = entry.value;
         existing.changes[key] = value;
       }
-      if (entryChanges.optype == OpType.delete) {
+      if (entryChanges.optype == ChangesOpType.delete) {
         existing.tag = null;
       } else {
         existing.tag = genTag(DateTime.parse(entry.timestamp));
@@ -311,7 +312,7 @@ typedef OplogColumnChanges = Map<String, OplogColumnChange>;
 typedef ShadowTableChanges = Map<String, Map<String, ShadowEntryChanges>>;
 typedef OplogTableChanges = Map<String, Map<String, OplogTableChange>>;
 
-class ShadowEntry {
+class ShadowEntry with EquatableMixin {
   final String namespace;
   final String tablename;
   final String primaryKey;
@@ -322,7 +323,10 @@ class ShadowEntry {
     required this.tablename,
     required this.primaryKey,
     required this.tags,
-  }); // json object
+  });
+
+  @override
+  List<Object?> get props => [namespace, tablename, primaryKey, tags]; // json object
 }
 
 // Convert an `OplogEntry` to an `OplogEntryChanges` structure,
@@ -346,7 +350,7 @@ OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
   for (final entry in newRow.entries) {
     final key = entry.key;
     final value = entry.value;
-    if (oldRow[key] == value) {
+    if (!oldRow.containsKey(key) || oldRow[key] != value) {
       result.changes[key] = OplogColumnChange(value, timestamp);
     }
   }
