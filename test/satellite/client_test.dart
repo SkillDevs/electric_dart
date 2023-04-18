@@ -119,7 +119,6 @@ void main() {
       await client.startReplication(null);
       fail("start replication should throw");
     } catch (error) {
-      print("HEYE");
       expect(error, isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.timeout));
     }
   });
@@ -412,7 +411,6 @@ void main() {
         final msgType = getMsgFromCode(code);
 
         if (msgType == SatMsgType.opLog) {
-          print(client.toMessage(data));
           final satOpLog = (client.toMessage(data).msg as SatOpLog).ops;
 
           final lsn = satOpLog[0].begin.lsn;

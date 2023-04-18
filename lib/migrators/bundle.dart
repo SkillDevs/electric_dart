@@ -1,6 +1,7 @@
 import 'package:electric_client/electric/adapter.dart';
 import 'package:electric_client/migrators/migrators.dart';
 import 'package:electric_client/migrators/schema.dart';
+import 'package:electric_client/util/debug/debug.dart';
 import 'package:electric_client/util/types.dart';
 
 const kElectricMigrationsTable = "_electric_migrations";
@@ -30,7 +31,7 @@ class BundleMigrator implements Migrator {
 
     for (int i = 0; i < unapplied.length; i++) {
       final migration = unapplied[i];
-      print("applying migration: ${migration.name} ${migration.sha256}");
+      logger.info("applying migration: ${migration.name} ${migration.sha256}");
       await apply(migration);
     }
 

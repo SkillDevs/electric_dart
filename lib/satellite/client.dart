@@ -9,6 +9,7 @@ import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/satellite.dart';
 import 'package:electric_client/sockets/sockets.dart';
 import 'package:electric_client/util/common.dart';
+import 'package:electric_client/util/debug/debug.dart';
 import 'package:electric_client/util/extension.dart';
 import 'package:electric_client/util/proto.dart';
 import 'package:electric_client/util/types.dart';
@@ -73,7 +74,7 @@ class SatelliteClient extends EventEmitter implements Client {
     final type = getMsgFromCode(code);
 
     if (type == null) {
-      throw Exception("Null data");
+      throw SatelliteException(SatelliteErrorCode.unexpectedMessageType, "$code");
     }
 
     return DecodedMessage(decodeMessage(data.sublist(1), type), type);
@@ -217,7 +218,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   Future<Either<SatelliteException, void>> close() async {
-    print('closing client');
+    logger.info('closing client');
 
     outbound = resetReplication(outbound.enqueuedLsn, outbound.ackLsn, null);
     inbound = resetReplication(
@@ -255,17 +256,15 @@ class SatelliteClient extends EventEmitter implements Client {
       // TODO: Use union instead of throwing
       messageInfo = toMessage(data);
     } catch (e) {
-      print(e);
       // this.emit('error', messageOrError)
       emit("error", messageInfo);
       return;
     }
 
-    print("Received message ${messageInfo.msg.runtimeType}");
+    logger.info("Received message ${messageInfo.msg.runtimeType}");
     final handler = getIncomingHandlerForMessage(messageInfo.msgType);
     final response = handler.handle(messageInfo.msg);
 
-    print("handle response $response");
     if (handler.isRpc) {
       emit("rpc_response", response);
     }
@@ -323,13 +322,13 @@ class SatelliteClient extends EventEmitter implements Client {
 
     late final SatInStartReplicationReq request;
     if (lsn == null || lsn.isEmpty) {
-      print("no previous LSN, start replication with option FIRST_LSN");
+      logger.info("no previous LSN, start replication with option FIRST_LSN");
 
       request = SatInStartReplicationReq(
         options: [SatInStartReplicationReq_Option.FIRST_LSN],
       );
     } else {
-      print("starting replication with lsn: ${base64.encode(lsn)}");
+      logger.info("starting replication with lsn: ${base64.encode(lsn)}");
       request = SatInStartReplicationReq(lsn: lsn);
     }
 
@@ -352,7 +351,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMessage(Object request) {
-    print("Sending message $request");
+    logger.info("Sending message $request");
     final _socket = socket;
     if (_socket == null) {
       throw SatelliteException(SatelliteErrorCode.unexpectedState, 'trying to send message, but no socket exists');
@@ -374,15 +373,12 @@ class SatelliteClient extends EventEmitter implements Client {
 
     try {
       timer = Timer(Duration(milliseconds: opts.timeout), () {
-        print("${request.runtimeType}");
         final error = SatelliteException(SatelliteErrorCode.timeout, "${request.runtimeType}");
         completer.completeError(error);
       });
 
       // reject on any error
       errorListener = on('error', (error) {
-        print("Error emitted $error");
-
         errorListener?.cancel();
         errorListener = null;
         completer.completeError(error as Object);
@@ -448,7 +444,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleInStartReplicationReq(SatInStartReplicationReq message) {
-    print("received replication request $message");
+    logger.info("received replication request $message");
     if (outbound.isReplicating == ReplicationStatus.stopped) {
       final replication = outbound.clone();
       if (message.options.firstWhereOrNull((o) => o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED) == null) {
@@ -575,7 +571,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handlePingReq() {
-    print("respond to ping with last ack ${inbound.ackLsn}");
+    logger.info("respond to ping with last ack ${inbound.ackLsn}");
     final pong = SatPingResp(lsn: inbound.ackLsn);
     sendMessage(pong);
   }
@@ -592,7 +588,6 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleRelation(SatRelation message) {
-    print("handle relation ${message.relationId} Is replicating ${inbound.isReplicating} ");
     if (inbound.isReplicating != ReplicationStatus.active) {
       emit(
         'error',
@@ -610,7 +605,6 @@ class SatelliteClient extends EventEmitter implements Client {
       columns: message.columns.map((c) => (RelationColumn(name: c.name, type: c.type))).toList(),
     );
 
-    print("ID SAVED: ${relation.id}");
     inbound.relations[relation.id] = relation;
   }
 
@@ -628,8 +622,6 @@ class SatelliteClient extends EventEmitter implements Client {
   ) {
     //print("PROCESS! ${opLogMessage.ops.length}");
     for (var op in opLogMessage.ops) {
-      print(op.writeToJsonMap());
-
       if (op.hasBegin()) {
         final transaction = Transaction(
           commitTimestamp: op.begin.commitTimestamp,
@@ -649,7 +641,6 @@ class SatelliteClient extends EventEmitter implements Client {
           changes: lastTx.changes,
           origin: lastTx.origin,
         );
-        print("we have commit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         // in the future, emitting this event can be decoupled
         emit<TransactionEvent>(
           'transaction',
@@ -809,7 +800,6 @@ Record? deserializeRow(
   SatOpRow? row,
   Relation relation,
 ) {
-  print("Row ${row?.writeToJsonMap()}");
   final _row = row;
   if (_row == null) {
     return null;
@@ -819,7 +809,6 @@ Record? deserializeRow(
     if (getMaskBit(_row.nullsBitmask, i) == 1) {
       value = null;
     } else {
-      print(_row.values);
       value = deserializeColumnData(_row.values[i], c);
     }
     return MapEntry(c.name, value);

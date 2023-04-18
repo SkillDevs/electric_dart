@@ -12,7 +12,7 @@ Logger _createLogger() {
   hierarchicalLoggingEnabled = true;
 
   // No logging by default
-  logger.level = null;
+  logger.level = Level.OFF;
 
   logger.onRecord.listen((event) {
     final error = event.error;
@@ -26,6 +26,7 @@ Logger _createLogger() {
       extra += "\n\tStackTrace: ${event.stackTrace}";
     }
 
+    // ignore: avoid_print
     print('${event.level.name}: ${event.time}: ${event.message} $extra');
   });
 

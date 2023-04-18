@@ -166,7 +166,7 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<void> stop() async {
-    print('stop polling');
+    logger.info('stop polling');
     if (_pollingInterval != null) {
       _pollingInterval!.cancel();
       _pollingInterval = null;
@@ -213,7 +213,7 @@ class SatelliteProcess implements Satellite {
   }
 
   Future<Either<SatelliteException, void>> _connectAndStartReplication() async {
-    print("connecting and starting replication");
+    logger.info("connecting and starting replication");
 
     final localAuthState = authState;
     if (localAuthState == null) {
@@ -228,7 +228,7 @@ class SatelliteProcess implements Satellite {
         .then((_) => client.startReplication(_lsn))
         .onError(
       (error, st) {
-        print("couldn't start replication: $error");
+        logger.warning("couldn't start replication: $error");
         return Right(null);
       },
     );
@@ -255,7 +255,7 @@ class SatelliteProcess implements Satellite {
         refreshToken: tokenResponse.refreshToken,
       );
     } catch (error) {
-      print("unable to refresh token: $error");
+      logger.warning("unable to refresh token: $error");
     }
 
     return authStateParam;
@@ -389,7 +389,7 @@ class SatelliteProcess implements Satellite {
   }
 
   Future<void> _notifyChanges(List<OplogEntry> results) async {
-    print('notify changes');
+    logger.info('notify changes');
     final ChangeAccumulator acc = {};
 
     // Would it be quicker to do this using a second SQL query that
@@ -440,7 +440,7 @@ class SatelliteProcess implements Satellite {
   // merging, for local and remote operations.
   @visibleForTesting
   Future<void> apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
-    print("apply incoming changes for LSN: $lsn");
+    logger.info("apply incoming changes for LSN: $lsn");
     // assign timestamp to pending operations before apply
     await performSnapshot();
 
@@ -545,7 +545,6 @@ class SatelliteProcess implements Satellite {
 
     final shadowTags = await adapter.query(query);
     return shadowTags.map((e) {
-      print("Row $e");
       return ShadowEntry(
         namespace: e['namespace'] as String,
         tablename: e['tablename'] as String,

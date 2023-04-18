@@ -93,43 +93,6 @@ class SqliteAdapter extends adp.DatabaseAdapter {
   }
 }
 
-class DummyDatabaseAdapter extends adp.DatabaseAdapter {
-  @override
-  Future<List<Row>> query(Statement statement) async {
-    print("QUERY $statement");
-
-    return [];
-  }
-
-  @override
-  Future<RunResult> run(Statement statement) async {
-    print("RUN $statement");
-
-    return RunResult(rowsAffected: 0);
-  }
-
-  @override
-  Future<RunResult> runInTransaction(List<Statement> statements) async {
-    print("RUN In Transaction $statements");
-
-    return RunResult(rowsAffected: 0);
-  }
-
-  @override
-  List<QualifiedTablename> tableNames(Statement statement) {
-    print("Table names $statement");
-    return [];
-  }
-
-  @override
-  Future<T> transaction<T>(void Function(Transaction tx, void Function(T res) p1) setResult) {
-    print("Transaction $setResult");
-
-    throw UnimplementedError();
-    // return setResult();
-  }
-}
-
 class Transaction implements adp.Transaction {
   final SqliteAdapter adapter;
   final void Function(Object reason) signalFailure;

@@ -12,12 +12,12 @@ class SatelliteWSServerStub {
 
   Future<void> start() async {
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, _kPort);
-    print('Listening on localhost:${server.port}');
+    // print('Listening on localhost:${server.port}');
 
     WebSocket? _socketClient;
 
     server.listen((HttpRequest request) async {
-      print("Request ${request.uri.path}");
+      // print("Request ${request.uri.path}");
       if (request.uri.path == '/ws') {
         if (_socketClient != null) {
           throw StateError("A client is already connected");
@@ -25,7 +25,7 @@ class SatelliteWSServerStub {
         // Upgrade an HttpRequest to a WebSocket connection
         final socketClient = await WebSocketTransformer.upgrade(request);
         _socketClient = socketClient;
-        print('Client connected!!!');
+        // print('Client connected!!!');
 
         // Listen for incoming messages from the client
         socketClient.listen((messageRaw) {

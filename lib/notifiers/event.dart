@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/notifiers/notifiers.dart';
+import 'package:electric_client/util/debug/debug.dart';
 import 'package:electric_client/util/random.dart';
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart' hide Change;
@@ -126,7 +127,7 @@ class EventNotifier implements Notifier {
 
   @override
   void actuallyChanged(DbName dbName, List<Change> changes) {
-    print('actually changed notifier');
+    logger.info('actually changed notifier');
     if (!_hasDbName(dbName)) {
       return;
     }
@@ -201,7 +202,7 @@ class EventNotifier implements Notifier {
       return;
     }
 
-    print("emit connectivity status $status");
+    logger.fine("emit connectivity status $status");
     _emitConnectivityStatus(dbName, status);
   }
 

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/satellite/satellite.dart';

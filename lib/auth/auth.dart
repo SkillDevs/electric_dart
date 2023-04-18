@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:electric_client/config/config.dart';
 import 'package:electric_client/satellite/satellite.dart';
+import 'package:electric_client/util/debug/debug.dart';
 import 'package:http/http.dart' as http;
 
 class AuthState {
@@ -46,7 +47,7 @@ class ConsoleHttpClient implements ConsoleClient {
 
   @override
   Future<TokenResponse> token(TokenRequest req) async {
-    print("fetching token for ${req.app} ${req.env} ${req.clientId}");
+    logger.info("fetching token for ${req.app} ${req.env} ${req.clientId}");
 
     final protocol = config.console?.ssl == true ? 'https' : 'http';
     final host = "$protocol://${config.console?.host}:${config.console?.port}";

@@ -7,13 +7,10 @@ import 'package:electric_client/electric/sqlite3_adapter.dart';
 import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/migrators/migrators.dart';
 import 'package:electric_client/notifiers/mock.dart';
-import 'package:electric_client/notifiers/notifiers.dart';
-import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/mock.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/satellite/process.dart';
-import 'package:electric_client/sockets/io.dart';
 import 'package:electric_client/util/random.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -22,7 +19,6 @@ import 'package:test/test.dart';
 import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
-import 'server_ws_stub.dart';
 
 // TODO: Revisar
 // const opts = Object.assign({}, satelliteDefaults, {
