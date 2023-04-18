@@ -63,7 +63,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
     replicating = true;
     inboundAck = lsn!;
 
-    final t = Timer(Duration(milliseconds: 100), () => emit('outbound_started'));
+    final t = Timer(Duration(milliseconds: 100), () => emit<void>('outbound_started'));
     timeouts.add(t);
 
     return Future<Right<SatelliteException, void>>.value(Right(null));

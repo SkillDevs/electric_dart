@@ -145,7 +145,7 @@ void main() {
 
   test('replication start sends FIRST_LSN', () async {
     await connectAndAuth();
-    final completer = Completer();
+    final completer = Completer<void>();
 
     server.nextResponses([
       (Uint8List data) {
@@ -215,7 +215,7 @@ void main() {
     final start = SatInStartReplicationResp();
     final ping = SatPingReq();
     final stop = SatInStopReplicationResp();
-    final completer = Completer();
+    final completer = Completer<void>();
 
     server.nextResponses([start, ping]);
     server.nextResponses([
@@ -295,7 +295,7 @@ void main() {
     server.nextResponses([start, relation, firstOpLogMessage, secondOpLogMessage]);
     server.nextResponses([stop]);
 
-    final completer = Completer();
+    final completer = Completer<void>();
 
     client.on('transaction', (TransactionEvent event) {
       expect(event.transaction.changes.length, 3);
@@ -330,7 +330,7 @@ void main() {
     server.nextResponses([start, opLog]);
     server.nextResponses([stop]);
 
-    final completer = Completer();
+    final completer = Completer<void>();
     client.on('transaction', (TransactionEvent event) {
       final ack = event.ackCb;
       final lsn0 = client.inbound.ackLsn;
@@ -387,7 +387,7 @@ void main() {
 
     final transaction = toTransactions(opLogEntries, kTestRelations);
 
-    final completer = Completer();
+    final completer = Completer<void>();
     server.nextResponses([startResp]);
     server.nextResponses([]);
 
@@ -479,7 +479,7 @@ void main() {
       ],
     );
 
-    final completer = Completer();
+    final completer = Completer<void>();
 
     var sent = false;
     client.subscribeToAck((event) {
@@ -640,7 +640,7 @@ void main() {
 
     server.nextResponses([start, relation, firstOpLogMessage]);
     server.nextResponses([stop]);
-    final completer = Completer();
+    final completer = Completer<void>();
 
     client.on('transaction', (TransactionEvent transactionEvent) {
       final transaction = transactionEvent.transaction;

@@ -102,7 +102,7 @@ class WebSocketIO implements Socket {
         }
       },
       cancelOnError: true,
-      onError: (e) {
+      onError: (Object e) {
         _notifyErrorAndCloseSocket(e);
       },
     );

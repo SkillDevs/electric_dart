@@ -332,7 +332,7 @@ class SatelliteClient extends EventEmitter implements Client {
       request = SatInStartReplicationReq(lsn: lsn);
     }
 
-    await rpc(request);
+    await rpc<void>(request);
 
     return Right(null);
   }
@@ -345,7 +345,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
     inbound.isReplicating = ReplicationStatus.stopping;
     final request = SatInStopReplicationReq();
-    await rpc(request);
+    await rpc<void>(request);
 
     return Right(null);
   }

@@ -148,11 +148,11 @@ List<Transaction> toTransactions(List<OplogEntry> opLogEntries, RelationsCache r
   Change opLogEntryToChange(OplogEntry entry) {
     Map<String, Object?>? record, oldRecord;
     if (entry.newRow != null) {
-      record = json.decode(entry.newRow!);
+      record = json.decode(entry.newRow!) as Map<String, Object?>;
     }
 
     if (entry.oldRow != null) {
-      oldRecord = json.decode(entry.oldRow!);
+      oldRecord = json.decode(entry.oldRow!) as Map<String, Object?>;
     }
 
     // FIXME: We should not loose UPDATE information here, as otherwise
@@ -342,8 +342,8 @@ OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
     clearTags: (json.decode(entry.clearTags) as List<dynamic>).cast<String>(),
   );
 
-  final Row oldRow = entry.oldRow != null ? json.decode(entry.oldRow!) : {};
-  final Row newRow = entry.newRow != null ? json.decode(entry.newRow!) : {};
+  final Row oldRow = entry.oldRow != null ? json.decode(entry.oldRow!) as Row : {};
+  final Row newRow = entry.newRow != null ? json.decode(entry.newRow!) as Row : {};
 
   final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
 

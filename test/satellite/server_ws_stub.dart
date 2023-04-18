@@ -93,7 +93,7 @@ class SatelliteWSServerStub {
     await server.close();
   }
 
-  nextResponses(List<Object> messages) {
+  void nextResponses(List<Object> messages) {
     queue.add(messages);
   }
 }

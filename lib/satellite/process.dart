@@ -356,7 +356,7 @@ class SatelliteProcess implements Satellite {
     return timestamp;
   }
 
-  _updateCachedShadowEntry(
+  void _updateCachedShadowEntry(
     OplogEntry oplogEntry,
     ShadowEntry shadowEntry,
     Map<String, ShadowEntry> shadowEntries,

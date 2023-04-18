@@ -116,9 +116,11 @@ class Transaction implements adp.Transaction {
   void invokeCallback<T>(
     Future<T> prom,
     void Function(Transaction tx, T result)? successCallback,
-    Function(Object error)? errorCallback,
+    void Function(Object error)? errorCallback,
   ) {
-    prom.then((res) => {successCallback?.call(this, res)}).catchError((err, _) {
+    prom.then((res) {
+      successCallback?.call(this, res);
+    }).catchError((Object err, _) {
       rollback(err, errorCallback);
     });
   }
