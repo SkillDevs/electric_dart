@@ -106,7 +106,7 @@ class SatelliteProcess implements Satellite {
     );
 
     // Starting now!
-    Future(() => _throttledSnapshot());
+    unawaited(Future(() => _throttledSnapshot()));
 
     // Need to reload primary keys after schema migration
     // For now, we do it only at initialization
@@ -153,7 +153,7 @@ class SatelliteProcess implements Satellite {
 
   void setClientListeners() {
     client.subscribeToTransactions((Transaction transaction) async {
-      _applyTransaction(transaction);
+      unawaited(_applyTransaction(transaction));
     });
     // When a local transaction is sent, or an acknowledgement for
     // a remote transaction commit is received, we update lsn records.

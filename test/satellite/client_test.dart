@@ -60,7 +60,7 @@ void main() {
   });
 
   test('connection backoff success', () async {
-    server.close();
+    await server.close();
 
     bool passed = false;
 
@@ -82,7 +82,7 @@ void main() {
   });
 
   test('connection backoff failure', () async {
-    server.close();
+    await server.close();
 
     bool retry(Object _e, int a) {
       if (a > 0) {
@@ -159,7 +159,7 @@ void main() {
         }
       },
     ]);
-    client.startReplication(null);
+    unawaited(client.startReplication(null));
     await completer.future;
   });
 
@@ -629,9 +629,6 @@ void main() {
     );
 
     final record = deserializeRow(serializedRow, rel);
-
-    print("record: $record");
-    print("insert: ${insertOp.writeToJsonMap()}");
 
     final firstOpLogMessage = SatOpLog(
       ops: [

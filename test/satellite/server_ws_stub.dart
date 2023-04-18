@@ -84,7 +84,7 @@ class SatelliteWSServerStub {
         });
       } else {
         request.response.statusCode = HttpStatus.notFound;
-        request.response.close();
+        await request.response.close();
       }
     });
   }
