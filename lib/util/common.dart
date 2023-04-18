@@ -12,22 +12,39 @@ String uuid() {
 
 final kDefaultLogPos = numberToBytes(0);
 
-void Function() throttle(void Function() callback, Duration duration) {
+FutureOr<void> Function() throttle(FutureOr<void> Function() callback, Duration duration) {
   Timer? timer;
   bool pending = false;
+
+  late Completer<void> completer;
+
+  Future<void> runCallback() async {
+    completer = Completer<void>();
+
+    try {
+      await callback();
+      completer.complete(null);
+    } catch (e, st) {
+      completer.completeError(e, st);
+    }
+  }
+
   return () {
     if (timer == null) {
+      runCallback();
+
       timer = Timer(duration, () {
         if (pending) {
-          callback();
           pending = false;
           timer = null;
+          runCallback();
         }
       });
-      callback();
     } else {
+      // The completer should be active
       pending = true;
     }
+    return completer.future;
   };
 }
 

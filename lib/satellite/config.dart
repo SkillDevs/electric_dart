@@ -37,20 +37,26 @@ class SatelliteClientOpts {
 }
 
 class SatelliteOpts {
-  // The database table where Satellite keeps its processing metadata.
+  /// The database table where Satellite keeps its processing metadata.
   final QualifiedTablename metaTable;
-  // The database table where the bundle migrator keeps its metadata.
+
+  /// The database table where the bundle migrator keeps its metadata.
   final QualifiedTablename migrationsTable;
-  // The database table where change operations are written to by the triggers
-  // automatically added to all tables in the user defined DDL schema.
+
+  /// The database table where change operations are written to by the triggers
+  /// automatically added to all tables in the user defined DDL schema.
   final QualifiedTablename oplogTable;
-  // The database table that controls active opLog triggers.
+
+  /// The database table that controls active opLog triggers.
   final QualifiedTablename triggersTable;
-  // The database table that contains dependency tracking information
+
+  /// The database table that contains dependency tracking information
   final QualifiedTablename shadowTable;
-  // Polls the database for changes every `pollingInterval` milliseconds.
+
+  /// Polls the database for changes every `pollingInterval` milliseconds.
   final int pollingInterval;
-  // Throttle snapshotting to once per `minSnapshotWindow` milliseconds.
+
+  /// Throttle snapshotting to once per `minSnapshotWindow` milliseconds.
   final int minSnapshotWindow;
 
   const SatelliteOpts({
@@ -62,4 +68,24 @@ class SatelliteOpts {
     required this.pollingInterval,
     required this.minSnapshotWindow,
   });
+
+  SatelliteOpts copyWith({
+    QualifiedTablename? metaTable,
+    QualifiedTablename? migrationsTable,
+    QualifiedTablename? oplogTable,
+    QualifiedTablename? triggersTable,
+    QualifiedTablename? shadowTable,
+    int? pollingInterval,
+    int? minSnapshotWindow,
+  }) {
+    return SatelliteOpts(
+      metaTable: metaTable ?? this.metaTable,
+      migrationsTable: migrationsTable ?? this.migrationsTable,
+      oplogTable: oplogTable ?? this.oplogTable,
+      triggersTable: triggersTable ?? this.triggersTable,
+      shadowTable: shadowTable ?? this.shadowTable,
+      pollingInterval: pollingInterval ?? this.pollingInterval,
+      minSnapshotWindow: minSnapshotWindow ?? this.minSnapshotWindow,
+    );
+  }
 }

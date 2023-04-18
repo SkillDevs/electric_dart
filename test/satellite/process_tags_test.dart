@@ -20,13 +20,10 @@ import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 
-// TODO: Revisar
-// const opts = Object.assign({}, satelliteDefaults, {
-//   minSnapshotWindow: 40,
-//   pollingInterval: 200,
-// })
-
-final opts = kSatelliteDefaults;
+final opts = kSatelliteDefaults.copyWith(
+  minSnapshotWindow: 40,
+  pollingInterval: 200,
+);
 
 final satelliteConfig = SatelliteConfig(
   app: 'test',

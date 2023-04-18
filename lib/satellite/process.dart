@@ -45,7 +45,7 @@ class SatelliteProcess implements Satellite {
   String? _potentialDataChangeSubscription;
   String? _connectivityChangeSubscription;
 
-  late void Function() _throttledSnapshot;
+  late FutureOr<void> Function() throttledSnapshot;
 
   int _lastAckdRowId = 0;
   int _lastSentRowId = 0;
@@ -68,7 +68,7 @@ class SatelliteProcess implements Satellite {
     // first call it and then every `minSnapshotWindow` ms as long as
     // you keep calling it within the window. If you don't call it within
     // the window, it will then run immediately the next time you call it.
-    _throttledSnapshot = throttle(
+    throttledSnapshot = throttle(
       performSnapshot,
       Duration(milliseconds: opts.minSnapshotWindow),
     );
@@ -89,7 +89,7 @@ class SatelliteProcess implements Satellite {
     // validate auth state, etc here.
 
     // Request a snapshot whenever the data in our database potentially changes.
-    _potentialDataChangeSubscription = notifier.subscribeToPotentialDataChanges((_) => _throttledSnapshot());
+    _potentialDataChangeSubscription = notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
     void connectivityChangeCallback(
       ConnectivityStateChangeNotification notification,
@@ -102,11 +102,11 @@ class SatelliteProcess implements Satellite {
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
       Duration(milliseconds: opts.pollingInterval),
-      (_) => _throttledSnapshot(),
+      (_) => throttledSnapshot(),
     );
 
     // Starting now!
-    unawaited(Future(() => _throttledSnapshot()));
+    unawaited(Future(() => throttledSnapshot()));
 
     // Need to reload primary keys after schema migration
     // For now, we do it only at initialization
@@ -161,7 +161,7 @@ class SatelliteProcess implements Satellite {
       final decoded = bytesToNumber(evt.lsn);
       await _ack(decoded, evt.ackType == AckType.remoteCommit);
     });
-    client.subscribeToOutboundEvent(() => _throttledSnapshot());
+    client.subscribeToOutboundEvent(() => throttledSnapshot());
   }
 
   @override
