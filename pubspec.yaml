@@ -20,6 +20,7 @@ dependencies:
   fixnum: ^1.1.0
   fpdart: ^0.5.0
   http: ^0.13.5
+  logging: ^1.1.1
   meta: ^1.9.1
   protobuf: ^2.1.0
   retry: ^3.1.1

@@ -11,6 +11,7 @@ import 'package:electric_client/satellite/merge.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/satellite/satellite.dart';
 import 'package:electric_client/util/common.dart';
+import 'package:electric_client/util/debug/debug.dart';
 import 'package:electric_client/util/sets.dart';
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart' hide Change;
@@ -119,10 +120,10 @@ class SatelliteProcess implements Satellite {
 
     final lsnBase64 = await _getMeta('lsn');
     if (lsnBase64.isNotEmpty) {
-      print("retrieved lsn $_lsn");
+      logger.info("retrieved lsn $_lsn");
       _lsn = base64.decode(lsnBase64);
     } else {
-      print("no lsn retrieved from store");
+      logger.info("no lsn retrieved from store");
     }
 
     return await _connectAndStartReplication();

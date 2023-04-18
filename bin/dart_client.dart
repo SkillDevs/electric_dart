@@ -9,6 +9,8 @@ import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/process.dart';
 import 'package:electric_client/sockets/io.dart';
+import 'package:electric_client/util/debug/debug.dart';
+import 'package:logging/logging.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'todo_migrations.dart';
@@ -41,6 +43,8 @@ void main(List<String> arguments) async {
 
   final adapter = SqliteAdapter(db);
   final migrator = BundleMigrator(adapter: adapter, migrations: todoMigrations);
+
+  setLogLevel(Level.ALL);
 
   final satellite = SatelliteProcess(
     client: client,
