@@ -318,4 +318,339 @@ void main() {
 
     expect(userTable, expectedUserTable);
   });
+
+  test('remote tx (INSERT) concurrently with 2 local txses (INSERT -> DELETE)', () async {
+    await runMigrations();
+    await satellite.setAuthState(null);
+
+    List<Statement> stmts = [];
+
+    // For this key we will choose remote Tx, such that: Local TM > Remote TX
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['1', 'local', null],
+    ));
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['2', 'local', null],
+    ));
+    await adapter.runInTransaction(stmts);
+    final txDate1 = await satellite.performSnapshot();
+
+    stmts = [];
+    // For this key we will choose remote Tx, such that: Local TM < Remote TX
+    stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
+    stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
+    await adapter.runInTransaction(stmts);
+    await satellite.performSnapshot();
+
+    final prevTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch - 1);
+    final nextTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch + 1);
+
+    final prevEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      prevTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [prevTs]),
+      newValues: {
+        "id": 1,
+        "value": 'remote',
+        "other": 1,
+      },
+      oldValues: {},
+    );
+    final nextEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      nextTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [nextTs]),
+      newValues: {
+        "id": 2,
+        "value": 'remote',
+        "other": 2,
+      },
+      oldValues: {},
+    );
+
+    await satellite.apply([prevEntry], 'remote', []);
+    await satellite.apply([nextEntry], 'remote', []);
+
+    final shadow = await satellite.getOplogShadowEntry();
+    final expectedShadow = [
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "1",
+        tags: genEncodedTags('remote', [prevTs]),
+      ),
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "2",
+        tags: genEncodedTags('remote', [nextTs]),
+      ),
+    ];
+    expect(shadow, expectedShadow);
+
+    //let entries= await satellite._getEntries()
+    //console.log(entries)
+    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+    //console.log(table)
+
+    // In both cases insert wins over delete, but
+    // for id = 1 CR picks local data before delete, while
+    // for id = 2 CR picks remote data
+    final expectedUserTable = [
+      {"id": 1, "value": 'local', "other": null},
+      {"id": 2, "value": 'remote', "other": 2},
+    ];
+    expect(expectedUserTable, userTable);
+  });
+
+  test('remote tx (INSERT) concurrently with local tx (INSERT -> UPDATE)', () async {
+    await runMigrations();
+    await satellite.setAuthState(null);
+    final clientId = satellite.authState!.clientId;
+    final stmts = <Statement>[];
+
+    // For this key we will choose remote Tx, such that: Local TM > Remote TX
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['1', 'local', null],
+    ));
+    stmts.add(Statement(
+      "UPDATE parent SET value = ?, other = ? WHERE id = 1",
+      ['local', 'not_null'],
+    ));
+    // For this key we will choose remote Tx, such that: Local TM < Remote TX
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['2', 'local', null],
+    ));
+    stmts.add(Statement(
+      "UPDATE parent SET value = ?, other = ? WHERE id = 1",
+      ['local', 'not_null'],
+    ));
+    await adapter.runInTransaction(stmts);
+
+    final txDate1 = await satellite.performSnapshot();
+
+    final prevTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch - 1);
+    final nextTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch + 1);
+
+    final prevEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      prevTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [prevTs]),
+      newValues: {
+        "id": 1,
+        "value": 'remote',
+        "other": 1,
+      },
+      oldValues: {},
+    );
+
+    final nextEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      nextTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [nextTs]),
+      newValues: {
+        "id": 2,
+        "value": 'remote',
+        "other": 2,
+      },
+      oldValues: {},
+    );
+
+    await satellite.apply([prevEntry], 'remote', []);
+    await satellite.apply([nextEntry], 'remote', []);
+
+    final shadow = await satellite.getOplogShadowEntry();
+    final expectedShadow = [
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "1",
+        tags: encodeTags([
+          generateTag(clientId, txDate1),
+          generateTag('remote', prevTs),
+        ]),
+      ),
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "2",
+        tags: encodeTags([
+          generateTag(clientId, txDate1),
+          generateTag('remote', nextTs),
+        ]),
+      ),
+    ];
+    expect(shadow, expectedShadow);
+
+    final entries = await satellite.getEntries();
+    //console.log(entries)
+
+    // Given that Insert and Update happen within the same transaction clear should not
+    // contain itself
+    expect(entries[0].clearTags, encodeTags([]));
+    expect(entries[1].clearTags, encodeTags([]));
+    expect(entries[2].clearTags, encodeTags([]));
+    expect(entries[3].clearTags, encodeTags([]));
+
+    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+
+    // In both cases insert wins over delete, but
+    // for id = 1 CR picks local data before delete, while
+    // for id = 2 CR picks remote data
+    final expectedUserTable = [
+      {"id": 1, "value": 'local', "other": 'not_null'},
+      {"id": 2, "value": 'remote', "other": 2},
+    ];
+    expect(expectedUserTable, userTable);
+  });
+
+  test('origin tx (INSERT) concurrently with local txses (INSERT -> DELETE)', () async {
+    //
+    await runMigrations();
+    await satellite.setAuthState(null);
+    final clientId = satellite.authState!.clientId;
+
+    var stmts = <Statement>[];
+
+    // For this key we will choose remote Tx, such that: Local TM > Remote TX
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['1', 'local', null],
+    ));
+    stmts.add(Statement(
+      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      ['2', 'local', null],
+    ));
+    await adapter.runInTransaction(stmts);
+    final txDate1 = await satellite.performSnapshot();
+
+    stmts = [];
+    // For this key we will choose remote Tx, such that: Local TM < Remote TX
+    stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
+    stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
+    await adapter.runInTransaction(stmts);
+    await satellite.performSnapshot();
+
+    final entries = await satellite.getEntries();
+    //console.log(entries)
+
+    // For this key we receive transaction which was older
+    final electricEntrySame = generateRemoteOplogEntry(
+      tableInfo,
+      entries[0].namespace,
+      entries[0].tablename,
+      OpType.insert,
+      DateTime.parse(entries[0].timestamp).millisecondsSinceEpoch,
+      genEncodedTags(clientId, [txDate1]),
+      newValues: json.decode(entries[0].newRow!) as Map<String, Object?>,
+      oldValues: {},
+    );
+
+    // For this key we had concurrent insert transaction from another node `remote`
+    // with same timestamp
+    final electricEntryConflict = generateRemoteOplogEntry(
+      tableInfo,
+      entries[1].namespace,
+      entries[1].tablename,
+      OpType.insert,
+      DateTime.parse(entries[1].timestamp).millisecondsSinceEpoch,
+      encodeTags([
+        generateTag(clientId, txDate1),
+        generateTag('remote', txDate1),
+      ]),
+      newValues: json.decode(entries[1].newRow!) as Map<String, Object?>,
+      oldValues: {},
+    );
+
+    await satellite.apply([electricEntrySame, electricEntryConflict], clientId, []);
+
+    final shadow = await satellite.getOplogShadowEntry();
+    final expectedShadow = [
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "2",
+        tags: genEncodedTags('remote', [txDate1]),
+      ),
+    ];
+    expect(shadow, expectedShadow);
+
+    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+    final expectedUserTable = [
+      {"id": 2, "value": 'local', "other": null}
+    ];
+    expect(expectedUserTable, userTable);
+  });
+
+  test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', () async {
+    await runMigrations();
+    await satellite.setAuthState(null);
+    final clientId = satellite.authState!.clientId;
+    final txDate1 = new DateTime.now();
+
+    final insertEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.update,
+      txDate1.millisecondsSinceEpoch,
+      genEncodedTags('remote', [txDate1]),
+      newValues: {
+        "id": 1,
+        "value": 'local',
+      },
+      oldValues: {},
+    );
+
+    final deleteEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.delete,
+      txDate1.millisecondsSinceEpoch + 1,
+      genEncodedTags('remote', []),
+      newValues: {
+        "id": 1,
+        "value": 'local',
+      },
+      oldValues: {},
+    );
+
+    await satellite.apply([insertEntry], clientId, []);
+
+    var shadow = await satellite.getOplogShadowEntry();
+    final expectedShadow = [
+      ShadowEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKey: "1",
+        tags: genEncodedTags('remote', [txDate1]),
+      ),
+    ];
+    expect(shadow, expectedShadow);
+
+    await satellite.apply([deleteEntry], clientId, []);
+
+    shadow = await satellite.getOplogShadowEntry();
+    expect(<ShadowEntry>[], shadow);
+
+    final entries = await satellite.getEntries(since: 0);
+    expect(<OplogEntry>[], entries);
+  });
 }
