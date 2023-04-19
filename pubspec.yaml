@@ -23,6 +23,7 @@ dependencies:
   logging: ^1.1.1
   meta: ^1.9.1
   protobuf: ^2.1.0
+  rate_limiter: ^1.0.0
   retry: ^3.1.1
   sqlite3: ^1.10.1
   synchronized: ^3.0.1

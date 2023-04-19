@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:rate_limiter/rate_limiter.dart' as rt;
 
 import 'package:uuid/uuid.dart' as uuid_lib;
 
@@ -12,40 +13,29 @@ String uuid() {
 
 final kDefaultLogPos = numberToBytes(0);
 
-FutureOr<void> Function() throttle(FutureOr<void> Function() callback, Duration duration) {
-  Timer? timer;
-  bool pending = false;
+// Typed wrapper around `rate_limiter` [Throttle]
+class Throttle<T> {
+  final Duration duration;
+  final FutureOr<T> Function() callback;
 
-  late Completer<void> completer;
+  late final rt.Throttle _throttle;
 
-  Future<void> runCallback() async {
-    completer = Completer<void>();
-
-    try {
-      await callback();
-      completer.complete(null);
-    } catch (e, st) {
-      completer.completeError(e, st);
-    }
+  Throttle(this.callback, this.duration) {
+    _throttle = rt.Throttle(
+      callback,
+      duration,
+      leading: true,
+      trailing: true,
+    );
   }
 
-  return () {
-    if (timer == null) {
-      runCallback();
+  Future<T> call() async {
+    return (await _throttle()) as FutureOr<T>;
+  }
 
-      timer = Timer(duration, () {
-        if (pending) {
-          pending = false;
-          timer = null;
-          runCallback();
-        }
-      });
-    } else {
-      // The completer should be active
-      pending = true;
-    }
-    return completer.future;
-  };
+  void cancel() {
+    _throttle.cancel();
+  }
 }
 
 class TypeEncoder {
