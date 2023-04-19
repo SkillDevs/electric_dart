@@ -306,7 +306,7 @@ class SatelliteClient extends EventEmitter implements Client {
     outbound.enqueuedLsn = transaction.lsn;
 
     if (throttledPushTransaction != null) {
-      throttledPushTransaction!.call();
+      throttledPushTransaction!();
     }
 
     return Right(null);
@@ -459,7 +459,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
       outbound = resetReplication(replication.enqueuedLsn, replication.ackLsn, ReplicationStatus.active);
 
-      throttledPushTransaction = Throttle(() => pushTransactions, Duration(milliseconds: opts.pushPeriod));
+      throttledPushTransaction = Throttle(pushTransactions, Duration(milliseconds: opts.pushPeriod));
 
       final response = SatInStartReplicationResp();
       sendMessage(response);
