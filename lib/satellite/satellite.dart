@@ -1,10 +1,33 @@
 import 'package:electric_client/auth/auth.dart';
+import 'package:electric_client/config/config.dart';
 import 'package:electric_client/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/migrators/migrators.dart';
 import 'package:electric_client/notifiers/notifiers.dart';
+import 'package:electric_client/satellite/config.dart';
+import 'package:electric_client/sockets/sockets.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 import 'package:fpdart/fpdart.dart';
+
+abstract class Registry {
+  Future<Satellite> ensureStarted({
+    required DbName dbName,
+    required DatabaseAdapter adapter,
+    required Migrator migrator,
+    required Notifier notifier,
+    required SocketFactory socketFactory,
+    required ConsoleClient console,
+    required ElectricConfigFilled config,
+    AuthState? authState,
+    SatelliteOverrides? opts,
+  });
+
+  Future<Satellite> ensureAlreadyStarted(DbName dbName);
+
+  Future<void> stop(DbName dbName);
+
+  Future<void> stopAll();
+}
 
 abstract class Satellite {
   DbName get dbName;

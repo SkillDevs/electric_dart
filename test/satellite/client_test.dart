@@ -415,7 +415,6 @@ void main() {
 
           final lsn = satOpLog[0].begin.lsn;
           expect(bytesToNumber(lsn), 1);
-          // TODO: Comparar los valores obtenidos en Javascript y aqui
           expect(satOpLog[0].begin.commitTimestamp, Int64(1000));
           // TODO: check values
         }

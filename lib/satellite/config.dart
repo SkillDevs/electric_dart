@@ -88,6 +88,16 @@ class SatelliteOpts {
       minSnapshotWindow: minSnapshotWindow ?? this.minSnapshotWindow,
     );
   }
+
+  SatelliteOpts copyWithOverrides(SatelliteOverrides overrides) {
+    return copyWith(
+      metaTable: overrides.metaTable,
+      migrationsTable: overrides.migrationsTable,
+      oplogTable: overrides.oplogTable,
+      pollingInterval: overrides.pollingInterval,
+      minSnapshotWindow: overrides.minSnapshotWindow,
+    );
+  }
 }
 
 class SatelliteOverrides {
@@ -105,5 +115,3 @@ class SatelliteOverrides {
     this.minSnapshotWindow,
   });
 }
-
-

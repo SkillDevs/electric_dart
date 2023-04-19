@@ -1,11 +1,83 @@
 import 'dart:async';
 
 import 'package:electric_client/auth/auth.dart';
+import 'package:electric_client/config/config.dart';
+import 'package:electric_client/electric/adapter.dart' hide Transaction;
+import 'package:electric_client/migrators/migrators.dart';
+import 'package:electric_client/notifiers/notifiers.dart';
+import 'package:electric_client/satellite/config.dart';
+import 'package:electric_client/satellite/registry.dart';
 import 'package:electric_client/satellite/satellite.dart';
+import 'package:electric_client/sockets/sockets.dart';
 import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 import 'package:fpdart/fpdart.dart';
+
+class MockSatelliteProcess implements Satellite {
+  final SatelliteConfig config;
+  final DbName dbName;
+  final DatabaseAdapter adapter;
+  final Migrator migrator;
+  final Notifier notifier;
+  final SocketFactory socketFactory;
+  final ConsoleClient console;
+  final SatelliteOpts opts;
+
+  MockSatelliteProcess(
+      {required this.dbName,
+      required this.adapter,
+      required this.migrator,
+      required this.notifier,
+      required this.socketFactory,
+      required this.console,
+      required this.config,
+      required this.opts});
+
+  Future<Either<Exception, void>> start(AuthState? authState) async {
+    await Future<void>.delayed(Duration(milliseconds: 50));
+    return Right(null);
+  }
+
+  Future<void> stop() async {
+    await Future<void>.delayed(Duration(milliseconds: 50));
+  }
+}
+
+class MockRegistry extends BaseRegistry {
+  Future<Satellite> startProcess({
+    required DbName dbName,
+    required DatabaseAdapter adapter,
+    required Migrator migrator,
+    required Notifier notifier,
+    required SocketFactory socketFactory,
+    required ConsoleClient console,
+    required ElectricConfigFilled config,
+    AuthState? authState,
+    SatelliteOverrides? opts,
+  }) async {
+    var effectiveOpts = kSatelliteDefaults;
+    if (opts != null) {
+      effectiveOpts = effectiveOpts.copyWithOverrides(opts);
+    }
+
+    final satellite = MockSatelliteProcess(
+        dbName: dbName,
+        adapter: adapter,
+        migrator: migrator,
+        notifier: notifier,
+        socketFactory: socketFactory,
+        console: console,
+        config: SatelliteConfig(
+          app: config.app,
+          env: config.env,
+        ),
+        opts: effectiveOpts);
+    await satellite.start(authState);
+
+    return satellite;
+  }
+}
 
 class MockSatelliteClient extends EventEmitter implements Client {
   bool replicating = false;
