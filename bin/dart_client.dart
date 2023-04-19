@@ -5,6 +5,7 @@ import 'package:electric_client/config/config.dart';
 import 'package:electric_client/electric/sqlite3_adapter.dart';
 import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/notifiers/event.dart';
+import 'package:electric_client/notifiers/mock.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/process.dart';
@@ -29,6 +30,7 @@ void main(List<String> arguments) async {
   final client = SatelliteClient(
     dbName: dbName,
     socketFactory: WebSocketIOFactory(),
+    notifier: MockNotifier(dbName),
     opts: SatelliteClientOpts(
       host: replicationConfig.host,
       port: replicationConfig.port,
@@ -59,6 +61,7 @@ void main(List<String> arguments) async {
           port: 4000,
           ssl: false,
         ),
+        migrations: [],
         replication: replicationConfig,
       ),
     ),

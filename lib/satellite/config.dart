@@ -89,3 +89,21 @@ class SatelliteOpts {
     );
   }
 }
+
+class SatelliteOverrides {
+  final QualifiedTablename? metaTable;
+  final QualifiedTablename? migrationsTable;
+  final QualifiedTablename oplogTable;
+  final int? pollingInterval;
+  final int? minSnapshotWindow;
+
+  SatelliteOverrides({
+    this.metaTable,
+    this.migrationsTable,
+    required this.oplogTable,
+    this.pollingInterval,
+    this.minSnapshotWindow,
+  });
+}
+
+

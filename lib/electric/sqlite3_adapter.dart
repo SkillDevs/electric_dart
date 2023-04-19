@@ -52,7 +52,7 @@ class SqliteAdapter extends adp.DatabaseAdapter {
 
   @override
   List<QualifiedTablename> tableNames(Statement statement) {
-    // TODO: implement tableNames
+    // TODO(dart): implement tableNames
     throw UnimplementedError();
   }
 

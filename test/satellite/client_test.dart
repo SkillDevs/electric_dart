@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electric_client/auth/auth.dart';
+import 'package:electric_client/notifiers/mock.dart';
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/client.dart';
 import 'package:electric_client/satellite/config.dart';
@@ -18,7 +19,6 @@ import 'common.dart';
 import 'server_ws_stub.dart';
 
 late SatelliteWSServerStub server;
-// TODO: Client interface
 late SatelliteClient client;
 late String clientId;
 late String app;
@@ -35,7 +35,7 @@ void main() {
     client = SatelliteClient(
       dbName: dbName,
       socketFactory: WebSocketIOFactory(),
-      //MockNotifier(dbName),
+      notifier: MockNotifier(dbName),
       opts: SatelliteClientOpts(
         host: '127.0.0.1',
         port: 30002,

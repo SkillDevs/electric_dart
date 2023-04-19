@@ -8,7 +8,7 @@ final triggersTable = kSatelliteDefaults.triggersTable;
 final shadowTable = kSatelliteDefaults.shadowTable;
 
 final kBaseMigrations = [
-  // TODO: In Typescript-client it uses type STRING instead of TEXT. String does not exist in Sqlite, it defaults to numeric if possible
+  // TODO(dart): In Typescript-client it uses type STRING instead of TEXT. String does not exist in Sqlite, it defaults to numeric if possible
   Migration(
     satelliteBody: [
       //`-- The ops log table\n`,

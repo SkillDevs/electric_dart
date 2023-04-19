@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:electric_client/auth/auth.dart';
+import 'package:electric_client/notifiers/notifiers.dart' hide Change;
 import 'package:electric_client/proto/satellite.pb.dart';
 import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/satellite.dart';
@@ -35,6 +36,7 @@ class SatelliteClient extends EventEmitter implements Client {
   final String dbName;
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
+  final Notifier notifier;
 
   Socket? socket;
 
@@ -47,7 +49,7 @@ class SatelliteClient extends EventEmitter implements Client {
   SatelliteClient({
     required this.dbName,
     required this.socketFactory,
-    //required this.notifier,
+    required this.notifier,
     required this.opts,
   }) {
     inbound = resetReplication(null, null, null);
@@ -167,13 +169,13 @@ class SatelliteClient extends EventEmitter implements Client {
           throw SatelliteException(SatelliteErrorCode.unexpectedState, 'socket got unassigned somehow');
         }
         socketHandler = (Uint8List message) => handleIncoming(message);
-        //notifier.connectivityStateChange(this.dbName, 'connected')
+        notifier.connectivityStateChange(this.dbName, ConnectivityState.connected);
         socket.onMessage(socketHandler!);
         socket.onError((error) {
-          // this.notifier.connectivityStateChange(this.dbName, 'error')
+          this.notifier.connectivityStateChange(this.dbName, ConnectivityState.error);
         });
         socket.onClose(() {
-          // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
+          this.notifier.connectivityStateChange(this.dbName, ConnectivityState.disconnected);
         });
         connectCompleter.complete();
       });
@@ -181,7 +183,7 @@ class SatelliteClient extends EventEmitter implements Client {
       socket.onceError((error) {
         // print("Once Error $error");
         this.socket = null;
-        // this.notifier.connectivityStateChange(this.dbName, 'disconnected')
+        this.notifier.connectivityStateChange(this.dbName, ConnectivityState.disconnected);
         if (!connectCompleter.isCompleted) {
           connectCompleter.completeError(error);
         }
@@ -253,7 +255,7 @@ class SatelliteClient extends EventEmitter implements Client {
   void handleIncoming(Uint8List data) {
     late final DecodedMessage messageInfo;
     try {
-      // TODO: Use union instead of throwing
+      // TODO(dart): Use union instead of throwing
       messageInfo = toMessage(data);
     } catch (e) {
       // this.emit('error', messageOrError)
@@ -781,7 +783,7 @@ SatOpRow serializeRow(Record rec, Relation relation) {
     [],
     (List<List<int>> acc, RelationColumn c) {
       if (rec[c.name] != null) {
-        // TODO: Review this. This can be a number and it's treated as a string
+        // TODO(dart): Review this. This can be a number and it's treated as a string
         acc.add(serializeColumnData(rec[c.name]!.toString()));
       } else {
         acc.add(serializeNullData());

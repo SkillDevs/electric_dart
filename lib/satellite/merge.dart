@@ -18,7 +18,7 @@ OplogColumnChanges mergeChangesLastWriteWins(
     }
 
     if (firstValue == null) {
-      // TODO: Could this break?
+      // TODO(dart): Could this break?
       acc[key] = secondValue!;
     } else if (secondValue == null) {
       acc[key] = firstValue;

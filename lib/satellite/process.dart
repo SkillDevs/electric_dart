@@ -38,7 +38,7 @@ class SatelliteProcess implements Satellite {
   @visibleForTesting
   AuthState? authState;
 
-  // TODO: Unused in typescript
+  // TODO(dart): Unused in typescript
   //DateTime? _lastSnapshotTimestamp;
 
   Timer? _pollingInterval;
@@ -177,7 +177,7 @@ class SatelliteProcess implements Satellite {
       _potentialDataChangeSubscription = null;
     }
 
-    // TODO: Missing in typescript client
+    // TODO(dart): Missing in typescript client
     if (_connectivityChangeSubscription != null) {
       notifier.unsubscribeFromConnectivityStateChange(_connectivityChangeSubscription!);
       _connectivityChangeSubscription = null;
@@ -220,7 +220,6 @@ class SatelliteProcess implements Satellite {
       throw Exception("trying to connect before authentication");
     }
 
-    // TODO: Connect to client
     return client
         .connect()
         .then((_) => refreshAuthState(localAuthState))
@@ -244,7 +243,7 @@ class SatelliteProcess implements Satellite {
         ),
       );
       await _setMeta('token', tokenResponse.token);
-      // TODO: Bug
+      // TODO(dart): Bug?
       await _setMeta('refreshToken', tokenResponse.token);
 
       return AuthState(
@@ -280,7 +279,7 @@ class SatelliteProcess implements Satellite {
     return numTables == 3;
   }
 
-// TODO: Migrate
+// TODO(dart): Migrate
 /*
     // Handle auth state changes.
   async _updateAuthState({ authState }: AuthStateNotification): Promise<void> {
@@ -502,7 +501,6 @@ class SatelliteProcess implements Satellite {
     final rows = await adapter.query(Statement(selectEntries, [since]));
     return rows.map(_opLogEntryFromRow).toList();
   }
-// TODO:
 
   Future<List<OplogEntry>> _getUpdatedEntries(DateTime timestamp, {int? since}) async {
     since ??= _lastAckdRowId;

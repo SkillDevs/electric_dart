@@ -126,8 +126,8 @@ List<OplogEntry> fromTransaction(
       primaryKey: pk,
       rowid: -1, // Not required
       optype: changeTypeToOpType(t.type),
-      timestamp:
-          DateTime.fromMillisecondsSinceEpoch(transaction.commitTimestamp.toInt()).toIso8601String(), //TODO: Revisar
+      timestamp: DateTime.fromMillisecondsSinceEpoch(transaction.commitTimestamp.toInt())
+          .toIso8601String(), // TODO: check precision
       newRow: t.record == null ? null : json.encode(t.record),
       oldRow: t.oldRecord == null ? null : json.encode(t.oldRecord),
       clearTags: encodeTags(t.tags),
@@ -141,7 +141,6 @@ List<Transaction> toTransactions(List<OplogEntry> opLogEntries, RelationsCache r
   }
 
   Int64 to_commit_timestamp(String timestamp) {
-    // TODO: Uint64 dart protobuf doesn't have a explicit type for this
     return Int64(DateTime.parse(timestamp).millisecondsSinceEpoch);
   }
 

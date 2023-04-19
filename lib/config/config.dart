@@ -1,11 +1,12 @@
+import 'package:electric_client/migrators/migrators.dart';
+
 typedef AppName = String;
 typedef EnvName = String;
 
 class ElectricConfig {
   final AppName app;
   final EnvName env;
-  // TODO: Migrations
-  // migrations
+  final List<Migration> migrations;
   final ConsoleConfig? console;
   final ReplicationConfig? replication;
   final bool? debug;
@@ -13,9 +14,28 @@ class ElectricConfig {
   ElectricConfig({
     required this.app,
     required this.env,
+    required this.migrations,
     this.console,
     this.replication,
     this.debug,
+  });
+}
+
+class ElectricConfigFilled {
+  final AppName app;
+  final EnvName env;
+  final List<Migration> migrations;
+  final ConsoleConfig console;
+  final ReplicationConfig replication;
+  final bool debug;
+
+  ElectricConfigFilled({
+    required this.app,
+    required this.env,
+    required this.console,
+    required this.migrations,
+    required this.replication,
+    required this.debug,
   });
 }
 
