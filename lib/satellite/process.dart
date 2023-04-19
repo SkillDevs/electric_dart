@@ -45,7 +45,7 @@ class SatelliteProcess implements Satellite {
   String? _potentialDataChangeSubscription;
   String? _connectivityChangeSubscription;
 
-  late FutureOr<void> Function() throttledSnapshot;
+  late Throttle<DateTime> throttledSnapshot;
 
   int _lastAckdRowId = 0;
   int _lastSentRowId = 0;
@@ -68,7 +68,7 @@ class SatelliteProcess implements Satellite {
     // first call it and then every `minSnapshotWindow` ms as long as
     // you keep calling it within the window. If you don't call it within
     // the window, it will then run immediately the next time you call it.
-    throttledSnapshot = throttle(
+    throttledSnapshot = Throttle(
       performSnapshot,
       Duration(milliseconds: opts.minSnapshotWindow),
     );

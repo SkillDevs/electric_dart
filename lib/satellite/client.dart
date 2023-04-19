@@ -41,7 +41,7 @@ class SatelliteClient extends EventEmitter implements Client {
   late Replication inbound;
   late Replication outbound;
 
-  void Function()? throttledPushTransaction;
+  Throttle<void>? throttledPushTransaction;
   void Function(Uint8List bytes)? socketHandler;
 
   SatelliteClient({
@@ -459,7 +459,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
       outbound = resetReplication(replication.enqueuedLsn, replication.ackLsn, ReplicationStatus.active);
 
-      throttledPushTransaction = throttle(() => pushTransactions(), Duration(milliseconds: opts.pushPeriod));
+      throttledPushTransaction = Throttle(() => pushTransactions, Duration(milliseconds: opts.pushPeriod));
 
       final response = SatInStartReplicationResp();
       sendMessage(response);
@@ -540,6 +540,7 @@ class SatelliteClient extends EventEmitter implements Client {
       outbound.isReplicating = ReplicationStatus.stopped;
 
       if (throttledPushTransaction != null) {
+        throttledPushTransaction!.cancel();
         throttledPushTransaction = null;
       }
 
