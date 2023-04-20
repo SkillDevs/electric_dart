@@ -210,7 +210,8 @@ class EventNotifier implements Notifier {
 
   @override
   String subscribeToConnectivityStateChange(
-      ConnectivityStateChangeCallback callback,) {
+    ConnectivityStateChangeCallback callback,
+  ) {
     final key = randomValue();
 
     void wrappedCallback(ConnectivityStateChangeNotification notification) {
@@ -287,7 +288,9 @@ class EventNotifier implements Notifier {
   }
 
   ConnectivityStateChangeNotification _emitConnectivityStatus(
-      DbName dbName, ConnectivityState connectivityState,) {
+    DbName dbName,
+    ConnectivityState connectivityState,
+  ) {
     final notification = ConnectivityStateChangeNotification(
       dbName: dbName,
       connectivityState: connectivityState,

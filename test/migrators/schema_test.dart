@@ -46,8 +46,10 @@ void main() {
       fail("should not occur");
     } catch (err) {
       final errSqlite = err as SqliteException;
-      expect(errSqlite.extendedResultCode,
-          SqliteErrors.SQLITE_CONSTRAINT_PRIMARYKEY,);
+      expect(
+        errSqlite.extendedResultCode,
+        SqliteErrors.SQLITE_CONSTRAINT_PRIMARYKEY,
+      );
     }
   });
 }

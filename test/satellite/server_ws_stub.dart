@@ -53,8 +53,12 @@ class SatelliteWSServerStub {
             }
 
             if (msgType == SatMsgType.inStartReplicationResp) {
-              socketClient.add(encodeSocketMessage(
-                  msgType, msg as SatInStartReplicationResp,),);
+              socketClient.add(
+                encodeSocketMessage(
+                  msgType,
+                  msg as SatInStartReplicationResp,
+                ),
+              );
               socketClient.add(
                 encodeSocketMessage(
                   SatMsgType.inStartReplicationReq,
@@ -64,8 +68,12 @@ class SatelliteWSServerStub {
             }
 
             if (msgType == SatMsgType.inStopReplicationResp) {
-              socketClient.add(encodeSocketMessage(
-                  msgType, msg as SatInStopReplicationResp,),);
+              socketClient.add(
+                encodeSocketMessage(
+                  msgType,
+                  msg as SatInStopReplicationResp,
+                ),
+              );
             }
 
             if (msgType == SatMsgType.relation) {

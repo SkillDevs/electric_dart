@@ -116,8 +116,9 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> connect(
-      {bool Function(Object error, int attempt)? retryHandler,}) async {
+  Future<Either<SatelliteException, void>> connect({
+    bool Function(Object error, int attempt)? retryHandler,
+  }) async {
     closed = false;
     return right(null);
   }
@@ -133,7 +134,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
   @override
   Future<Either<SatelliteException, AuthResponse>> authenticate(
-      AuthState _authState,) async {
+    AuthState _authState,
+  ) async {
     return right(
       AuthResponse(
         null,
@@ -150,8 +152,10 @@ class MockSatelliteClient extends EventEmitter implements Client {
     replicating = true;
     inboundAck = lsn!;
 
-    final t = Timer(const Duration(milliseconds: 100),
-        () => emit<void>('outbound_started'),);
+    final t = Timer(
+      const Duration(milliseconds: 100),
+      () => emit<void>('outbound_started'),
+    );
     timeouts.add(t);
 
     return Future<Right<SatelliteException, void>>.value(const Right(null));
@@ -165,7 +169,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
   @override
   void subscribeToTransactions(
-      Future<void> Function(Transaction transaction) callback,) {}
+    Future<void> Function(Transaction transaction) callback,
+  ) {}
 
   @override
   Either<SatelliteException, void> enqueueTransaction(Transaction transaction) {

@@ -119,7 +119,9 @@ class SatelliteProcess implements Satellite {
 
     setClientListeners();
     client.resetOutboundLogPositions(
-        numberToBytes(_lastAckdRowId), numberToBytes(_lastSentRowId),);
+      numberToBytes(_lastAckdRowId),
+      numberToBytes(_lastSentRowId),
+    );
 
     final lsnBase64 = await _getMeta('lsn');
     if (lsnBase64.isNotEmpty) {
@@ -177,14 +179,16 @@ class SatelliteProcess implements Satellite {
 
     if (_potentialDataChangeSubscription != null) {
       notifier.unsubscribeFromPotentialDataChanges(
-          _potentialDataChangeSubscription!,);
+        _potentialDataChangeSubscription!,
+      );
       _potentialDataChangeSubscription = null;
     }
 
     // TODO(dart): Missing in typescript client
     if (_connectivityChangeSubscription != null) {
       notifier.unsubscribeFromConnectivityStateChange(
-          _connectivityChangeSubscription!,);
+        _connectivityChangeSubscription!,
+      );
       _connectivityChangeSubscription = null;
     }
 
@@ -453,7 +457,10 @@ class SatelliteProcess implements Satellite {
   // merging, for local and remote operations.
   @visibleForTesting
   Future<void> apply(
-      List<OplogEntry> incoming, String incomingOrigin, LSN lsn,) async {
+    List<OplogEntry> incoming,
+    String incomingOrigin,
+    LSN lsn,
+  ) async {
     logger.info("apply incoming changes for LSN: $lsn");
     // assign timestamp to pending operations before apply
     await performSnapshot();
@@ -468,9 +475,12 @@ class SatelliteProcess implements Satellite {
     // update lsn.
     _lsn = lsn;
     final lsnBase64 = base64.encode(lsn);
-    stmts.add(Statement(
+    stmts.add(
+      Statement(
         "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
-        <Object?>[lsnBase64, 'lsn'],),);
+        <Object?>[lsnBase64, 'lsn'],
+      ),
+    );
 
     for (final entry in merged.entries) {
       final tablenameStr = entry.key;
@@ -519,8 +529,10 @@ class SatelliteProcess implements Satellite {
     return rows.map(_opLogEntryFromRow).toList();
   }
 
-  Future<List<OplogEntry>> _getUpdatedEntries(DateTime timestamp,
-      {int? since,}) async {
+  Future<List<OplogEntry>> _getUpdatedEntries(
+    DateTime timestamp, {
+    int? since,
+  }) async {
     since ??= _lastAckdRowId;
     final oplog = opts.oplogTable.toString();
 
@@ -675,8 +687,12 @@ class SatelliteProcess implements Satellite {
         }
         final localChanges = localInfo.oplogEntryChanges;
 
-        final changes = mergeChangesLastWriteWins(localOrigin,
-            localChanges.changes, incomingOrigin, incomingChanges.changes,);
+        final changes = mergeChangesLastWriteWins(
+          localOrigin,
+          localChanges.changes,
+          incomingOrigin,
+          incomingChanges.changes,
+        );
         late final ChangesOpType optype;
 
         final tags = mergeOpTags(localChanges, incomingChanges);
@@ -700,9 +716,14 @@ class SatelliteProcess implements Satellite {
 
     final opLogEntries = fromTransaction(transaction, relations);
     final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(
-        transaction.commitTimestamp.toInt(),);
+      transaction.commitTimestamp.toInt(),
+    );
     await applyTransactionInternal(
-        origin, commitTimestamp, opLogEntries, transaction.lsn,);
+      origin,
+      commitTimestamp,
+      opLogEntries,
+      transaction.lsn,
+    );
   }
 
   @visibleForTesting
@@ -888,7 +909,9 @@ class SatelliteProcess implements Satellite {
 }
 
 Statement _applyDeleteOperation(
-    ShadowEntryChanges entryChanges, String tablenameStr,) {
+  ShadowEntryChanges entryChanges,
+  String tablenameStr,
+) {
   final pkEntries = entryChanges.primaryKeyCols.entries;
   final params = pkEntries.fold<_WhereAndValues>(
     _WhereAndValues([], []),
@@ -908,7 +931,9 @@ Statement _applyDeleteOperation(
 }
 
 Statement _applyNonDeleteOperation(
-    ShadowEntryChanges shadowEntryChanges, String tablenameStr,) {
+  ShadowEntryChanges shadowEntryChanges,
+  String tablenameStr,
+) {
   final changes = shadowEntryChanges.changes;
   final primaryKeyCols = shadowEntryChanges.primaryKeyCols;
 

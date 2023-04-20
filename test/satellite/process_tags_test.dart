@@ -96,7 +96,8 @@ void main() {
 
     await adapter.run(
       Statement(
-          "UPDATE parent SET value = 'local1', other = 'other1' WHERE id = 1",),
+        "UPDATE parent SET value = 'local1', other = 'other1' WHERE id = 1",
+      ),
     );
 
     final txDate2 = await satellite.performSnapshot();
@@ -308,14 +309,18 @@ void main() {
         tablename: 'parent',
         primaryKey: "1",
         tags: genEncodedTags(
-            'remote', [DateTime.fromMillisecondsSinceEpoch(prevTs)],),
+          'remote',
+          [DateTime.fromMillisecondsSinceEpoch(prevTs)],
+        ),
       ),
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
         primaryKey: "2",
         tags: genEncodedTags(
-            'remote', [DateTime.fromMillisecondsSinceEpoch(nextTs)],),
+          'remote',
+          [DateTime.fromMillisecondsSinceEpoch(nextTs)],
+        ),
       ),
     ];
     expect(shadow, expectedShadow);
@@ -619,7 +624,10 @@ void main() {
     );
 
     await satellite.apply(
-        [electricEntrySame, electricEntryConflict], clientId, [],);
+      [electricEntrySame, electricEntryConflict],
+      clientId,
+      [],
+    );
 
     final shadow = await satellite.getOplogShadowEntry();
     final expectedShadow = [

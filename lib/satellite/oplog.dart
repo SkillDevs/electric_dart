@@ -127,8 +127,8 @@ List<OplogEntry> fromTransaction(
       rowid: -1, // Not required
       optype: changeTypeToOpType(t.type),
       timestamp: DateTime.fromMillisecondsSinceEpoch(
-              transaction.commitTimestamp.toInt(),)
-          .toIso8601String(), // TODO: check precision
+        transaction.commitTimestamp.toInt(),
+      ).toIso8601String(), // TODO: check precision
       newRow: t.record == null ? null : json.encode(t.record),
       oldRow: t.oldRecord == null ? null : json.encode(t.oldRecord),
       clearTags: encodeTags(t.tags),
@@ -137,7 +137,9 @@ List<OplogEntry> fromTransaction(
 }
 
 List<Transaction> toTransactions(
-    List<OplogEntry> opLogEntries, RelationsCache relations,) {
+  List<OplogEntry> opLogEntries,
+  RelationsCache relations,
+) {
   if (opLogEntries.isEmpty) {
     return [];
   }
@@ -205,8 +207,9 @@ ShadowEntry newShadowEntry(OplogEntry oplogEntry) {
     namespace: oplogEntry.namespace,
     tablename: oplogEntry.tablename,
     primaryKey: primaryKeyToStr(
-        (json.decode(oplogEntry.primaryKey) as Map<String, dynamic>)
-            .cast<String, Object>(),),
+      (json.decode(oplogEntry.primaryKey) as Map<String, dynamic>)
+          .cast<String, Object>(),
+    ),
     tags: shadowTagsDefault,
   );
 }
@@ -238,7 +241,9 @@ OplogTableChanges localOperationsToTableChanges(
 
     if (acc[tablenameStr]![primaryKeyStr] == null) {
       acc[tablenameStr]![primaryKeyStr] = OplogTableChange(
-          timestamp: entry.timestamp, oplogEntryChanges: entryChanges,);
+        timestamp: entry.timestamp,
+        oplogEntryChanges: entryChanges,
+      );
     } else {
       final oplogTableChange = acc[tablenameStr]![primaryKeyStr]!;
       final timestamp = oplogTableChange.timestamp;
@@ -439,8 +444,9 @@ ShadowKey getShadowPrimaryKey(
 ) {
   if (oplogEntry is OplogEntry) {
     return primaryKeyToStr(
-        (json.decode(oplogEntry.primaryKey) as Map<String, dynamic>)
-            .cast<String, Object>(),);
+      (json.decode(oplogEntry.primaryKey) as Map<String, dynamic>)
+          .cast<String, Object>(),
+    );
   } else if (oplogEntry is OplogEntryChanges) {
     return primaryKeyToStr(oplogEntry.primaryKeyCols);
   } else if (oplogEntry is ShadowEntryChanges) {

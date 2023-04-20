@@ -120,9 +120,10 @@ void main() {
       fail("start replication should throw");
     } catch (error) {
       expect(
-          error,
-          isA<SatelliteException>()
-              .having((e) => e.code, "code", SatelliteErrorCode.timeout),);
+        error,
+        isA<SatelliteException>()
+            .having((e) => e.code, "code", SatelliteErrorCode.timeout),
+      );
     }
   });
 
@@ -133,8 +134,10 @@ void main() {
     server.nextResponses([authResp]);
 
     final res = await client.authenticate(createAuthState());
-    expect(res.getOrElse((l) => throw StateError("auth error")).serverId,
-        'server_identity',);
+    expect(
+      res.getOrElse((l) => throw StateError("auth error")).serverId,
+      'server_identity',
+    );
     expect(client.inbound.authenticated, isTrue);
   });
 
@@ -158,8 +161,10 @@ void main() {
 
         if (msgType == SatMsgType.inStartReplicationReq) {
           final decodedMsg = client.toMessage(data);
-          expect((decodedMsg.msg as SatInStartReplicationReq).options[0],
-              SatInStartReplicationReq_Option.FIRST_LSN,);
+          expect(
+            (decodedMsg.msg as SatInStartReplicationReq).options[0],
+            SatInStartReplicationReq_Option.FIRST_LSN,
+          );
           completer.complete();
         }
       },
@@ -180,8 +185,11 @@ void main() {
     } catch (error) {
       expect(
         error,
-        isA<SatelliteException>().having((e) => e.code, "code",
-            SatelliteErrorCode.replicationAlreadyStarted,),
+        isA<SatelliteException>().having(
+          (e) => e.code,
+          "code",
+          SatelliteErrorCode.replicationAlreadyStarted,
+        ),
       );
     }
   });
@@ -211,7 +219,10 @@ void main() {
       expect(
         error,
         isA<SatelliteException>().having(
-            (e) => e.code, "code", SatelliteErrorCode.replicationNotStarted,),
+          (e) => e.code,
+          "code",
+          SatelliteErrorCode.replicationNotStarted,
+        ),
       );
     }
   });
@@ -300,7 +311,8 @@ void main() {
     final stop = SatInStopReplicationResp();
 
     server.nextResponses(
-        [start, relation, firstOpLogMessage, secondOpLogMessage],);
+      [start, relation, firstOpLogMessage, secondOpLogMessage],
+    );
     server.nextResponses([stop]);
 
     final completer = Completer<void>();
@@ -666,5 +678,10 @@ void main() {
 
 AuthState createAuthState() {
   return AuthState(
-      app: app, env: env, token: token, clientId: clientId, refreshToken: null,);
+    app: app,
+    env: env,
+    token: token,
+    clientId: clientId,
+    refreshToken: null,
+  );
 }
