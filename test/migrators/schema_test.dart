@@ -33,11 +33,11 @@ void main() {
 
     await adapter.run(Statement(
       "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
-    ));
+    ),);
     try {
       await adapter.run(Statement(
         "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
-      ));
+      ),);
       fail("should not occur");
     } catch (err) {
       final errSqlite = err as SqliteException;

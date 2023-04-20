@@ -85,7 +85,7 @@ void main() {
 
     await adapter.run(Statement(
       "INSERT INTO parent(id, value, other) VALUES (1, 'local', null)",
-    ));
+    ),);
 
     final txDate1 = await satellite.performSnapshot();
     var shadow = await satellite.getOplogShadowEntry();
@@ -103,7 +103,7 @@ void main() {
 
     await adapter.run(Statement(
       "UPDATE parent SET value = 'local2', other = 'other2' WHERE id = 1",
-    ));
+    ),);
 
     final txDate3 = await satellite.performSnapshot();
     shadow = await satellite.getOplogShadowEntry();
@@ -112,7 +112,7 @@ void main() {
 
     await adapter.run(Statement(
       "DELETE FROM parent WHERE id = 1",
-    ));
+    ),);
 
     final txDate4 = await satellite.performSnapshot();
     shadow = await satellite.getOplogShadowEntry();
@@ -223,7 +223,7 @@ void main() {
 
     final shadow = await satellite.getOplogShadowEntry();
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate3]),
-        reason: 'error: tag1 was reintroduced after merging acked operation');
+        reason: 'error: tag1 was reintroduced after merging acked operation',);
   });
 
   test('remote tx (INSERT) concurrently with local tx (INSERT -> DELETE)', () async {
@@ -236,13 +236,13 @@ void main() {
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['1', 'local', null],
-    ));
+    ),);
     stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['2', 'local', null],
-    ));
+    ),);
     stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
     await adapter.runInTransaction(stmts);
 
@@ -326,11 +326,11 @@ void main() {
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['1', 'local', null],
-    ));
+    ),);
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['2', 'local', null],
-    ));
+    ),);
     await adapter.runInTransaction(stmts);
     final txDate1 = await satellite.performSnapshot();
 
@@ -418,20 +418,20 @@ void main() {
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['1', 'local', null],
-    ));
+    ),);
     stmts.add(Statement(
       "UPDATE parent SET value = ?, other = ? WHERE id = 1",
       ['local', 'not_null'],
-    ));
+    ),);
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['2', 'local', null],
-    ));
+    ),);
     stmts.add(Statement(
       "UPDATE parent SET value = ?, other = ? WHERE id = 1",
       ['local', 'not_null'],
-    ));
+    ),);
     await adapter.runInTransaction(stmts);
 
     final txDate1 = await satellite.performSnapshot();
@@ -529,11 +529,11 @@ void main() {
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['1', 'local', null],
-    ));
+    ),);
     stmts.add(Statement(
       "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
       ['2', 'local', null],
-    ));
+    ),);
     await adapter.runInTransaction(stmts);
     final txDate1 = await satellite.performSnapshot();
 
@@ -599,7 +599,7 @@ void main() {
     await runMigrations();
     await satellite.setAuthState(null);
     final clientId = satellite.authState!.clientId;
-    final txDate1 = new DateTime.now();
+    final txDate1 = DateTime.now();
 
     final insertEntry = generateRemoteOplogEntry(
       tableInfo,

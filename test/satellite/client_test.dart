@@ -443,7 +443,7 @@ void main() {
 
     // wait a little for replication to start in the opposite direction
     await Future.delayed(
-      Duration(milliseconds: 100),
+      const Duration(milliseconds: 100),
       () {
         client.enqueueTransaction(transaction[0]);
         client.enqueueTransaction(transaction[1]);
@@ -495,7 +495,7 @@ void main() {
       }
     });
 
-    await Future.delayed(Duration(milliseconds: 100), () {
+    await Future.delayed(const Duration(milliseconds: 100), () {
       client.enqueueTransaction(transaction);
     });
 
@@ -558,7 +558,7 @@ void main() {
         "text_null_default": '',
         "intvalue_null": null,
         "intvalue_null_default": '10',
-      }, rel),
+      }, rel,),
     );
 
     final serializedRow = SatOpRow(
