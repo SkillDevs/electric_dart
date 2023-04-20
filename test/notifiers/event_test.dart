@@ -49,7 +49,7 @@ void main() {
     const qualifiedTablename = QualifiedTablename('main', 'items');
 
     source.actuallyChanged('test.db',
-        [Change(qualifiedTablename: qualifiedTablename, rowids: null)]);
+        [Change(qualifiedTablename: qualifiedTablename, rowids: null)],);
 
     expect(notifications.length, 1);
   });
@@ -98,7 +98,7 @@ void main() {
     expect(notifications.length, 1);
 
     source.connectivityStateChange(
-        'non-existing-db', ConnectivityState.connected);
+        'non-existing-db', ConnectivityState.connected,);
 
     expect(notifications.length, 1);
   });

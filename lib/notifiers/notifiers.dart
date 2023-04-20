@@ -35,7 +35,7 @@ class ConnectivityStateChangeNotification extends Notification {
   final ConnectivityState connectivityState;
 
   ConnectivityStateChangeNotification(
-      {required this.dbName, required this.connectivityState});
+      {required this.dbName, required this.connectivityState,});
 }
 
 abstract class Notification {}
@@ -43,10 +43,10 @@ abstract class Notification {}
 typedef AuthStateCallback = void Function(AuthStateNotification notification);
 typedef ChangeCallback = void Function(ChangeNotification notification);
 typedef PotentialChangeCallback = void Function(
-    PotentialChangeNotification notification);
+    PotentialChangeNotification notification,);
 
 typedef ConnectivityStateChangeCallback = void Function(
-    ConnectivityStateChangeNotification notification);
+    ConnectivityStateChangeNotification notification,);
 
 typedef NotificationCallback = void Function(Notification notification);
 

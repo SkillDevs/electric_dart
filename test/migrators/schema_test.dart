@@ -47,7 +47,7 @@ void main() {
     } catch (err) {
       final errSqlite = err as SqliteException;
       expect(errSqlite.extendedResultCode,
-          SqliteErrors.SQLITE_CONSTRAINT_PRIMARYKEY);
+          SqliteErrors.SQLITE_CONSTRAINT_PRIMARYKEY,);
     }
   });
 }

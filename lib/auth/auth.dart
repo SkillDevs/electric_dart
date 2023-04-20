@@ -77,7 +77,7 @@ class ConsoleHttpClient implements ConsoleClient {
       throw Exception('unable to fetch token ${response['errors']}');
     }
 
-    final responseData = response["data"] as Map<String, Object?>;
+    final responseData = response["data"]! as Map<String, Object?>;
     return TokenResponse(
       token: responseData['token']! as String,
       refreshToken: responseData['refreshToken']! as String,

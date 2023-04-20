@@ -252,7 +252,7 @@ Future<Satellite> _callStartProcess(MockRegistry mockRegistry) {
 }
 
 Future<Satellite> _callEnsureStarted(MockRegistry mockRegistry,
-    {DbName? name}) {
+    {DbName? name,}) {
   return mockRegistry.ensureStarted(
     dbName: name ?? dbName,
     adapter: adapter,

@@ -41,15 +41,15 @@ abstract class Satellite {
 
 abstract class Client {
   Future<Either<SatelliteException, void>> connect(
-      {bool Function(Object error, int attempt)? retryHandler});
+      {bool Function(Object error, int attempt)? retryHandler,});
   Future<Either<SatelliteException, void>> close();
   Future<Either<SatelliteException, AuthResponse>> authenticate(
-      AuthState authState);
+      AuthState authState,);
   bool isClosed();
   Future<Either<SatelliteException, void>> startReplication(LSN? lsn);
   Future<Either<SatelliteException, void>> stopReplication();
   void subscribeToTransactions(
-      Future<void> Function(Transaction transaction) callback);
+      Future<void> Function(Transaction transaction) callback,);
   Either<SatelliteException, void> enqueueTransaction(Transaction transaction);
   EventListener<AckLsnEvent> subscribeToAck(AckCallback callback);
   void unsubscribeToAck(EventListener<AckLsnEvent> eventListener);

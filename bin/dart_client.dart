@@ -17,15 +17,15 @@ import 'package:sqlite3/sqlite3.dart';
 import 'todo_migrations.dart';
 
 void main(List<String> arguments) async {
-  final appId = "my-todos";
-  final env = "local";
+  const appId = "my-todos";
+  const env = "local";
 
   final replicationConfig = ReplicationConfig(
     host: '127.0.0.1',
     port: 5133,
     ssl: false,
   );
-  final dbName = "electric.db";
+  const dbName = "electric.db";
 
   final client = SatelliteClient(
     dbName: dbName,

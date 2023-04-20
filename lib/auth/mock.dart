@@ -5,6 +5,6 @@ class MockConsoleClient implements ConsoleClient {
   @override
   Future<TokenResponse> token(TokenRequest req) {
     return Future.value(
-        TokenResponse(token: 'MOCK_TOKEN', refreshToken: 'MOCK_REFRESH_TOKEN'));
+        TokenResponse(token: 'MOCK_TOKEN', refreshToken: 'MOCK_REFRESH_TOKEN'),);
   }
 }

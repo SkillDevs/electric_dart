@@ -119,7 +119,7 @@ class SatelliteProcess implements Satellite {
 
     setClientListeners();
     client.resetOutboundLogPositions(
-        numberToBytes(_lastAckdRowId), numberToBytes(_lastSentRowId));
+        numberToBytes(_lastAckdRowId), numberToBytes(_lastSentRowId),);
 
     final lsnBase64 = await _getMeta('lsn');
     if (lsnBase64.isNotEmpty) {
@@ -177,14 +177,14 @@ class SatelliteProcess implements Satellite {
 
     if (_potentialDataChangeSubscription != null) {
       notifier.unsubscribeFromPotentialDataChanges(
-          _potentialDataChangeSubscription!);
+          _potentialDataChangeSubscription!,);
       _potentialDataChangeSubscription = null;
     }
 
     // TODO(dart): Missing in typescript client
     if (_connectivityChangeSubscription != null) {
       notifier.unsubscribeFromConnectivityStateChange(
-          _connectivityChangeSubscription!);
+          _connectivityChangeSubscription!,);
       _connectivityChangeSubscription = null;
     }
 
@@ -453,7 +453,7 @@ class SatelliteProcess implements Satellite {
   // merging, for local and remote operations.
   @visibleForTesting
   Future<void> apply(
-      List<OplogEntry> incoming, String incomingOrigin, LSN lsn) async {
+      List<OplogEntry> incoming, String incomingOrigin, LSN lsn,) async {
     logger.info("apply incoming changes for LSN: $lsn");
     // assign timestamp to pending operations before apply
     await performSnapshot();
@@ -470,7 +470,7 @@ class SatelliteProcess implements Satellite {
     final lsnBase64 = base64.encode(lsn);
     stmts.add(Statement(
         "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
-        <Object?>[lsnBase64, 'lsn']));
+        <Object?>[lsnBase64, 'lsn'],),);
 
     for (final entry in merged.entries) {
       final tablenameStr = entry.key;
@@ -520,7 +520,7 @@ class SatelliteProcess implements Satellite {
   }
 
   Future<List<OplogEntry>> _getUpdatedEntries(DateTime timestamp,
-      {int? since}) async {
+      {int? since,}) async {
     since ??= _lastAckdRowId;
     final oplog = opts.oplogTable.toString();
 
@@ -546,7 +546,8 @@ class SatelliteProcess implements Satellite {
     Statement query;
     var selectTags = "SELECT * FROM $shadow";
     if (oplog != null) {
-      selectTags = '''$selectTags WHERE
+      selectTags = '''
+        $selectTags WHERE
          namespace = ? AND
          tablename = ? AND
          primaryKey = ?
@@ -564,10 +565,10 @@ class SatelliteProcess implements Satellite {
     final shadowTags = await adapter.query(query);
     return shadowTags.map((e) {
       return ShadowEntry(
-        namespace: e['namespace'] as String,
-        tablename: e['tablename'] as String,
-        primaryKey: e['primaryKey'] as String,
-        tags: e['tags'] as String,
+        namespace: e['namespace']! as String,
+        tablename: e['tablename']! as String,
+        primaryKey: e['primaryKey']! as String,
+        tags: e['tags']! as String,
       );
     }).toList();
   }
@@ -675,7 +676,7 @@ class SatelliteProcess implements Satellite {
         final localChanges = localInfo.oplogEntryChanges;
 
         final changes = mergeChangesLastWriteWins(localOrigin,
-            localChanges.changes, incomingOrigin, incomingChanges.changes);
+            localChanges.changes, incomingOrigin, incomingChanges.changes,);
         late final ChangesOpType optype;
 
         final tags = mergeOpTags(localChanges, incomingChanges);
@@ -699,9 +700,9 @@ class SatelliteProcess implements Satellite {
 
     final opLogEntries = fromTransaction(transaction, relations);
     final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(
-        transaction.commitTimestamp.toInt());
+        transaction.commitTimestamp.toInt(),);
     await applyTransactionInternal(
-        origin, commitTimestamp, opLogEntries, transaction.lsn);
+        origin, commitTimestamp, opLogEntries, transaction.lsn,);
   }
 
   @visibleForTesting
@@ -818,11 +819,11 @@ class SatelliteProcess implements Satellite {
   // Fetch primary keys from local store and use them to identify incoming ops.
   // TODO: Improve this code once with Migrator and consider simplifying oplog.
   Future<RelationsCache> _getLocalRelations() async {
-    final notIn = [
-      opts.metaTable.tablename.toString(),
-      opts.migrationsTable.tablename.toString(),
-      opts.oplogTable.tablename.toString(),
-      opts.triggersTable.tablename.toString(),
+    final notIn = <String>[
+      opts.metaTable.tablename,
+      opts.migrationsTable.tablename,
+      opts.oplogTable.tablename,
+      opts.triggersTable.tablename,
       'sqlite_schema',
       'sqlite_sequence',
       'sqlite_temp_schema',
@@ -877,7 +878,7 @@ class SatelliteProcess implements Satellite {
 
   Future<void> _garbageCollectOplog(DateTime commitTimestamp) async {
     final isoString = commitTimestamp.toIso8601String();
-    final oplog = opts.oplogTable.tablename.toString();
+    final String oplog = opts.oplogTable.tablename;
     final stmt = '''
       DELETE FROM $oplog
       WHERE timestamp = ?;
@@ -887,7 +888,7 @@ class SatelliteProcess implements Satellite {
 }
 
 Statement _applyDeleteOperation(
-    ShadowEntryChanges entryChanges, String tablenameStr) {
+    ShadowEntryChanges entryChanges, String tablenameStr,) {
   final pkEntries = entryChanges.primaryKeyCols.entries;
   final params = pkEntries.fold<_WhereAndValues>(
     _WhereAndValues([], []),
@@ -907,7 +908,7 @@ Statement _applyDeleteOperation(
 }
 
 Statement _applyNonDeleteOperation(
-    ShadowEntryChanges shadowEntryChanges, String tablenameStr) {
+    ShadowEntryChanges shadowEntryChanges, String tablenameStr,) {
   final changes = shadowEntryChanges.changes;
   final primaryKeyCols = shadowEntryChanges.primaryKeyCols;
 

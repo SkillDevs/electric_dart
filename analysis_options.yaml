@@ -8,6 +8,10 @@ analyzer:
     strict-casts: true
     strict-inference: true
 
+  errors:
+    non_constant_identifier_names: ignore
+    todo: info
+
 linter:
   rules:
     unawaited_futures: true

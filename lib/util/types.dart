@@ -126,7 +126,7 @@ class Change {
       required this.type,
       this.record,
       this.oldRecord,
-      required this.tags});
+      required this.tags,});
 }
 
 class Relation {

@@ -58,7 +58,7 @@ class SqliteAdapter extends adp.DatabaseAdapter {
 
   @override
   Future<T> transaction<T>(
-      void Function(Transaction tx, void Function(T res) setResult) f) {
+      void Function(Transaction tx, void Function(T res) setResult) f,) {
     return txLock.synchronized(() async {
       db.execute('BEGIN');
 
@@ -104,7 +104,7 @@ class Transaction implements adp.Transaction {
   );
 
   void rollback(Object err, void Function(Object)? errorCallback) {
-    invokeErrorCallbackAndSignalFailure() {
+    void invokeErrorCallbackAndSignalFailure() {
       if (errorCallback != null) errorCallback(err);
       signalFailure(err);
     }

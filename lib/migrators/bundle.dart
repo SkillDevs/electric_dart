@@ -75,7 +75,7 @@ class BundleMigrator implements Migrator {
   }
 
   Future<List<Migration>> validateApplied(
-      List<Migration> migrations, List<MigrationRecord> existing) async {
+      List<Migration> migrations, List<MigrationRecord> existing,) async {
     // First we validate that the existing records are the first migrations.
     for (var i = 0; i < existing.length; i++) {
       final migrationRecord = existing[i];
@@ -86,12 +86,12 @@ class BundleMigrator implements Migrator {
 
       if (migration.name != name) {
         throw Exception(
-            "Migrations cannot be altered once applied: expecting $name at index $i.");
+            "Migrations cannot be altered once applied: expecting $name at index $i.",);
       }
 
       if (migration.sha256 != sha256) {
         throw Exception(
-            "Migrations cannot be altered once applied: expecting $name to have sha256 of $sha256");
+            "Migrations cannot be altered once applied: expecting $name to have sha256 of $sha256",);
       }
     }
 
