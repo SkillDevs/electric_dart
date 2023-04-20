@@ -1,6 +1,6 @@
 import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/util/types.dart' hide Transaction;
 import 'package:electric_client/util/tablename.dart';
+import 'package:electric_client/util/types.dart' hide Transaction;
 
 class MockDatabaseAdapter implements DatabaseAdapter {
   @override
@@ -24,7 +24,8 @@ class MockDatabaseAdapter implements DatabaseAdapter {
   }
 
   @override
-  Future<T> transaction<T>(void Function(Transaction tx, void Function(T res) p1) setResult) async {
+  Future<T> transaction<T>(
+      void Function(Transaction tx, void Function(T res) p1) setResult) async {
     throw UnimplementedError();
   }
 }

@@ -121,7 +121,12 @@ class Change {
   final Record? oldRecord;
   final List<Tag> tags;
 
-  Change({required this.relation, required this.type, this.record, this.oldRecord, required this.tags});
+  Change(
+      {required this.relation,
+      required this.type,
+      this.record,
+      this.oldRecord,
+      required this.tags});
 }
 
 class Relation {

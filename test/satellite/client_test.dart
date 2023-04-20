@@ -119,7 +119,10 @@ void main() {
       await client.startReplication(null);
       fail("start replication should throw");
     } catch (error) {
-      expect(error, isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.timeout));
+      expect(
+          error,
+          isA<SatelliteException>()
+              .having((e) => e.code, "code", SatelliteErrorCode.timeout));
     }
   });
 
@@ -130,7 +133,8 @@ void main() {
     server.nextResponses([authResp]);
 
     final res = await client.authenticate(createAuthState());
-    expect(res.getOrElse((l) => throw StateError("auth error")).serverId, 'server_identity');
+    expect(res.getOrElse((l) => throw StateError("auth error")).serverId,
+        'server_identity');
     expect(client.inbound.authenticated, isTrue);
   });
 
@@ -154,7 +158,8 @@ void main() {
 
         if (msgType == SatMsgType.inStartReplicationReq) {
           final decodedMsg = client.toMessage(data);
-          expect((decodedMsg.msg as SatInStartReplicationReq).options[0], SatInStartReplicationReq_Option.FIRST_LSN);
+          expect((decodedMsg.msg as SatInStartReplicationReq).options[0],
+              SatInStartReplicationReq_Option.FIRST_LSN);
           completer.complete();
         }
       },
@@ -175,7 +180,8 @@ void main() {
     } catch (error) {
       expect(
         error,
-        isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.replicationAlreadyStarted),
+        isA<SatelliteException>().having((e) => e.code, "code",
+            SatelliteErrorCode.replicationAlreadyStarted),
       );
     }
   });
@@ -204,7 +210,8 @@ void main() {
     } catch (error) {
       expect(
         error,
-        isA<SatelliteException>().having((e) => e.code, "code", SatelliteErrorCode.replicationNotStarted),
+        isA<SatelliteException>().having(
+            (e) => e.code, "code", SatelliteErrorCode.replicationNotStarted),
       );
     }
   });
@@ -292,7 +299,8 @@ void main() {
 
     final stop = SatInStopReplicationResp();
 
-    server.nextResponses([start, relation, firstOpLogMessage, secondOpLogMessage]);
+    server.nextResponses(
+        [start, relation, firstOpLogMessage, secondOpLogMessage]);
     server.nextResponses([stop]);
 
     final completer = Completer<void>();
@@ -443,7 +451,7 @@ void main() {
 
     // wait a little for replication to start in the opposite direction
     await Future.delayed(
-      Duration(milliseconds: 100),
+      const Duration(milliseconds: 100),
       () {
         client.enqueueTransaction(transaction[0]);
         client.enqueueTransaction(transaction[1]);
@@ -495,7 +503,7 @@ void main() {
       }
     });
 
-    await Future.delayed(Duration(milliseconds: 100), () {
+    await Future.delayed(const Duration(milliseconds: 100), () {
       client.enqueueTransaction(transaction);
     });
 
@@ -551,14 +559,17 @@ void main() {
 
     final insertOp = SatOpInsert(
       relationId: 1,
-      rowData: serializeRow({
-        "id": 'f989b58b-980d-4d3c-b178-adb6ae8222f1',
-        "content": 'hello from pg_1',
-        "text_null": null,
-        "text_null_default": '',
-        "intvalue_null": null,
-        "intvalue_null_default": '10',
-      }, rel),
+      rowData: serializeRow(
+        {
+          "id": 'f989b58b-980d-4d3c-b178-adb6ae8222f1',
+          "content": 'hello from pg_1',
+          "text_null": null,
+          "text_null_default": '',
+          "intvalue_null": null,
+          "intvalue_null_default": '10',
+        },
+        rel,
+      ),
     );
 
     final serializedRow = SatOpRow(
@@ -654,5 +665,6 @@ void main() {
 }
 
 AuthState createAuthState() {
-  return AuthState(app: app, env: env, token: token, clientId: clientId, refreshToken: null);
+  return AuthState(
+      app: app, env: env, token: token, clientId: clientId, refreshToken: null);
 }

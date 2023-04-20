@@ -22,10 +22,10 @@ void main() {
       "name2": 'World!',
       "name3": null,
     };
-    final s_row = serializeRow(record, rel);
-    final d_row = deserializeRow(s_row, rel);
+    final sRow = serializeRow(record, rel);
+    final dRow = deserializeRow(sRow, rel);
 
-    expect(record, d_row);
+    expect(record, dRow);
   });
 
   test('Null mask uses bits as if they were a list', () {
@@ -58,9 +58,9 @@ void main() {
       "bit7": 'Filled',
       "bit8": null,
     };
-    final s_row = serializeRow(record, rel);
+    final sRow = serializeRow(record, rel);
 
-    final mask = [...s_row.nullsBitmask].map((x) => x.toRadixString(2)).join('');
+    final mask = [...sRow.nullsBitmask].map((x) => x.toRadixString(2)).join('');
 
     expect(mask, '1101000010000000');
   });

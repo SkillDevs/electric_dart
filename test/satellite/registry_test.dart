@@ -79,7 +79,7 @@ void main() {
   });
 
   test('ensure satellite process started works', () async {
-    final mockRegistry = new MockRegistry();
+    final mockRegistry = MockRegistry();
     final satellite = await _callEnsureStarted(mockRegistry);
 
     expect(satellite, isA<MockSatelliteProcess>());
@@ -120,8 +120,9 @@ void main() {
     expect(s3, isA<MockSatelliteProcess>());
   });
 
-  test('concurrent calls to ensureStarted with same dbName get same process', () async {
-    final mockRegistry = new MockRegistry();
+  test('concurrent calls to ensureStarted with same dbName get same process',
+      () async {
+    final mockRegistry = MockRegistry();
     final satellites = await Future.wait([
       _callEnsureStarted(mockRegistry),
       _callEnsureStarted(mockRegistry),
@@ -141,16 +142,18 @@ void main() {
 
     await expectLater(
       mockRegistry.ensureAlreadyStarted(dbName),
-      throwsA(isA<Exception>().having(
-        (Exception e) => e.toString(),
-        "message",
-        "Exception: Satellite not running for db: ${dbName}",
-      )),
+      throwsA(
+        isA<Exception>().having(
+          (Exception e) => e.toString(),
+          "message",
+          "Exception: Satellite not running for db: $dbName",
+        ),
+      ),
     );
   });
 
   test('ensureAlreadyStarted succeeds if fully started', () async {
-    final mockRegistry = new MockRegistry();
+    final mockRegistry = MockRegistry();
     await _callEnsureStarted(mockRegistry);
     final satellite = await mockRegistry.ensureAlreadyStarted(dbName);
 
@@ -158,7 +161,7 @@ void main() {
   });
 
   test('ensureAlreadyStarted succeeds if in the process of starting', () async {
-    final mockRegistry = new MockRegistry();
+    final mockRegistry = MockRegistry();
     final promise = _callEnsureStarted(mockRegistry);
     final satellite = await mockRegistry.ensureAlreadyStarted(dbName);
 
@@ -167,7 +170,7 @@ void main() {
   });
 
   test('stop defaults to a noop', () async {
-    final mockRegistry = new MockRegistry();
+    final mockRegistry = MockRegistry();
     await mockRegistry.stop(dbName);
   });
 
@@ -192,7 +195,7 @@ void main() {
   });
 
   test('stopAll works', () async {
-    final mockRegistry = new MockRegistry();
+    final mockRegistry = MockRegistry();
     await Future.wait([
       _callEnsureStarted(mockRegistry, name: "a.db"),
       _callEnsureStarted(mockRegistry, name: "b.db"),
@@ -204,7 +207,7 @@ void main() {
   });
 
   test('stopAll works even when starting', () async {
-    final mockRegistry = new MockRegistry();
+    final mockRegistry = MockRegistry();
     final startPromises = [
       _callEnsureStarted(mockRegistry, name: "a.db"),
       _callEnsureStarted(mockRegistry, name: "b.db"),
@@ -248,7 +251,8 @@ Future<Satellite> _callStartProcess(MockRegistry mockRegistry) {
   );
 }
 
-Future<Satellite> _callEnsureStarted(MockRegistry mockRegistry, {DbName? name}) {
+Future<Satellite> _callEnsureStarted(MockRegistry mockRegistry,
+    {DbName? name}) {
   return mockRegistry.ensureStarted(
     dbName: name ?? dbName,
     adapter: adapter,

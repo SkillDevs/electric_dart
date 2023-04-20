@@ -16,35 +16,43 @@ import 'package:fpdart/fpdart.dart';
 
 class MockSatelliteProcess implements Satellite {
   final SatelliteConfig config;
+  @override
   final DbName dbName;
+  @override
   final DatabaseAdapter adapter;
+  @override
   final Migrator migrator;
+  @override
   final Notifier notifier;
   final SocketFactory socketFactory;
   final ConsoleClient console;
   final SatelliteOpts opts;
 
-  MockSatelliteProcess(
-      {required this.dbName,
-      required this.adapter,
-      required this.migrator,
-      required this.notifier,
-      required this.socketFactory,
-      required this.console,
-      required this.config,
-      required this.opts});
+  MockSatelliteProcess({
+    required this.dbName,
+    required this.adapter,
+    required this.migrator,
+    required this.notifier,
+    required this.socketFactory,
+    required this.console,
+    required this.config,
+    required this.opts,
+  });
 
+  @override
   Future<Either<Exception, void>> start(AuthState? authState) async {
-    await Future<void>.delayed(Duration(milliseconds: 50));
-    return Right(null);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return const Right(null);
   }
 
+  @override
   Future<void> stop() async {
-    await Future<void>.delayed(Duration(milliseconds: 50));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
   }
 }
 
 class MockRegistry extends BaseRegistry {
+  @override
   Future<Satellite> startProcess({
     required DbName dbName,
     required DatabaseAdapter adapter,
@@ -62,17 +70,18 @@ class MockRegistry extends BaseRegistry {
     }
 
     final satellite = MockSatelliteProcess(
-        dbName: dbName,
-        adapter: adapter,
-        migrator: migrator,
-        notifier: notifier,
-        socketFactory: socketFactory,
-        console: console,
-        config: SatelliteConfig(
-          app: config.app,
-          env: config.env,
-        ),
-        opts: effectiveOpts);
+      dbName: dbName,
+      adapter: adapter,
+      migrator: migrator,
+      notifier: notifier,
+      socketFactory: socketFactory,
+      console: console,
+      config: SatelliteConfig(
+        app: config.app,
+        env: config.env,
+      ),
+      opts: effectiveOpts,
+    );
     await satellite.start(authState);
 
     return satellite;
@@ -101,16 +110,19 @@ class MockSatelliteClient extends EventEmitter implements Client {
     outboundAck = ack;
   }
 
+  @override
   LogPositions getOutboundLogPositions() {
     return LogPositions(enqueued: outboundSent, ack: outboundAck);
   }
 
   @override
-  Future<Either<SatelliteException, void>> connect({bool Function(Object error, int attempt)? retryHandler}) async {
+  Future<Either<SatelliteException, void>> connect(
+      {bool Function(Object error, int attempt)? retryHandler}) async {
     closed = false;
     return right(null);
   }
 
+  @override
   Future<Either<SatelliteException, void>> close() async {
     closed = true;
     for (var t in timeouts) {
@@ -120,11 +132,14 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, AuthResponse>> authenticate(AuthState _authState) async {
-    return right(AuthResponse(
-      null,
-      null,
-    ));
+  Future<Either<SatelliteException, AuthResponse>> authenticate(
+      AuthState _authState) async {
+    return right(
+      AuthResponse(
+        null,
+        null,
+      ),
+    );
   }
 
   @override
@@ -135,20 +150,22 @@ class MockSatelliteClient extends EventEmitter implements Client {
     replicating = true;
     inboundAck = lsn!;
 
-    final t = Timer(Duration(milliseconds: 100), () => emit<void>('outbound_started'));
+    final t = Timer(const Duration(milliseconds: 100),
+        () => emit<void>('outbound_started'));
     timeouts.add(t);
 
-    return Future<Right<SatelliteException, void>>.value(Right(null));
+    return Future<Right<SatelliteException, void>>.value(const Right(null));
   }
 
   @override
   Future<Either<SatelliteException, void>> stopReplication() {
     replicating = false;
-    return Future<Right<SatelliteException, void>>.value(Right(null));
+    return Future<Right<SatelliteException, void>>.value(const Right(null));
   }
 
   @override
-  void subscribeToTransactions(Future<void> Function(Transaction transaction) callback) {}
+  void subscribeToTransactions(
+      Future<void> Function(Transaction transaction) callback) {}
 
   @override
   Either<SatelliteException, void> enqueueTransaction(Transaction transaction) {
@@ -157,13 +174,13 @@ class MockSatelliteClient extends EventEmitter implements Client {
     emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.localSend));
 
     // simulate ping message effect
-    final t = Timer(Duration(milliseconds: 100), () {
+    final t = Timer(const Duration(milliseconds: 100), () {
       outboundAck = transaction.lsn;
       emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.remoteCommit));
     });
     timeouts.add(t);
 
-    return Right(null);
+    return const Right(null);
   }
 
   @override

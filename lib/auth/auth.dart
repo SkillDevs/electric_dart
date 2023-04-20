@@ -70,7 +70,8 @@ class ConsoleHttpClient implements ConsoleClient {
       body: json.encode(bodyJ),
     );
 
-    final response = await json.decode(utf8.decode(res.bodyBytes)) as Map<String, Object?>;
+    final response =
+        await json.decode(utf8.decode(res.bodyBytes)) as Map<String, Object?>;
 
     if (response['errors'] != null) {
       throw Exception('unable to fetch token ${response['errors']}');

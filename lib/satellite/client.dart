@@ -76,7 +76,8 @@ class SatelliteClient extends EventEmitter implements Client {
     final type = getMsgFromCode(code);
 
     if (type == null) {
-      throw SatelliteException(SatelliteErrorCode.unexpectedMessageType, "$code");
+      throw SatelliteException(
+          SatelliteErrorCode.unexpectedMessageType, "$code");
     }
 
     return DecodedMessage(decodeMessage(data.sublist(1), type), type);
@@ -92,7 +93,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
       case SatMsgType.inStartReplicationReq:
         return IncomingHandler(
-          handle: (v) => handleInStartReplicationReq(v as SatInStartReplicationReq),
+          handle: (v) =>
+              handleInStartReplicationReq(v as SatInStartReplicationReq),
           isRpc: false,
         );
       case SatMsgType.inStartReplicationResp:
@@ -159,23 +161,27 @@ class SatelliteClient extends EventEmitter implements Client {
       // TODO: ensure any previous socket is closed, or reject
       if (this.socket != null) {
         throw SatelliteException(
-            SatelliteErrorCode.unexpectedState, 'a socket already exist. ensure it is closed before reconnecting.');
+          SatelliteErrorCode.unexpectedState,
+          'a socket already exist. ensure it is closed before reconnecting.',
+        );
       }
       final socket = socketFactory.create();
       this.socket = socket;
 
       socket.onceConnect(() {
         if (this.socket == null) {
-          throw SatelliteException(SatelliteErrorCode.unexpectedState, 'socket got unassigned somehow');
+          throw SatelliteException(SatelliteErrorCode.unexpectedState,
+              'socket got unassigned somehow');
         }
         socketHandler = (Uint8List message) => handleIncoming(message);
-        notifier.connectivityStateChange(this.dbName, ConnectivityState.connected);
+        notifier.connectivityStateChange(dbName, ConnectivityState.connected);
         socket.onMessage(socketHandler!);
         socket.onError((error) {
-          this.notifier.connectivityStateChange(this.dbName, ConnectivityState.error);
+          notifier.connectivityStateChange(dbName, ConnectivityState.error);
         });
         socket.onClose(() {
-          this.notifier.connectivityStateChange(this.dbName, ConnectivityState.disconnected);
+          notifier.connectivityStateChange(
+              dbName, ConnectivityState.disconnected);
         });
         connectCompleter.complete();
       });
@@ -183,7 +189,8 @@ class SatelliteClient extends EventEmitter implements Client {
       socket.onceError((error) {
         // print("Once Error $error");
         this.socket = null;
-        this.notifier.connectivityStateChange(this.dbName, ConnectivityState.disconnected);
+        notifier.connectivityStateChange(
+            dbName, ConnectivityState.disconnected);
         if (!connectCompleter.isCompleted) {
           connectCompleter.completeError(error);
         }
@@ -205,8 +212,8 @@ class SatelliteClient extends EventEmitter implements Client {
         return _attemptBody();
       },
       maxAttempts: 10,
-      maxDelay: Duration(milliseconds: 100),
-      delayFactor: Duration(milliseconds: 100),
+      maxDelay: const Duration(milliseconds: 100),
+      delayFactor: const Duration(milliseconds: 100),
       retryIf: (e) {
         if (retryHandler != null) {
           return retryHandler(e, retryAttempt);
@@ -215,7 +222,7 @@ class SatelliteClient extends EventEmitter implements Client {
       },
     );
 
-    return Right(null);
+    return const Right(null);
   }
 
   @override
@@ -237,7 +244,7 @@ class SatelliteClient extends EventEmitter implements Client {
       socket = null;
     }
 
-    return Right(null);
+    return const Right(null);
   }
 
   @override
@@ -273,7 +280,8 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, AuthResponse>> authenticate(AuthState authState) async {
+  Future<Either<SatelliteException, AuthResponse>> authenticate(
+      AuthState authState) async {
     final headers = [
       SatAuthHeaderPair(
         key: SatAuthHeader.PROTO_VERSION,
@@ -289,7 +297,8 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToTransactions(Future<void> Function(Transaction transaction) callback) {
+  void subscribeToTransactions(
+      Future<void> Function(Transaction transaction) callback) {
     on<TransactionEvent>('transaction', (txnEvent) async {
       // move callback execution outside the message handling path
       await callback(txnEvent.transaction);
@@ -300,8 +309,10 @@ class SatelliteClient extends EventEmitter implements Client {
   @override
   Either<SatelliteException, void> enqueueTransaction(Transaction transaction) {
     if (outbound.isReplicating != ReplicationStatus.active) {
-      throw SatelliteException(SatelliteErrorCode.replicationNotStarted,
-          'enqueuing a transaction while outbound replication has not started');
+      throw SatelliteException(
+        SatelliteErrorCode.replicationNotStarted,
+        'enqueuing a transaction while outbound replication has not started',
+      );
     }
 
     outbound.transactions.add(transaction);
@@ -311,13 +322,14 @@ class SatelliteClient extends EventEmitter implements Client {
       throttledPushTransaction!();
     }
 
-    return Right(null);
+    return const Right(null);
   }
 
   @override
   Future<Either<SatelliteException, void>> startReplication(LSN? lsn) async {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
-      throw SatelliteException(SatelliteErrorCode.replicationAlreadyStarted, "replication already started");
+      throw SatelliteException(SatelliteErrorCode.replicationAlreadyStarted,
+          "replication already started");
     }
 
     inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
@@ -336,31 +348,34 @@ class SatelliteClient extends EventEmitter implements Client {
 
     await rpc<void>(request);
 
-    return Right(null);
+    return const Right(null);
   }
 
   @override
   Future<Either<SatelliteException, void>> stopReplication() async {
     if (inbound.isReplicating != ReplicationStatus.active) {
-      return Future.error(SatelliteException(SatelliteErrorCode.replicationNotStarted, "replication not active"));
+      return Future.error(SatelliteException(
+          SatelliteErrorCode.replicationNotStarted, "replication not active"));
     }
 
     inbound.isReplicating = ReplicationStatus.stopping;
     final request = SatInStopReplicationReq();
     await rpc<void>(request);
 
-    return Right(null);
+    return const Right(null);
   }
 
   void sendMessage(Object request) {
     logger.info("Sending message $request");
     final _socket = socket;
     if (_socket == null) {
-      throw SatelliteException(SatelliteErrorCode.unexpectedState, 'trying to send message, but no socket exists');
+      throw SatelliteException(SatelliteErrorCode.unexpectedState,
+          'trying to send message, but no socket exists');
     }
     final msgType = getTypeFromSatObject(request);
     if (msgType == null) {
-      throw SatelliteException(SatelliteErrorCode.unexpectedMessageType, "${request.runtimeType}");
+      throw SatelliteException(
+          SatelliteErrorCode.unexpectedMessageType, "${request.runtimeType}");
     }
 
     final buffer = encodeSocketMessage(msgType, request);
@@ -375,7 +390,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
     try {
       timer = Timer(Duration(milliseconds: opts.timeout), () {
-        final error = SatelliteException(SatelliteErrorCode.timeout, "${request.runtimeType}");
+        final error = SatelliteException(
+            SatelliteErrorCode.timeout, "${request.runtimeType}");
         completer.completeError(error);
       });
 
@@ -440,7 +456,9 @@ class SatelliteClient extends EventEmitter implements Client {
       emit(
         "error",
         SatelliteException(
-            SatelliteErrorCode.unexpectedState, "unexpected state ${inbound.isReplicating} handling 'start' response"),
+          SatelliteErrorCode.unexpectedState,
+          "unexpected state ${inbound.isReplicating} handling 'start' response",
+        ),
       );
     }
   }
@@ -449,19 +467,25 @@ class SatelliteClient extends EventEmitter implements Client {
     logger.info("received replication request $message");
     if (outbound.isReplicating == ReplicationStatus.stopped) {
       final replication = outbound.clone();
-      if (message.options.firstWhereOrNull((o) => o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED) == null) {
+      if (message.options.firstWhereOrNull(
+              (o) => o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED) ==
+          null) {
         final lsnList = Uint8List.fromList(message.lsn);
         replication.ackLsn = lsnList;
         replication.enqueuedLsn = lsnList;
       }
-      if (message.options.firstWhereOrNull((o) => o == SatInStartReplicationReq_Option.FIRST_LSN) == null) {
+      if (message.options.firstWhereOrNull(
+              (o) => o == SatInStartReplicationReq_Option.FIRST_LSN) ==
+          null) {
         replication.ackLsn = kDefaultLogPos;
         replication.enqueuedLsn = kDefaultLogPos;
       }
 
-      outbound = resetReplication(replication.enqueuedLsn, replication.ackLsn, ReplicationStatus.active);
+      outbound = resetReplication(replication.enqueuedLsn, replication.ackLsn,
+          ReplicationStatus.active);
 
-      throttledPushTransaction = Throttle(pushTransactions, Duration(milliseconds: opts.pushPeriod));
+      throttledPushTransaction =
+          Throttle(pushTransactions, Duration(milliseconds: opts.pushPeriod));
 
       final response = SatInStartReplicationResp();
       sendMessage(response);
@@ -473,16 +497,21 @@ class SatelliteClient extends EventEmitter implements Client {
       sendMessage(response);
 
       emit(
-          'error',
-          SatelliteException(SatelliteErrorCode.unexpectedState,
-              "unexpected state ${outbound.isReplicating} handling 'start' request"));
+        'error',
+        SatelliteException(
+          SatelliteErrorCode.unexpectedState,
+          "unexpected state ${outbound.isReplicating} handling 'start' request",
+        ),
+      );
     }
   }
 
   void pushTransactions() {
     if (outbound.isReplicating != ReplicationStatus.active) {
       throw SatelliteException(
-          SatelliteErrorCode.replicationNotStarted, 'sending a transaction while outbound replication has not started');
+        SatelliteErrorCode.replicationNotStarted,
+        'sending a transaction while outbound replication has not started',
+      );
     }
 
     while (outbound.transactions.isNotEmpty) {
@@ -529,7 +558,8 @@ class SatelliteClient extends EventEmitter implements Client {
           schemaName: relation.schema, // TODO
           tableName: relation.table,
           tableType: relation.tableType,
-          columns: relation.columns.map((c) => SatRelationColumn(name: c.name, type: c.type)),
+          columns: relation.columns
+              .map((c) => SatRelationColumn(name: c.name, type: c.type)),
         );
 
         sendMessage(satRelation);
@@ -555,9 +585,12 @@ class SatelliteClient extends EventEmitter implements Client {
       sendMessage(response);
 
       emit(
-          'error',
-          SatelliteException(
-              SatelliteErrorCode.unexpectedState, "unexpected state ${inbound.isReplicating} handling 'stop' request"));
+        'error',
+        SatelliteException(
+          SatelliteErrorCode.unexpectedState,
+          "unexpected state ${inbound.isReplicating} handling 'stop' request",
+        ),
+      );
     }
   }
 
@@ -568,7 +601,9 @@ class SatelliteClient extends EventEmitter implements Client {
       emit(
         'error',
         SatelliteException(
-            SatelliteErrorCode.unexpectedState, "unexpected state ${inbound.isReplicating} handling 'stop' response"),
+          SatelliteErrorCode.unexpectedState,
+          "unexpected state ${inbound.isReplicating} handling 'stop' response",
+        ),
       );
     }
   }
@@ -594,8 +629,10 @@ class SatelliteClient extends EventEmitter implements Client {
     if (inbound.isReplicating != ReplicationStatus.active) {
       emit(
         'error',
-        SatelliteException(SatelliteErrorCode.unexpectedState,
-            "unexpected state ${inbound.isReplicating} handling 'relation' message"),
+        SatelliteException(
+          SatelliteErrorCode.unexpectedState,
+          "unexpected state ${inbound.isReplicating} handling 'relation' message",
+        ),
       );
       return;
     }
@@ -605,7 +642,9 @@ class SatelliteClient extends EventEmitter implements Client {
       schema: message.schemaName,
       table: message.tableName,
       tableType: message.tableType,
-      columns: message.columns.map((c) => (RelationColumn(name: c.name, type: c.type))).toList(),
+      columns: message.columns
+          .map((c) => RelationColumn(name: c.name, type: c.type))
+          .toList(),
     );
 
     inbound.relations[relation.id] = relation;
@@ -616,7 +655,8 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleErrorResp(SatErrorResp error) {
-    emit('error', Exception("server replied with error code: ${error.errorType}"));
+    emit('error',
+        Exception("server replied with error code: ${error.errorType}"));
   }
 
   void processOpLogMessage(
@@ -649,7 +689,7 @@ class SatelliteClient extends EventEmitter implements Client {
           'transaction',
           TransactionEvent(
             transaction,
-            () => (inbound.ackLsn = transaction.lsn),
+            () => inbound.ackLsn = transaction.lsn,
           ),
         );
         replication.transactions.removeAt(lastTxnIdx);
@@ -660,7 +700,9 @@ class SatelliteClient extends EventEmitter implements Client {
 
         if (rel == null) {
           throw SatelliteException(
-              SatelliteErrorCode.protocolViolation, "missing relation ${op.insert.relationId} for incoming operation");
+            SatelliteErrorCode.protocolViolation,
+            "missing relation ${op.insert.relationId} for incoming operation",
+          );
         }
 
         final change = Change(
@@ -680,7 +722,8 @@ class SatelliteClient extends EventEmitter implements Client {
         final oldRowData = op.update.getNullableOldRowData();
 
         if (rel == null) {
-          throw SatelliteException(SatelliteErrorCode.protocolViolation, 'missing relation for incoming operation');
+          throw SatelliteException(SatelliteErrorCode.protocolViolation,
+              'missing relation for incoming operation');
         }
 
         final change = Change(
@@ -698,7 +741,8 @@ class SatelliteClient extends EventEmitter implements Client {
         final rid = op.delete.relationId;
         final rel = replication.relations[rid];
         if (rel == null) {
-          throw SatelliteException(SatelliteErrorCode.protocolViolation, 'missing relation for incoming operation');
+          throw SatelliteException(SatelliteErrorCode.protocolViolation,
+              'missing relation for incoming operation');
         }
 
         final oldRowData = op.delete.getNullableOldRowData();
@@ -778,7 +822,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
 SatOpRow serializeRow(Record rec, Relation relation) {
   int recordNumColumn = 0;
-  final recordNullBitMask = Uint8List(calculateNumBytes(relation.columns.length));
+  final recordNullBitMask =
+      Uint8List(calculateNumBytes(relation.columns.length));
   final recordValues = relation.columns.fold<List<List<int>>>(
     [],
     (List<List<int>> acc, RelationColumn c) {
@@ -807,15 +852,17 @@ Record? deserializeRow(
   if (_row == null) {
     return null;
   }
-  return Map.fromEntries(relation.columns.mapIndexed((i, c) {
-    Object? value;
-    if (getMaskBit(_row.nullsBitmask, i) == 1) {
-      value = null;
-    } else {
-      value = deserializeColumnData(_row.values[i], c);
-    }
-    return MapEntry(c.name, value);
-  }));
+  return Map.fromEntries(
+    relation.columns.mapIndexed((i, c) {
+      Object? value;
+      if (getMaskBit(_row.nullsBitmask, i) == 1) {
+        value = null;
+      } else {
+        value = deserializeColumnData(_row.values[i], c);
+      }
+      return MapEntry(c.name, value);
+    }),
+  );
 }
 
 void setMaskBit(List<int> array, int indexFromStart) {
@@ -863,7 +910,8 @@ Object deserializeColumnData(
     case 'INTEGER':
       return num.parse(TypeDecoder.text(column));
   }
-  throw SatelliteException(SatelliteErrorCode.unknownDataType, "can't deserialize ${columnInfo.type}");
+  throw SatelliteException(SatelliteErrorCode.unknownDataType,
+      "can't deserialize ${columnInfo.type}");
 }
 
 // All values serialized as textual representation

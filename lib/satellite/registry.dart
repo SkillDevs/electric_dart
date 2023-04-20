@@ -49,7 +49,8 @@ abstract class BaseRegistry implements Registry {
     final stoppingPromises = this.stoppingPromises;
     final stopping = stoppingPromises[dbName];
     if (stopping != null) {
-      return stopping.then((_) => this.ensureStarted(
+      return stopping.then(
+        (_) => ensureStarted(
           dbName: dbName,
           adapter: adapter,
           migrator: migrator,
@@ -58,7 +59,9 @@ abstract class BaseRegistry implements Registry {
           console: console,
           config: config,
           authState: authState,
-          opts: opts));
+          opts: opts,
+        ),
+      );
     }
 
     // If we're in the process of starting the satellite process for this
@@ -82,15 +85,15 @@ abstract class BaseRegistry implements Registry {
 
     // Otherwise we need to fire it up!
     final startingPromise = startProcess(
-            dbName: dbName,
-            adapter: adapter,
-            migrator: migrator,
-            notifier: notifier,
-            socketFactory: socketFactory,
-            console: console,
-            config: config,
-            authState: authState)
-        .then((satellite) {
+      dbName: dbName,
+      adapter: adapter,
+      migrator: migrator,
+      notifier: notifier,
+      socketFactory: socketFactory,
+      console: console,
+      config: config,
+      authState: authState,
+    ).then((satellite) {
       startingPromises.remove(dbName);
 
       satellites[dbName] = satellite;
@@ -102,20 +105,22 @@ abstract class BaseRegistry implements Registry {
     return startingPromise;
   }
 
+  @override
   Future<Satellite> ensureAlreadyStarted(DbName dbName) async {
-    final starting = this.startingPromises[dbName];
+    final starting = startingPromises[dbName];
     if (starting != null) {
       return starting;
     }
 
-    final satellite = this.satellites[dbName];
+    final satellite = satellites[dbName];
     if (satellite != null) {
       return satellite;
     }
 
-    throw new Exception("Satellite not running for db: ${dbName}");
+    throw Exception("Satellite not running for db: $dbName");
   }
 
+  @override
   Future<void> stop(DbName dbName, {bool shouldIncludeStarting = true}) async {
     // If in the process of starting, wait for it to start and then stop it.
     if (shouldIncludeStarting) {
@@ -145,6 +150,7 @@ abstract class BaseRegistry implements Registry {
     }
   }
 
+  @override
   Future<void> stopAll({bool shouldIncludeStarting = true}) async {
     final running = satellites.keys.map((dbName) => stop(dbName)).toList();
     final stopping = stoppingPromises.values.toList();
@@ -164,6 +170,7 @@ abstract class BaseRegistry implements Registry {
 }
 
 class GlobalRegistry extends BaseRegistry {
+  @override
   Future<Satellite> startProcess({
     required DbName dbName,
     required DatabaseAdapter adapter,

@@ -25,7 +25,8 @@ void main() {
   });
 
   test('run the bundle migrator', () async {
-    final migrator = BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+    final migrator =
+        BundleMigrator(adapter: adapter, migrations: kTestMigrations);
     await expectLater(await migrator.up(), 3);
     await expectLater(await migrator.up(), 0);
   });

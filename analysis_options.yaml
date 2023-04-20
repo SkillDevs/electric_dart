@@ -1,8 +1,8 @@
-include: package:lint/recommended.yaml
+include: package:lint/strict.yaml
 
 analyzer:
   exclude:
-    - proto/**
+    - lib/proto/**
       
   language:
     strict-casts: true

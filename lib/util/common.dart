@@ -5,7 +5,7 @@ import 'package:rate_limiter/rate_limiter.dart' as rt;
 
 import 'package:uuid/uuid.dart' as uuid_lib;
 
-final _uuidGen = uuid_lib.Uuid();
+const _uuidGen = uuid_lib.Uuid();
 
 String uuid() {
   return _uuidGen.v4();
@@ -30,7 +30,7 @@ class Throttle<T> {
   }
 
   Future<T> call() async {
-    return (await _throttle()) as FutureOr<T>;
+    return (_throttle()) as FutureOr<T>;
   }
 
   void cancel() {

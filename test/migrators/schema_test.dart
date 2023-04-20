@@ -28,20 +28,26 @@ void main() {
   });
 
   test('check schema keys are unique', () async {
-    final migrator = BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+    final migrator =
+        BundleMigrator(adapter: adapter, migrations: kTestMigrations);
     await migrator.up();
 
-    await adapter.run(Statement(
-      "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
-    ));
-    try {
-      await adapter.run(Statement(
+    await adapter.run(
+      Statement(
         "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
-      ));
+      ),
+    );
+    try {
+      await adapter.run(
+        Statement(
+          "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
+        ),
+      );
       fail("should not occur");
     } catch (err) {
       final errSqlite = err as SqliteException;
-      expect(errSqlite.extendedResultCode, SqliteErrors.SQLITE_CONSTRAINT_PRIMARYKEY);
+      expect(errSqlite.extendedResultCode,
+          SqliteErrors.SQLITE_CONSTRAINT_PRIMARYKEY);
     }
   });
 }
