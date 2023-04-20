@@ -220,3 +220,5 @@ class GlobalRegistry extends BaseRegistry {
     return satellite;
   }
 }
+
+final globalRegistry = GlobalRegistry();

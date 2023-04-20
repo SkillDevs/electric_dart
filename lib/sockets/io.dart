@@ -25,17 +25,22 @@ class WebSocketIO implements Socket {
 
   @override
   Socket closeAndRemoveListeners() {
-    _channel?.sink.close();
-    for (final cb in _closeCallbacks) {
-      cb();
-    }
-
-    _subscriptions = [];
     _onceConnectCallbacks = [];
     _onceErrorCallbacks = [];
     _errorCallbacks = [];
     _closeCallbacks = [];
     _messageCallbacks = [];
+
+    _channel?.sink.close();
+    // for (final cb in _closeCallbacks) {
+    //   cb();
+    // }
+
+    for (var subscription in _subscriptions) {
+      subscription.cancel();
+    }
+
+    _subscriptions = [];
     return this;
   }
 
