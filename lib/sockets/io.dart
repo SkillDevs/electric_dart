@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:io' as io;
 import 'dart:typed_data';
 
 import 'package:electric_client/sockets/sockets.dart';
 import 'package:web_socket_channel/io.dart';
-import 'dart:io' as io;
 
 class WebSocketIOFactory implements SocketFactory {
   @override

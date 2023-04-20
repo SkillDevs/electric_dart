@@ -203,7 +203,7 @@ class SatelliteProcess implements Satellite {
         }
       case ConnectivityState.connected:
         {
-          return Right(null);
+          return const Right(null);
         }
       default:
         {
@@ -228,7 +228,7 @@ class SatelliteProcess implements Satellite {
         .onError(
       (error, st) {
         logger.warning("couldn't start replication: $error");
-        return Right(null);
+        return const Right(null);
       },
     );
   }
@@ -274,7 +274,7 @@ class SatelliteProcess implements Satellite {
     final res = await adapter.query(Statement(
       tablesExist,
       [meta, oplog, shadow],
-    ));
+    ),);
     final numTables = res.first["numTables"]! as int;
     return numTables == 3;
   }
@@ -319,7 +319,7 @@ class SatelliteProcess implements Satellite {
         if (cached) {
           oplogEntry.clearTags = encodeTags(difference(decodeTags(shadowEntry.tags), [
             _generateTag(timestamp),
-          ]));
+          ]),);
         } else {
           oplogEntry.clearTags = shadowEntry.tags;
         }
@@ -368,7 +368,7 @@ class SatelliteProcess implements Satellite {
 
   // Promise<[boolean, ShadowEntry]
   Future<ShadowEntryLookup> _lookupCachedShadowEntry(
-      OplogEntry oplogEntry, Map<String, ShadowEntry> shadowEntries) async {
+      OplogEntry oplogEntry, Map<String, ShadowEntry> shadowEntries,) async {
     final pk = getShadowPrimaryKey(oplogEntry);
     final String key = [oplogEntry.namespace, oplogEntry.tablename, pk].join('.');
 
@@ -393,7 +393,7 @@ class SatelliteProcess implements Satellite {
 
     // Would it be quicker to do this using a second SQL query that
     // returns results in `Change` format?!
-    reduceFn(ChangeAccumulator acc, OplogEntry entry) {
+    ChangeAccumulator reduceFn(ChangeAccumulator acc, OplogEntry entry) {
       final qt = QualifiedTablename(entry.namespace, entry.tablename);
       final key = qt.toString();
 
@@ -423,7 +423,7 @@ class SatelliteProcess implements Satellite {
   ) async {
     // TODO: Don't try replicating when outbound is inactive
     if (client.isClosed()) {
-      return Right(null);
+      return const Right(null);
     }
 
     final transactions = toTransactions(results, relations);
@@ -431,29 +431,29 @@ class SatelliteProcess implements Satellite {
       return client.enqueueTransaction(txn);
     }
 
-    return Right(null);
+    return const Right(null);
   }
 
   // Apply a set of incoming transactions against pending local operations,
   // applying conflict resolution rules. Takes all changes per each key before
   // merging, for local and remote operations.
   @visibleForTesting
-  Future<void> apply(List<OplogEntry> incoming, String incoming_origin, LSN lsn) async {
+  Future<void> apply(List<OplogEntry> incoming, String incomingOrigin, LSN lsn) async {
     logger.info("apply incoming changes for LSN: $lsn");
     // assign timestamp to pending operations before apply
     await performSnapshot();
 
     final local = await getEntries();
-    final merged = _mergeEntries(authState!.clientId, local, incoming_origin, incoming);
+    final merged = _mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
 
     final List<Statement> stmts = [];
     // switches off on transaction commit/abort
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
     // update lsn.
     _lsn = lsn;
-    final lsn_base64 = base64.encode(lsn);
+    final lsnBase64 = base64.encode(lsn);
     stmts
-        .add(Statement("UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?", <Object?>[lsn_base64, 'lsn']));
+        .add(Statement("UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?", <Object?>[lsnBase64, 'lsn']));
 
     for (final entry in merged.entries) {
       final tablenameStr = entry.key;
@@ -516,7 +516,7 @@ class SatelliteProcess implements Satellite {
     final rows = await adapter.query(Statement(
       selectChanges,
       [timestamp.toIso8601String(), since],
-    ));
+    ),);
     return rows.map(_opLogEntryFromRow).toList();
   }
 
@@ -596,7 +596,7 @@ class SatelliteProcess implements Satellite {
     return await adapter.run(Statement(
       updateTags,
       <Object?>[oplog.clearTags, oplog.rowid],
-    ));
+    ),);
   }
 
   Future<void> _updateOplogTimestamp(DateTime timestamp) async {
@@ -620,13 +620,13 @@ class SatelliteProcess implements Satellite {
   // clearTags field is used by the calling code to determine new value of
   // the shadowTags
   ShadowTableChanges _mergeEntries(
-    String local_origin,
+    String localOrigin,
     List<OplogEntry> local,
-    String incoming_origin,
+    String incomingOrigin,
     List<OplogEntry> incoming,
   ) {
     final localTableChanges = localOperationsToTableChanges(local, (DateTime timestamp) {
-      return generateTag(local_origin, timestamp);
+      return generateTag(localOrigin, timestamp);
     });
     final incomingTableChanges = remoteOperationsToTableChanges(incoming);
 
@@ -649,7 +649,7 @@ class SatelliteProcess implements Satellite {
         final localChanges = localInfo.oplogEntryChanges;
 
         final changes =
-            mergeChangesLastWriteWins(local_origin, localChanges.changes, incoming_origin, incomingChanges.changes);
+            mergeChangesLastWriteWins(localOrigin, localChanges.changes, incomingOrigin, incomingChanges.changes);
         late final ChangesOpType optype;
 
         final tags = mergeOpTags(localChanges, incomingChanges);
@@ -678,7 +678,7 @@ class SatelliteProcess implements Satellite {
 
   @visibleForTesting
   Future<void> applyTransactionInternal(
-      String origin, DateTime commitTimestamp, List<OplogEntry> opLogEntries, LSN lsn) async {
+      String origin, DateTime commitTimestamp, List<OplogEntry> opLogEntries, LSN lsn,) async {
     await apply(opLogEntries, origin, lsn);
     await _notifyChanges(opLogEntries);
 
@@ -709,10 +709,10 @@ class SatelliteProcess implements Satellite {
   List<Statement> _updateTriggerSettings(List<String> tablenames, bool flag) {
     final triggers = opts.triggersTable.toString();
     final stmts = tablenames
-        .map((tablenameStr) => (Statement(
+        .map((tablenameStr) => Statement(
               "UPDATE $triggers SET flag = ? WHERE tablename = ?",
-              [flag ? 1 : 0, tablenameStr],
-            )))
+              [if (flag) 1 else 0, tablenameStr],
+            ),)
         .toList();
     return stmts;
   }
@@ -727,7 +727,7 @@ class SatelliteProcess implements Satellite {
     final sql = " UPDATE $meta SET value = ? WHERE key = ?";
     final args = <Object?>[
       lsn.toString(),
-      isAck ? 'lastAckdRowId' : 'lastSentRowId',
+      if (isAck) 'lastAckdRowId' else 'lastSentRowId',
     ];
 
     if (isAck) {
@@ -825,7 +825,7 @@ class SatelliteProcess implements Satellite {
           name: c["name"]! as String,
           type: c["type"]! as String,
           primaryKey: (c["pk"]! as int) > 0,
-        ));
+        ),);
       }
       relations[tableName] = relation;
     }
@@ -878,7 +878,7 @@ Statement _applyNonDeleteOperation(ShadowEntryChanges shadowEntryChanges, String
   String insertStmt =
       '''INTO $tablenameStr(${columnNames.join(', ')}) VALUES (${columnValues.map((_) => '?').join(',')})''';
 
-  final updateColumnStmts = columnNames.where((c) => !(primaryKeyCols.containsKey(c))).fold(
+  final updateColumnStmts = columnNames.where((c) => !primaryKeyCols.containsKey(c)).fold(
     _WhereAndValues([], []),
     (acc, c) {
       acc.where.add("$c = ?");
@@ -917,14 +917,14 @@ class ShadowEntryLookup {
 
 OplogEntry _opLogEntryFromRow(Map<String, Object?> row) {
   return OplogEntry(
-    namespace: row['namespace'] as String,
-    tablename: row['tablename'] as String,
-    primaryKey: row['primaryKey'] as String,
-    rowid: row['rowid'] as int,
-    optype: opTypeStrToOpType(row['optype'] as String),
-    timestamp: row['timestamp'] as String,
+    namespace: row['namespace']! as String,
+    tablename: row['tablename']! as String,
+    primaryKey: row['primaryKey']! as String,
+    rowid: row['rowid']! as int,
+    optype: opTypeStrToOpType(row['optype']! as String),
+    timestamp: row['timestamp']! as String,
     newRow: row['newRow'] as String?,
     oldRow: row['oldRow'] as String?,
-    clearTags: row['clearTags'] as String,
+    clearTags: row['clearTags']! as String,
   );
 }

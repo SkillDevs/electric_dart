@@ -1,6 +1,6 @@
 import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/util/types.dart' hide Transaction;
 import 'package:electric_client/util/tablename.dart';
+import 'package:electric_client/util/types.dart' hide Transaction;
 
 class MockDatabaseAdapter implements DatabaseAdapter {
   @override

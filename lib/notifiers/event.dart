@@ -197,7 +197,7 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  connectivityStateChange(String dbName, ConnectivityState status) {
+  void connectivityStateChange(String dbName, ConnectivityState status) {
     if (!_hasDbName(dbName)) {
       return;
     }
@@ -207,7 +207,7 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  subscribeToConnectivityStateChange(ConnectivityStateChangeCallback callback) {
+  String subscribeToConnectivityStateChange(ConnectivityStateChangeCallback callback) {
     final key = randomValue();
 
     void wrappedCallback(ConnectivityStateChangeNotification notification) {

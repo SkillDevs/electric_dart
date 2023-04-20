@@ -4,7 +4,7 @@ import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/util/sets.dart';
 
 OplogColumnChanges mergeChangesLastWriteWins(
-    String firstOrigin, OplogColumnChanges first, String secondOrigin, OplogColumnChanges second) {
+    String firstOrigin, OplogColumnChanges first, String secondOrigin, OplogColumnChanges second,) {
   final uniqueKeys = <String>{...first.keys, ...second.keys};
 
   final OplogColumnChanges initialValue = {};

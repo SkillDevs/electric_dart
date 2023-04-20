@@ -49,7 +49,7 @@ class BundleMigrator implements Migrator {
     final res = await adapter.query(Statement(
       tableExists,
       [tableName],
-    ));
+    ),);
     final numTables = res.first["numTables"]! as int;
     if (numTables == 0) {
       return [];
@@ -66,7 +66,7 @@ class BundleMigrator implements Migrator {
         .map((r) => MigrationRecord(
               name: r["name"]! as String,
               sha256: r["sha256"]! as String,
-            ))
+            ),)
         .toList();
   }
 
