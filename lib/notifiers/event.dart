@@ -145,7 +145,8 @@ class EventNotifier implements Notifier {
       }
     }
 
-    final eventListener = EventListener(EventNames.potentialDataChange, wrappedCallback);
+    final eventListener =
+        EventListener(EventNames.potentialDataChange, wrappedCallback);
 
     _changeCallbacks[key] = eventListener;
     _subscribe(eventListener);
@@ -176,7 +177,8 @@ class EventNotifier implements Notifier {
       }
     }
 
-    final eventListener = EventListener(EventNames.actualDataChange, wrappedCallback);
+    final eventListener =
+        EventListener(EventNames.actualDataChange, wrappedCallback);
     _changeCallbacks[key] = eventListener;
     _subscribe(eventListener);
 
@@ -207,7 +209,8 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  String subscribeToConnectivityStateChange(ConnectivityStateChangeCallback callback) {
+  String subscribeToConnectivityStateChange(
+      ConnectivityStateChangeCallback callback) {
     final key = randomValue();
 
     void wrappedCallback(ConnectivityStateChangeNotification notification) {
@@ -217,7 +220,8 @@ class EventNotifier implements Notifier {
       return;
     }
 
-    final eventListener = EventListener(EventNames.connectivityStateChange, wrappedCallback);
+    final eventListener =
+        EventListener(EventNames.connectivityStateChange, wrappedCallback);
     _connectivityStatusCallbacks[key] = eventListener;
     _subscribe(eventListener);
 
@@ -282,7 +286,8 @@ class EventNotifier implements Notifier {
     return notification;
   }
 
-  ConnectivityStateChangeNotification _emitConnectivityStatus(DbName dbName, ConnectivityState connectivityState) {
+  ConnectivityStateChangeNotification _emitConnectivityStatus(
+      DbName dbName, ConnectivityState connectivityState) {
     final notification = ConnectivityStateChangeNotification(
       dbName: dbName,
       connectivityState: connectivityState,

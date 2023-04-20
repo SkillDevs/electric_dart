@@ -83,9 +83,11 @@ void main() {
     await satellite.setAuthState(null);
     final clientId = satellite.authState!.clientId;
 
-    await adapter.run(Statement(
-      "INSERT INTO parent(id, value, other) VALUES (1, 'local', null)",
-    ),);
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value, other) VALUES (1, 'local', null)",
+      ),
+    );
 
     final txDate1 = await satellite.performSnapshot();
     var shadow = await satellite.getOplogShadowEntry();
@@ -93,7 +95,8 @@ void main() {
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate1]));
 
     await adapter.run(
-      Statement("UPDATE parent SET value = 'local1', other = 'other1' WHERE id = 1"),
+      Statement(
+          "UPDATE parent SET value = 'local1', other = 'other1' WHERE id = 1"),
     );
 
     final txDate2 = await satellite.performSnapshot();
@@ -101,18 +104,22 @@ void main() {
     expect(shadow.length, 1);
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate2]));
 
-    await adapter.run(Statement(
-      "UPDATE parent SET value = 'local2', other = 'other2' WHERE id = 1",
-    ),);
+    await adapter.run(
+      Statement(
+        "UPDATE parent SET value = 'local2', other = 'other2' WHERE id = 1",
+      ),
+    );
 
     final txDate3 = await satellite.performSnapshot();
     shadow = await satellite.getOplogShadowEntry();
     expect(shadow.length, 1);
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate3]));
 
-    await adapter.run(Statement(
-      "DELETE FROM parent WHERE id = 1",
-    ),);
+    await adapter.run(
+      Statement(
+        "DELETE FROM parent WHERE id = 1",
+      ),
+    );
 
     final txDate4 = await satellite.performSnapshot();
     shadow = await satellite.getOplogShadowEntry();
@@ -145,7 +152,8 @@ void main() {
     final txDate1 = await satellite.performSnapshot();
 
     final localEntries1 = await satellite.getEntries();
-    final shadowEntry1 = await satellite.getOplogShadowEntry(oplog: localEntries1[0]);
+    final shadowEntry1 =
+        await satellite.getOplogShadowEntry(oplog: localEntries1[0]);
 
     // shadow tag is time of snapshot
     final tag1 = genEncodedTags(clientId, [txDate1]);
@@ -164,7 +172,8 @@ void main() {
     final txDate2 = await satellite.performSnapshot();
 
     final localEntries2 = await satellite.getEntries();
-    final shadowEntry2 = await satellite.getOplogShadowEntry(oplog: localEntries2[1]);
+    final shadowEntry2 =
+        await satellite.getOplogShadowEntry(oplog: localEntries2[1]);
 
     // shadowTag is empty
     expect(0, shadowEntry2.length);
@@ -183,7 +192,8 @@ void main() {
     final txDate3 = await satellite.performSnapshot();
 
     final localEntries3 = await satellite.getEntries();
-    final shadowEntry3 = await satellite.getOplogShadowEntry(oplog: localEntries3[1]);
+    final shadowEntry3 =
+        await satellite.getOplogShadowEntry(oplog: localEntries3[1]);
 
     final tag3 = genEncodedTags(clientId, [txDate3]);
     // shadow tag is tag3
@@ -222,27 +232,35 @@ void main() {
     expect(2, (await satellite.getEntries()).length);
 
     final shadow = await satellite.getOplogShadowEntry();
-    expect(shadow[0].tags, genEncodedTags(clientId, [txDate3]),
-        reason: 'error: tag1 was reintroduced after merging acked operation',);
+    expect(
+      shadow[0].tags,
+      genEncodedTags(clientId, [txDate3]),
+      reason: 'error: tag1 was reintroduced after merging acked operation',
+    );
   });
 
-  test('remote tx (INSERT) concurrently with local tx (INSERT -> DELETE)', () async {
+  test('remote tx (INSERT) concurrently with local tx (INSERT -> DELETE)',
+      () async {
     await runMigrations();
     await satellite.setAuthState(null);
 
     final List<Statement> stmts = [];
 
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['1', 'local', null],
-    ),);
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['1', 'local', null],
+      ),
+    );
     stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['2', 'local', null],
-    ),);
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['2', 'local', null],
+      ),
+    );
     stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
     await adapter.runInTransaction(stmts);
 
@@ -289,13 +307,15 @@ void main() {
         namespace: 'main',
         tablename: 'parent',
         primaryKey: "1",
-        tags: genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(prevTs)]),
+        tags: genEncodedTags(
+            'remote', [DateTime.fromMillisecondsSinceEpoch(prevTs)]),
       ),
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
         primaryKey: "2",
-        tags: genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(nextTs)]),
+        tags: genEncodedTags(
+            'remote', [DateTime.fromMillisecondsSinceEpoch(nextTs)]),
       ),
     ];
     expect(shadow, expectedShadow);
@@ -316,21 +336,26 @@ void main() {
     expect(userTable, expectedUserTable);
   });
 
-  test('remote tx (INSERT) concurrently with 2 local txses (INSERT -> DELETE)', () async {
+  test('remote tx (INSERT) concurrently with 2 local txses (INSERT -> DELETE)',
+      () async {
     await runMigrations();
     await satellite.setAuthState(null);
 
     List<Statement> stmts = [];
 
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['1', 'local', null],
-    ),);
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['2', 'local', null],
-    ),);
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['1', 'local', null],
+      ),
+    );
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['2', 'local', null],
+      ),
+    );
     await adapter.runInTransaction(stmts);
     final txDate1 = await satellite.performSnapshot();
 
@@ -341,8 +366,10 @@ void main() {
     await adapter.runInTransaction(stmts);
     await satellite.performSnapshot();
 
-    final prevTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch - 1);
-    final nextTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch + 1);
+    final prevTs =
+        DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch - 1);
+    final nextTs =
+        DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch + 1);
 
     final prevEntry = generateRemoteOplogEntry(
       tableInfo,
@@ -408,36 +435,47 @@ void main() {
     expect(expectedUserTable, userTable);
   });
 
-  test('remote tx (INSERT) concurrently with local tx (INSERT -> UPDATE)', () async {
+  test('remote tx (INSERT) concurrently with local tx (INSERT -> UPDATE)',
+      () async {
     await runMigrations();
     await satellite.setAuthState(null);
     final clientId = satellite.authState!.clientId;
     final stmts = <Statement>[];
 
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['1', 'local', null],
-    ),);
-    stmts.add(Statement(
-      "UPDATE parent SET value = ?, other = ? WHERE id = 1",
-      ['local', 'not_null'],
-    ),);
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['1', 'local', null],
+      ),
+    );
+    stmts.add(
+      Statement(
+        "UPDATE parent SET value = ?, other = ? WHERE id = 1",
+        ['local', 'not_null'],
+      ),
+    );
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['2', 'local', null],
-    ),);
-    stmts.add(Statement(
-      "UPDATE parent SET value = ?, other = ? WHERE id = 1",
-      ['local', 'not_null'],
-    ),);
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['2', 'local', null],
+      ),
+    );
+    stmts.add(
+      Statement(
+        "UPDATE parent SET value = ?, other = ? WHERE id = 1",
+        ['local', 'not_null'],
+      ),
+    );
     await adapter.runInTransaction(stmts);
 
     final txDate1 = await satellite.performSnapshot();
 
-    final prevTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch - 1);
-    final nextTs = DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch + 1);
+    final prevTs =
+        DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch - 1);
+    final nextTs =
+        DateTime.fromMillisecondsSinceEpoch(txDate1.millisecondsSinceEpoch + 1);
 
     final prevEntry = generateRemoteOplogEntry(
       tableInfo,
@@ -517,7 +555,8 @@ void main() {
     expect(expectedUserTable, userTable);
   });
 
-  test('origin tx (INSERT) concurrently with local txses (INSERT -> DELETE)', () async {
+  test('origin tx (INSERT) concurrently with local txses (INSERT -> DELETE)',
+      () async {
     //
     await runMigrations();
     await satellite.setAuthState(null);
@@ -526,14 +565,18 @@ void main() {
     var stmts = <Statement>[];
 
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['1', 'local', null],
-    ),);
-    stmts.add(Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
-      ['2', 'local', null],
-    ),);
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['1', 'local', null],
+      ),
+    );
+    stmts.add(
+      Statement(
+        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        ['2', 'local', null],
+      ),
+    );
     await adapter.runInTransaction(stmts);
     final txDate1 = await satellite.performSnapshot();
 
@@ -575,7 +618,8 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.apply([electricEntrySame, electricEntryConflict], clientId, []);
+    await satellite.apply(
+        [electricEntrySame, electricEntryConflict], clientId, []);
 
     final shadow = await satellite.getOplogShadowEntry();
     final expectedShadow = [

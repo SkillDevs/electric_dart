@@ -46,10 +46,12 @@ class BundleMigrator implements Migrator {
         WHERE type = 'table'
           AND name = ?
     ''';
-    final res = await adapter.query(Statement(
-      tableExists,
-      [tableName],
-    ),);
+    final res = await adapter.query(
+      Statement(
+        tableExists,
+        [tableName],
+      ),
+    );
     final numTables = res.first["numTables"]! as int;
     if (numTables == 0) {
       return [];
@@ -63,14 +65,17 @@ class BundleMigrator implements Migrator {
     ''';
     final rows = await adapter.query(Statement(existingRecords));
     return rows
-        .map((r) => MigrationRecord(
-              name: r["name"]! as String,
-              sha256: r["sha256"]! as String,
-            ),)
+        .map(
+          (r) => MigrationRecord(
+            name: r["name"]! as String,
+            sha256: r["sha256"]! as String,
+          ),
+        )
         .toList();
   }
 
-  Future<List<Migration>> validateApplied(List<Migration> migrations, List<MigrationRecord> existing) async {
+  Future<List<Migration>> validateApplied(
+      List<Migration> migrations, List<MigrationRecord> existing) async {
     // First we validate that the existing records are the first migrations.
     for (var i = 0; i < existing.length; i++) {
       final migrationRecord = existing[i];
@@ -80,11 +85,13 @@ class BundleMigrator implements Migrator {
       final migration = migrations[i];
 
       if (migration.name != name) {
-        throw Exception("Migrations cannot be altered once applied: expecting $name at index $i.");
+        throw Exception(
+            "Migrations cannot be altered once applied: expecting $name at index $i.");
       }
 
       if (migration.sha256 != sha256) {
-        throw Exception("Migrations cannot be altered once applied: expecting $name to have sha256 of $sha256");
+        throw Exception(
+            "Migrations cannot be altered once applied: expecting $name to have sha256 of $sha256");
       }
     }
 

@@ -4,7 +4,11 @@ import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/util/sets.dart';
 
 OplogColumnChanges mergeChangesLastWriteWins(
-    String firstOrigin, OplogColumnChanges first, String secondOrigin, OplogColumnChanges second,) {
+  String firstOrigin,
+  OplogColumnChanges first,
+  String secondOrigin,
+  OplogColumnChanges second,
+) {
   final uniqueKeys = <String>{...first.keys, ...second.keys};
 
   final OplogColumnChanges initialValue = {};
@@ -25,9 +29,12 @@ OplogColumnChanges mergeChangesLastWriteWins(
     } else {
       if (firstValue.timestamp == secondValue.timestamp) {
         // origin lexicographic ordered on timestamp equality
-        acc[key] = firstOrigin.compareTo(secondOrigin) > 0 ? firstValue : secondValue;
+        acc[key] =
+            firstOrigin.compareTo(secondOrigin) > 0 ? firstValue : secondValue;
       } else {
-        acc[key] = firstValue.timestamp > secondValue.timestamp ? firstValue : secondValue;
+        acc[key] = firstValue.timestamp > secondValue.timestamp
+            ? firstValue
+            : secondValue;
       }
     }
 

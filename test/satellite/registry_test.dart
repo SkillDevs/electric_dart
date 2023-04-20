@@ -120,7 +120,8 @@ void main() {
     expect(s3, isA<MockSatelliteProcess>());
   });
 
-  test('concurrent calls to ensureStarted with same dbName get same process', () async {
+  test('concurrent calls to ensureStarted with same dbName get same process',
+      () async {
     final mockRegistry = MockRegistry();
     final satellites = await Future.wait([
       _callEnsureStarted(mockRegistry),
@@ -141,11 +142,13 @@ void main() {
 
     await expectLater(
       mockRegistry.ensureAlreadyStarted(dbName),
-      throwsA(isA<Exception>().having(
-        (Exception e) => e.toString(),
-        "message",
-        "Exception: Satellite not running for db: $dbName",
-      ),),
+      throwsA(
+        isA<Exception>().having(
+          (Exception e) => e.toString(),
+          "message",
+          "Exception: Satellite not running for db: $dbName",
+        ),
+      ),
     );
   });
 
@@ -248,7 +251,8 @@ Future<Satellite> _callStartProcess(MockRegistry mockRegistry) {
   );
 }
 
-Future<Satellite> _callEnsureStarted(MockRegistry mockRegistry, {DbName? name}) {
+Future<Satellite> _callEnsureStarted(MockRegistry mockRegistry,
+    {DbName? name}) {
   return mockRegistry.ensureStarted(
     dbName: name ?? dbName,
     adapter: adapter,

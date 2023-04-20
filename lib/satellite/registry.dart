@@ -49,7 +49,8 @@ abstract class BaseRegistry implements Registry {
     final stoppingPromises = this.stoppingPromises;
     final stopping = stoppingPromises[dbName];
     if (stopping != null) {
-      return stopping.then((_) => ensureStarted(
+      return stopping.then(
+        (_) => ensureStarted(
           dbName: dbName,
           adapter: adapter,
           migrator: migrator,
@@ -58,7 +59,9 @@ abstract class BaseRegistry implements Registry {
           console: console,
           config: config,
           authState: authState,
-          opts: opts,),);
+          opts: opts,
+        ),
+      );
     }
 
     // If we're in the process of starting the satellite process for this
@@ -82,15 +85,15 @@ abstract class BaseRegistry implements Registry {
 
     // Otherwise we need to fire it up!
     final startingPromise = startProcess(
-            dbName: dbName,
-            adapter: adapter,
-            migrator: migrator,
-            notifier: notifier,
-            socketFactory: socketFactory,
-            console: console,
-            config: config,
-            authState: authState,)
-        .then((satellite) {
+      dbName: dbName,
+      adapter: adapter,
+      migrator: migrator,
+      notifier: notifier,
+      socketFactory: socketFactory,
+      console: console,
+      config: config,
+      authState: authState,
+    ).then((satellite) {
       startingPromises.remove(dbName);
 
       satellites[dbName] = satellite;

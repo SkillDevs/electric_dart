@@ -26,7 +26,9 @@ enum SatMsgType {
 }
 
 SatMsgType? getMsgFromCode(int code) {
-  return SatMsgType.values.cast<SatMsgType?>().firstWhere((e) => e!.code == code, orElse: () => null);
+  return SatMsgType.values
+      .cast<SatMsgType?>()
+      .firstWhere((e) => e!.code == code, orElse: () => null);
 }
 
 Object decodeMessage(Uint8List data, SatMsgType type) {

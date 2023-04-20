@@ -24,7 +24,8 @@ class MockDatabaseAdapter implements DatabaseAdapter {
   }
 
   @override
-  Future<T> transaction<T>(void Function(Transaction tx, void Function(T res) p1) setResult) async {
+  Future<T> transaction<T>(
+      void Function(Transaction tx, void Function(T res) p1) setResult) async {
     throw UnimplementedError();
   }
 }

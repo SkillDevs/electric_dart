@@ -28,15 +28,16 @@ class MockSatelliteProcess implements Satellite {
   final ConsoleClient console;
   final SatelliteOpts opts;
 
-  MockSatelliteProcess(
-      {required this.dbName,
-      required this.adapter,
-      required this.migrator,
-      required this.notifier,
-      required this.socketFactory,
-      required this.console,
-      required this.config,
-      required this.opts,});
+  MockSatelliteProcess({
+    required this.dbName,
+    required this.adapter,
+    required this.migrator,
+    required this.notifier,
+    required this.socketFactory,
+    required this.console,
+    required this.config,
+    required this.opts,
+  });
 
   @override
   Future<Either<Exception, void>> start(AuthState? authState) async {
@@ -69,17 +70,18 @@ class MockRegistry extends BaseRegistry {
     }
 
     final satellite = MockSatelliteProcess(
-        dbName: dbName,
-        adapter: adapter,
-        migrator: migrator,
-        notifier: notifier,
-        socketFactory: socketFactory,
-        console: console,
-        config: SatelliteConfig(
-          app: config.app,
-          env: config.env,
-        ),
-        opts: effectiveOpts,);
+      dbName: dbName,
+      adapter: adapter,
+      migrator: migrator,
+      notifier: notifier,
+      socketFactory: socketFactory,
+      console: console,
+      config: SatelliteConfig(
+        app: config.app,
+        env: config.env,
+      ),
+      opts: effectiveOpts,
+    );
     await satellite.start(authState);
 
     return satellite;
@@ -114,7 +116,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> connect({bool Function(Object error, int attempt)? retryHandler}) async {
+  Future<Either<SatelliteException, void>> connect(
+      {bool Function(Object error, int attempt)? retryHandler}) async {
     closed = false;
     return right(null);
   }
@@ -129,11 +132,14 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, AuthResponse>> authenticate(AuthState _authState) async {
-    return right(AuthResponse(
-      null,
-      null,
-    ),);
+  Future<Either<SatelliteException, AuthResponse>> authenticate(
+      AuthState _authState) async {
+    return right(
+      AuthResponse(
+        null,
+        null,
+      ),
+    );
   }
 
   @override
@@ -144,7 +150,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
     replicating = true;
     inboundAck = lsn!;
 
-    final t = Timer(const Duration(milliseconds: 100), () => emit<void>('outbound_started'));
+    final t = Timer(const Duration(milliseconds: 100),
+        () => emit<void>('outbound_started'));
     timeouts.add(t);
 
     return Future<Right<SatelliteException, void>>.value(const Right(null));
@@ -157,7 +164,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToTransactions(Future<void> Function(Transaction transaction) callback) {}
+  void subscribeToTransactions(
+      Future<void> Function(Transaction transaction) callback) {}
 
   @override
   Either<SatelliteException, void> enqueueTransaction(Transaction transaction) {

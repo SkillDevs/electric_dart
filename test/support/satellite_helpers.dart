@@ -58,7 +58,8 @@ OplogEntry generateRemoteOplogEntry(
     rowid: timestamp,
     newRow: json.encode(newRow.columns),
     oldRow: json.encode(oldRow.columns),
-    primaryKey: json.encode({...oldRow.primaryKey ?? {}, ...newRow.primaryKey ?? {}}),
+    primaryKey:
+        json.encode({...oldRow.primaryKey ?? {}, ...newRow.primaryKey ?? {}}),
     timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp).toIso8601String(),
     clearTags: incomingTags,
   );

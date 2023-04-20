@@ -48,11 +48,13 @@ class SatelliteWSServerStub {
             }
 
             if (msgType == SatMsgType.authResp) {
-              socketClient.add(encodeSocketMessage(msgType, msg as SatAuthResp));
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatAuthResp));
             }
 
             if (msgType == SatMsgType.inStartReplicationResp) {
-              socketClient.add(encodeSocketMessage(msgType, msg as SatInStartReplicationResp));
+              socketClient.add(encodeSocketMessage(
+                  msgType, msg as SatInStartReplicationResp));
               socketClient.add(
                 encodeSocketMessage(
                   SatMsgType.inStartReplicationReq,
@@ -62,11 +64,13 @@ class SatelliteWSServerStub {
             }
 
             if (msgType == SatMsgType.inStopReplicationResp) {
-              socketClient.add(encodeSocketMessage(msgType, msg as SatInStopReplicationResp));
+              socketClient.add(encodeSocketMessage(
+                  msgType, msg as SatInStopReplicationResp));
             }
 
             if (msgType == SatMsgType.relation) {
-              socketClient.add(encodeSocketMessage(msgType, msg as SatRelation));
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatRelation));
             }
 
             if (msgType == SatMsgType.opLog) {
@@ -78,7 +82,8 @@ class SatelliteWSServerStub {
             }
 
             if (msgType == SatMsgType.pingResp) {
-              socketClient.add(encodeSocketMessage(msgType, msg as SatPingResp));
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatPingResp));
             }
           }
         });

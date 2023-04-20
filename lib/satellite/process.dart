@@ -89,7 +89,8 @@ class SatelliteProcess implements Satellite {
     // validate auth state, etc here.
 
     // Request a snapshot whenever the data in our database potentially changes.
-    _potentialDataChangeSubscription = notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
+    _potentialDataChangeSubscription =
+        notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
     void connectivityChangeCallback(
       ConnectivityStateChangeNotification notification,
@@ -97,7 +98,8 @@ class SatelliteProcess implements Satellite {
       _connectivityStateChange(notification.connectivityState);
     }
 
-    _connectivityChangeSubscription = notifier.subscribeToConnectivityStateChange(connectivityChangeCallback);
+    _connectivityChangeSubscription =
+        notifier.subscribeToConnectivityStateChange(connectivityChangeCallback);
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
@@ -116,7 +118,8 @@ class SatelliteProcess implements Satellite {
     _lastSentRowId = int.parse(await _getMeta('lastSentRowId'));
 
     setClientListeners();
-    client.resetOutboundLogPositions(numberToBytes(_lastAckdRowId), numberToBytes(_lastSentRowId));
+    client.resetOutboundLogPositions(
+        numberToBytes(_lastAckdRowId), numberToBytes(_lastSentRowId));
 
     final lsnBase64 = await _getMeta('lsn');
     if (lsnBase64.isNotEmpty) {
@@ -173,13 +176,15 @@ class SatelliteProcess implements Satellite {
     }
 
     if (_potentialDataChangeSubscription != null) {
-      notifier.unsubscribeFromPotentialDataChanges(_potentialDataChangeSubscription!);
+      notifier.unsubscribeFromPotentialDataChanges(
+          _potentialDataChangeSubscription!);
       _potentialDataChangeSubscription = null;
     }
 
     // TODO(dart): Missing in typescript client
     if (_connectivityChangeSubscription != null) {
-      notifier.unsubscribeFromConnectivityStateChange(_connectivityChangeSubscription!);
+      notifier.unsubscribeFromConnectivityStateChange(
+          _connectivityChangeSubscription!);
       _connectivityChangeSubscription = null;
     }
 
@@ -271,10 +276,12 @@ class SatelliteProcess implements Satellite {
         AND name IN (?, ?, ?)
     ''';
 
-    final res = await adapter.query(Statement(
-      tablesExist,
-      [meta, oplog, shadow],
-    ),);
+    final res = await adapter.query(
+      Statement(
+        tablesExist,
+        [meta, oplog, shadow],
+      ),
+    );
     final numTables = res.first["numTables"]! as int;
     return numTables == 3;
   }
@@ -309,7 +316,8 @@ class SatelliteProcess implements Satellite {
       final shadowEntries = <String, ShadowEntry>{};
 
       for (final oplogEntry in oplogEntries) {
-        final shadowEntryLookup = await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
+        final shadowEntryLookup =
+            await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
         final cached = shadowEntryLookup.cached;
         final shadowEntry = shadowEntryLookup.entry;
 
@@ -317,9 +325,11 @@ class SatelliteProcess implements Satellite {
         // the entry was previously in cache - it means, that we already
         // read it within the same snapshot
         if (cached) {
-          oplogEntry.clearTags = encodeTags(difference(decodeTags(shadowEntry.tags), [
-            _generateTag(timestamp),
-          ]),);
+          oplogEntry.clearTags = encodeTags(
+            difference(decodeTags(shadowEntry.tags), [
+              _generateTag(timestamp),
+            ]),
+          );
         } else {
           oplogEntry.clearTags = shadowEntry.tags;
         }
@@ -350,7 +360,8 @@ class SatelliteProcess implements Satellite {
       final enqueuedLogPos = bytesToNumber(enqueued);
 
       // TODO: take next N transactions instead of all
-      await getEntries(since: enqueuedLogPos).then((missing) => _replicateSnapshotChanges(missing));
+      await getEntries(since: enqueuedLogPos)
+          .then((missing) => _replicateSnapshotChanges(missing));
     }
     return timestamp;
   }
@@ -368,9 +379,12 @@ class SatelliteProcess implements Satellite {
 
   // Promise<[boolean, ShadowEntry]
   Future<ShadowEntryLookup> _lookupCachedShadowEntry(
-      OplogEntry oplogEntry, Map<String, ShadowEntry> shadowEntries,) async {
+    OplogEntry oplogEntry,
+    Map<String, ShadowEntry> shadowEntries,
+  ) async {
     final pk = getShadowPrimaryKey(oplogEntry);
-    final String key = [oplogEntry.namespace, oplogEntry.tablename, pk].join('.');
+    final String key =
+        [oplogEntry.namespace, oplogEntry.tablename, pk].join('.');
 
     if (shadowEntries.containsKey(key)) {
       return ShadowEntryLookup(cached: true, entry: shadowEntries[key]!);
@@ -438,13 +452,15 @@ class SatelliteProcess implements Satellite {
   // applying conflict resolution rules. Takes all changes per each key before
   // merging, for local and remote operations.
   @visibleForTesting
-  Future<void> apply(List<OplogEntry> incoming, String incomingOrigin, LSN lsn) async {
+  Future<void> apply(
+      List<OplogEntry> incoming, String incomingOrigin, LSN lsn) async {
     logger.info("apply incoming changes for LSN: $lsn");
     // assign timestamp to pending operations before apply
     await performSnapshot();
 
     final local = await getEntries();
-    final merged = _mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
+    final merged =
+        _mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
 
     final List<Statement> stmts = [];
     // switches off on transaction commit/abort
@@ -452,8 +468,9 @@ class SatelliteProcess implements Satellite {
     // update lsn.
     _lsn = lsn;
     final lsnBase64 = base64.encode(lsn);
-    stmts
-        .add(Statement("UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?", <Object?>[lsnBase64, 'lsn']));
+    stmts.add(Statement(
+        "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
+        <Object?>[lsnBase64, 'lsn']));
 
     for (final entry in merged.entries) {
       final tablenameStr = entry.key;
@@ -502,7 +519,8 @@ class SatelliteProcess implements Satellite {
     return rows.map(_opLogEntryFromRow).toList();
   }
 
-  Future<List<OplogEntry>> _getUpdatedEntries(DateTime timestamp, {int? since}) async {
+  Future<List<OplogEntry>> _getUpdatedEntries(DateTime timestamp,
+      {int? since}) async {
     since ??= _lastAckdRowId;
     final oplog = opts.oplogTable.toString();
 
@@ -513,10 +531,12 @@ class SatelliteProcess implements Satellite {
       ORDER BY rowid ASC
     ''';
 
-    final rows = await adapter.query(Statement(
-      selectChanges,
-      [timestamp.toIso8601String(), since],
-    ),);
+    final rows = await adapter.query(
+      Statement(
+        selectChanges,
+        [timestamp.toIso8601String(), since],
+      ),
+    );
     return rows.map(_opLogEntryFromRow).toList();
   }
 
@@ -593,10 +613,12 @@ class SatelliteProcess implements Satellite {
       UPDATE $oplogTable set clearTags = ?
         WHERE rowid = ?
     ''';
-    return await adapter.run(Statement(
-      updateTags,
-      <Object?>[oplog.clearTags, oplog.rowid],
-    ),);
+    return await adapter.run(
+      Statement(
+        updateTags,
+        <Object?>[oplog.clearTags, oplog.rowid],
+      ),
+    );
   }
 
   Future<void> _updateOplogTimestamp(DateTime timestamp) async {
@@ -612,7 +634,10 @@ class SatelliteProcess implements Satellite {
           )
     ''';
 
-    final updateArgs = <Object?>[timestamp.toIso8601String(), _lastAckdRowId.toString()];
+    final updateArgs = <Object?>[
+      timestamp.toIso8601String(),
+      _lastAckdRowId.toString()
+    ];
     await adapter.run(Statement(updateTimestamps, updateArgs));
   }
 
@@ -625,7 +650,8 @@ class SatelliteProcess implements Satellite {
     String incomingOrigin,
     List<OplogEntry> incoming,
   ) {
-    final localTableChanges = localOperationsToTableChanges(local, (DateTime timestamp) {
+    final localTableChanges =
+        localOperationsToTableChanges(local, (DateTime timestamp) {
       return generateTag(localOrigin, timestamp);
     });
     final incomingTableChanges = remoteOperationsToTableChanges(incoming);
@@ -648,8 +674,8 @@ class SatelliteProcess implements Satellite {
         }
         final localChanges = localInfo.oplogEntryChanges;
 
-        final changes =
-            mergeChangesLastWriteWins(localOrigin, localChanges.changes, incomingOrigin, incomingChanges.changes);
+        final changes = mergeChangesLastWriteWins(localOrigin,
+            localChanges.changes, incomingOrigin, incomingChanges.changes);
         late final ChangesOpType optype;
 
         final tags = mergeOpTags(localChanges, incomingChanges);
@@ -672,13 +698,19 @@ class SatelliteProcess implements Satellite {
     final origin = transaction.origin!;
 
     final opLogEntries = fromTransaction(transaction, relations);
-    final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(transaction.commitTimestamp.toInt());
-    await applyTransactionInternal(origin, commitTimestamp, opLogEntries, transaction.lsn);
+    final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(
+        transaction.commitTimestamp.toInt());
+    await applyTransactionInternal(
+        origin, commitTimestamp, opLogEntries, transaction.lsn);
   }
 
   @visibleForTesting
   Future<void> applyTransactionInternal(
-      String origin, DateTime commitTimestamp, List<OplogEntry> opLogEntries, LSN lsn,) async {
+    String origin,
+    DateTime commitTimestamp,
+    List<OplogEntry> opLogEntries,
+    LSN lsn,
+  ) async {
     await apply(opLogEntries, origin, lsn);
     await _notifyChanges(opLogEntries);
 
@@ -709,10 +741,12 @@ class SatelliteProcess implements Satellite {
   List<Statement> _updateTriggerSettings(List<String> tablenames, bool flag) {
     final triggers = opts.triggersTable.toString();
     final stmts = tablenames
-        .map((tablenameStr) => Statement(
-              "UPDATE $triggers SET flag = ? WHERE tablename = ?",
-              [if (flag) 1 else 0, tablenameStr],
-            ),)
+        .map(
+          (tablenameStr) => Statement(
+            "UPDATE $triggers SET flag = ? WHERE tablename = ?",
+            [if (flag) 1 else 0, tablenameStr],
+          ),
+        )
         .toList();
     return stmts;
   }
@@ -821,11 +855,13 @@ class SatelliteProcess implements Satellite {
         columns: [],
       );
       for (final c in columnsForTable) {
-        relation.columns.add(RelationColumn(
-          name: c["name"]! as String,
-          type: c["type"]! as String,
-          primaryKey: (c["pk"]! as int) > 0,
-        ),);
+        relation.columns.add(
+          RelationColumn(
+            name: c["name"]! as String,
+            type: c["type"]! as String,
+            primaryKey: (c["pk"]! as int) > 0,
+          ),
+        );
       }
       relations[tableName] = relation;
     }
@@ -850,7 +886,8 @@ class SatelliteProcess implements Satellite {
   }
 }
 
-Statement _applyDeleteOperation(ShadowEntryChanges entryChanges, String tablenameStr) {
+Statement _applyDeleteOperation(
+    ShadowEntryChanges entryChanges, String tablenameStr) {
   final pkEntries = entryChanges.primaryKeyCols.entries;
   final params = pkEntries.fold<_WhereAndValues>(
     _WhereAndValues([], []),
@@ -869,16 +906,19 @@ Statement _applyDeleteOperation(ShadowEntryChanges entryChanges, String tablenam
   );
 }
 
-Statement _applyNonDeleteOperation(ShadowEntryChanges shadowEntryChanges, String tablenameStr) {
+Statement _applyNonDeleteOperation(
+    ShadowEntryChanges shadowEntryChanges, String tablenameStr) {
   final changes = shadowEntryChanges.changes;
   final primaryKeyCols = shadowEntryChanges.primaryKeyCols;
 
   final columnNames = changes.keys;
-  final List<Object?> columnValues = changes.values.map((c) => c.value).toList();
+  final List<Object?> columnValues =
+      changes.values.map((c) => c.value).toList();
   String insertStmt =
       '''INTO $tablenameStr(${columnNames.join(', ')}) VALUES (${columnValues.map((_) => '?').join(',')})''';
 
-  final updateColumnStmts = columnNames.where((c) => !primaryKeyCols.containsKey(c)).fold(
+  final updateColumnStmts =
+      columnNames.where((c) => !primaryKeyCols.containsKey(c)).fold(
     _WhereAndValues([], []),
     (acc, c) {
       acc.where.add("$c = ?");
