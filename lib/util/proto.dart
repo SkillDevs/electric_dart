@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:electric_client/proto/satellite.pb.dart';
 
-const kProtobufPackage = "Electric.Satellite.v0_2";
+const kProtobufPackage = "Electric.Satellite.v1_0";
 
 enum SatMsgType {
   errorResp(code: 0),

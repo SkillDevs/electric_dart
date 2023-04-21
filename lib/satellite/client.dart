@@ -382,7 +382,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMessage(Object request) {
-    logger.info("Sending message $request");
+    logger.info("Sending message ${request.runtimeType}($request)");
     final _socket = socket;
     if (_socket == null) {
       throw SatelliteException(
