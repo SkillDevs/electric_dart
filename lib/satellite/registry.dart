@@ -215,7 +215,7 @@ class GlobalRegistry extends BaseRegistry {
       config: satelliteConfig,
       opts: kSatelliteDefaults,
     );
-    unawaited(satellite.start(authState));
+    await satellite.start(authState);
 
     return satellite;
   }

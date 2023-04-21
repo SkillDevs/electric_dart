@@ -75,7 +75,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @override
-  Future<Either<Exception, void>> start(AuthState? authStateParam) async {
+  Future<ConnectionWrapper> start(AuthState? authStateParam) async {
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -131,7 +131,10 @@ class SatelliteProcess implements Satellite {
       logger.info("no lsn retrieved from store");
     }
 
-    return await _connectAndStartReplication();
+    final connectionFuture = _connectAndStartReplication();
+    return ConnectionWrapper(
+      connectionFuture: connectionFuture,
+    );
   }
 
   @visibleForTesting

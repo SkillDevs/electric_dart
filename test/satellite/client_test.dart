@@ -585,7 +585,6 @@ void main() {
     );
 
     final serializedRow = SatOpRow(
-      //$type: 'Electric.Satellite.v1_0.SatOpRow',
       nullsBitmask: Uint8List.fromList([40]),
       values: [
         Uint8List.fromList([
