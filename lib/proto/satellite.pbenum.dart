@@ -184,3 +184,33 @@ class SatRelation_RelationType extends $pb.ProtobufEnum {
 
   const SatRelation_RelationType._($core.int v, $core.String n) : super(v, n);
 }
+
+class SatOpMigrate_Type extends $pb.ProtobufEnum {
+  static const SatOpMigrate_Type CREATE_TABLE = SatOpMigrate_Type._(
+      0,
+      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+          ? ''
+          : 'CREATE_TABLE');
+  static const SatOpMigrate_Type CREATE_INDEX = SatOpMigrate_Type._(
+      1,
+      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+          ? ''
+          : 'CREATE_INDEX');
+  static const SatOpMigrate_Type ALTER_ADD_COLUMN = SatOpMigrate_Type._(
+      6,
+      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+          ? ''
+          : 'ALTER_ADD_COLUMN');
+
+  static const $core.List<SatOpMigrate_Type> values = <SatOpMigrate_Type>[
+    CREATE_TABLE,
+    CREATE_INDEX,
+    ALTER_ADD_COLUMN,
+  ];
+
+  static final $core.Map<$core.int, SatOpMigrate_Type> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static SatOpMigrate_Type? valueOf($core.int value) => _byValue[value];
+
+  const SatOpMigrate_Type._($core.int v, $core.String n) : super(v, n);
+}
