@@ -184,14 +184,6 @@ class SatelliteProcess implements Satellite {
       _potentialDataChangeSubscription = null;
     }
 
-    // TODO(dart): Missing in typescript client
-    if (_connectivityChangeSubscription != null) {
-      notifier.unsubscribeFromConnectivityStateChange(
-        _connectivityChangeSubscription!,
-      );
-      _connectivityChangeSubscription = null;
-    }
-
     await client.close();
   }
 
