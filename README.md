@@ -2,9 +2,9 @@
 
 Dart client implementation for Electric [Electric](https://electric-sql.com/) based on:
 
-- `typescript-client` `v0.5.0` (hash `314df48f7908ede4ae9fe27d376746164d8905f5`)
+- `typescript-client` (monorepo) (hash `29142a12f14f5db79239757a56726d79cbc53473`)
 
-- Electric backend `v0.2.0` (hash `f03c4df0030c8499eb66a607325f5a4d5613dad3`) running with the `local-stack`
+- Electric backend (hash `29142a12f14f5db79239757a56726d79cbc53473`) running with the `local-stack`
 
 ### Run the Todos example
 
