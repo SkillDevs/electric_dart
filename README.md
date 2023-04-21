@@ -30,7 +30,7 @@ Install the `protoc_plugin` Dart package. Version used: `^20.0.1`
 
 To generate the code
 
-`protoc --dart_out=lib proto/satellite.proto`
+`protoc --dart_out=lib proto/satellite.proto && dart format lib/proto`
 
 ### Run the tests
 
