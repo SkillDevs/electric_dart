@@ -12,3 +12,8 @@ Run with
 
 protoc --dart_out=lib proto/satellite.proto
 
+Todos Flutter demo compatible with the `todosMVC` official example
+
+
+https://user-images.githubusercontent.com/22084723/233607256-2a36c911-152b-483b-9adf-81b4e5ff051d.mp4
+
