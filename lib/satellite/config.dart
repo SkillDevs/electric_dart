@@ -53,9 +53,11 @@ class SatelliteOpts {
   /// The database table that contains dependency tracking information
   final QualifiedTablename shadowTable;
 
+  // TODO(dart) Convert to Duration
   /// Polls the database for changes every `pollingInterval` milliseconds.
   final int pollingInterval;
 
+  // TODO(dart) Convert to Duration
   /// Throttle snapshotting to once per `minSnapshotWindow` milliseconds.
   final int minSnapshotWindow;
 

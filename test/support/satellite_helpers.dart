@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:electric_client/electric/adapter.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/util/types.dart';
 
@@ -27,6 +28,21 @@ TableInfo initTableInfo() {
       columns: ['value', 'other'],
     ),
   };
+}
+
+Future<Row> loadSatelliteMetaTable(
+  DatabaseAdapter db, {
+  String metaTableName = '_electric_meta',
+}) async {
+  final rows = await db.query(
+    Statement(
+      "SELECT key, value FROM $metaTableName",
+    ),
+  );
+  final entries = rows
+      .map((x) => MapEntry<String, Object?>(x["key"]! as String, x["value"]));
+
+  return Map.fromEntries(entries);
 }
 
 OplogEntry generateRemoteOplogEntry(

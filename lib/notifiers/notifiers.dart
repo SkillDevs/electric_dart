@@ -1,6 +1,7 @@
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart';
+import 'package:equatable/equatable.dart';
 
 class AuthStateNotification extends Notification {
   final AuthState authState;
@@ -8,7 +9,7 @@ class AuthStateNotification extends Notification {
   AuthStateNotification({required this.authState});
 }
 
-class Change {
+class Change with EquatableMixin {
   final QualifiedTablename qualifiedTablename;
   List<RowId>? rowids;
 
@@ -16,6 +17,9 @@ class Change {
     required this.qualifiedTablename,
     this.rowids,
   });
+
+  @override
+  List<Object?> get props => [qualifiedTablename, rowids];
 }
 
 class ChangeNotification extends Notification {

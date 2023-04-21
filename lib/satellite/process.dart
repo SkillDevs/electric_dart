@@ -114,8 +114,8 @@ class SatelliteProcess implements Satellite {
     // For now, we do it only at initialization
     relations = await _getLocalRelations();
 
-    _lastAckdRowId = int.parse(await _getMeta('lastAckdRowId'));
-    _lastSentRowId = int.parse(await _getMeta('lastSentRowId'));
+    _lastAckdRowId = int.parse(await getMeta('lastAckdRowId'));
+    _lastSentRowId = int.parse(await getMeta('lastSentRowId'));
 
     setClientListeners();
     client.resetOutboundLogPositions(
@@ -123,7 +123,7 @@ class SatelliteProcess implements Satellite {
       numberToBytes(_lastSentRowId),
     );
 
-    final lsnBase64 = await _getMeta('lsn');
+    final lsnBase64 = await getMeta('lsn');
     if (lsnBase64.isNotEmpty) {
       logger.info("retrieved lsn $_lsn");
       _lsn = base64.decode(lsnBase64);
@@ -135,7 +135,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @visibleForTesting
-  Future<void> setAuthState(AuthState? newAuthState) async {
+  Future<void> setAuthState([AuthState? newAuthState]) async {
     if (newAuthState != null) {
       throw UnimplementedError();
       // this._authState = authState
@@ -143,8 +143,8 @@ class SatelliteProcess implements Satellite {
       final app = config.app;
       final env = config.env;
       final clientId = await _getClientId();
-      final token = await _getMeta('token');
-      final refreshToken = await _getMeta('refreshToken');
+      final token = await getMeta('token');
+      final refreshToken = await getMeta('refreshToken');
 
       authState = AuthState(
         app: app,
@@ -459,7 +459,7 @@ class SatelliteProcess implements Satellite {
 
     final local = await getEntries();
     final merged =
-        _mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
+        mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
 
     final List<Statement> stmts = [];
     // switches off on transaction commit/abort
@@ -649,7 +649,7 @@ class SatelliteProcess implements Satellite {
   // Merge changes, with last-write-wins and add-wins semantics.
   // clearTags field is used by the calling code to determine new value of
   // the shadowTags
-  ShadowTableChanges _mergeEntries(
+  ShadowTableChanges mergeEntries(
     String localOrigin,
     List<OplogEntry> local,
     String incomingOrigin,
@@ -803,7 +803,8 @@ class SatelliteProcess implements Satellite {
     await adapter.run(Statement(sql, args));
   }
 
-  Future<String> _getMeta(String key) async {
+  @visibleForTesting
+  Future<String> getMeta(String key) async {
     final meta = opts.metaTable.toString();
 
     final sql = "SELECT value from $meta WHERE key = ?";
@@ -820,7 +821,7 @@ class SatelliteProcess implements Satellite {
   Future<String> _getClientId() async {
     const clientIdKey = 'clientId';
 
-    String clientId = await _getMeta(clientIdKey);
+    String clientId = await getMeta(clientIdKey);
 
     if (clientId.isEmpty) {
       clientId = uuid();

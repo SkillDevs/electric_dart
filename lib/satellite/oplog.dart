@@ -312,11 +312,14 @@ class OplogTableChange {
   });
 }
 
-class OplogColumnChange {
+class OplogColumnChange with EquatableMixin {
   final SqlValue value;
   final int timestamp;
 
   OplogColumnChange(this.value, this.timestamp);
+
+  @override
+  List<Object?> get props => [value, timestamp];
 }
 
 typedef OplogColumnChanges = Map<String, OplogColumnChange>;
@@ -416,7 +419,7 @@ Row _decodeRow(String? row) {
   return decoded ?? {};
 }
 
-class ShadowEntryChanges {
+class ShadowEntryChanges with EquatableMixin {
   final String namespace;
   final String tablename;
   final Map<String, Object> primaryKeyCols;
@@ -432,6 +435,10 @@ class ShadowEntryChanges {
     required this.changes,
     required this.tags,
   });
+
+  @override
+  List<Object?> get props =>
+      [namespace, tablename, primaryKeyCols, optype, changes, tags];
 }
 
 String primaryKeyToStr(Map<String, Object> primaryKeyJson) {
