@@ -115,18 +115,14 @@ void main() {
     final clientId2 = satellite.authState!.clientId;
 
     expect(clientId1, clientId2);
-
-    // TODO(dart): Maybe it would better to instantiate the throttle in the start function and cancel it in stop
-    // Instead of creating it in the constructor and never cancelling it
-    // Give time for the performSnapshot to run. Otherwise it could be interacting with a deleted DB
-    await Future<void>.delayed(const Duration(milliseconds: 500));
   });
 
   test('connect saves new token', () async {
     await runMigrations();
 
     final initToken = await satellite.getMeta('token');
-    await satellite.start(null);
+    final connectionWrapper = await satellite.start(null);
+    await connectionWrapper.connectionFuture;
     final receivedToken = await satellite.getMeta('token');
 
     expect(initToken, isNot(receivedToken));

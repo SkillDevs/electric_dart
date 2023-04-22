@@ -68,6 +68,9 @@ class SatelliteProcess implements Satellite {
     // first call it and then every `minSnapshotWindow` ms as long as
     // you keep calling it within the window. If you don't call it within
     // the window, it will then run immediately the next time you call it.
+
+    // TODO(dart): Maybe it would better to instantiate the throttle in the start function and cancel it in stop
+    // Instead of creating it in the constructor and never cancelling it
     throttledSnapshot = Throttle(
       performSnapshot,
       Duration(milliseconds: opts.minSnapshotWindow),
