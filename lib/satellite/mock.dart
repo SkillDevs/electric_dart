@@ -40,9 +40,12 @@ class MockSatelliteProcess implements Satellite {
   });
 
   @override
-  Future<Either<Exception, void>> start(AuthState? authState) async {
+  Future<ConnectionWrapper> start(AuthState? authState) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    return const Right(null);
+
+    return ConnectionWrapper(
+      connectionFuture: Future.value(const Right(null)),
+    );
   }
 
   @override

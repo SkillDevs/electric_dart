@@ -22,7 +22,7 @@ class SatPingReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -63,7 +63,7 @@ class SatPingResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -130,7 +130,7 @@ class SatAuthHeaderPair extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..e<SatAuthHeader>(
         1,
@@ -222,7 +222,7 @@ class SatAuthReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -323,7 +323,7 @@ class SatAuthResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -403,7 +403,7 @@ class SatErrorResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..e<SatErrorResp_ErrorCode>(
         1,
@@ -474,7 +474,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -582,7 +582,7 @@ class SatInStartReplicationResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -626,7 +626,7 @@ class SatInStopReplicationReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -670,7 +670,7 @@ class SatInStopReplicationResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -714,7 +714,7 @@ class SatRelationColumn extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -802,7 +802,7 @@ class SatRelation extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -950,7 +950,7 @@ class SatOpLog extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..pc<SatTransOp>(
         1,
@@ -1001,7 +1001,7 @@ class SatOpLog extends $pb.GeneratedMessage {
   $core.List<SatTransOp> get ops => $_getList(0);
 }
 
-enum SatTransOp_Op { begin, commit, update, insert, delete, notSet }
+enum SatTransOp_Op { begin, commit, update, insert, delete, migrate, notSet }
 
 class SatTransOp extends $pb.GeneratedMessage {
   static const $core.Map<$core.int, SatTransOp_Op> _SatTransOp_OpByTag = {
@@ -1010,6 +1010,7 @@ class SatTransOp extends $pb.GeneratedMessage {
     3: SatTransOp_Op.update,
     4: SatTransOp_Op.insert,
     5: SatTransOp_Op.delete,
+    6: SatTransOp_Op.migrate,
     0: SatTransOp_Op.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
@@ -1019,9 +1020,9 @@ class SatTransOp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
-    ..oo(0, [1, 2, 3, 4, 5])
+    ..oo(0, [1, 2, 3, 4, 5, 6])
     ..aOM<SatOpBegin>(
         1,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
@@ -1052,6 +1053,12 @@ class SatTransOp extends $pb.GeneratedMessage {
             ? ''
             : 'delete',
         subBuilder: SatOpDelete.create)
+    ..aOM<SatOpMigrate>(
+        6,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'migrate',
+        subBuilder: SatOpMigrate.create)
     ..hasRequiredFields = false;
 
   SatTransOp._() : super();
@@ -1061,6 +1068,7 @@ class SatTransOp extends $pb.GeneratedMessage {
     SatOpUpdate? update,
     SatOpInsert? insert,
     SatOpDelete? delete,
+    SatOpMigrate? migrate,
   }) {
     final _result = create();
     if (begin != null) {
@@ -1077,6 +1085,9 @@ class SatTransOp extends $pb.GeneratedMessage {
     }
     if (delete != null) {
       _result.delete = delete;
+    }
+    if (migrate != null) {
+      _result.migrate = migrate;
     }
     return _result;
   }
@@ -1178,6 +1189,20 @@ class SatTransOp extends $pb.GeneratedMessage {
   void clearDelete() => clearField(5);
   @$pb.TagNumber(5)
   SatOpDelete ensureDelete() => $_ensure(4);
+
+  @$pb.TagNumber(6)
+  SatOpMigrate get migrate => $_getN(5);
+  @$pb.TagNumber(6)
+  set migrate(SatOpMigrate v) {
+    setField(6, v);
+  }
+
+  @$pb.TagNumber(6)
+  $core.bool hasMigrate() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearMigrate() => clearField(6);
+  @$pb.TagNumber(6)
+  SatOpMigrate ensureMigrate() => $_ensure(5);
 }
 
 class SatOpBegin extends $pb.GeneratedMessage {
@@ -1188,7 +1213,7 @@ class SatOpBegin extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$fixnum.Int64>(
         1,
@@ -1213,6 +1238,11 @@ class SatOpBegin extends $pb.GeneratedMessage {
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'origin')
+    ..aOB(
+        5,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'isMigration')
     ..hasRequiredFields = false;
 
   SatOpBegin._() : super();
@@ -1221,6 +1251,7 @@ class SatOpBegin extends $pb.GeneratedMessage {
     $core.String? transId,
     $core.List<$core.int>? lsn,
     $core.String? origin,
+    $core.bool? isMigration,
   }) {
     final _result = create();
     if (commitTimestamp != null) {
@@ -1234,6 +1265,9 @@ class SatOpBegin extends $pb.GeneratedMessage {
     }
     if (origin != null) {
       _result.origin = origin;
+    }
+    if (isMigration != null) {
+      _result.isMigration = isMigration;
     }
     return _result;
   }
@@ -1310,6 +1344,18 @@ class SatOpBegin extends $pb.GeneratedMessage {
   $core.bool hasOrigin() => $_has(3);
   @$pb.TagNumber(4)
   void clearOrigin() => clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get isMigration => $_getBF(4);
+  @$pb.TagNumber(5)
+  set isMigration($core.bool v) {
+    $_setBool(4, v);
+  }
+
+  @$pb.TagNumber(5)
+  $core.bool hasIsMigration() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearIsMigration() => clearField(5);
 }
 
 class SatOpCommit extends $pb.GeneratedMessage {
@@ -1320,7 +1366,7 @@ class SatOpCommit extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$fixnum.Int64>(
         1,
@@ -1431,7 +1477,7 @@ class SatOpInsert extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1534,7 +1580,7 @@ class SatOpUpdate extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1661,7 +1707,7 @@ class SatOpDelete extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1764,7 +1810,7 @@ class SatMigrationNotification extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -1896,7 +1942,7 @@ class SatOpRow extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_0'),
+              : 'Electric.Satellite.v1_2'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -1966,4 +2012,608 @@ class SatOpRow extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(2)
   $core.List<$core.List<$core.int>> get values => $_getList(1);
+}
+
+class SatOpMigrate_Stmt extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatOpMigrate.Stmt',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_2'),
+      createEmptyInstance: create)
+    ..e<SatOpMigrate_Type>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'type',
+        $pb.PbFieldType.OE,
+        defaultOrMaker: SatOpMigrate_Type.CREATE_TABLE,
+        valueOf: SatOpMigrate_Type.valueOf,
+        enumValues: SatOpMigrate_Type.values)
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'sql')
+    ..hasRequiredFields = false;
+
+  SatOpMigrate_Stmt._() : super();
+  factory SatOpMigrate_Stmt({
+    SatOpMigrate_Type? type,
+    $core.String? sql,
+  }) {
+    final _result = create();
+    if (type != null) {
+      _result.type = type;
+    }
+    if (sql != null) {
+      _result.sql = sql;
+    }
+    return _result;
+  }
+  factory SatOpMigrate_Stmt.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpMigrate_Stmt.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_Stmt clone() => SatOpMigrate_Stmt()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_Stmt copyWith(void Function(SatOpMigrate_Stmt) updates) =>
+      super.copyWith((message) => updates(message as SatOpMigrate_Stmt))
+          as SatOpMigrate_Stmt; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_Stmt create() => SatOpMigrate_Stmt._();
+  SatOpMigrate_Stmt createEmptyInstance() => create();
+  static $pb.PbList<SatOpMigrate_Stmt> createRepeated() =>
+      $pb.PbList<SatOpMigrate_Stmt>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_Stmt getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpMigrate_Stmt>(create);
+  static SatOpMigrate_Stmt? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  SatOpMigrate_Type get type => $_getN(0);
+  @$pb.TagNumber(1)
+  set type(SatOpMigrate_Type v) {
+    setField(1, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearType() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get sql => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set sql($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasSql() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSql() => clearField(2);
+}
+
+class SatOpMigrate_PgColumnType extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatOpMigrate.PgColumnType',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_2'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'name')
+    ..p<$core.int>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'array',
+        $pb.PbFieldType.K3)
+    ..p<$core.int>(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'size',
+        $pb.PbFieldType.K3)
+    ..hasRequiredFields = false;
+
+  SatOpMigrate_PgColumnType._() : super();
+  factory SatOpMigrate_PgColumnType({
+    $core.String? name,
+    $core.Iterable<$core.int>? array,
+    $core.Iterable<$core.int>? size,
+  }) {
+    final _result = create();
+    if (name != null) {
+      _result.name = name;
+    }
+    if (array != null) {
+      _result.array.addAll(array);
+    }
+    if (size != null) {
+      _result.size.addAll(size);
+    }
+    return _result;
+  }
+  factory SatOpMigrate_PgColumnType.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpMigrate_PgColumnType.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_PgColumnType clone() =>
+      SatOpMigrate_PgColumnType()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_PgColumnType copyWith(
+          void Function(SatOpMigrate_PgColumnType) updates) =>
+      super.copyWith((message) => updates(message as SatOpMigrate_PgColumnType))
+          as SatOpMigrate_PgColumnType; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_PgColumnType create() => SatOpMigrate_PgColumnType._();
+  SatOpMigrate_PgColumnType createEmptyInstance() => create();
+  static $pb.PbList<SatOpMigrate_PgColumnType> createRepeated() =>
+      $pb.PbList<SatOpMigrate_PgColumnType>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_PgColumnType getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpMigrate_PgColumnType>(create);
+  static SatOpMigrate_PgColumnType? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get array => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $core.List<$core.int> get size => $_getList(2);
+}
+
+class SatOpMigrate_Column extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatOpMigrate.Column',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_2'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'name')
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'sqliteType')
+    ..aOM<SatOpMigrate_PgColumnType>(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'pgType',
+        subBuilder: SatOpMigrate_PgColumnType.create)
+    ..hasRequiredFields = false;
+
+  SatOpMigrate_Column._() : super();
+  factory SatOpMigrate_Column({
+    $core.String? name,
+    $core.String? sqliteType,
+    SatOpMigrate_PgColumnType? pgType,
+  }) {
+    final _result = create();
+    if (name != null) {
+      _result.name = name;
+    }
+    if (sqliteType != null) {
+      _result.sqliteType = sqliteType;
+    }
+    if (pgType != null) {
+      _result.pgType = pgType;
+    }
+    return _result;
+  }
+  factory SatOpMigrate_Column.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpMigrate_Column.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_Column clone() => SatOpMigrate_Column()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_Column copyWith(void Function(SatOpMigrate_Column) updates) =>
+      super.copyWith((message) => updates(message as SatOpMigrate_Column))
+          as SatOpMigrate_Column; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_Column create() => SatOpMigrate_Column._();
+  SatOpMigrate_Column createEmptyInstance() => create();
+  static $pb.PbList<SatOpMigrate_Column> createRepeated() =>
+      $pb.PbList<SatOpMigrate_Column>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_Column getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpMigrate_Column>(create);
+  static SatOpMigrate_Column? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get sqliteType => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set sqliteType($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasSqliteType() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSqliteType() => clearField(2);
+
+  @$pb.TagNumber(3)
+  SatOpMigrate_PgColumnType get pgType => $_getN(2);
+  @$pb.TagNumber(3)
+  set pgType(SatOpMigrate_PgColumnType v) {
+    setField(3, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasPgType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPgType() => clearField(3);
+  @$pb.TagNumber(3)
+  SatOpMigrate_PgColumnType ensurePgType() => $_ensure(2);
+}
+
+class SatOpMigrate_ForeignKey extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatOpMigrate.ForeignKey',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_2'),
+      createEmptyInstance: create)
+    ..pPS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'fkCols')
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'pkTable')
+    ..pPS(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'pkCols')
+    ..hasRequiredFields = false;
+
+  SatOpMigrate_ForeignKey._() : super();
+  factory SatOpMigrate_ForeignKey({
+    $core.Iterable<$core.String>? fkCols,
+    $core.String? pkTable,
+    $core.Iterable<$core.String>? pkCols,
+  }) {
+    final _result = create();
+    if (fkCols != null) {
+      _result.fkCols.addAll(fkCols);
+    }
+    if (pkTable != null) {
+      _result.pkTable = pkTable;
+    }
+    if (pkCols != null) {
+      _result.pkCols.addAll(pkCols);
+    }
+    return _result;
+  }
+  factory SatOpMigrate_ForeignKey.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpMigrate_ForeignKey.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_ForeignKey clone() =>
+      SatOpMigrate_ForeignKey()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_ForeignKey copyWith(
+          void Function(SatOpMigrate_ForeignKey) updates) =>
+      super.copyWith((message) => updates(message as SatOpMigrate_ForeignKey))
+          as SatOpMigrate_ForeignKey; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_ForeignKey create() => SatOpMigrate_ForeignKey._();
+  SatOpMigrate_ForeignKey createEmptyInstance() => create();
+  static $pb.PbList<SatOpMigrate_ForeignKey> createRepeated() =>
+      $pb.PbList<SatOpMigrate_ForeignKey>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_ForeignKey getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpMigrate_ForeignKey>(create);
+  static SatOpMigrate_ForeignKey? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.String> get fkCols => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $core.String get pkTable => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set pkTable($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasPkTable() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPkTable() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.List<$core.String> get pkCols => $_getList(2);
+}
+
+class SatOpMigrate_Table extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatOpMigrate.Table',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_2'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'name')
+    ..pc<SatOpMigrate_Column>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'columns',
+        $pb.PbFieldType.PM,
+        subBuilder: SatOpMigrate_Column.create)
+    ..pc<SatOpMigrate_ForeignKey>(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'fks',
+        $pb.PbFieldType.PM,
+        subBuilder: SatOpMigrate_ForeignKey.create)
+    ..pPS(
+        4,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'pks')
+    ..hasRequiredFields = false;
+
+  SatOpMigrate_Table._() : super();
+  factory SatOpMigrate_Table({
+    $core.String? name,
+    $core.Iterable<SatOpMigrate_Column>? columns,
+    $core.Iterable<SatOpMigrate_ForeignKey>? fks,
+    $core.Iterable<$core.String>? pks,
+  }) {
+    final _result = create();
+    if (name != null) {
+      _result.name = name;
+    }
+    if (columns != null) {
+      _result.columns.addAll(columns);
+    }
+    if (fks != null) {
+      _result.fks.addAll(fks);
+    }
+    if (pks != null) {
+      _result.pks.addAll(pks);
+    }
+    return _result;
+  }
+  factory SatOpMigrate_Table.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpMigrate_Table.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_Table clone() => SatOpMigrate_Table()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_Table copyWith(void Function(SatOpMigrate_Table) updates) =>
+      super.copyWith((message) => updates(message as SatOpMigrate_Table))
+          as SatOpMigrate_Table; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_Table create() => SatOpMigrate_Table._();
+  SatOpMigrate_Table createEmptyInstance() => create();
+  static $pb.PbList<SatOpMigrate_Table> createRepeated() =>
+      $pb.PbList<SatOpMigrate_Table>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_Table getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpMigrate_Table>(create);
+  static SatOpMigrate_Table? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<SatOpMigrate_Column> get columns => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $core.List<SatOpMigrate_ForeignKey> get fks => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $core.List<$core.String> get pks => $_getList(3);
+}
+
+class SatOpMigrate extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatOpMigrate',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_2'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'version')
+    ..pc<SatOpMigrate_Stmt>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'stmts',
+        $pb.PbFieldType.PM,
+        subBuilder: SatOpMigrate_Stmt.create)
+    ..aOM<SatOpMigrate_Table>(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'table',
+        subBuilder: SatOpMigrate_Table.create)
+    ..hasRequiredFields = false;
+
+  SatOpMigrate._() : super();
+  factory SatOpMigrate({
+    $core.String? version,
+    $core.Iterable<SatOpMigrate_Stmt>? stmts,
+    SatOpMigrate_Table? table,
+  }) {
+    final _result = create();
+    if (version != null) {
+      _result.version = version;
+    }
+    if (stmts != null) {
+      _result.stmts.addAll(stmts);
+    }
+    if (table != null) {
+      _result.table = table;
+    }
+    return _result;
+  }
+  factory SatOpMigrate.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpMigrate.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate clone() => SatOpMigrate()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate copyWith(void Function(SatOpMigrate) updates) =>
+      super.copyWith((message) => updates(message as SatOpMigrate))
+          as SatOpMigrate; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate create() => SatOpMigrate._();
+  SatOpMigrate createEmptyInstance() => create();
+  static $pb.PbList<SatOpMigrate> createRepeated() =>
+      $pb.PbList<SatOpMigrate>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpMigrate>(create);
+  static SatOpMigrate? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get version => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set version($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasVersion() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearVersion() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<SatOpMigrate_Stmt> get stmts => $_getList(1);
+
+  @$pb.TagNumber(3)
+  SatOpMigrate_Table get table => $_getN(2);
+  @$pb.TagNumber(3)
+  set table(SatOpMigrate_Table v) {
+    setField(3, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasTable() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTable() => clearField(3);
+  @$pb.TagNumber(3)
+  SatOpMigrate_Table ensureTable() => $_ensure(2);
 }

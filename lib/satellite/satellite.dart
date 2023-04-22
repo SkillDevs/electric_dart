@@ -29,13 +29,21 @@ abstract class Registry {
   Future<void> stopAll();
 }
 
+class ConnectionWrapper {
+  final Future<Either<SatelliteException, void>> connectionFuture;
+
+  ConnectionWrapper({
+    required this.connectionFuture,
+  });
+}
+
 abstract class Satellite {
   DbName get dbName;
   DatabaseAdapter get adapter;
   Migrator get migrator;
   Notifier get notifier;
 
-  Future<Either<Exception, void>> start(AuthState? authState);
+  Future<ConnectionWrapper> start(AuthState? authState);
   Future<void> stop();
 }
 
