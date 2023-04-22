@@ -401,7 +401,7 @@ ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
   final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
 
   for (final entry in newRow.entries) {
-    if (oldRow[entry.key] != entry.value) {
+    if (!oldRow.containsKey(entry.key) || oldRow[entry.key] != entry.value) {
       result.changes[entry.key] = OplogColumnChange(entry.value, timestamp);
     }
   }

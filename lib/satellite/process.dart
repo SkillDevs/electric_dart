@@ -48,7 +48,8 @@ class SatelliteProcess implements Satellite {
   late Throttle<DateTime> throttledSnapshot;
 
   int _lastAckdRowId = 0;
-  int _lastSentRowId = 0;
+  @visibleForTesting
+  int lastSentRowId = 0;
   LSN? _lsn;
 
   RelationsCache relations = {};
@@ -118,12 +119,12 @@ class SatelliteProcess implements Satellite {
     relations = await _getLocalRelations();
 
     _lastAckdRowId = int.parse(await getMeta('lastAckdRowId'));
-    _lastSentRowId = int.parse(await getMeta('lastSentRowId'));
+    lastSentRowId = int.parse(await getMeta('lastSentRowId'));
 
     setClientListeners();
     client.resetOutboundLogPositions(
       numberToBytes(_lastAckdRowId),
-      numberToBytes(_lastSentRowId),
+      numberToBytes(lastSentRowId),
     );
 
     final lsnBase64 = await getMeta('lsn');
@@ -170,7 +171,7 @@ class SatelliteProcess implements Satellite {
     // a remote transaction commit is received, we update lsn records.
     client.subscribeToAck((evt) async {
       final decoded = bytesToNumber(evt.lsn);
-      await _ack(decoded, evt.ackType == AckType.remoteCommit);
+      await ack(decoded, evt.ackType == AckType.remoteCommit);
     });
     client.subscribeToOutboundEvent(() => throttledSnapshot());
   }
@@ -249,9 +250,9 @@ class SatelliteProcess implements Satellite {
           clientId: authStateParam.clientId,
         ),
       );
-      await _setMeta('token', tokenResponse.token);
+      await setMeta('token', tokenResponse.token);
       // TODO(dart): Bug?
-      await _setMeta('refreshToken', tokenResponse.token);
+      await setMeta('refreshToken', tokenResponse.token);
 
       return AuthState(
         app: authStateParam.app,
@@ -771,8 +772,9 @@ class SatelliteProcess implements Satellite {
     return stmts;
   }
 
-  Future<void> _ack(int lsn, bool isAck) async {
-    if (lsn < _lastAckdRowId || (lsn > _lastSentRowId && isAck)) {
+  @visibleForTesting
+  Future<void> ack(int lsn, bool isAck) async {
+    if (lsn < _lastAckdRowId || (lsn > lastSentRowId && isAck)) {
       throw Exception('Invalid position');
     }
 
@@ -785,22 +787,18 @@ class SatelliteProcess implements Satellite {
     ];
 
     if (isAck) {
-      final oplog = opts.oplogTable.toString();
-      final del = "DELETE FROM $oplog WHERE rowid <= ?";
-      final delArgs = <Object?>[lsn];
-
       _lastAckdRowId = lsn;
       await adapter.runInTransaction([
         Statement(sql, args),
-        Statement(del, delArgs),
       ]);
     } else {
-      _lastSentRowId = lsn;
+      lastSentRowId = lsn;
       await adapter.runInTransaction([Statement(sql, args)]);
     }
   }
 
-  Future<void> _setMeta(String key, Object? value) async {
+  @visibleForTesting
+  Future<void> setMeta(String key, Object? value) async {
     final meta = opts.metaTable.toString();
 
     final sql = "UPDATE $meta SET value = ? WHERE key = ?";
@@ -831,7 +829,7 @@ class SatelliteProcess implements Satellite {
 
     if (clientId.isEmpty) {
       clientId = uuid();
-      await _setMeta(clientIdKey, clientId);
+      await setMeta(clientIdKey, clientId);
     }
     return clientId;
   }
@@ -844,6 +842,7 @@ class SatelliteProcess implements Satellite {
       opts.migrationsTable.tablename,
       opts.oplogTable.tablename,
       opts.triggersTable.tablename,
+      opts.shadowTable.tablename,
       'sqlite_schema',
       'sqlite_sequence',
       'sqlite_temp_schema',

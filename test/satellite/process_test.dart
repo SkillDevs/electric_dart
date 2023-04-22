@@ -27,7 +27,7 @@ late DatabaseAdapter adapter;
 late Migrator migrator;
 late MockNotifier notifier;
 late TableInfo tableInfo;
-late int timestamp;
+late DateTime timestamp;
 late SatelliteProcess satellite;
 late MockSatelliteClient client;
 late String dbName;
@@ -69,7 +69,7 @@ void main() {
     );
 
     tableInfo = initTableInfo();
-    timestamp = DateTime.now().millisecondsSinceEpoch;
+    timestamp = DateTime.now();
   });
 
   tearDown(() async {
@@ -411,5 +411,378 @@ void main() {
 
     //t.deepEqual(shadowEntries, shadowEntries2)
     expect(localEntries.length, 1);
+  });
+
+  test('apply incoming with no local', () async {
+    await runMigrations();
+
+    final incomingTs = DateTime.now();
+    final incomingEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.delete,
+      incomingTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', []),
+      newValues: {
+        "id": 1,
+        "value": 'incoming',
+        "otherValue": 1,
+      },
+      oldValues: {},
+    );
+    await satellite.setAuthState();
+    await satellite.apply([incomingEntry], 'remote', []);
+
+    const sql = 'SELECT * from parent WHERE id=1';
+    final rows = await adapter.query(Statement(sql));
+    final shadowEntries = await satellite.getOplogShadowEntry();
+
+    expect(shadowEntries, isEmpty);
+    expect(rows, isEmpty);
+  });
+
+  test('apply empty incoming', () async {
+    await runMigrations();
+
+    await satellite.setAuthState();
+
+    // TODO(dart): Is this an empty incoming? When can it happen?
+    await satellite.apply([], "", []);
+  });
+
+  test('apply incoming with null on column with default', () async {
+    await runMigrations();
+
+    final incomingTs = DateTime.now();
+    final incomingEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      incomingTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [incomingTs]),
+      newValues: {
+        "id": 1234,
+        "value": 'incoming',
+        "other": null,
+      },
+      oldValues: {},
+    );
+
+    await satellite.setAuthState();
+    await satellite.apply([incomingEntry], 'remote', []);
+
+    const sql = "SELECT * from main.parent WHERE value='incoming'";
+    final rows = await adapter.query(Statement(sql));
+
+    expect(rows[0]["other"], null);
+  });
+
+  test('apply incoming with undefined on column with default', () async {
+    await runMigrations();
+
+    final incomingTs = DateTime.now();
+    final incomingEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      incomingTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [incomingTs]),
+      newValues: {
+        "id": 1234,
+        "value": 'incoming',
+      },
+      oldValues: {},
+    );
+
+    await satellite.setAuthState();
+    await satellite.apply([incomingEntry], 'remote', []);
+
+    const sql = "SELECT * from main.parent WHERE value='incoming'";
+    final rows = await adapter.query(Statement(sql));
+
+    expect(rows[0]["other"], 0);
+  });
+
+  test('INSERT wins over DELETE and restored deleted values', () async {
+    await runMigrations();
+    await satellite.setAuthState();
+    final clientId = satellite.authState!.clientId;
+
+    final localTs = DateTime.now();
+    final incomingTs = localTs.add(const Duration(milliseconds: 1));
+
+    final incoming = [
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.insert,
+        incomingTs.millisecondsSinceEpoch,
+        genEncodedTags('remote', [incomingTs]),
+        newValues: {
+          "id": 1,
+          "other": 1,
+        },
+        oldValues: {},
+      ),
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.delete,
+        incomingTs.millisecondsSinceEpoch,
+        genEncodedTags('remote', []),
+        newValues: {
+          "id": 1,
+        },
+        oldValues: {},
+      ),
+    ];
+
+    final local = [
+      generateLocalOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.insert,
+        localTs.millisecondsSinceEpoch,
+        genEncodedTags(clientId, [localTs]),
+        newValues: {
+          "id": 1,
+          "value": 'local',
+          "other": null,
+        },
+      ),
+    ];
+
+    final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
+    final item = merged['main.parent']!['1'];
+
+    expect(
+      item,
+      ShadowEntryChanges(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKeyCols: {"id": 1},
+        optype: ChangesOpType.upsert,
+        changes: {
+          "id": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+          "value": OplogColumnChange('local', localTs.millisecondsSinceEpoch),
+          "other": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+        },
+        tags: [
+          generateTag(clientId, localTs),
+          generateTag('remote', incomingTs),
+        ],
+      ),
+    );
+  });
+
+  test('merge incoming with empty local', () async {
+    await runMigrations();
+    await satellite.setAuthState();
+    final clientId = satellite.authState!.clientId;
+
+    final localTs = DateTime.now();
+    final incomingTs = localTs.add(const Duration(milliseconds: 1));
+
+    final incoming = [
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.insert,
+        incomingTs.millisecondsSinceEpoch,
+        genEncodedTags('remote', [incomingTs]),
+        newValues: {
+          "id": 1,
+        },
+        oldValues: {},
+      ),
+    ];
+
+    final local = <OplogEntry>[];
+    final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
+    final item = merged['main.parent']!['1'];
+
+    expect(
+      item,
+      ShadowEntryChanges(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKeyCols: {"id": 1},
+        optype: ChangesOpType.upsert,
+        changes: {
+          "id": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+        },
+        tags: [generateTag('remote', incomingTs)],
+      ),
+    );
+  });
+
+  test('advance oplog cursor', () async {
+    await runMigrations();
+
+    // fake current propagated rowId
+    satellite.lastSentRowId = 2;
+
+    // Get tablenames.
+    final oplogTablename = opts.oplogTable.tablename;
+    final metaTablename = opts.metaTable.tablename;
+
+    // Insert a couple of rows.
+    await adapter
+        .run(Statement("INSERT INTO main.parent(id) VALUES ('1'),('2')"));
+
+    // We have two rows in the oplog.
+    var rows = await adapter.query(
+      Statement(
+        "SELECT count(rowid) as num_rows FROM $oplogTablename",
+      ),
+    );
+    expect(rows[0]["num_rows"], 2);
+
+    // Ack.
+    await satellite.ack(2, true);
+
+    // NOTE: The oplog is not clean! This is a current design decision to clear
+    // oplog only when receiving transaction that originated from Satellite in the
+    // first place.
+    rows = await adapter.query(
+      Statement(
+        "SELECT count(rowid) as num_rows FROM $oplogTablename",
+      ),
+    );
+    expect(rows[0]["num_rows"], 2);
+
+    // Verify the meta.
+    rows = await adapter.query(
+      Statement(
+        "SELECT value FROM $metaTablename WHERE key = 'lastAckdRowId'",
+      ),
+    );
+    expect(rows[0]["value"], '2');
+  });
+
+  test('compensations: referential integrity is enforced', () async {
+    await runMigrations();
+
+    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+    await satellite.setMeta('compensations', 0);
+    await adapter.run(
+      Statement(
+        "INSERT INTO main.parent(id, value) VALUES (1, '1')",
+      ),
+    );
+
+    await expectLater(
+      adapter
+          .run(Statement("INSERT INTO main.child(id, parent) VALUES (1, 2)")),
+      throwsA(
+        isA<SqliteException>().having(
+          (SqliteException e) => e.extendedResultCode,
+          "code",
+          SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+        ),
+      ),
+    );
+  });
+
+  test('compensations: incoming operation breaks referential integrity',
+      () async {
+    await runMigrations();
+
+    await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
+    await satellite.setMeta('compensations', 0);
+    await satellite.setAuthState();
+
+    final incoming = [
+      generateLocalOplogEntry(
+        tableInfo,
+        'main',
+        'child',
+        OpType.insert,
+        timestamp.millisecondsSinceEpoch,
+        genEncodedTags('remote', [timestamp]),
+        newValues: {
+          "id": 1,
+          "parent": 1,
+        },
+      ),
+    ];
+
+    await satellite.setAuthState();
+    await expectLater(
+      satellite.apply(incoming, 'remote', []),
+      throwsA(
+        isA<SqliteException>().having(
+          (SqliteException e) => e.extendedResultCode,
+          "code",
+          SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+        ),
+      ),
+    );
+  });
+
+  test(
+      'compensations: incoming operations accepted if restore referential integrity',
+      () async {
+    await runMigrations();
+
+    await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
+    await satellite.setMeta('compensations', 0);
+    await satellite.setAuthState();
+    final clientId = satellite.authState!.clientId;
+
+    final incoming = [
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'child',
+        OpType.insert,
+        timestamp.millisecondsSinceEpoch,
+        genEncodedTags(clientId, [timestamp]),
+        newValues: {
+          "id": 1,
+          "parent": 1,
+        },
+      ),
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.insert,
+        timestamp.millisecondsSinceEpoch,
+        genEncodedTags(clientId, [timestamp]),
+        newValues: {
+          "id": 1,
+        },
+      ),
+    ];
+
+    await adapter.run(
+      Statement(
+        "INSERT INTO main.parent(id, value) VALUES (1, '1')",
+      ),
+    );
+    await adapter.run(Statement("DELETE FROM main.parent WHERE id=1"));
+
+    await satellite.setAuthState();
+    await satellite.performSnapshot();
+    await satellite.apply(incoming, 'remote', []);
+    final rows = await adapter.query(
+      Statement(
+        "SELECT * from main.parent WHERE id=1",
+      ),
+    );
+
+    // Not only does the parent exist.
+    expect(rows.length, 1);
+
+    // But it's also recreated with deleted values.
+    expect(rows[0]["value"], '1');
   });
 }

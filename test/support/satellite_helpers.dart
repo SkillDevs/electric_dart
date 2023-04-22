@@ -45,6 +45,55 @@ Future<Row> loadSatelliteMetaTable(
   return Map.fromEntries(entries);
 }
 
+// This function should be only used to represent incoming transaction, not local
+// transactions, as we treat cleatTags differently for incoming transactions.
+OplogEntry generateLocalOplogEntry(
+  TableInfo info,
+  String namespace,
+  String tablename,
+  OpType optype,
+  int timestamp,
+  String? clearTags, {
+  Row newValues = const {},
+  Row oldValues = const {},
+}) {
+  final schema = info[namespace + '.' + tablename];
+  if (schema == null) {
+    throw Exception('Schema is undefined');
+  }
+
+  final newRow = generateFrom(schema, newValues);
+
+  GenerateFromResult oldRow = GenerateFromResult();
+  if (optype == OpType.update || optype == OpType.delete) {
+    oldRow = generateFrom(schema, oldValues);
+  }
+  String? tags = clearTags;
+  if (optype == OpType.delete && clearTags == null) {
+    tags = shadowTagsDefault;
+  }
+  if (optype != OpType.delete && clearTags == null) {
+    tags = encodeTags([
+      generateTag('remote', DateTime.fromMillisecondsSinceEpoch(timestamp))
+    ]);
+  }
+
+  final result = OplogEntry(
+    namespace: namespace,
+    tablename: tablename,
+    optype: optype,
+    rowid: timestamp,
+    newRow: newRow.columns == null ? null : json.encode(newRow.columns),
+    oldRow: oldRow.columns == null ? null : json.encode(oldRow.columns),
+    primaryKey:
+        json.encode({...oldRow.primaryKey ?? {}, ...newRow.primaryKey ?? {}}),
+    timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp).toIso8601String(),
+    clearTags: tags!,
+  );
+
+  return result;
+}
+
 OplogEntry generateRemoteOplogEntry(
   TableInfo info,
   String namespace,
@@ -85,7 +134,7 @@ OplogEntry generateRemoteOplogEntry(
 
 GenerateFromResult generateFrom(TableSchema schema, Row values) {
   final columns = schema.columns.fold<Row>({}, (acc, column) {
-    if (values[column] != null) {
+    if (values.containsKey(column)) {
       acc[column] = values[column];
     }
 

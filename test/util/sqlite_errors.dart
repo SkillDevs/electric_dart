@@ -5,4 +5,5 @@
 class SqliteErrors {
   static const SQLITE_CONSTRAINT_PRIMARYKEY = 1555;
   static const SQLITE_CONSTRAINT_TRIGGER = 1811;
+  static const SQLITE_CONSTRAINT_FOREIGNKEY = 787;
 }
