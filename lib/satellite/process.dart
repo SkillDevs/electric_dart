@@ -99,8 +99,10 @@ class SatelliteProcess implements Satellite {
     void connectivityChangeCallback(
       ConnectivityStateChangeNotification notification,
     ) {
-      _connectivityStateChange(notification.connectivityState);
+      connectivityStateChange(notification.connectivityState);
     }
+
+    // TODO(dart): Should the subscription be removed here, before assigning a new one?
 
     _connectivityChangeSubscription =
         notifier.subscribeToConnectivityStateChange(connectivityChangeCallback);
@@ -116,7 +118,7 @@ class SatelliteProcess implements Satellite {
 
     // Need to reload primary keys after schema migration
     // For now, we do it only at initialization
-    relations = await _getLocalRelations();
+    relations = await getLocalRelations();
 
     _lastAckdRowId = int.parse(await getMeta('lastAckdRowId'));
     lastSentRowId = int.parse(await getMeta('lastSentRowId'));
@@ -165,7 +167,7 @@ class SatelliteProcess implements Satellite {
 
   void setClientListeners() {
     client.subscribeToTransactions((Transaction transaction) async {
-      unawaited(_applyTransaction(transaction));
+      unawaited(applyTransaction(transaction));
     });
     // When a local transaction is sent, or an acknowledgement for
     // a remote transaction commit is received, we update lsn records.
@@ -194,7 +196,8 @@ class SatelliteProcess implements Satellite {
     await client.close();
   }
 
-  Future<Either<SatelliteException, void>> _connectivityStateChange(
+  @visibleForTesting
+  Future<Either<SatelliteException, void>> connectivityStateChange(
     ConnectivityState status,
   ) async {
     // TODO: no op if state is the same
@@ -545,7 +548,7 @@ class SatelliteProcess implements Satellite {
     final rows = await adapter.query(
       Statement(
         selectChanges,
-        [timestamp.toIso8601String(), since],
+        [timestamp.toISOStringUTC(), since],
       ),
     );
     return rows.map(_opLogEntryFromRow).toList();
@@ -647,7 +650,7 @@ class SatelliteProcess implements Satellite {
     ''';
 
     final updateArgs = <Object?>[
-      timestamp.toIso8601String(),
+      timestamp.toISOStringUTC(),
       _lastAckdRowId.toString()
     ];
     await adapter.run(Statement(updateTimestamps, updateArgs));
@@ -710,11 +713,12 @@ class SatelliteProcess implements Satellite {
     return incomingTableChanges;
   }
 
-  Future<void> _applyTransaction(Transaction transaction) async {
+  @visibleForTesting  
+  Future<void> applyTransaction(Transaction transaction) async {
     final origin = transaction.origin!;
 
     final opLogEntries = fromTransaction(transaction, relations);
-    final commitTimestamp = DateTime.fromMicrosecondsSinceEpoch(
+    final commitTimestamp = DateTime.fromMillisecondsSinceEpoch(
       transaction.commitTimestamp.toInt(),
     );
     await applyTransactionInternal(
@@ -836,7 +840,8 @@ class SatelliteProcess implements Satellite {
 
   // Fetch primary keys from local store and use them to identify incoming ops.
   // TODO: Improve this code once with Migrator and consider simplifying oplog.
-  Future<RelationsCache> _getLocalRelations() async {
+  @visibleForTesting
+  Future<RelationsCache> getLocalRelations() async {
     final notIn = <String>[
       opts.metaTable.tablename,
       opts.migrationsTable.tablename,
@@ -896,7 +901,7 @@ class SatelliteProcess implements Satellite {
   }
 
   Future<void> _garbageCollectOplog(DateTime commitTimestamp) async {
-    final isoString = commitTimestamp.toIso8601String();
+    final isoString = commitTimestamp.toISOStringUTC();
     final String oplog = opts.oplogTable.tablename;
     final stmt = '''
       DELETE FROM $oplog

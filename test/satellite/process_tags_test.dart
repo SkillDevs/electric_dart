@@ -11,6 +11,7 @@ import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/mock.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/satellite/process.dart';
+import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/random.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -162,7 +163,7 @@ void main() {
     // clearTag is empty
     final localEntries10 = localEntries1[0];
     expect(localEntries10.clearTags, json.encode([]));
-    expect(localEntries10.timestamp, txDate1.toIso8601String());
+    expect(localEntries10.timestamp, txDate1.toISOStringUTC());
 
     // Local DELETE
     final stmts2 = Statement(
@@ -182,7 +183,7 @@ void main() {
     final localEntry21 = localEntries2[1];
 
     expect(localEntry21.clearTags, tag1);
-    expect(localEntry21.timestamp, txDate2.toIso8601String());
+    expect(localEntry21.timestamp, txDate2.toISOStringUTC());
 
     // Local INSERT
     final stmts3 = Statement(
@@ -204,7 +205,7 @@ void main() {
     final localEntry32 = localEntries3[2];
 
     expect(localEntry32.clearTags, json.encode([]));
-    expect(localEntry32.timestamp, txDate3.toIso8601String());
+    expect(localEntry32.timestamp, txDate3.toISOStringUTC());
 
     // apply incomig operation (local operation ack)
     final ackEntry = generateRemoteOplogEntry(

@@ -74,3 +74,9 @@ int bytesToNumber(List<int> bytes) {
   }
   return n;
 }
+
+extension DateExtension on DateTime {
+  String toISOStringUTC() {
+    return toUtc().copyWith(microsecond: 0).toIso8601String();
+  }
+}

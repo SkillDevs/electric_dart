@@ -45,7 +45,7 @@ class OplogEntryChanges {
   });
 }
 
-class OplogEntry {
+class OplogEntry with EquatableMixin {
   final String namespace;
   final String tablename;
   final String primaryKey; // json object
@@ -72,6 +72,19 @@ class OplogEntry {
   String toString() {
     return "$optype $namespace.$tablename $primaryKey - $newRow";
   }
+
+  @override
+  List<Object?> get props => [
+        namespace,
+        tablename,
+        primaryKey,
+        rowid,
+        optype,
+        timestamp,
+        newRow,
+        oldRow,
+        clearTags,
+      ];
 }
 
 OpType changeTypeToOpType(ChangeType opTypeStr) {
@@ -128,7 +141,7 @@ List<OplogEntry> fromTransaction(
       optype: changeTypeToOpType(t.type),
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         transaction.commitTimestamp.toInt(),
-      ).toIso8601String(), // TODO: check precision
+      ).toISOStringUTC(), // TODO: check precision
       newRow: t.record == null ? null : json.encode(t.record),
       oldRow: t.oldRecord == null ? null : json.encode(t.oldRecord),
       clearTags: encodeTags(t.tags),

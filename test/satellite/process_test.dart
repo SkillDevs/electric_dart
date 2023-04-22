@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:electric_client/auth/mock.dart';
-import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/electric/sqlite3_adapter.dart';
+import 'package:electric_client/electric/adapter.dart' hide Transaction;
+import 'package:electric_client/electric/sqlite3_adapter.dart' hide Transaction;
 import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/migrators/migrators.dart';
 import 'package:electric_client/notifiers/mock.dart';
@@ -11,9 +12,12 @@ import 'package:electric_client/satellite/config.dart';
 import 'package:electric_client/satellite/mock.dart';
 import 'package:electric_client/satellite/oplog.dart';
 import 'package:electric_client/satellite/process.dart';
+import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/random.dart';
 import 'package:electric_client/util/tablename.dart';
 import 'package:electric_client/util/types.dart' hide Change;
+import 'package:electric_client/util/types.dart' as t;
+import 'package:fixnum/fixnum.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
@@ -21,6 +25,7 @@ import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 import '../util/sqlite_errors.dart';
+import 'common.dart';
 
 late Database db;
 late DatabaseAdapter adapter;
@@ -306,9 +311,11 @@ void main() {
   test('take snapshot and merge incoming wins', () async {
     await runMigrations();
 
-    await adapter.run(Statement(
-      "INSERT INTO parent(id, value, other) VALUES (1, 'local', 1)",
-    ));
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value, other) VALUES (1, 'local', 1)",
+      ),
+    );
 
     await satellite.setAuthState();
     final clientId = satellite.authState!.clientId;
@@ -318,7 +325,8 @@ void main() {
     final localTimestamp = DateTime.parse(local[0].timestamp);
 
     final incomingTs = DateTime.fromMillisecondsSinceEpoch(
-        localTimestamp.millisecondsSinceEpoch + 1);
+      localTimestamp.millisecondsSinceEpoch + 1,
+    );
 
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
@@ -785,4 +793,295 @@ void main() {
     // But it's also recreated with deleted values.
     expect(rows[0]["value"], '1');
   });
+
+  test('compensations: using triggers with flag 0', () async {
+    await runMigrations();
+
+    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+    await satellite.setMeta('compensations', 0);
+    satellite.lastSentRowId = 1;
+
+    await adapter.run(
+      Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
+    );
+    await satellite.setAuthState();
+    await satellite.performSnapshot();
+    await satellite.ack(1, true);
+
+    await adapter
+        .run(Statement("INSERT INTO main.child(id, parent) VALUES (1, 1)"));
+    await satellite.performSnapshot();
+
+    final timestamp = DateTime.now();
+    final incoming = [
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.delete,
+        timestamp.millisecondsSinceEpoch,
+        genEncodedTags('remote', []),
+        newValues: {
+          "id": 1,
+        },
+      ),
+    ];
+
+    await expectLater(
+      satellite.apply(incoming, 'remote', []),
+      throwsA(
+        isA<SqliteException>().having(
+          (SqliteException e) => e.extendedResultCode,
+          "code",
+          SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+        ),
+      ),
+    );
+  });
+
+  test('compensations: using triggers with flag 1', () async {
+    await runMigrations();
+
+    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+    await satellite.setMeta('compensations', 1);
+    satellite.lastSentRowId = 1;
+
+    await adapter.run(
+      Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
+    );
+    await satellite.setAuthState();
+    await satellite.performSnapshot();
+    await satellite.ack(1, true);
+
+    await adapter
+        .run(Statement("INSERT INTO main.child(id, parent) VALUES (1, 1)"));
+    await satellite.performSnapshot();
+
+    final timestamp = DateTime.now();
+    final incoming = [
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.delete,
+        timestamp.millisecondsSinceEpoch,
+        genEncodedTags('remote', []),
+        newValues: {
+          "id": 1,
+        },
+      ),
+    ];
+
+    // TODO(dart) No expectations?
+    await satellite.apply(incoming, "", []);
+  });
+
+  test('get oplogEntries from transaction', () async {
+    await runMigrations();
+
+    final relations = await satellite.getLocalRelations();
+
+    final transaction = Transaction(
+      lsn: kDefaultLogPos,
+      commitTimestamp: Int64.ZERO,
+      changes: [
+        t.Change(
+          relation: relations["parent"]!,
+          type: ChangeType.insert,
+          record: {"id": 0},
+          tags: [], // proper values are not relevent here
+        ),
+      ],
+    );
+
+    final expected = OplogEntry(
+      namespace: 'main',
+      tablename: 'parent',
+      optype: OpType.insert,
+      newRow: '{"id":0}',
+      oldRow: null,
+      primaryKey: '{"id":0}',
+      rowid: -1,
+      timestamp: '1970-01-01T00:00:00.000Z',
+      clearTags: encodeTags([]),
+    );
+
+    final opLog = fromTransaction(transaction, relations);
+    expect(opLog[0], expected);
+  });
+
+  test('get transactions from opLogEntries', () async {
+    await runMigrations();
+
+    final opLogEntries = <OplogEntry>[
+      OplogEntry(
+        namespace: 'public',
+        tablename: 'parent',
+        optype: OpType.insert,
+        newRow: '{"id":0}',
+        oldRow: null,
+        primaryKey: '{"id":0}',
+        rowid: 1,
+        timestamp: '1970-01-01T00:00:00.000Z',
+        clearTags: encodeTags([]),
+      ),
+      OplogEntry(
+        namespace: 'public',
+        tablename: 'parent',
+        optype: OpType.update,
+        newRow: '{"id":1}',
+        oldRow: '{"id":1}',
+        primaryKey: '{"id":1}',
+        rowid: 2,
+        timestamp: '1970-01-01T00:00:00.000Z',
+        clearTags: encodeTags([]),
+      ),
+      OplogEntry(
+        namespace: 'public',
+        tablename: 'parent',
+        optype: OpType.insert,
+        newRow: '{"id":2}',
+        oldRow: null,
+        primaryKey: '{"id":0}',
+        rowid: 3,
+        timestamp: '1970-01-01T00:00:01.000Z',
+        clearTags: encodeTags([]),
+      ),
+    ];
+
+    final expected = <Transaction>[
+      Transaction(
+        lsn: numberToBytes(2),
+        commitTimestamp: Int64.ZERO,
+        changes: [
+          t.Change(
+            relation: kTestRelations["parent"]!,
+            type: ChangeType.insert,
+            record: {"id": 0},
+            oldRecord: null,
+            tags: [],
+          ),
+          t.Change(
+            relation: kTestRelations["parent"]!,
+            type: ChangeType.insert,
+            record: {"id": 1},
+            oldRecord: {"id": 1},
+            tags: [],
+          ),
+        ],
+      ),
+      Transaction(
+        lsn: numberToBytes(3),
+        commitTimestamp: Int64(1000),
+        changes: [
+          t.Change(
+            relation: kTestRelations["parent"]!,
+            type: ChangeType.insert,
+            record: {"id": 2},
+            oldRecord: null,
+            tags: [],
+          ),
+        ],
+      ),
+    ];
+
+    final opLog = toTransactions(opLogEntries, kTestRelations);
+    expect(opLog, expected);
+  });
+
+  test('rowid acks updates meta', () async {
+    await runMigrations();
+    await satellite.start(null);
+
+    final lsn1 = numberToBytes(1);
+    client.emit('ack_lsn', AckLsnEvent(lsn1, AckType.localSend));
+
+    final lsn = await satellite.getMeta('lastSentRowId');
+    expect(lsn, '1');
+  });
+
+  test('handling connectivity state change stops queueing operations',
+      () async {
+    await runMigrations();
+    await satellite.start(null);
+
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value, other) VALUES (1, 'local', 1)",
+      ),
+    );
+
+    await satellite.performSnapshot();
+
+    final lsn = await satellite.getMeta('lastSentRowId');
+    expect(lsn, '1');
+
+    final completer = Completer<void>();
+    Timer(const Duration(milliseconds: 100), () async {
+      final lsn = await satellite.getMeta('lastAckdRowId');
+      expect(lsn, '1');
+      completer.complete();
+    });
+
+    await completer.future;
+
+    await satellite.connectivityStateChange(ConnectivityState.disconnected);
+
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value, other) VALUES (2, 'local', 1)",
+      ),
+    );
+
+    await satellite.performSnapshot();
+
+    final lsn1 = await satellite.getMeta('lastSentRowId');
+    expect(lsn1, '1');
+
+    await satellite.connectivityStateChange(ConnectivityState.connected);
+
+    // TODO(dart) This test is not passing in TS when awaiting the 200 ms
+    /* await Future<void>.delayed(const Duration(milliseconds: 200));
+    final lsn2 = await satellite.getMeta('lastSentRowId');
+    expect(lsn2, '2'); */
+  });
+
+  test(
+      'garbage collection is triggered when transaction from the same origin is replicated',
+      () async {
+    await runMigrations();
+    await satellite.start(null);
+
+    final clientId = satellite.authState!.clientId;
+
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value, other) VALUES (1, 'local', 1);",
+      ),
+    );
+    await adapter.run(
+      Statement(
+        "UPDATE parent SET value = 'local', other = 2 WHERE id = 1;",
+      ),
+    );
+
+    var lsn = await satellite.getMeta('lastSentRowId');
+    expect(lsn, '0');
+
+    await satellite.performSnapshot();
+
+    lsn = await satellite.getMeta('lastSentRowId');
+    expect(lsn, '2');
+    lsn = await satellite.getMeta('lastAckdRowId');
+
+    final old_oplog = await satellite.getEntries();
+    final transactions = toTransactions(old_oplog, kTestRelations);
+    transactions[0].origin = clientId;
+
+    await satellite.applyTransaction(transactions[0]);
+    final new_oplog = await satellite.getEntries();
+    expect(new_oplog, isEmpty);
+  });
 }
+// Document if we support CASCADE https://www.sqlite.org/foreignkeys.html
+// Document that we do not maintian the order of execution of incoming operations and therefore we defer foreign key checks to the outermost commit

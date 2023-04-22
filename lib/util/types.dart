@@ -1,4 +1,5 @@
 import 'package:electric_client/proto/satellite.pb.dart';
+import 'package:equatable/equatable.dart';
 import 'package:events_emitter/listener.dart';
 import 'package:fixnum/fixnum.dart';
 
@@ -88,13 +89,13 @@ class LogPositions {
   });
 }
 
-class Transaction {
+class Transaction with EquatableMixin {
   final Int64 commitTimestamp;
   LSN lsn;
   final List<Change> changes;
 
   // This field is only set by transactions coming from Electric
-  final String? origin;
+  String? origin;
 
   Transaction({
     required this.commitTimestamp,
@@ -102,6 +103,9 @@ class Transaction {
     required this.changes,
     this.origin,
   });
+
+  @override
+  List<Object?> get props => [commitTimestamp, lsn, changes, origin];
 }
 
 enum ChangeType {
@@ -114,7 +118,7 @@ typedef Record = Map<String, Object?>;
 
 typedef Tag = String;
 
-class Change {
+class Change with EquatableMixin {
   final Relation relation;
   final ChangeType type;
   final Record? record;
@@ -128,6 +132,15 @@ class Change {
     this.oldRecord,
     required this.tags,
   });
+
+  @override
+  List<Object?> get props => [
+        relation,
+        type,
+        record,
+        oldRecord,
+        tags,
+      ];
 }
 
 class Relation {

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:electric_client/electric/adapter.dart';
 import 'package:electric_client/satellite/oplog.dart';
+import 'package:electric_client/util/common.dart';
 import 'package:electric_client/util/types.dart';
 
 typedef TableInfo = Map<String, TableSchema>;
@@ -87,7 +88,7 @@ OplogEntry generateLocalOplogEntry(
     oldRow: oldRow.columns == null ? null : json.encode(oldRow.columns),
     primaryKey:
         json.encode({...oldRow.primaryKey ?? {}, ...newRow.primaryKey ?? {}}),
-    timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp).toIso8601String(),
+    timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp).toISOStringUTC(),
     clearTags: tags!,
   );
 
@@ -125,7 +126,7 @@ OplogEntry generateRemoteOplogEntry(
     oldRow: json.encode(oldRow.columns),
     primaryKey:
         json.encode({...oldRow.primaryKey ?? {}, ...newRow.primaryKey ?? {}}),
-    timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp).toIso8601String(),
+    timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp).toISOStringUTC(),
     clearTags: incomingTags,
   );
 
