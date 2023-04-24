@@ -116,6 +116,9 @@ class WebSocketIO implements Socket {
       onError: (Object e) {
         _notifyErrorAndCloseSocket(e);
       },
+      onDone: () {
+        _socketClose();
+      },
     );
     _subscriptions.add(msgSubscription);
   }
