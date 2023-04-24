@@ -8,11 +8,16 @@ Dart client implementation for Electric [Electric](https://electric-sql.com/) ba
 
 ### Run the Todos example
 
-This demo is compatible with the `todoMVC` official example [Link](https://github.com/electric-sql/examples)
+This demo is compatible with the `todoMVC` official example [Link](https://github.com/electric-sql/examples).
 
 1. Run the Electric backend ([Instructions](https://electric-sql.com/docs/overview/examples))
 
 2. From inside the todos_flutter directory: `flutter run`
+
+Note:
+
+> Right now the `todoMVC` web examples are running against Electric client version 0.4.3. Which is incompatible with the server in the commit this is based on. You'll need to compile the typescript client and use that build in the web examples.
+
 
 https://user-images.githubusercontent.com/22084723/233607256-2a36c911-152b-483b-9adf-81b4e5ff051d.mp4
 
