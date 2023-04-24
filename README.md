@@ -8,6 +8,8 @@ Dart client implementation for Electric [Electric](https://electric-sql.com/) ba
 
 ### Run the Todos example
 
+Flutter version used: 3.7.X
+
 This demo is compatible with the `todoMVC` official example [Link](https://github.com/electric-sql/examples).
 
 1. Run the Electric backend ([Instructions](https://electric-sql.com/docs/overview/examples))
