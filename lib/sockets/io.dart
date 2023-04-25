@@ -48,6 +48,8 @@ class WebSocketIO implements Socket {
 
     _errorCallbacks = [];
     _messageCallbacks = [];
+
+    _channel = null;
   }
 
   @override
@@ -132,8 +134,7 @@ class WebSocketIO implements Socket {
       _onceErrorCallbacks.removeLast()(e);
     }
 
-    _channel?.sink.close();
-    _channel = null;
+    _socketClose();
   }
 
   @override
