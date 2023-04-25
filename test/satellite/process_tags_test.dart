@@ -22,8 +22,8 @@ import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 
 final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: 40,
-  pollingInterval: 200,
+  minSnapshotWindow: const Duration(milliseconds: 40),
+  pollingInterval: const Duration(milliseconds: 200),
 );
 
 final satelliteConfig = SatelliteConfig(

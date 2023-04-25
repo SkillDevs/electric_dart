@@ -74,7 +74,7 @@ class SatelliteProcess implements Satellite {
     // Instead of creating it in the constructor and never cancelling it
     throttledSnapshot = Throttle(
       performSnapshot,
-      Duration(milliseconds: opts.minSnapshotWindow),
+      opts.minSnapshotWindow,
     );
   }
 
@@ -109,7 +109,7 @@ class SatelliteProcess implements Satellite {
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
-      Duration(milliseconds: opts.pollingInterval),
+      opts.pollingInterval,
       (_) => throttledSnapshot(),
     );
 

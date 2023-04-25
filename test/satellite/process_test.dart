@@ -42,8 +42,8 @@ Future<void> runMigrations() async {
 }
 
 final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: 40,
-  pollingInterval: 200,
+  minSnapshotWindow: const Duration(milliseconds: 40),
+  pollingInterval: const Duration(milliseconds: 200),
 );
 
 final satelliteConfig = SatelliteConfig(
@@ -189,18 +189,18 @@ void main() {
 
     await satellite.start(null);
 
-    await Future<void>.delayed(Duration(milliseconds: opts.pollingInterval));
+    await Future<void>.delayed(opts.pollingInterval);
 
     expect(notifier.notifications.length, 1);
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('3'),('4')"));
-    await Future<void>.delayed(Duration(milliseconds: opts.pollingInterval));
+    await Future<void>.delayed(opts.pollingInterval);
 
     expect(notifier.notifications.length, 2);
 
     await satellite.stop();
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('5'),('6')"));
-    await Future<void>.delayed(Duration(milliseconds: opts.pollingInterval));
+    await Future<void>.delayed(opts.pollingInterval);
 
     expect(notifier.notifications.length, 2);
 

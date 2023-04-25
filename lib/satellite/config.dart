@@ -13,8 +13,8 @@ const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   oplogTable: QualifiedTablename('main', '_electric_oplog'),
   triggersTable: QualifiedTablename('main', '_electric_trigger_settings'),
   shadowTable: QualifiedTablename('main', '_electric_shadow'),
-  pollingInterval: 2000,
-  minSnapshotWindow: 40,
+  pollingInterval: Duration(milliseconds: 2000),
+  minSnapshotWindow: Duration(milliseconds: 40),
 );
 
 const kDefaultSatelliteTimeout = 3000;
@@ -53,13 +53,11 @@ class SatelliteOpts {
   /// The database table that contains dependency tracking information
   final QualifiedTablename shadowTable;
 
-  // TODO(dart) Convert to Duration
   /// Polls the database for changes every `pollingInterval` milliseconds.
-  final int pollingInterval;
+  final Duration pollingInterval;
 
-  // TODO(dart) Convert to Duration
   /// Throttle snapshotting to once per `minSnapshotWindow` milliseconds.
-  final int minSnapshotWindow;
+  final Duration minSnapshotWindow;
 
   const SatelliteOpts({
     required this.metaTable,
@@ -77,8 +75,8 @@ class SatelliteOpts {
     QualifiedTablename? oplogTable,
     QualifiedTablename? triggersTable,
     QualifiedTablename? shadowTable,
-    int? pollingInterval,
-    int? minSnapshotWindow,
+    Duration? pollingInterval,
+    Duration? minSnapshotWindow,
   }) {
     return SatelliteOpts(
       metaTable: metaTable ?? this.metaTable,
@@ -106,8 +104,8 @@ class SatelliteOverrides {
   final QualifiedTablename? metaTable;
   final QualifiedTablename? migrationsTable;
   final QualifiedTablename oplogTable;
-  final int? pollingInterval;
-  final int? minSnapshotWindow;
+  final Duration? pollingInterval;
+  final Duration? minSnapshotWindow;
 
   SatelliteOverrides({
     this.metaTable,

@@ -19,8 +19,8 @@ import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 
 final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: 80,
-  pollingInterval: 500,
+  minSnapshotWindow: const Duration(milliseconds: 80),
+  pollingInterval: const Duration(milliseconds: 500),
 );
 
 final satelliteConfig = SatelliteConfig(
@@ -88,7 +88,7 @@ void main() {
 
     expect(notifier.notifications.length, numNotifications);
 
-    await Future<void>.delayed(Duration(milliseconds: opts.minSnapshotWindow));
+    await Future<void>.delayed(opts.minSnapshotWindow);
 
     expect(notifier.notifications.length, numNotifications + 1);
   });
