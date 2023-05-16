@@ -1,5 +1,7 @@
 # Electric Dart
 
+https://github.com/SkillDevs/electric_dart/actions/workflows/tests.yml/badge.svg
+
 Dart client implementation for [Electric](https://electric-sql.com/) based on:
 
 - `typescript-client` ([monorepo](https://github.com/electric-sql/electric)) (hash `29142a12f14f5db79239757a56726d79cbc53473`)
