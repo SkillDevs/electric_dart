@@ -90,6 +90,6 @@ void main() {
 
     await Future<void>.delayed(opts.minSnapshotWindow);
 
-    expect(notifier.notifications.length, numNotifications + 1);
+    expect(notifier.notifications.length, numNotifications + 1); 
   });
 }
