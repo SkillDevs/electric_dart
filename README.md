@@ -1,6 +1,6 @@
-# Electric Dart
-
 ![Tests](https://github.com/SkillDevs/electric_dart/actions/workflows/tests.yml/badge.svg)
+
+# Electric Dart
 
 Dart client implementation for [Electric](https://electric-sql.com/) based on:
 
