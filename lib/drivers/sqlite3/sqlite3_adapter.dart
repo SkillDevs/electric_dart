@@ -6,6 +6,8 @@ import 'package:electric_client/util/types.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:synchronized/synchronized.dart';
 
+// TODO(dart): Use package exports
+
 class SqliteAdapter extends adp.DatabaseAdapter {
   final sqlite.Database db;
   final Lock txLock = Lock();
@@ -36,6 +38,7 @@ class SqliteAdapter extends adp.DatabaseAdapter {
       for (var statement in statements) {
         db.execute(statement.sql, statement.args ?? []);
       }
+      // TODO(dart): Review
       final rowsAffected = db.getUpdatedRows();
 
       return RunResult(rowsAffected: rowsAffected);
