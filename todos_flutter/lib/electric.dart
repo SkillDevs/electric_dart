@@ -1,6 +1,6 @@
 import 'package:electric_client/auth/auth.dart';
 import 'package:electric_client/config/config.dart';
-import 'package:electric_client/drivers/sqlite3/sqlite3_adapter.dart';
+import 'package:electric_client/electric/adapter.dart';
 import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/notifiers/event.dart';
 import 'package:electric_client/satellite/registry.dart';
@@ -9,7 +9,6 @@ import 'package:electric_client/sockets/io.dart';
 import 'package:electric_client/util/debug/debug.dart';
 import 'package:electric_client/util/types.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:todos_electrified/database.dart';
 import 'package:todos_electrified/migrations.dart';
 import 'package:logging/logging.dart';
 
@@ -20,8 +19,8 @@ final connectivityStateProvider = StateProvider<ConnectivityState>((ref) {
   return ConnectivityState.disconnected;
 });
 
-Future<Satellite> startElectric(TodosDatabase database) async {
-  final dbName = database.dbPath;
+Future<Satellite> startElectric(String dbPath, DatabaseAdapter adapter) async {
+  final dbName = dbPath;
   const app = "my-todos";
   const env = "local";
 
@@ -31,7 +30,6 @@ Future<Satellite> startElectric(TodosDatabase database) async {
     ssl: false,
   );
 
-  final adapter = SqliteAdapter(database.db);
   final consoleConfig = ConsoleConfig(
     host: '127.0.0.1',
     port: 4000,
@@ -43,7 +41,7 @@ Future<Satellite> startElectric(TodosDatabase database) async {
   final notifier = EventNotifier(dbName: dbName);
 
   final satellite = await globalRegistry.ensureStarted(
-    dbName: database.dbPath,
+    dbName: dbName,
     adapter: adapter,
     migrator: BundleMigrator(adapter: adapter, migrations: todoMigrations),
     notifier: notifier,

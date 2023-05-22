@@ -15,6 +15,7 @@ dev_dependencies:
   
 dependencies:
   collection: ^1.17.0
+  drift: ^2.7.0
   equatable: ^2.0.5
   events_emitter: ^0.5.2
   fixnum: ^1.1.0
