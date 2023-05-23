@@ -106,6 +106,16 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (m) async {
+        //
+        print("Dummy onCreate");
+      },
+    );
+  }
 }
 
 QueryExecutor _openConnection(String dbPath) {

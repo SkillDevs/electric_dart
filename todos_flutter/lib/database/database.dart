@@ -72,6 +72,5 @@ Future<String> getDatabasePath() async {
 
   final todosDbPath = join(appDir.path, "todos.db");
 
-  print("Using todos database at path $todosDbPath");
   return todosDbPath;
 }
