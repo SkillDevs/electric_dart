@@ -25,6 +25,10 @@ Future<void> main() async {
 
   final satellite = await startElectric(dbPath, adapter);
 
+  driftRepo.db.setElectricNotifier(satellite.notifier);
+
+  final dispose = adapter.hookToNotifier(satellite.notifier);
+
   runApp(
     ProviderScope(
       overrides: [
@@ -71,13 +75,6 @@ class MyHomePage extends HookConsumerWidget {
     }, []);
 
     final todosAV = ref.watch(todosProvider);
-
-    useEffect(() {
-      final timer = Timer.periodic(const Duration(milliseconds: 500), (t) {
-        ref.invalidate(todosProvider);
-      });
-      return () => timer.cancel();
-    }, []);
 
     return Scaffold(
       appBar: AppBar(
@@ -177,12 +174,11 @@ class _TodosLoaded extends HookConsumerWidget {
                         completed: false,
                       ),
                     );
-                    ref.invalidate(todosProvider);
 
                     textController.clear();
 
-                    final satellite = ref.read(satelliteProvider);
-                    satellite.notifier.potentiallyChanged();
+                    // final satellite = ref.read(satelliteProvider);
+                    // satellite.notifier.potentiallyChanged();
                   },
                 ),
                 const SizedBox(
@@ -220,10 +216,9 @@ class TodoTile extends ConsumerWidget {
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.updateTodo(todo.copyWith(completed: !todo.completed));
-          ref.invalidate(todosProvider);
 
-          final satellite = ref.read(satelliteProvider);
-          satellite.notifier.potentiallyChanged();
+          // final satellite = ref.read(satelliteProvider);
+          // satellite.notifier.potentiallyChanged();
         },
         icon: todo.completed
             ? const Icon(
@@ -243,10 +238,9 @@ class TodoTile extends ConsumerWidget {
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.removeTodo(todo.id);
-          ref.invalidate(todosProvider);
 
-          final satellite = ref.read(satelliteProvider);
-          satellite.notifier.potentiallyChanged();
+          // final satellite = ref.read(satelliteProvider);
+          // satellite.notifier.potentiallyChanged();
         },
         icon: const Icon(Icons.delete),
       ),

@@ -16,6 +16,10 @@ class TodosDatabase {
     return todosRepo.fetchTodos();
   }
 
+  Stream<List<Todo>> watchTodos() {
+    return todosRepo.watchTodos();
+  }
+
   Future<void> updateTodo(Todo todo) async {
     return todosRepo.updateTodo(todo);
   }
@@ -58,6 +62,7 @@ class Todo {
 
 abstract class TodosRepository {
   Future<List<Todo>> fetchTodos();
+  Stream<List<Todo>> watchTodos();
   Future<void> updateTodo(Todo todo);
   Future<void> removeTodo(String id);
   Future<void> insertTodo(Todo todo);

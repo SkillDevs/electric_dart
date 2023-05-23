@@ -51,4 +51,9 @@ WHERE id = ?''';
     const query = "DELETE FROM todo WHERE id = ?";
     db.execute(query, [id]);
   }
+
+  @override
+  Stream<List<Todo>> watchTodos() {
+    throw UnimplementedError();
+  }
 }

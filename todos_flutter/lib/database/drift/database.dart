@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:electric_client/drivers/drift/electrify.dart';
 import 'package:todos_electrified/database/database.dart' as m;
 
 part 'database.g.dart';
@@ -97,10 +98,24 @@ class DriftRepository implements m.TodosRepository {
       ),
     );
   }
+
+  @override
+  Stream<List<m.Todo>> watchTodos() {
+    return db.todos
+        .select()
+        .map(
+          (todo) => m.Todo(
+              completed: todo.completed,
+              id: todo.id,
+              listId: todo.listid,
+              text: todo.textCol!),
+        )
+        .watch();
+  }
 }
 
 @DriftDatabase(tables: [Todos, TodoLists])
-class AppDatabase extends _$AppDatabase {
+class AppDatabase extends _$AppDatabase with ElectricfiedDriftDatabaseMixin {
   final String dbPath;
   AppDatabase(this.dbPath) : super(_openConnection(dbPath));
 
