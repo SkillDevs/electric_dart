@@ -1,5 +1,5 @@
 import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/electric/sqlite3_adapter.dart';
+import 'package:electric_client/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/util/random.dart';
 import 'package:sqlite3/sqlite3.dart';

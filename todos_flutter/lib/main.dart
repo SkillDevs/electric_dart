@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:electric_client/drivers/drift/drift_adapter.dart';
 import 'package:electric_client/util/types.dart' hide Row;
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:todos_electrified/database.dart';
+import 'package:todos_electrified/database/database.dart';
+import 'package:todos_electrified/database/drift/database.dart' hide Todo;
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/todos.dart';
 import 'package:todos_electrified/util.dart';
@@ -13,9 +15,19 @@ const kClientId = "FAKE-CLIENT-ID";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final todosDb = await initTodosDatabase();
+  final dbPath = await getDatabasePath();
+  final driftRepo = await initDriftTodosDatabase(dbPath);
+  final todosDb = TodosDatabase(driftRepo);
+  final adapter = DriftAdapter(driftRepo.db);
+  // final sqliteRepo = initSqliteRepository(dbPath);
+  // final todosDb = TodosDatabase(sqliteRepo);
+  // final adapter = SqliteAdapter(sqliteRepo.db);
 
-  final satellite = await startElectric(todosDb);
+  final satellite = await startElectric(dbPath, adapter);
+
+  driftRepo.db.setElectricNotifier(satellite.notifier);
+
+  final dispose = adapter.hookToNotifier(satellite.notifier);
 
   runApp(
     ProviderScope(
@@ -64,13 +76,6 @@ class MyHomePage extends HookConsumerWidget {
 
     final todosAV = ref.watch(todosProvider);
 
-    useEffect(() {
-      final timer = Timer.periodic(const Duration(milliseconds: 500), (t) {
-        ref.invalidate(todosProvider);
-      });
-      return () => timer.cancel();
-    }, []);
-
     return Scaffold(
       appBar: AppBar(
         leading: const Center(
@@ -80,7 +85,10 @@ class MyHomePage extends HookConsumerWidget {
         title: Row(
           children: [
             const Text("todos "),
-            Image.network("https://images.emojiterra.com/google/android-12l/512px/26a1.png", width: 20, height: 20),
+            Image.network(
+                "https://images.emojiterra.com/google/android-12l/512px/26a1.png",
+                width: 20,
+                height: 20),
           ],
         ),
       ),
@@ -97,7 +105,8 @@ class MyHomePage extends HookConsumerWidget {
                 error: (e, st) {
                   return Center(child: Text(e.toString()));
                 },
-                loading: () => const Center(child: CircularProgressIndicator())),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator())),
           ),
         ],
       ),
@@ -122,7 +131,9 @@ class ConnectivityButton extends HookConsumerWidget {
         }
       },
       child: Text(
-        connectivityState == ConnectivityState.connected ? "Disconnect" : "Connect",
+        connectivityState == ConnectivityState.connected
+            ? "Disconnect"
+            : "Connect",
       ),
     );
   }
@@ -163,12 +174,11 @@ class _TodosLoaded extends HookConsumerWidget {
                         completed: false,
                       ),
                     );
-                    ref.invalidate(todosProvider);
 
                     textController.clear();
 
-                    final satellite = ref.read(satelliteProvider);
-                    satellite.notifier.potentiallyChanged();
+                    // final satellite = ref.read(satelliteProvider);
+                    // satellite.notifier.potentiallyChanged();
                   },
                 ),
                 const SizedBox(
@@ -206,10 +216,9 @@ class TodoTile extends ConsumerWidget {
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.updateTodo(todo.copyWith(completed: !todo.completed));
-          ref.invalidate(todosProvider);
 
-          final satellite = ref.read(satelliteProvider);
-          satellite.notifier.potentiallyChanged();
+          // final satellite = ref.read(satelliteProvider);
+          // satellite.notifier.potentiallyChanged();
         },
         icon: todo.completed
             ? const Icon(
@@ -219,7 +228,7 @@ class TodoTile extends ConsumerWidget {
             : const Icon(Icons.circle_outlined),
       ),
       title: Text(
-        todo.text,
+        todo.text ?? "",
         style: TextStyle(
           decoration: todo.completed ? TextDecoration.lineThrough : null,
           color: todo.completed ? Colors.grey : null,
@@ -229,10 +238,9 @@ class TodoTile extends ConsumerWidget {
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.removeTodo(todo.id);
-          ref.invalidate(todosProvider);
 
-          final satellite = ref.read(satelliteProvider);
-          satellite.notifier.potentiallyChanged();
+          // final satellite = ref.read(satelliteProvider);
+          // satellite.notifier.potentiallyChanged();
         },
         icon: const Icon(Icons.delete),
       ),

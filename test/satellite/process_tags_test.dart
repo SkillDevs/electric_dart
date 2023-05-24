@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:electric_client/auth/mock.dart';
 import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/electric/sqlite3_adapter.dart';
+import 'package:electric_client/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electric_client/migrators/bundle.dart';
 import 'package:electric_client/migrators/migrators.dart';
 import 'package:electric_client/notifiers/mock.dart';
