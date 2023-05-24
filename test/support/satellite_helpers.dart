@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/satellite/oplog.dart';
-import 'package:electric_client/util/common.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:electric_client/src/electric/adapter.dart';
+import 'package:electric_client/src/satellite/oplog.dart';
+import 'package:electric_client/src/util/common.dart';
+import 'package:electric_client/src/util/types.dart';
 
 typedef TableInfo = Map<String, TableSchema>;
 

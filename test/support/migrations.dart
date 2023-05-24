@@ -6,7 +6,7 @@
   See https://electric-sql.com/docs for more information.
 */
 
-import 'package:electric_client/migrators/migrators.dart';
+import 'package:electric_client/src/migrators/migrators.dart';
 
 final kTestMigrations = [
   Migration(

@@ -1,15 +1,15 @@
-import 'package:electric_client/auth/mock.dart';
-import 'package:electric_client/config/config.dart';
-import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/electric/mock.dart';
-import 'package:electric_client/migrators/migrators.dart';
-import 'package:electric_client/migrators/mock.dart';
-import 'package:electric_client/notifiers/mock.dart';
-import 'package:electric_client/satellite/mock.dart';
-import 'package:electric_client/satellite/satellite.dart';
-import 'package:electric_client/sockets/io.dart';
-import 'package:electric_client/sockets/sockets.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:electric_client/src/auth/mock.dart';
+import 'package:electric_client/src/config/config.dart';
+import 'package:electric_client/src/electric/adapter.dart';
+import 'package:electric_client/src/electric/mock.dart';
+import 'package:electric_client/src/migrators/migrators.dart';
+import 'package:electric_client/src/migrators/mock.dart';
+import 'package:electric_client/src/notifiers/mock.dart';
+import 'package:electric_client/src/satellite/mock.dart';
+import 'package:electric_client/src/satellite/satellite.dart';
+import 'package:electric_client/src/sockets/io.dart';
+import 'package:electric_client/src/sockets/sockets.dart';
+import 'package:electric_client/src/util/types.dart';
 import 'package:test/test.dart';
 
 const dbName = 'test.db';

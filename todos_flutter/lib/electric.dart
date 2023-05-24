@@ -1,13 +1,4 @@
-import 'package:electric_client/auth/auth.dart';
-import 'package:electric_client/config/config.dart';
-import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/migrators/bundle.dart';
-import 'package:electric_client/notifiers/event.dart';
-import 'package:electric_client/satellite/registry.dart';
-import 'package:electric_client/satellite/satellite.dart';
-import 'package:electric_client/sockets/io.dart';
-import 'package:electric_client/util/debug/debug.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:electric_client/electric_dart.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:todos_electrified/migrations.dart';
 import 'package:logging/logging.dart';

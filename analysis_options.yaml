@@ -2,7 +2,7 @@ include: package:lint/strict.yaml
 
 analyzer:
   exclude:
-    - lib/proto/**
+    - lib/src/proto/**
       
   language:
     strict-casts: true

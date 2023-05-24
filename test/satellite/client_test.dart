@@ -2,16 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:electric_client/auth/auth.dart';
-import 'package:electric_client/notifiers/mock.dart';
-import 'package:electric_client/proto/satellite.pb.dart';
-import 'package:electric_client/satellite/client.dart';
-import 'package:electric_client/satellite/config.dart';
-import 'package:electric_client/satellite/oplog.dart';
-import 'package:electric_client/sockets/io.dart';
-import 'package:electric_client/util/common.dart';
-import 'package:electric_client/util/proto.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:electric_client/src/auth/auth.dart';
+import 'package:electric_client/src/notifiers/mock.dart';
+import 'package:electric_client/src/proto/satellite.pb.dart';
+import 'package:electric_client/src/satellite/client.dart';
+import 'package:electric_client/src/satellite/config.dart';
+import 'package:electric_client/src/satellite/oplog.dart';
+import 'package:electric_client/src/sockets/io.dart';
+import 'package:electric_client/src/util/common.dart';
+import 'package:electric_client/src/util/proto.dart';
+import 'package:electric_client/src/util/types.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:test/test.dart';
 

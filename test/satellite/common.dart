@@ -1,5 +1,5 @@
-import 'package:electric_client/proto/satellite.pb.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:electric_client/src/proto/satellite.pb.dart';
+import 'package:electric_client/src/util/types.dart';
 
 Map<String, Relation> kTestRelations = {
   "child": Relation(

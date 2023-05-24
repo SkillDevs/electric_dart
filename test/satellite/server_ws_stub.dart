@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:electric_client/proto/satellite.pb.dart';
-import 'package:electric_client/satellite/client.dart';
-import 'package:electric_client/util/proto.dart';
+import 'package:electric_client/src/proto/satellite.pb.dart';
+import 'package:electric_client/src/satellite/client.dart';
+import 'package:electric_client/src/util/proto.dart';
 
 const _kPort = 30002;
 

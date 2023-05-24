@@ -1,16 +1,16 @@
 import 'dart:io';
 
-import 'package:electric_client/auth/mock.dart';
-import 'package:electric_client/electric/adapter.dart';
-import 'package:electric_client/drivers/sqlite3/sqlite3_adapter.dart';
-import 'package:electric_client/migrators/bundle.dart';
-import 'package:electric_client/migrators/migrators.dart';
-import 'package:electric_client/notifiers/mock.dart';
-import 'package:electric_client/satellite/config.dart';
-import 'package:electric_client/satellite/mock.dart';
-import 'package:electric_client/satellite/process.dart';
-import 'package:electric_client/util/random.dart';
-import 'package:electric_client/util/types.dart';
+import 'package:electric_client/src/auth/mock.dart';
+import 'package:electric_client/src/drivers/sqlite3/sqlite3_adapter.dart';
+import 'package:electric_client/src/electric/adapter.dart';
+import 'package:electric_client/src/migrators/bundle.dart';
+import 'package:electric_client/src/migrators/migrators.dart';
+import 'package:electric_client/src/notifiers/mock.dart';
+import 'package:electric_client/src/satellite/config.dart';
+import 'package:electric_client/src/satellite/mock.dart';
+import 'package:electric_client/src/satellite/process.dart';
+import 'package:electric_client/src/util/random.dart';
+import 'package:electric_client/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
@@ -90,6 +90,6 @@ void main() {
 
     await Future<void>.delayed(opts.minSnapshotWindow);
 
-    expect(notifier.notifications.length, numNotifications + 1); 
+    expect(notifier.notifications.length, numNotifications + 1);
   });
 }

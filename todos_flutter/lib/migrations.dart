@@ -1,4 +1,4 @@
-import 'package:electric_client/migrators/migrators.dart';
+import 'package:electric_client/electric_dart.dart';
 
 final todoMigrations = [
   Migration(

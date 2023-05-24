@@ -1,7 +1,7 @@
-import 'package:electric_client/notifiers/event.dart';
-import 'package:electric_client/notifiers/notifiers.dart';
-import 'package:electric_client/util/tablename.dart';
-import 'package:electric_client/util/types.dart' hide Change;
+import 'package:electric_client/src/notifiers/event.dart';
+import 'package:electric_client/src/notifiers/notifiers.dart';
+import 'package:electric_client/src/util/tablename.dart';
+import 'package:electric_client/src/util/types.dart' hide Change;
 import 'package:test/test.dart';
 
 void main() {
