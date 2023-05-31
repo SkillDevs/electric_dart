@@ -600,85 +600,94 @@ void main() {
     );
   });
 
-// TODO(dart): Implement test
-/*   test('concurrent updates take all changed values', async (t) => {
-  const { runMigrations, satellite, tableInfo } = t.context as any
-  await runMigrations()
-  await satellite._setAuthState()
-  const clientId = satellite['_authState']['clientId']
+  test('concurrent updates take all changed values', () async {
+    await runMigrations();
+    await satellite.setAuthState();
+    final clientId = satellite.authState!.clientId;
 
-  const localTs = new Date().getTime()
-  const incomingTs = localTs + 1
+    final localTs = DateTime.now().millisecondsSinceEpoch;
+    final incomingTs = localTs + 1;
 
-  const incoming = [
-    generateRemoteOplogEntry(
-      tableInfo,
-      'main',
-      'parent',
-      OPTYPES.update,
-      incomingTs,
-      genEncodedTags('remote', [incomingTs]),
-      {
-        id: 1,
-        value: 'remote', // the only modified column
-        other: 0,
-      },
-      {
-        id: 1,
-        value: 'local',
-        other: 0,
-      }
-    ),
-  ]
+    final incoming = [
+      generateRemoteOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.update,
+        incomingTs,
+        genEncodedTags(
+          'remote',
+          [DateTime.fromMillisecondsSinceEpoch(incomingTs)],
+        ),
+        newValues: {
+          "id": 1,
+          "value": 'remote', // the only modified column
+          "other": 0,
+        },
+        oldValues: {
+          "id": 1,
+          "value": 'local',
+          "other": 0,
+        },
+      ),
+    ];
 
-  const local = [
-    generateLocalOplogEntry(
-      tableInfo,
-      'main',
-      'parent',
-      OPTYPES.update,
-      localTs,
-      genEncodedTags(clientId, [localTs]),
-      {
-        id: 1,
-        value: 'local',
-        other: 1, // the only modified column
-      },
-      {
-        id: 1,
-        value: 'local',
-        other: 0,
-      }
-    ),
-  ]
+    final local = [
+      generateLocalOplogEntry(
+        tableInfo,
+        'main',
+        'parent',
+        OpType.update,
+        localTs,
+        genEncodedTags(
+          clientId,
+          [DateTime.fromMillisecondsSinceEpoch(localTs)],
+        ),
+        newValues: {
+          "id": 1,
+          "value": 'local',
+          "other": 1, // the only modified column
+        },
+        oldValues: {
+          "id": 1,
+          "value": 'local',
+          "other": 0,
+        },
+      ),
+    ];
 
-  const merged = satellite._mergeEntries(clientId, local, 'remote', incoming)
-  const item = merged['main.parent']['1']
+    final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
+    final item = merged['main.parent']!['1']!;
 
-  // The incoming entry modified the value of the `value` column to `'remote'`
-  // The local entry concurrently modified the value of the `other` column to 1.
-  // The merged entries should have `value = 'remote'` and `other = 1`.
-  t.deepEqual(item, {
-    namespace: 'main',
-    tablename: 'parent',
-    primaryKeyCols: { id: 1 },
-    optype: OPTYPES.upsert,
-    changes: {
-      value: { value: 'remote', timestamp: incomingTs },
-      other: { value: 1, timestamp: localTs },
-    },
-    fullRow: {
-      id: 1,
-      value: 'remote',
-      other: 1,
-    },
-    tags: [
-      generateTag(clientId, new Date(localTs)),
-      generateTag('remote', new Date(incomingTs)),
-    ],
-  })
-})
- */
+    // The incoming entry modified the value of the `value` column to `'remote'`
+    // The local entry concurrently modified the value of the `other` column to 1.
+    // The merged entries should have `value = 'remote'` and `other = 1`.
+    expect(
+      item,
+      ShadowEntryChanges(
+        namespace: 'main',
+        tablename: 'parent',
+        primaryKeyCols: {"id": 1},
+        optype: ChangesOpType.upsert,
+        changes: {
+          "value": OplogColumnChange('remote', incomingTs),
+          "other": OplogColumnChange(1, localTs),
+        },
+        fullRow: {
+          "id": 1,
+          "value": 'remote',
+          "other": 1,
+        },
+        tags: [
+          generateTag(clientId, DateTime.fromMillisecondsSinceEpoch(localTs)),
+          generateTag(
+            'remote',
+            DateTime.fromMillisecondsSinceEpoch(incomingTs),
+          ),
+        ],
+      ),
+    );
+  });
 
   test('merge incoming with empty local', () async {
     await runMigrations();

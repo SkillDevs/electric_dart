@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/src/migrators/migrators.dart';
+import 'package:electric_client/src/migrators/triggers.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
 import 'package:electric_client/src/proto/satellite.pbenum.dart';
 import 'package:electric_client/src/satellite/config.dart';
@@ -698,7 +699,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @visibleForTesting
-  void updateRelations(Relation rel) {
+  Future<void> updateRelations(Relation rel) async {
     if (rel.tableType == SatRelation_RelationType.TABLE) {
       // this relation may be for a newly created table
       // or for a column that was added to an existing table
@@ -888,27 +889,26 @@ class SatelliteProcess implements Satellite {
   }
 
   List<Statement> _generateTriggersForTable(MigrationTable tbl) {
-    return [];
-    // TODO(dart): implement
-    /* const table = {
+    final table = Table(
       tableName: tbl.name,
       namespace: 'main',
-      columns: tbl.columns.map((col) => col.name),
+      columns: tbl.columns.map((col) => col.name).toList(),
       primary: tbl.pks,
-      foreignKeys: tbl.fks.map((fk) => {
-        if (fk.fkCols.length !== 1 || fk.pkCols.length !== 1)
-          throw new Error(
-            'Satellite does not yet support compound foreign keys.'
-          )
-        return {
+      foreignKeys: tbl.fks.map((fk) {
+        if (fk.fkCols.length != 1 || fk.pkCols.length != 1) {
+          throw Exception(
+            'Satellite does not yet support compound foreign keys.',
+          );
+        }
+        return ForeignKey(
           table: fk.pkTable,
           childKey: fk.fkCols[0],
           parentKey: fk.pkCols[0],
-        }
-      }),
-    }
-    const fullTableName = table.namespace + '.' + table.tableName
-    return generateOplogTriggers(fullTableName, table) */
+        );
+      }).toList(),
+    );
+    final fullTableName = table.namespace + '.' + table.tableName;
+    return generateOplogTriggers(fullTableName, table);
   }
 
   @visibleForTesting
