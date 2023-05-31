@@ -1,9 +1,8 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:equatable/equatable.dart';
 import 'package:events_emitter/listener.dart';
 import 'package:fixnum/fixnum.dart';
-
-import 'package:electric_client/src/proto/satellite.pb.dart';
 
 typedef LSN = List<int>;
 typedef DbName = String;

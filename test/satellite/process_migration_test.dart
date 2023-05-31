@@ -421,8 +421,8 @@ void main() {
 
   test('apply migration and concurrent transaction', () async {
     final timestamp = txDate.millisecondsSinceEpoch;
-    final remoteA = 'remoteA';
-    final remoteB = 'remoteB';
+    const remoteA = 'remoteA';
+    const remoteB = 'remoteB';
     final txTagsRemoteA = [generateTag(remoteA, txDate)];
     final txTagsRemoteB = [generateTag(remoteB, txDate)];
 

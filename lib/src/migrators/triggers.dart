@@ -41,7 +41,9 @@ typedef Tables = Map<TableFullName, Table>;
 /// We return an array of SQL statements because the DB drivers
 /// do not accept queries containing more than one SQL statement.
 List<Statement> generateOplogTriggers(
-    TableFullName tableFullName, Table table) {
+  TableFullName tableFullName,
+  Table table,
+) {
   final tableName = table.tableName;
   final primary = table.primary;
   final columns = table.columns;

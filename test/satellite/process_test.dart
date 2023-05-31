@@ -902,8 +902,9 @@ void main() {
         opLogEntryToChange(parentInsertEntry, kTestRelations);
     final insertChildAndParentTx = Transaction(
       origin: 'remote',
-      commitTimestamp: Int64(DateTime.now()
-          .millisecondsSinceEpoch), // timestamp is not important for this test, it is only used to GC the oplog
+      commitTimestamp: Int64(
+        DateTime.now().millisecondsSinceEpoch,
+      ), // timestamp is not important for this test, it is only used to GC the oplog
       changes: [childInsertChange, parentInsertChange],
       lsn: [],
     );
@@ -1222,4 +1223,3 @@ void main() {
 }
 // Document if we support CASCADE https://www.sqlite.org/foreignkeys.html
 // Document that we do not maintian the order of execution of incoming operations and therefore we defer foreign key checks to the outermost commit
- 

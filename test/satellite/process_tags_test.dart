@@ -655,8 +655,9 @@ void main() {
         opLogEntryToChange(electricEntryConflict, kTestRelations);
     final tx = Transaction(
       origin: clientId,
-      commitTimestamp: Int64(DateTime.now()
-          .millisecondsSinceEpoch), // commit_timestamp doesn't matter for this test, it is only used to GC the oplog
+      commitTimestamp: Int64(
+        DateTime.now().millisecondsSinceEpoch,
+      ), // commit_timestamp doesn't matter for this test, it is only used to GC the oplog
       changes: [electricEntrySameChange, electricEntryConflictChange],
       lsn: [],
     );

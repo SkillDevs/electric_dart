@@ -331,7 +331,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   Either<SatelliteException, void> enqueueTransaction(
-      DataTransaction transaction) {
+    DataTransaction transaction,
+  ) {
     if (outbound.isReplicating != ReplicationStatus.active) {
       throw SatelliteException(
         SatelliteErrorCode.replicationNotStarted,
@@ -588,7 +589,9 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMissingRelations(
-      DataTransaction transaction, OutgoingReplication replication) {
+    DataTransaction transaction,
+    OutgoingReplication replication,
+  ) {
     for (var change in transaction.changes) {
       final relation = change.relation;
       if (!outbound.relations.containsKey(relation.id)) {
@@ -651,7 +654,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
   void handlePingReq() {
     logger.info(
-        "respond to ping with last ack ${toHexString(inbound.ackLsn ?? [])}");
+      "respond to ping with last ack ${toHexString(inbound.ackLsn ?? [])}",
+    );
     final pong = SatPingResp(lsn: inbound.ackLsn);
     sendMessage(pong);
   }
