@@ -12,6 +12,7 @@ import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/extension.dart';
+import 'package:electric_client/src/util/hex.dart';
 import 'package:electric_client/src/util/proto.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
@@ -41,7 +42,7 @@ class SatelliteClient extends EventEmitter implements Client {
   Socket? socket;
 
   late Replication inbound;
-  late Replication outbound;
+  late OutgoingReplication outbound;
 
   Throttle<void>? throttledPushTransaction;
   void Function(Uint8List bytes)? socketHandler;
@@ -52,16 +53,16 @@ class SatelliteClient extends EventEmitter implements Client {
     required this.notifier,
     required this.opts,
   }) {
-    inbound = resetReplication(null, null, null);
-    outbound = resetReplication(null, null, null);
+    inbound = resetReplication<Transaction>(null, null, null);
+    outbound = resetReplication<DataTransaction>(null, null, null);
   }
 
-  Replication resetReplication(
+  BaseReplication<TransactionType> resetReplication<TransactionType>(
     LSN? enqueued,
     LSN? ack,
     ReplicationStatus? isReplicating,
   ) {
-    return Replication(
+    return BaseReplication<TransactionType>(
       authenticated: false,
       isReplicating: isReplicating ?? ReplicationStatus.stopped,
       relations: {},
@@ -71,18 +72,22 @@ class SatelliteClient extends EventEmitter implements Client {
     );
   }
 
-  DecodedMessage toMessage(Uint8List data) {
+  Either<SatelliteException, DecodedMessage> _toMessage(Uint8List data) {
     final code = data[0];
     final type = getMsgFromCode(code);
 
     if (type == null) {
-      throw SatelliteException(
-        SatelliteErrorCode.unexpectedMessageType,
-        "$code",
+      return Left(
+        SatelliteException(
+          SatelliteErrorCode.unexpectedMessageType,
+          "$code",
+        ),
       );
     }
 
-    return DecodedMessage(decodeMessage(data.sublist(1), type), type);
+    return Right(
+      DecodedMessage(decodeMessage(data.sublist(1), type), type),
+    );
   }
 
   IncomingHandler getIncomingHandlerForMessage(SatMsgType msgType) {
@@ -268,23 +273,24 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleIncoming(Uint8List data) {
-    late final DecodedMessage messageInfo;
-    try {
-      // TODO(dart): Use union instead of throwing
-      messageInfo = toMessage(data);
-    } catch (e) {
-      // this.emit('error', messageOrError)
-      emit("error", messageInfo);
-      return;
-    }
+    final messageOrError = _toMessage(data);
+    logger.info(
+      "Received message ${messageOrError.match((error) => error.toString(), (a) => a.msgType.name)}",
+    );
 
-    logger.info("Received message ${messageInfo.msg.runtimeType}");
-    final handler = getIncomingHandlerForMessage(messageInfo.msgType);
-    final response = handler.handle(messageInfo.msg);
+    messageOrError.match(
+      (error) {
+        emit("error", error);
+      },
+      (messageInfo) {
+        final handler = getIncomingHandlerForMessage(messageInfo.msgType);
+        final response = handler.handle(messageInfo.msg);
 
-    if (handler.isRpc) {
-      emit("rpc_response", response);
-    }
+        if (handler.isRpc) {
+          emit("rpc_response", response);
+        }
+      },
+    );
   }
 
   @override
@@ -317,7 +323,16 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Either<SatelliteException, void> enqueueTransaction(Transaction transaction) {
+  void subscribeToRelations(
+    void Function(Relation relation) callback,
+  ) {
+    on<Relation>('relation', callback);
+  }
+
+  @override
+  Either<SatelliteException, void> enqueueTransaction(
+    DataTransaction transaction,
+  ) {
     if (outbound.isReplicating != ReplicationStatus.active) {
       throw SatelliteException(
         SatelliteErrorCode.replicationNotStarted,
@@ -548,7 +563,6 @@ class SatelliteClient extends EventEmitter implements Client {
       sendMissingRelations(next, outbound);
       final SatOpLog satOpLog = transactionToSatOpLog(next);
 
-      // console.log(`sending message with lsn ${JSON.stringify(next.lsn)}`)
       sendMessage(satOpLog);
       emit<AckLsnEvent>('ack_lsn', AckLsnEvent(next.lsn, AckType.localSend));
     }
@@ -574,7 +588,10 @@ class SatelliteClient extends EventEmitter implements Client {
     removeEventListener(eventListener);
   }
 
-  void sendMissingRelations(Transaction transaction, Replication replication) {
+  void sendMissingRelations(
+    DataTransaction transaction,
+    OutgoingReplication replication,
+  ) {
     for (var change in transaction.changes) {
       final relation = change.relation;
       if (!outbound.relations.containsKey(relation.id)) {
@@ -636,7 +653,9 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handlePingReq() {
-    logger.info("respond to ping with last ack ${inbound.ackLsn}");
+    logger.info(
+      "respond to ping with last ack ${toHexString(inbound.ackLsn ?? [])}",
+    );
     final pong = SatPingResp(lsn: inbound.ackLsn);
     sendMessage(pong);
   }
@@ -670,11 +689,18 @@ class SatelliteClient extends EventEmitter implements Client {
       table: message.tableName,
       tableType: message.tableType,
       columns: message.columns
-          .map((c) => RelationColumn(name: c.name, type: c.type))
+          .map(
+            (c) => RelationColumn(
+              name: c.name,
+              type: c.type,
+              primaryKey: c.primaryKey,
+            ),
+          )
           .toList(),
     );
 
     inbound.relations[relation.id] = relation;
+    emit('relation', relation);
   }
 
   void handleTransaction(SatOpLog message) {
@@ -707,7 +733,7 @@ class SatelliteClient extends EventEmitter implements Client {
       final lastTxnIdx = replication.transactions.length - 1;
       if (op.hasCommit()) {
         final lastTx = replication.transactions[lastTxnIdx];
-        final Transaction transaction = Transaction(
+        final transaction = Transaction(
           commitTimestamp: lastTx.commitTimestamp,
           lsn: lastTx.lsn,
           changes: lastTx.changes,
@@ -734,9 +760,9 @@ class SatelliteClient extends EventEmitter implements Client {
           );
         }
 
-        final change = Change(
+        final change = DataChange(
           relation: rel,
-          type: ChangeType.insert,
+          type: DataChangeType.insert,
           record: deserializeRow(op.insert.getNullableRowData(), rel),
           tags: op.insert.tags,
         );
@@ -757,9 +783,9 @@ class SatelliteClient extends EventEmitter implements Client {
           );
         }
 
-        final change = Change(
+        final change = DataChange(
           relation: rel,
-          type: ChangeType.update,
+          type: DataChangeType.update,
           record: deserializeRow(rowData, rel),
           oldRecord: deserializeRow(oldRowData, rel),
           tags: op.update.tags,
@@ -780,18 +806,31 @@ class SatelliteClient extends EventEmitter implements Client {
 
         final oldRowData = op.delete.getNullableOldRowData();
 
-        final change = Change(
+        final change = DataChange(
           relation: rel,
-          type: ChangeType.delete,
+          type: DataChangeType.delete,
           oldRecord: deserializeRow(oldRowData, rel),
           tags: op.delete.tags,
         );
         replication.transactions[lastTxnIdx].changes.add(change);
       }
+
+      if (op.hasMigrate()) {
+        final stmts = op.migrate.stmts;
+
+        for (final stmt in stmts) {
+          final change = SchemaChange(
+            table: op.migrate.table,
+            migrationType: stmt.type,
+            sql: stmt.sql,
+          );
+          replication.transactions[lastTxnIdx].changes.add(change);
+        }
+      }
     }
   }
 
-  SatOpLog transactionToSatOpLog(Transaction transaction) {
+  SatOpLog transactionToSatOpLog(DataTransaction transaction) {
     final List<SatTransOp> ops = [
       SatTransOp(
         begin: SatOpBegin(
@@ -818,7 +857,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
       late final SatTransOp changeOp;
       switch (change.type) {
-        case ChangeType.delete:
+        case DataChangeType.delete:
           changeOp = SatTransOp(
             delete: SatOpDelete(
               oldRowData: oldRecord,
@@ -827,7 +866,7 @@ class SatelliteClient extends EventEmitter implements Client {
             ),
           );
           break;
-        case ChangeType.insert:
+        case DataChangeType.insert:
           changeOp = SatTransOp(
             insert: SatOpInsert(
               rowData: record,
@@ -836,7 +875,7 @@ class SatelliteClient extends EventEmitter implements Client {
             ),
           );
           break;
-        case ChangeType.update:
+        case DataChangeType.update:
           changeOp = SatTransOp(
             update: SatOpUpdate(
               rowData: record,

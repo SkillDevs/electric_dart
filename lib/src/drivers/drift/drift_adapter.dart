@@ -4,10 +4,9 @@ import 'package:drift/drift.dart';
 import 'package:electric_client/src/electric/adapter.dart' as adp;
 import 'package:electric_client/src/notifiers/notifiers.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
-import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart';
 
-class DriftAdapter extends adp.DatabaseAdapter {
+class DriftAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
   final DatabaseConnectionUser db;
 
   DriftAdapter(this.db);
@@ -44,12 +43,6 @@ class DriftAdapter extends adp.DatabaseAdapter {
 
     // TODO(dart): Should runInTransaction return the rows affected?
     return RunResult(rowsAffected: 0);
-  }
-
-  @override
-  List<QualifiedTablename> tableNames(Statement statement) {
-    // TODO(dart): implement tableNames
-    throw UnimplementedError();
   }
 
   @override

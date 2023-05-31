@@ -87,13 +87,13 @@ class OplogEntry with EquatableMixin {
       ];
 }
 
-OpType changeTypeToOpType(ChangeType opTypeStr) {
+OpType changeTypeToOpType(DataChangeType opTypeStr) {
   switch (opTypeStr) {
-    case ChangeType.insert:
+    case DataChangeType.insert:
       return OpType.insert;
-    case ChangeType.update:
+    case DataChangeType.update:
       return OpType.update;
-    case ChangeType.delete:
+    case DataChangeType.delete:
       return OpType.delete;
   }
 }
@@ -117,7 +117,7 @@ OpType opTypeStrToOpType(String str) {
 }
 
 List<OplogEntry> fromTransaction(
-  Transaction transaction,
+  DataTransaction transaction,
   RelationsCache relations,
 ) {
   return transaction.changes.map((t) {
@@ -149,7 +149,7 @@ List<OplogEntry> fromTransaction(
   }).toList();
 }
 
-List<Transaction> toTransactions(
+List<DataTransaction> toTransactions(
   List<OplogEntry> opLogEntries,
   RelationsCache relations,
 ) {
@@ -161,31 +161,7 @@ List<Transaction> toTransactions(
     return Int64(DateTime.parse(timestamp).millisecondsSinceEpoch);
   }
 
-  Change opLogEntryToChange(OplogEntry entry) {
-    Map<String, Object?>? record;
-    Map<String, Object?>? oldRecord;
-    if (entry.newRow != null) {
-      record = json.decode(entry.newRow!) as Map<String, Object?>;
-    }
-
-    if (entry.oldRow != null) {
-      oldRecord = json.decode(entry.oldRow!) as Map<String, Object?>;
-    }
-
-    // FIXME: We should not loose UPDATE information here, as otherwise
-    // it will be identical to setting all values in a transaction, instead
-    // of updating values (different CR outcome)
-    return Change(
-      type:
-          entry.optype == OpType.delete ? ChangeType.delete : ChangeType.insert,
-      relation: relations[entry.tablename]!,
-      record: record,
-      oldRecord: oldRecord,
-      tags: decodeTags(entry.clearTags),
-    );
-  }
-
-  final Transaction init = Transaction(
+  final init = DataTransaction(
     commitTimestamp: to_commit_timestamp(opLogEntries[0].timestamp),
     lsn: numberToBytes(opLogEntries[0].rowid),
     changes: [],
@@ -198,7 +174,7 @@ List<Transaction> toTransactions(
 
       final nextTs = to_commit_timestamp(txn.timestamp);
       if (nextTs != currTxn.commitTimestamp) {
-        final nextTxn = Transaction(
+        final nextTxn = DataTransaction(
           commitTimestamp: to_commit_timestamp(txn.timestamp),
           lsn: numberToBytes(txn.rowid),
           changes: [],
@@ -207,7 +183,7 @@ List<Transaction> toTransactions(
         currTxn = nextTxn;
       }
 
-      final change = opLogEntryToChange(txn);
+      final change = opLogEntryToChange(txn, relations);
       currTxn.changes.add(change);
       currTxn.lsn = numberToBytes(txn.rowid);
       return acc;
@@ -308,6 +284,7 @@ ShadowTableChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
       existing.optype = entryChanges.optype;
       for (final entry in entryChanges.changes.entries) {
         existing.changes[entry.key] = entry.value;
+        existing.fullRow[entry.key] = entry.value.value;
       }
     }
 
@@ -396,6 +373,9 @@ OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
 // Convert an `OplogEntry` to a `ShadowEntryChanges` structure,
 // parsing out the changed columns from the oldRow and the newRow.
 ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
+  final Row oldRow = _decodeRow(entry.oldRow);
+  final Row newRow = _decodeRow(entry.newRow);
+
   final result = ShadowEntryChanges(
     namespace: entry.namespace,
     tablename: entry.tablename,
@@ -405,11 +385,10 @@ ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
         ? ChangesOpType.delete
         : ChangesOpType.upsert,
     changes: {},
+    // if it is a delete, then `newRow` is empty so the full row is the old row
+    fullRow: entry.optype == OpType.delete ? oldRow : newRow,
     tags: decodeTags(entry.clearTags),
   );
-
-  final Row oldRow = _decodeRow(entry.oldRow);
-  final Row newRow = _decodeRow(entry.newRow);
 
   final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
 
@@ -438,6 +417,7 @@ class ShadowEntryChanges with EquatableMixin {
   final Map<String, Object> primaryKeyCols;
   ChangesOpType optype;
   OplogColumnChanges changes;
+  Row fullRow;
   List<Tag> tags;
 
   ShadowEntryChanges({
@@ -446,12 +426,13 @@ class ShadowEntryChanges with EquatableMixin {
     required this.primaryKeyCols,
     required this.optype,
     required this.changes,
+    required this.fullRow,
     required this.tags,
   });
 
   @override
   List<Object?> get props =>
-      [namespace, tablename, primaryKeyCols, optype, changes, tags];
+      [namespace, tablename, primaryKeyCols, optype, changes, fullRow, tags];
 }
 
 String primaryKeyToStr(Map<String, Object> primaryKeyJson) {
@@ -487,4 +468,35 @@ String encodeTags(List<Tag> tags) {
 
 List<Tag> decodeTags(String tags) {
   return (json.decode(tags) as List<dynamic>).cast<Tag>();
+}
+
+DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
+  Map<String, Object?>? record;
+  Map<String, Object?>? oldRecord;
+  if (entry.newRow != null) {
+    record = json.decode(entry.newRow!) as Map<String, Object?>;
+  }
+
+  if (entry.oldRow != null) {
+    oldRecord = json.decode(entry.oldRow!) as Map<String, Object?>;
+  }
+
+  final relation = relations[entry.tablename];
+
+  if (relation == null) {
+    throw Exception("Could not find relation for ${entry.tablename}");
+  }
+
+  // FIXME: We should not loose UPDATE information here, as otherwise
+  // it will be identical to setting all values in a transaction, instead
+  // of updating values (different CR outcome)
+  return DataChange(
+    type: entry.optype == OpType.delete
+        ? DataChangeType.delete
+        : DataChangeType.insert,
+    relation: relation,
+    record: record,
+    oldRecord: oldRecord,
+    tags: decodeTags(entry.clearTags),
+  );
 }

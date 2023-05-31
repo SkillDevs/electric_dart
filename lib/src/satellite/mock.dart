@@ -171,12 +171,17 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
+  void subscribeToRelations(void Function(Relation relation) callback) {}
+
+  @override
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   ) {}
 
   @override
-  Either<SatelliteException, void> enqueueTransaction(Transaction transaction) {
+  Either<SatelliteException, void> enqueueTransaction(
+    DataTransaction transaction,
+  ) {
     outboundSent = transaction.lsn;
 
     emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.localSend));

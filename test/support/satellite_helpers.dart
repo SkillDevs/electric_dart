@@ -24,7 +24,7 @@ TableInfo initTableInfo() {
       primaryKey: ['id'],
       columns: ['id', 'parent'],
     ),
-    'main.items': TableSchema(
+    'main.Items': TableSchema(
       primaryKey: ['value'],
       columns: ['value', 'other'],
     ),
@@ -122,8 +122,8 @@ OplogEntry generateRemoteOplogEntry(
     tablename: tablename,
     optype: optype,
     rowid: timestamp,
-    newRow: json.encode(newRow.columns),
-    oldRow: json.encode(oldRow.columns),
+    newRow: newRow.columns == null ? null : json.encode(newRow.columns),
+    oldRow: oldRow.columns == null ? null : json.encode(oldRow.columns),
     primaryKey:
         json.encode({...oldRow.primaryKey ?? {}, ...newRow.primaryKey ?? {}}),
     timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp).toISOStringUTC(),

@@ -1,85 +1,42 @@
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:electric_client/src/auth/mock.dart';
-import 'package:electric_client/src/electric/adapter.dart';
-import 'package:electric_client/src/drivers/sqlite3/sqlite3_adapter.dart';
-import 'package:electric_client/src/migrators/bundle.dart';
+import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
-import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/satellite/mock.dart';
 import 'package:electric_client/src/satellite/oplog.dart';
 import 'package:electric_client/src/satellite/process.dart';
 import 'package:electric_client/src/util/common.dart';
-import 'package:electric_client/src/util/random.dart';
 import 'package:electric_client/src/util/types.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
-import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
-import '../util/io.dart';
+import 'common.dart';
 
-final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: const Duration(milliseconds: 40),
-  pollingInterval: const Duration(milliseconds: 200),
-);
+late SatelliteTestContext context;
 
-final satelliteConfig = SatelliteConfig(
-  app: 'test',
-  env: 'default',
-);
-
-late Database db;
-late DatabaseAdapter adapter;
-late Migrator migrator;
-late MockNotifier notifier;
-late TableInfo tableInfo;
-late int timestamp;
-late SatelliteProcess satellite;
-late MockSatelliteClient client;
-late String dbName;
-
-Future<void> runMigrations() async {
-  await migrator.up();
-}
+Database get db => context.db;
+DatabaseAdapter get adapter => context.adapter;
+Migrator get migrator => context.migrator;
+MockNotifier get notifier => context.notifier;
+TableInfo get tableInfo => context.tableInfo;
+SatelliteProcess get satellite => context.satellite;
+MockSatelliteClient get client => context.client;
+String get dbName => context.dbName;
 
 void main() {
   setUp(() async {
-    await Directory(".tmp").create(recursive: true);
-
-    dbName = '.tmp/test-${randomValue()}.db';
-    db = sqlite3.open(dbName);
-    adapter = SqliteAdapter(db);
-    migrator = BundleMigrator(adapter: adapter, migrations: kTestMigrations);
-    notifier = MockNotifier(dbName);
-    client = MockSatelliteClient();
-    final console = MockConsoleClient();
-    satellite = SatelliteProcess(
-      dbName: dbName,
-      adapter: adapter,
-      migrator: migrator,
-      notifier: notifier,
-      client: client,
-      console: console,
-      config: satelliteConfig,
-      opts: opts,
-    );
-
-    tableInfo = initTableInfo();
-    timestamp = DateTime.now().millisecondsSinceEpoch;
+    context = await makeContext();
   });
 
   tearDown(() async {
-    await removeFile(dbName);
-    await removeFile("$dbName-journal");
-
-    await satellite.stop();
+    await context.cleanAndStopSatellite();
   });
 
   test('basic rules for setting tags', () async {
-    await runMigrations();
+    await context.runMigrations();
 
     await satellite.setAuthState(null);
     final clientId = satellite.authState!.clientId;
@@ -140,7 +97,7 @@ void main() {
   });
 
   test('TX1=INSERT, TX2=DELETE, TX3=INSERT, ack TX1', () async {
-    await runMigrations();
+    await context.runMigrations();
     await satellite.setAuthState(null);
 
     final clientId = satellite.authState!.clientId;
@@ -223,14 +180,19 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.applyTransactionInternal(
-      clientId,
-      txDate1,
-      [ackEntry],
-      [],
-    );
+    final ackDataChange = opLogEntryToChange(ackEntry, kTestRelations);
 
-    // validat that garbage collection have triggered
+    // satellite must be aware of the relations in order to turn the `ackDataChange` DataChange into an OpLogEntry
+    satellite.relations = kTestRelations;
+    final tx = Transaction(
+      origin: clientId,
+      commitTimestamp: Int64(txDate1.millisecondsSinceEpoch),
+      changes: [ackDataChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(tx);
+
+    // validate that garbage collection has been triggered
     expect(2, (await satellite.getEntries()).length);
 
     final shadow = await satellite.getOplogShadowEntry();
@@ -243,7 +205,7 @@ void main() {
 
   test('remote tx (INSERT) concurrently with local tx (INSERT -> DELETE)',
       () async {
-    await runMigrations();
+    await context.runMigrations();
     await satellite.setAuthState(null);
 
     final List<Statement> stmts = [];
@@ -300,8 +262,26 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.apply([prevEntry], 'remote', []);
-    await satellite.apply([nextEntry], 'remote', []);
+// satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
+    satellite.relations = kTestRelations;
+
+    final prevChange = opLogEntryToChange(prevEntry, kTestRelations);
+    final prevTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(prevTs),
+      changes: [prevChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(prevTx);
+
+    final nextChange = opLogEntryToChange(nextEntry, kTestRelations);
+    final nextTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(nextTs),
+      changes: [nextChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(nextTx);
 
     final shadow = await satellite.getOplogShadowEntry();
     final expectedShadow = [
@@ -344,7 +324,7 @@ void main() {
 
   test('remote tx (INSERT) concurrently with 2 local txses (INSERT -> DELETE)',
       () async {
-    await runMigrations();
+    await context.runMigrations();
     await satellite.setAuthState(null);
 
     List<Statement> stmts = [];
@@ -406,8 +386,26 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.apply([prevEntry], 'remote', []);
-    await satellite.apply([nextEntry], 'remote', []);
+// satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s in `_applyTransaction`
+    satellite.relations = kTestRelations;
+
+    final prevChange = opLogEntryToChange(prevEntry, kTestRelations);
+    final prevTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(prevTs.millisecondsSinceEpoch),
+      changes: [prevChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(prevTx);
+
+    final nextChange = opLogEntryToChange(nextEntry, kTestRelations);
+    final nextTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(nextTs.millisecondsSinceEpoch),
+      changes: [nextChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(nextTx);
 
     final shadow = await satellite.getOplogShadowEntry();
     final expectedShadow = [
@@ -443,7 +441,7 @@ void main() {
 
   test('remote tx (INSERT) concurrently with local tx (INSERT -> UPDATE)',
       () async {
-    await runMigrations();
+    await context.runMigrations();
     await satellite.setAuthState(null);
     final clientId = satellite.authState!.clientId;
     final stmts = <Statement>[];
@@ -513,8 +511,26 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.apply([prevEntry], 'remote', []);
-    await satellite.apply([nextEntry], 'remote', []);
+    // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s in `_applyTransaction`
+    satellite.relations = kTestRelations;
+
+    final prevChange = opLogEntryToChange(prevEntry, kTestRelations);
+    final prevTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(prevTs.millisecondsSinceEpoch),
+      changes: [prevChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(prevTx);
+
+    final nextChange = opLogEntryToChange(nextEntry, kTestRelations);
+    final nextTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(nextTs.millisecondsSinceEpoch),
+      changes: [nextChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(nextTx);
 
     final shadow = await satellite.getOplogShadowEntry();
     final expectedShadow = [
@@ -564,7 +580,7 @@ void main() {
   test('origin tx (INSERT) concurrently with local txses (INSERT -> DELETE)',
       () async {
     //
-    await runMigrations();
+    await context.runMigrations();
     await satellite.setAuthState(null);
     final clientId = satellite.authState!.clientId;
 
@@ -597,12 +613,14 @@ void main() {
     //console.log(entries)
 
     // For this key we receive transaction which was older
+    final electricEntrySameTs =
+        DateTime.parse(entries[0].timestamp).millisecondsSinceEpoch;
     final electricEntrySame = generateRemoteOplogEntry(
       tableInfo,
       entries[0].namespace,
       entries[0].tablename,
       OpType.insert,
-      DateTime.parse(entries[0].timestamp).millisecondsSinceEpoch,
+      electricEntrySameTs,
       genEncodedTags(clientId, [txDate1]),
       newValues: json.decode(entries[0].newRow!) as Map<String, Object?>,
       oldValues: {},
@@ -610,12 +628,14 @@ void main() {
 
     // For this key we had concurrent insert transaction from another node `remote`
     // with same timestamp
+    final electricEntryConflictTs =
+        DateTime.parse(entries[1].timestamp).millisecondsSinceEpoch;
     final electricEntryConflict = generateRemoteOplogEntry(
       tableInfo,
       entries[1].namespace,
       entries[1].tablename,
       OpType.insert,
-      DateTime.parse(entries[1].timestamp).millisecondsSinceEpoch,
+      electricEntryConflictTs,
       encodeTags([
         generateTag(clientId, txDate1),
         generateTag('remote', txDate1),
@@ -624,11 +644,24 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.apply(
-      [electricEntrySame, electricEntryConflict],
-      clientId,
-      [],
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s in `_applyTransaction`
+
+    final electricEntrySameChange = opLogEntryToChange(
+      electricEntrySame,
+      kTestRelations,
     );
+    final electricEntryConflictChange =
+        opLogEntryToChange(electricEntryConflict, kTestRelations);
+    final tx = Transaction(
+      origin: clientId,
+      commitTimestamp: Int64(
+        DateTime.now().millisecondsSinceEpoch,
+      ), // commit_timestamp doesn't matter for this test, it is only used to GC the oplog
+      changes: [electricEntrySameChange, electricEntryConflictChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(tx);
 
     final shadow = await satellite.getOplogShadowEntry();
     final expectedShadow = [
@@ -649,7 +682,7 @@ void main() {
   });
 
   test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', () async {
-    await runMigrations();
+    await context.runMigrations();
     await satellite.setAuthState(null);
     final clientId = satellite.authState!.clientId;
     final txDate1 = DateTime.now();
@@ -668,12 +701,13 @@ void main() {
       oldValues: {},
     );
 
+    final deleteDate = txDate1.millisecondsSinceEpoch + 1;
     final deleteEntry = generateRemoteOplogEntry(
       tableInfo,
       'main',
       'parent',
       OpType.delete,
-      txDate1.millisecondsSinceEpoch + 1,
+      deleteDate,
       genEncodedTags('remote', []),
       newValues: {
         "id": 1,
@@ -682,7 +716,17 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.apply([insertEntry], clientId, []);
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s in `_applyTransaction`
+
+    final insertChange = opLogEntryToChange(insertEntry, kTestRelations);
+    final insertTx = Transaction(
+      origin: clientId,
+      commitTimestamp: Int64(txDate1.millisecondsSinceEpoch),
+      changes: [insertChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(insertTx);
 
     var shadow = await satellite.getOplogShadowEntry();
     final expectedShadow = [
@@ -695,7 +739,14 @@ void main() {
     ];
     expect(shadow, expectedShadow);
 
-    await satellite.apply([deleteEntry], clientId, []);
+    final deleteChange = opLogEntryToChange(deleteEntry, kTestRelations);
+    final deleteTx = Transaction(
+      origin: clientId,
+      commitTimestamp: Int64(deleteDate),
+      changes: [deleteChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(deleteTx);
 
     shadow = await satellite.getOplogShadowEntry();
     expect(<ShadowEntry>[], shadow);

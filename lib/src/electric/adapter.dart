@@ -24,6 +24,15 @@ abstract class DatabaseAdapter {
   List<QualifiedTablename> tableNames(Statement statement);
 }
 
+ class TableNameImpl {
+  List<QualifiedTablename> tableNames(Statement statement) {
+    // TODO(dart): implement tableNames
+    throw UnimplementedError();
+    //return parseTableNames(sql);
+  }
+}
+
+
 abstract class Transaction {
   void run(
     Statement statement,

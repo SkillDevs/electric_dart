@@ -46,7 +46,7 @@ void main() {
 
     target.subscribeToDataChanges((x) => {notifications.add(x)});
 
-    const qualifiedTablename = QualifiedTablename('main', 'items');
+    const qualifiedTablename = QualifiedTablename('main', 'Items');
 
     source.actuallyChanged(
       'test.db',
@@ -66,7 +66,7 @@ void main() {
     t1.subscribeToDataChanges((x) => {notifications.add(x)});
     t2.subscribeToDataChanges((x) => {notifications.add(x)});
 
-    const qualifiedTablename = QualifiedTablename('main', 'items');
+    const qualifiedTablename = QualifiedTablename('main', 'Items');
     final changes = [Change(qualifiedTablename: qualifiedTablename)];
 
     source.actuallyChanged('foo.db', changes);

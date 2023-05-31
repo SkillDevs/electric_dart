@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:equatable/equatable.dart';
 import 'package:events_emitter/listener.dart';
@@ -50,15 +51,15 @@ enum SatelliteErrorCode {
   authError,
 }
 
-class Replication {
+class BaseReplication<TransactionType> {
   bool authenticated;
   ReplicationStatus isReplicating;
   Map<int, Relation> relations;
   LSN? ackLsn;
   LSN? enqueuedLsn;
-  List<Transaction> transactions;
+  List<TransactionType> transactions;
 
-  Replication({
+  BaseReplication({
     required this.authenticated,
     required this.isReplicating,
     required this.relations,
@@ -67,8 +68,8 @@ class Replication {
     this.enqueuedLsn,
   });
 
-  Replication clone() {
-    return Replication(
+  BaseReplication<TransactionType> clone() {
+    return BaseReplication<TransactionType>(
       authenticated: authenticated,
       isReplicating: isReplicating,
       relations: relations,
@@ -78,6 +79,9 @@ class Replication {
     );
   }
 }
+
+typedef Replication = BaseReplication<Transaction>;
+typedef OutgoingReplication = BaseReplication<DataTransaction>;
 
 class LogPositions {
   final LSN ack;
@@ -89,15 +93,16 @@ class LogPositions {
   });
 }
 
-class Transaction with EquatableMixin {
+class BaseTransaction<ChangeT> with EquatableMixin {
   final Int64 commitTimestamp;
   LSN lsn;
-  final List<Change> changes;
 
   // This field is only set by transactions coming from Electric
   String? origin;
 
-  Transaction({
+  final List<ChangeT> changes;
+
+  BaseTransaction({
     required this.commitTimestamp,
     required this.lsn,
     required this.changes,
@@ -105,10 +110,25 @@ class Transaction with EquatableMixin {
   });
 
   @override
-  List<Object?> get props => [commitTimestamp, lsn, changes, origin];
+  List<Object?> get props => [commitTimestamp, lsn, origin, changes];
+
+  BaseTransaction<ChangeT> clone() {
+    return BaseTransaction<ChangeT>(
+      commitTimestamp: commitTimestamp,
+      lsn: lsn,
+      changes: changes,
+      origin: origin,
+    );
+  }
 }
 
-enum ChangeType {
+typedef Transaction = BaseTransaction<Change>;
+
+// A transaction whose changes are only DML statements
+// i.e. the transaction does not contain migrations
+typedef DataTransaction = BaseTransaction<DataChange>;
+
+enum DataChangeType {
   insert,
   update,
   delete,
@@ -118,14 +138,35 @@ typedef Record = Map<String, Object?>;
 
 typedef Tag = String;
 
-class Change with EquatableMixin {
+abstract class Change {}
+
+typedef MigrationTable = SatOpMigrate_Table;
+
+enum ChangeType {
+  dml, // Data
+  ddl, // Schema
+}
+
+class SchemaChange extends Change {
+  final MigrationTable table; // table affected by the schema change
+  final SatOpMigrate_Type migrationType;
+  final String sql;
+
+  SchemaChange({
+    required this.table,
+    required this.migrationType,
+    required this.sql,
+  });
+}
+
+class DataChange extends Change with EquatableMixin {
   final Relation relation;
-  final ChangeType type;
+  final DataChangeType type;
   final Record? record;
   final Record? oldRecord;
   final List<Tag> tags;
 
-  Change({
+  DataChange({
     required this.relation,
     required this.type,
     this.record,
@@ -157,6 +198,22 @@ class Relation {
     required this.tableType,
     required this.columns,
   });
+
+  Relation copyWith({
+    int? id,
+    String? schema,
+    String? table,
+    SatRelation_RelationType? tableType,
+    List<RelationColumn>? columns,
+  }) {
+    return Relation(
+      id: id ?? this.id,
+      schema: schema ?? this.schema,
+      table: table ?? this.table,
+      tableType: tableType ?? this.tableType,
+      columns: columns ?? this.columns,
+    );
+  }
 }
 
 class RelationColumn {
