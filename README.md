@@ -10,7 +10,7 @@ Dart client implementation for [Electric](https://electric-sql.com/) based on co
 
 ### Run the Todos example
 
-Flutter version used: 3.7.X
+Flutter version used: 3.10.X
 
 This demo is compatible with the `todoMVC` official example [Link](https://github.com/electric-sql/examples).
 
