@@ -1,20 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:electric_client/src/auth/mock.dart';
-import 'package:electric_client/src/drivers/sqlite3/sqlite3_adapter.dart'
-    hide Transaction;
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
-import 'package:electric_client/src/migrators/bundle.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
-import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/satellite/mock.dart';
 import 'package:electric_client/src/satellite/oplog.dart';
 import 'package:electric_client/src/satellite/process.dart';
 import 'package:electric_client/src/util/common.dart';
-import 'package:electric_client/src/util/random.dart';
 import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
 import 'package:electric_client/src/util/types.dart' as t;
@@ -22,67 +15,33 @@ import 'package:fixnum/fixnum.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
-import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
-import '../util/io.dart';
 import '../util/sqlite_errors.dart';
 import 'common.dart';
 
-late Database db;
-late DatabaseAdapter adapter;
-late Migrator migrator;
-late MockNotifier notifier;
-late TableInfo tableInfo;
-late DateTime timestamp;
-late SatelliteProcess satellite;
-late MockSatelliteClient client;
-late String dbName;
+late SatelliteTestContext context;
 
 Future<void> runMigrations() async {
-  await migrator.up();
+  await context.runMigrations();
 }
 
-final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: const Duration(milliseconds: 40),
-  pollingInterval: const Duration(milliseconds: 200),
-);
-
-final satelliteConfig = SatelliteConfig(
-  app: 'test',
-  env: 'default',
-);
+Database get db => context.db;
+DatabaseAdapter get adapter => context.adapter;
+Migrator get migrator => context.migrator;
+MockNotifier get notifier => context.notifier;
+TableInfo get tableInfo => context.tableInfo;
+DateTime get timestamp => context.timestamp;
+SatelliteProcess get satellite => context.satellite;
+MockSatelliteClient get client => context.client;
+String get dbName => context.dbName;
 
 void main() {
   setUp(() async {
-    await Directory(".tmp").create(recursive: true);
-
-    dbName = '.tmp/test-${randomValue()}.db';
-    db = sqlite3.open(dbName);
-    adapter = SqliteAdapter(db);
-    migrator = BundleMigrator(adapter: adapter, migrations: kTestMigrations);
-    notifier = MockNotifier(dbName);
-    client = MockSatelliteClient();
-    final console = MockConsoleClient();
-    satellite = SatelliteProcess(
-      dbName: dbName,
-      adapter: adapter,
-      migrator: migrator,
-      notifier: notifier,
-      client: client,
-      console: console,
-      config: satelliteConfig,
-      opts: opts,
-    );
-
-    tableInfo = initTableInfo();
-    timestamp = DateTime.now();
+    context = await makeContext();
   });
 
   tearDown(() async {
-    await removeFile(dbName);
-    await removeFile("$dbName-journal");
-
-    await satellite.stop();
+    await context.cleanAndStopSatellite();
   });
 
   test('start creates system tables', () async {
@@ -300,6 +259,11 @@ void main() {
           "value": OplogColumnChange('local', localTimestamp),
           "other": OplogColumnChange(1, localTimestamp),
         },
+        fullRow: {
+          "id": 1,
+          "value": 'local',
+          "other": 1,
+        },
         tags: [
           generateTag(clientId, localTime),
           generateTag(
@@ -363,6 +327,11 @@ void main() {
               OplogColumnChange('incoming', incomingTs.millisecondsSinceEpoch),
           "other": OplogColumnChange(1, localTimestamp.millisecondsSinceEpoch),
         },
+        fullRow: {
+          "id": 1,
+          "value": 'incoming',
+          "other": 1,
+        },
         tags: [
           generateTag(clientId, localTimestamp),
           generateTag('remote', incomingTs),
@@ -400,7 +369,19 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.apply([incomingEntry], 'remote', []);
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
+
+    final incomingChange = opLogEntryToChange(incomingEntry, kTestRelations);
+    final incomingTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(incomingTs.millisecondsSinceEpoch),
+      changes: [incomingChange],
+      lsn: [],
+    );
+
+    await satellite.applyTransaction(incomingTx);
+
     await satellite.performSnapshot();
 
     const sql = 'SELECT * from parent WHERE id=1';
@@ -443,7 +424,7 @@ void main() {
       oldValues: {},
     );
     await satellite.setAuthState();
-    await satellite.apply([incomingEntry], 'remote', []);
+    await satellite.apply([incomingEntry], 'remote');
 
     const sql = 'SELECT * from parent WHERE id=1';
     final rows = await adapter.query(Statement(sql));
@@ -459,7 +440,7 @@ void main() {
     await satellite.setAuthState();
 
     // TODO(dart): Is this an empty incoming? When can it happen?
-    await satellite.apply([], "", []);
+    await satellite.apply([], "");
   });
 
   test('apply incoming with null on column with default', () async {
@@ -482,7 +463,18 @@ void main() {
     );
 
     await satellite.setAuthState();
-    await satellite.apply([incomingEntry], 'remote', []);
+
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
+
+    final incomingChange = opLogEntryToChange(incomingEntry, kTestRelations);
+    final incomingTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(incomingTs.millisecondsSinceEpoch),
+      changes: [incomingChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(incomingTx);
 
     const sql = "SELECT * from main.parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
@@ -509,7 +501,18 @@ void main() {
     );
 
     await satellite.setAuthState();
-    await satellite.apply([incomingEntry], 'remote', []);
+
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
+
+    final incomingChange = opLogEntryToChange(incomingEntry, kTestRelations);
+    final incomingTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(incomingTs.millisecondsSinceEpoch),
+      changes: [incomingChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(incomingTx);
 
     const sql = "SELECT * from main.parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
@@ -584,6 +587,11 @@ void main() {
           "value": OplogColumnChange('local', localTs.millisecondsSinceEpoch),
           "other": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
         },
+        fullRow: {
+          "id": 1,
+          "value": 'local',
+          "other": 1,
+        },
         tags: [
           generateTag(clientId, localTs),
           generateTag('remote', incomingTs),
@@ -592,6 +600,85 @@ void main() {
     );
   });
 
+// TODO(dart): Implement test
+/*   test('concurrent updates take all changed values', async (t) => {
+  const { runMigrations, satellite, tableInfo } = t.context as any
+  await runMigrations()
+  await satellite._setAuthState()
+  const clientId = satellite['_authState']['clientId']
+
+  const localTs = new Date().getTime()
+  const incomingTs = localTs + 1
+
+  const incoming = [
+    generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OPTYPES.update,
+      incomingTs,
+      genEncodedTags('remote', [incomingTs]),
+      {
+        id: 1,
+        value: 'remote', // the only modified column
+        other: 0,
+      },
+      {
+        id: 1,
+        value: 'local',
+        other: 0,
+      }
+    ),
+  ]
+
+  const local = [
+    generateLocalOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OPTYPES.update,
+      localTs,
+      genEncodedTags(clientId, [localTs]),
+      {
+        id: 1,
+        value: 'local',
+        other: 1, // the only modified column
+      },
+      {
+        id: 1,
+        value: 'local',
+        other: 0,
+      }
+    ),
+  ]
+
+  const merged = satellite._mergeEntries(clientId, local, 'remote', incoming)
+  const item = merged['main.parent']['1']
+
+  // The incoming entry modified the value of the `value` column to `'remote'`
+  // The local entry concurrently modified the value of the `other` column to 1.
+  // The merged entries should have `value = 'remote'` and `other = 1`.
+  t.deepEqual(item, {
+    namespace: 'main',
+    tablename: 'parent',
+    primaryKeyCols: { id: 1 },
+    optype: OPTYPES.upsert,
+    changes: {
+      value: { value: 'remote', timestamp: incomingTs },
+      other: { value: 1, timestamp: localTs },
+    },
+    fullRow: {
+      id: 1,
+      value: 'remote',
+      other: 1,
+    },
+    tags: [
+      generateTag(clientId, new Date(localTs)),
+      generateTag('remote', new Date(incomingTs)),
+    ],
+  })
+})
+ */
   test('merge incoming with empty local', () async {
     await runMigrations();
     await satellite.setAuthState();
@@ -628,6 +715,9 @@ void main() {
         optype: ChangesOpType.upsert,
         changes: {
           "id": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+        },
+        fullRow: {
+          "id": 1,
         },
         tags: [generateTag('remote', incomingTs)],
       ),
@@ -710,24 +800,34 @@ void main() {
     await satellite.setMeta('compensations', 0);
     await satellite.setAuthState();
 
-    final incoming = [
-      generateLocalOplogEntry(
-        tableInfo,
-        'main',
-        'child',
-        OpType.insert,
-        timestamp.millisecondsSinceEpoch,
-        genEncodedTags('remote', [timestamp]),
-        newValues: {
-          "id": 1,
-          "parent": 1,
-        },
-      ),
-    ];
+    final incoming = generateLocalOplogEntry(
+      tableInfo,
+      'main',
+      'child',
+      OpType.insert,
+      timestamp.millisecondsSinceEpoch,
+      genEncodedTags('remote', [timestamp]),
+      newValues: {
+        "id": 1,
+        "parent": 1,
+      },
+    );
 
     await satellite.setAuthState();
+
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
+
+    final incomingChange = opLogEntryToChange(incoming, kTestRelations);
+    final incomingTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(timestamp.millisecondsSinceEpoch),
+      changes: [incomingChange],
+      lsn: [],
+    );
+
     await expectLater(
-      satellite.apply(incoming, 'remote', []),
+      satellite.applyTransaction(incomingTx),
       throwsA(
         isA<SqliteException>().having(
           (SqliteException e) => e.extendedResultCode,
@@ -748,31 +848,30 @@ void main() {
     await satellite.setAuthState();
     final clientId = satellite.authState!.clientId;
 
-    final incoming = [
-      generateRemoteOplogEntry(
-        tableInfo,
-        'main',
-        'child',
-        OpType.insert,
-        timestamp.millisecondsSinceEpoch,
-        genEncodedTags(clientId, [timestamp]),
-        newValues: {
-          "id": 1,
-          "parent": 1,
-        },
-      ),
-      generateRemoteOplogEntry(
-        tableInfo,
-        'main',
-        'parent',
-        OpType.insert,
-        timestamp.millisecondsSinceEpoch,
-        genEncodedTags(clientId, [timestamp]),
-        newValues: {
-          "id": 1,
-        },
-      ),
-    ];
+    final childInsertEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'child',
+      OpType.insert,
+      timestamp.millisecondsSinceEpoch,
+      genEncodedTags(clientId, [timestamp]),
+      newValues: {
+        "id": 1,
+        "parent": 1,
+      },
+    );
+
+    final parentInsertEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      timestamp.millisecondsSinceEpoch,
+      genEncodedTags(clientId, [timestamp]),
+      newValues: {
+        "id": 1,
+      },
+    );
 
     await adapter.run(
       Statement(
@@ -783,7 +882,23 @@ void main() {
 
     await satellite.setAuthState();
     await satellite.performSnapshot();
-    await satellite.apply(incoming, 'remote', []);
+
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
+
+    final childInsertChange =
+        opLogEntryToChange(childInsertEntry, kTestRelations);
+    final parentInsertChange =
+        opLogEntryToChange(parentInsertEntry, kTestRelations);
+    final insertChildAndParentTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(DateTime.now()
+          .millisecondsSinceEpoch), // timestamp is not important for this test, it is only used to GC the oplog
+      changes: [childInsertChange, parentInsertChange],
+      lsn: [],
+    );
+    await satellite.applyTransaction(insertChildAndParentTx);
+
     final rows = await adapter.query(
       Statement(
         "SELECT * from main.parent WHERE id=1",
@@ -816,22 +931,31 @@ void main() {
     await satellite.performSnapshot();
 
     final timestamp = DateTime.now();
-    final incoming = [
-      generateRemoteOplogEntry(
-        tableInfo,
-        'main',
-        'parent',
-        OpType.delete,
-        timestamp.millisecondsSinceEpoch,
-        genEncodedTags('remote', []),
-        newValues: {
-          "id": 1,
-        },
-      ),
-    ];
+    final incoming = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.delete,
+      timestamp.millisecondsSinceEpoch,
+      genEncodedTags('remote', []),
+      newValues: {
+        "id": 1,
+      },
+    );
+
+    satellite.relations =
+        kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
+
+    final incomingChange = opLogEntryToChange(incoming, kTestRelations);
+    final incomingTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(timestamp.millisecondsSinceEpoch),
+      changes: [incomingChange],
+      lsn: [],
+    );
 
     await expectLater(
-      satellite.apply(incoming, 'remote', []),
+      satellite.applyTransaction(incomingTx),
       throwsA(
         isA<SqliteException>().having(
           (SqliteException e) => e.extendedResultCode,
@@ -876,7 +1000,7 @@ void main() {
     ];
 
     // TODO(dart) No expectations?
-    await satellite.apply(incoming, "", []);
+    await satellite.apply(incoming, "");
   });
 
   test('get oplogEntries from transaction', () async {
@@ -884,7 +1008,7 @@ void main() {
 
     final relations = await satellite.getLocalRelations();
 
-    final transaction = Transaction(
+    final transaction = DataTransaction(
       lsn: kDefaultLogPos,
       commitTimestamp: Int64.ZERO,
       changes: [
@@ -952,8 +1076,8 @@ void main() {
       ),
     ];
 
-    final expected = <Transaction>[
-      Transaction(
+    final expected = <DataTransaction>[
+      DataTransaction(
         lsn: numberToBytes(2),
         commitTimestamp: Int64.ZERO,
         changes: [
@@ -973,7 +1097,7 @@ void main() {
           ),
         ],
       ),
-      Transaction(
+      DataTransaction(
         lsn: numberToBytes(3),
         commitTimestamp: Int64(1000),
         changes: [

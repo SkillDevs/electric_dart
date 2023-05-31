@@ -99,7 +99,7 @@ Future<SatelliteTestContext> makeContext({
   );
 
   final tableInfo = initTableInfo();
-  final timestamp = DateTime.now().millisecondsSinceEpoch;
+  final timestamp = DateTime.now();
 
   return SatelliteTestContext(
     dbName: dbName,
@@ -123,7 +123,7 @@ class SatelliteTestContext {
   final MockSatelliteClient client;
   final SatelliteProcess satellite;
   final TableInfo tableInfo;
-  final int timestamp;
+  final DateTime timestamp;
 
   SatelliteTestContext({
     required this.dbName,

@@ -23,7 +23,6 @@ DatabaseAdapter get adapter => context.adapter;
 Migrator get migrator => context.migrator;
 MockNotifier get notifier => context.notifier;
 TableInfo get tableInfo => context.tableInfo;
-int get timestamp => context.timestamp;
 SatelliteProcess get satellite => context.satellite;
 MockSatelliteClient get client => context.client;
 String get dbName => context.dbName;

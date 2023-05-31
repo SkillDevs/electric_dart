@@ -24,7 +24,7 @@ TableInfo initTableInfo() {
       primaryKey: ['id'],
       columns: ['id', 'parent'],
     ),
-    'main.items': TableSchema(
+    'main.Items': TableSchema(
       primaryKey: ['value'],
       columns: ['value', 'other'],
     ),
