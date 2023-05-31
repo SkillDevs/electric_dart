@@ -1,19 +1,16 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
 
-import 'package:electric_client/src/auth/mock.dart';
-import 'package:electric_client/src/satellite/config.dart';
-import 'package:electric_client/src/util/random.dart';
-import 'package:sqlite3/sqlite3.dart';
-
 import 'package:electric_client/electric_dart.dart';
-import 'package:electric_client/src/migrators/bundle.dart';
-import 'package:electric_client/src/migrators/migrators.dart';
+import 'package:electric_client/src/auth/mock.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
 import 'package:electric_client/src/proto/satellite.pb.dart';
+import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/satellite/mock.dart';
 import 'package:electric_client/src/satellite/process.dart';
+import 'package:electric_client/src/util/random.dart';
 import 'package:electric_client/src/util/types.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';

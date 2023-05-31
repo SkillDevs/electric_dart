@@ -38,6 +38,7 @@ class SatelliteProcess implements Satellite {
 
   @visibleForTesting
   AuthState? authState;
+  String? _authStateSubscription;
 
   // TODO(dart): Unused in typescript
   //DateTime? _lastSnapshotTimestamp;
@@ -89,6 +90,9 @@ class SatelliteProcess implements Satellite {
     }
 
     await setAuthState(authStateParam);
+
+    _authStateSubscription ??=
+        notifier.subscribeToAuthStateChanges(_updateAuthState);
 
     // XXX establish replication connection,
     // validate auth state, etc here.
@@ -291,19 +295,16 @@ class SatelliteProcess implements Satellite {
     return numTables == 3;
   }
 
-// TODO(dart): Migrate
-/*
-    // Handle auth state changes.
-  async _updateAuthState({ authState }: AuthStateNotification): Promise<void> {
+  // Handle auth state changes.
+  Future<void> _updateAuthState(AuthStateNotification notification) async {
     // XXX do whatever we need to stop/start or reconnect the replication
     // connection with the new auth state.
 
     // XXX Maybe we need to auto-start processing and/or replication
     // when we get the right authState?
 
-    this._authState = authState
+    authState = notification.authState;
   }
-  */
 
   // Perform a snapshot and notify which data actually changed.
   @visibleForTesting
