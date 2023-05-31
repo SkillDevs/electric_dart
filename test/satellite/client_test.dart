@@ -160,7 +160,7 @@ void main() {
         final msgType = getMsgFromCode(code);
 
         if (msgType == SatMsgType.inStartReplicationReq) {
-          final decodedMsg = client.toMessage(data);
+          final decodedMsg = decode(data);
           expect(
             (decodedMsg.msg as SatInStartReplicationReq).options[0],
             SatInStartReplicationReq_Option.FIRST_LSN,
@@ -418,7 +418,7 @@ void main() {
         final msgType = getMsgFromCode(code);
 
         if (msgType == SatMsgType.relation) {
-          final decodedMsg = client.toMessage(data);
+          final decodedMsg = decode(data);
           expect((decodedMsg.msg as SatRelation).relationId, 1);
         }
       },
@@ -431,7 +431,7 @@ void main() {
         final msgType = getMsgFromCode(code);
 
         if (msgType == SatMsgType.opLog) {
-          final satOpLog = (client.toMessage(data).msg as SatOpLog).ops;
+          final satOpLog = (decode(data).msg as SatOpLog).ops;
 
           final lsn = satOpLog[0].begin.lsn;
           expect(bytesToNumber(lsn), 1);
@@ -448,7 +448,7 @@ void main() {
         final msgType = getMsgFromCode(code);
 
         if (msgType == SatMsgType.opLog) {
-          final satOpLog = (client.toMessage(data).msg as SatOpLog).ops;
+          final satOpLog = (decode(data).msg as SatOpLog).ops;
 
           final lsn = satOpLog[0].begin.lsn;
           expect(bytesToNumber(lsn), 2);
@@ -684,4 +684,10 @@ AuthState createAuthState() {
     clientId: clientId,
     refreshToken: null,
   );
+}
+
+DecodedMessage decode(Uint8List data) {
+  final code = data[0];
+  final type = getMsgFromCode(code)!;
+  return DecodedMessage(decodeMessage(data.sublist(1), type), type);
 }

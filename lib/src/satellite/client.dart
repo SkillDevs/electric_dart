@@ -72,18 +72,22 @@ class SatelliteClient extends EventEmitter implements Client {
     );
   }
 
-  DecodedMessage toMessage(Uint8List data) {
+  Either<SatelliteException, DecodedMessage> _toMessage(Uint8List data) {
     final code = data[0];
     final type = getMsgFromCode(code);
 
     if (type == null) {
-      throw SatelliteException(
-        SatelliteErrorCode.unexpectedMessageType,
-        "$code",
+      return Left(
+        SatelliteException(
+          SatelliteErrorCode.unexpectedMessageType,
+          "$code",
+        ),
       );
     }
 
-    return DecodedMessage(decodeMessage(data.sublist(1), type), type);
+    return Right(
+      DecodedMessage(decodeMessage(data.sublist(1), type), type),
+    );
   }
 
   IncomingHandler getIncomingHandlerForMessage(SatMsgType msgType) {
@@ -269,23 +273,24 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleIncoming(Uint8List data) {
-    late final DecodedMessage messageInfo;
-    try {
-      // TODO(dart): Use union instead of throwing
-      messageInfo = toMessage(data);
-    } catch (e) {
-      // this.emit('error', messageOrError)
-      emit("error", messageInfo);
-      return;
-    }
+    final messageOrError = _toMessage(data);
+    logger.info(
+      "Received message ${messageOrError.match((error) => error.toString(), (a) => a.msgType.name)}",
+    );
 
-    logger.info("Received message ${messageInfo.msg.runtimeType}");
-    final handler = getIncomingHandlerForMessage(messageInfo.msgType);
-    final response = handler.handle(messageInfo.msg);
+    messageOrError.match(
+      (error) {
+        emit("error", error);
+      },
+      (messageInfo) {
+        final handler = getIncomingHandlerForMessage(messageInfo.msgType);
+        final response = handler.handle(messageInfo.msg);
 
-    if (handler.isRpc) {
-      emit("rpc_response", response);
-    }
+        if (handler.isRpc) {
+          emit("rpc_response", response);
+        }
+      },
+    );
   }
 
   @override

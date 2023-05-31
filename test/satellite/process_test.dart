@@ -679,6 +679,7 @@ void main() {
   })
 })
  */
+
   test('merge incoming with empty local', () async {
     await runMigrations();
     await satellite.setAuthState();
