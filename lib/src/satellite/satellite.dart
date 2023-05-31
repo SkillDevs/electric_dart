@@ -58,10 +58,11 @@ abstract class Client {
   bool isClosed();
   Future<Either<SatelliteException, void>> startReplication(LSN? lsn);
   Future<Either<SatelliteException, void>> stopReplication();
+  void  subscribeToRelations(void Function(Relation relation) callback);
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   );
-  Either<SatelliteException, void> enqueueTransaction(Transaction transaction);
+  Either<SatelliteException, void> enqueueTransaction(DataTransaction transaction);
   EventListener<AckLsnEvent> subscribeToAck(AckCallback callback);
   void unsubscribeToAck(EventListener<AckLsnEvent> eventListener);
   void resetOutboundLogPositions(LSN sent, LSN ack);

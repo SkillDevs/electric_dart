@@ -1,14 +1,13 @@
 import 'dart:async';
 
 import 'package:electric_client/src/electric/adapter.dart' as adp;
-import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:synchronized/synchronized.dart';
 
 // TODO(dart): Use package exports
 
-class SqliteAdapter extends adp.DatabaseAdapter {
+class SqliteAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
   final sqlite.Database db;
   final Lock txLock = Lock();
 
@@ -51,12 +50,6 @@ class SqliteAdapter extends adp.DatabaseAdapter {
         db.execute('COMMIT');
       }
     }
-  }
-
-  @override
-  List<QualifiedTablename> tableNames(Statement statement) {
-    // TODO(dart): implement tableNames
-    throw UnimplementedError();
   }
 
   @override

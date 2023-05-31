@@ -204,7 +204,6 @@ class EventNotifier implements Notifier {
       return;
     }
 
-    logger.fine("emit connectivity status $status");
     _emitConnectivityStatus(dbName, status);
   }
 

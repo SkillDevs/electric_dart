@@ -2,11 +2,11 @@
 
 # Electric Dart
 
-Dart client implementation for [Electric](https://electric-sql.com/) based on:
+Dart client implementation for [Electric](https://electric-sql.com/) based on commit `1d78f9fa49a99a18284adbe17d26368ee3cde5b3`
 
-- `typescript-client` ([monorepo](https://github.com/electric-sql/electric)) (hash `29142a12f14f5db79239757a56726d79cbc53473`)
+- Client based on the typescript client from the `clients/typescript` subfolder.
 
-- Electric backend (hash `29142a12f14f5db79239757a56726d79cbc53473`) running with the `local-stack`
+- Electric backend running with the `local-stack` Docker Compose using the `electric` Docker image built in that specific commit.
 
 ### Run the Todos example
 

@@ -491,7 +491,7 @@ void main() {
       changes: [
         Change(
           relation: kTestRelations["parent"]!,
-          type: ChangeType.insert,
+          type: DataChangeType.insert,
           record: {"id": 0},
           tags: [], // actual value is not relevent here
         ),

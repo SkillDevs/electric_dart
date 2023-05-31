@@ -890,7 +890,7 @@ void main() {
       changes: [
         t.Change(
           relation: relations["parent"]!,
-          type: ChangeType.insert,
+          type: DataChangeType.insert,
           record: {"id": 0},
           tags: [], // proper values are not relevent here
         ),
@@ -959,14 +959,14 @@ void main() {
         changes: [
           t.Change(
             relation: kTestRelations["parent"]!,
-            type: ChangeType.insert,
+            type: DataChangeType.insert,
             record: {"id": 0},
             oldRecord: null,
             tags: [],
           ),
           t.Change(
             relation: kTestRelations["parent"]!,
-            type: ChangeType.insert,
+            type: DataChangeType.insert,
             record: {"id": 1},
             oldRecord: {"id": 1},
             tags: [],
@@ -979,7 +979,7 @@ void main() {
         changes: [
           t.Change(
             relation: kTestRelations["parent"]!,
-            type: ChangeType.insert,
+            type: DataChangeType.insert,
             record: {"id": 2},
             oldRecord: null,
             tags: [],

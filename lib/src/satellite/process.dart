@@ -15,6 +15,7 @@ import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/sets.dart';
 import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
+import 'package:electric_client/src/util/types.dart' as types;
 import 'package:fpdart/fpdart.dart';
 import 'package:meta/meta.dart';
 
@@ -117,7 +118,6 @@ class SatelliteProcess implements Satellite {
     unawaited(Future(() => throttledSnapshot()));
 
     // Need to reload primary keys after schema migration
-    // For now, we do it only at initialization
     relations = await getLocalRelations();
 
     _lastAckdRowId = int.parse(await getMeta('lastAckdRowId'));
@@ -166,9 +166,8 @@ class SatelliteProcess implements Satellite {
   }
 
   void setClientListeners() {
-    client.subscribeToTransactions((Transaction transaction) async {
-      unawaited(applyTransaction(transaction));
-    });
+    client.subscribeToRelations(updateRelations);
+    client.subscribeToTransactions(applyTransaction);
     // When a local transaction is sent, or an acknowledgement for
     // a remote transaction commit is received, we update lsn records.
     client.subscribeToAck((evt) async {
@@ -458,31 +457,15 @@ class SatelliteProcess implements Satellite {
   // applying conflict resolution rules. Takes all changes per each key before
   // merging, for local and remote operations.
   @visibleForTesting
-  Future<void> apply(
+  Future<ApplyIncomingResult> apply(
     List<OplogEntry> incoming,
     String incomingOrigin,
-    LSN lsn,
   ) async {
-    logger.info("apply incoming changes for LSN: $lsn");
-    // assign timestamp to pending operations before apply
-    await performSnapshot();
-
     final local = await getEntries();
     final merged =
         mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
 
     final List<Statement> stmts = [];
-    // switches off on transaction commit/abort
-    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
-    // update lsn.
-    _lsn = lsn;
-    final lsnBase64 = base64.encode(lsn);
-    stmts.add(
-      Statement(
-        "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
-        <Object?>[lsnBase64, 'lsn'],
-      ),
-    );
 
     for (final entry in merged.entries) {
       final tablenameStr = entry.key;
@@ -507,13 +490,12 @@ class SatelliteProcess implements Satellite {
       }
     }
 
-    final tablenames = merged.keys;
+    final tablenames = merged.keys.toList();
 
-    await adapter.runInTransaction([
-      ..._disableTriggers(tablenames.toList()),
-      ...stmts,
-      ..._enableTriggers(tablenames.toList()),
-    ]);
+    return ApplyIncomingResult(
+      tableNames: tablenames,
+      statements: stmts,
+    );
   }
 
   @visibleForTesting
@@ -694,6 +676,7 @@ class SatelliteProcess implements Satellite {
           localChanges.changes,
           incomingOrigin,
           incomingChanges.changes,
+          incomingChanges.fullRow,
         );
         late final ChangesOpType optype;
 
@@ -714,29 +697,225 @@ class SatelliteProcess implements Satellite {
   }
 
   @visibleForTesting
-  Future<void> applyTransaction(Transaction transaction) async {
-    final origin = transaction.origin!;
+  void updateRelations(Relation rel) {
+    if (rel.tableType == SatRelation_RelationType.TABLE) {
+      // this relation may be for a newly created table
+      // or for a column that was added to an existing table
+      final tableName = rel.table;
 
-    final opLogEntries = fromTransaction(transaction, relations);
-    final commitTimestamp = DateTime.fromMillisecondsSinceEpoch(
-      transaction.commitTimestamp.toInt(),
-    );
-    await applyTransactionInternal(
-      origin,
-      commitTimestamp,
-      opLogEntries,
-      transaction.lsn,
-    );
+      if (relations[tableName] == null) {
+        int id = 0;
+        // generate an id for the new relation as (the highest existing id) + 1
+        // TODO: why not just use the relation.id coming from pg?
+        for (final r in relations.values) {
+          if (r.id > id) {
+            id = r.id;
+          }
+        }
+        final relation = rel.copyWith(
+          id: id + 1,
+        );
+        relations[tableName] = relation;
+      } else {
+        // the relation is for an existing table
+        // update the information but keep the same ID
+        final id = relations[tableName]!.id;
+        final relation = rel.copyWith(id: id);
+        relations[tableName] = relation;
+      }
+    }
   }
 
   @visibleForTesting
-  Future<void> applyTransactionInternal(
+  Future<void> applyTransaction(Transaction transaction) async {
+    final origin = transaction.origin!;
+
+    final commitTimestamp = DateTime.fromMillisecondsSinceEpoch(
+      transaction.commitTimestamp.toInt(),
+    );
+
+    // Transactions coming from the replication stream
+    // may contain DML operations manipulating data
+    // but may also contain DDL operations migrating schemas.
+    // DML operations are ran through conflict resolution logic.
+    // DDL operations are applied as is against the local DB.
+
+    final stmts = <Statement>[];
+    final tablenamesSet = <String>{};
+    var newTables = <String>{};
+    final opLogEntries = <OplogEntry>[];
+    final lsn = transaction.lsn;
+    bool firstDMLChunk = true;
+
+    // switches off on transaction commit/abort
+    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
+    // update lsn.
+    _lsn = lsn;
+    final lsn_base64 = base64.encode(lsn);
+    stmts.add(
+      Statement(
+        "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
+        [lsn_base64, 'lsn'],
+      ),
+    );
+
+    final processDML = (List<DataChange> changes) async {
+      final tx = DataTransaction(
+        commitTimestamp: transaction.commitTimestamp,
+        lsn: transaction.lsn,
+        changes: changes,
+      );
+      final entries = fromTransaction(tx, relations);
+
+      // Before applying DML statements we need to assign a timestamp to pending operations.
+      // This only needs to be done once, even if there are several DML chunks
+      // because all those chunks are part of the same transaction.
+      if (firstDMLChunk) {
+        logger.info("apply incoming changes for LSN: $lsn");
+        // assign timestamp to pending operations before apply
+        await performSnapshot();
+        firstDMLChunk = false;
+      }
+
+      final applyRes = await apply(entries, origin);
+      final statements = applyRes.statements;
+      final tablenames = applyRes.tableNames;
+      entries.forEach((e) => opLogEntries.add(e));
+      statements.forEach((s) => stmts.add(s));
+      tablenames.forEach((n) => tablenamesSet.add(n));
+    };
+
+    final processDDL = (List<SchemaChange> changes) async {
+      final createdTables = <String>{};
+      final affectedTables = <String, MigrationTable>{};
+      changes.forEach((change) {
+        stmts.add(Statement(change.sql));
+
+        if (change.migrationType == SatOpMigrate_Type.CREATE_TABLE ||
+            change.migrationType == SatOpMigrate_Type.ALTER_ADD_COLUMN) {
+          // We will create/update triggers for this new/updated table
+          // so store it in `tablenamesSet` such that those
+          // triggers can be disabled while executing the transaction
+          final affectedTable = change.table.name;
+          // store the table information to generate the triggers after this `forEach`
+          affectedTables[affectedTable] = change.table;
+          tablenamesSet.add(affectedTable);
+
+          if (change.migrationType == SatOpMigrate_Type.CREATE_TABLE) {
+            createdTables.add(affectedTable);
+          }
+        }
+      });
+
+      // Also add statements to create the necessary triggers for the created/updated table
+      affectedTables.values.forEach((table) {
+        final triggers = _generateTriggersForTable(table);
+        stmts.addAll(triggers);
+      });
+
+      // Disable the newly created triggers
+      // during the processing of this transaction
+      stmts.addAll(_disableTriggers([...createdTables]));
+      newTables = <String>{...newTables, ...createdTables};
+    };
+
+    // Now process all changes per chunk.
+    // We basically take a prefix of changes of the same type
+    // which we call a `dmlChunk` or `ddlChunk` if the changes
+    // are DML statements, respectively, DDL statements.
+    // We process chunk per chunk in-order.
+    var dmlChunk = <DataChange>[];
+    var ddlChunk = <SchemaChange>[];
+
+    final changes = transaction.changes;
+    for (int idx = 0; idx < changes.length; idx++) {
+      final change = changes[idx];
+      ChangeType getChangeType(types.Change change) {
+        return change is DataChange ? ChangeType.dml : ChangeType.ddl;
+      }
+
+      bool sameChangeTypeAsPrevious() {
+        return idx == 0 ||
+            getChangeType(changes[idx]) == getChangeType(changes[idx - 1]);
+      }
+
+      final addToChunk = (types.Change change) {
+        if (change is DataChange) {
+          dmlChunk.add(change);
+        } else {
+          ddlChunk.add(change as SchemaChange);
+        }
+      };
+      Future<void> processChunk(ChangeType type) async {
+        if (type == ChangeType.dml) {
+          await processDML(dmlChunk);
+          dmlChunk = [];
+        } else {
+          await processDDL(ddlChunk);
+          ddlChunk = [];
+        }
+      }
+
+      addToChunk(change); // add the change in the right chunk
+      if (!sameChangeTypeAsPrevious()) {
+        // We're starting a new chunk
+        // process the previous chunk and clear it
+        final previousChange = changes[idx - 1];
+        await processChunk(getChangeType(previousChange));
+      }
+
+      if (idx == changes.length - 1) {
+        // we're at the last change
+        // process this chunk
+        final thisChange = changes[idx];
+        await processChunk(getChangeType(thisChange));
+      }
+    }
+
+    // Now run the DML and DDL statements in-order in a transaction
+    final tablenames = tablenamesSet.toList();
+    final notNewTableNames =
+        tablenames.filter((t) => !newTables.contains(t)).toList();
+
+    await adapter.runInTransaction([
+      ..._disableTriggers(notNewTableNames),
+      ...stmts,
+      ..._enableTriggers(tablenames)
+    ]);
+
+    await notifyChangesAndGCopLog(opLogEntries, origin, commitTimestamp);
+  }
+
+  List<Statement> _generateTriggersForTable(MigrationTable tbl) {
+    return [];
+    // TODO(dart): implement
+    /* const table = {
+      tableName: tbl.name,
+      namespace: 'main',
+      columns: tbl.columns.map((col) => col.name),
+      primary: tbl.pks,
+      foreignKeys: tbl.fks.map((fk) => {
+        if (fk.fkCols.length !== 1 || fk.pkCols.length !== 1)
+          throw new Error(
+            'Satellite does not yet support compound foreign keys.'
+          )
+        return {
+          table: fk.pkTable,
+          childKey: fk.fkCols[0],
+          parentKey: fk.pkCols[0],
+        }
+      }),
+    }
+    const fullTableName = table.namespace + '.' + table.tableName
+    return generateOplogTriggers(fullTableName, table) */
+  }
+
+  @visibleForTesting
+  Future<void> notifyChangesAndGCopLog(
+    List<OplogEntry> opLogEntries,
     String origin,
     DateTime commitTimestamp,
-    List<OplogEntry> opLogEntries,
-    LSN lsn,
   ) async {
-    await apply(opLogEntries, origin, lsn);
     await _notifyChanges(opLogEntries);
 
     if (origin == authState!.clientId) {
@@ -797,7 +976,7 @@ class SatelliteProcess implements Satellite {
       ]);
     } else {
       lastSentRowId = lsn;
-      await adapter.runInTransaction([Statement(sql, args)]);
+      await adapter.run(Statement(sql, args));
     }
   }
 
@@ -838,10 +1017,7 @@ class SatelliteProcess implements Satellite {
     return clientId;
   }
 
-  // Fetch primary keys from local store and use them to identify incoming ops.
-  // TODO: Improve this code once with Migrator and consider simplifying oplog.
-  @visibleForTesting
-  Future<RelationsCache> getLocalRelations() async {
+  Future<List<Row>> _getLocalTableNames() async {
     final notIn = <String>[
       opts.metaTable.tablename,
       opts.migrationsTable.tablename,
@@ -859,7 +1035,14 @@ class SatelliteProcess implements Satellite {
           AND name NOT IN (${notIn.map((_) => '?').join(',')})
     ''';
     final tableNames = await adapter.query(Statement(tables, notIn));
+    return tableNames;
+  }
 
+  // Fetch primary keys from local store and use them to identify incoming ops.
+  // TODO: Improve this code once with Migrator and consider simplifying oplog.
+  @visibleForTesting
+  Future<RelationsCache> getLocalRelations() async {
+    final tableNames = await _getLocalTableNames();
     final RelationsCache relations = {};
 
     int id = 0;
@@ -916,6 +1099,11 @@ Statement _applyDeleteOperation(
   String tablenameStr,
 ) {
   final pkEntries = entryChanges.primaryKeyCols.entries;
+  if (pkEntries.isEmpty) {
+    throw Exception(
+      "Can't apply delete operation. None of the columns in changes are marked as PK.",
+    );
+  }
   final params = pkEntries.fold<_WhereAndValues>(
     _WhereAndValues([], []),
     (acc, entry) {
@@ -937,12 +1125,11 @@ Statement _applyNonDeleteOperation(
   ShadowEntryChanges shadowEntryChanges,
   String tablenameStr,
 ) {
-  final changes = shadowEntryChanges.changes;
+  final fullRow = shadowEntryChanges.fullRow;
   final primaryKeyCols = shadowEntryChanges.primaryKeyCols;
 
-  final columnNames = changes.keys;
-  final List<Object?> columnValues =
-      changes.values.map((c) => c.value).toList();
+  final columnNames = fullRow.keys;
+  final List<Object?> columnValues = fullRow.values.toList();
   String insertStmt =
       '''INTO $tablenameStr(${columnNames.join(', ')}) VALUES (${columnValues.map((_) => '?').join(',')})''';
 
@@ -951,7 +1138,7 @@ Statement _applyNonDeleteOperation(
     _WhereAndValues([], []),
     (acc, c) {
       acc.where.add("$c = ?");
-      acc.values.add(changes[c]!.value);
+      acc.values.add(fullRow[c]);
       return acc;
     },
   );
@@ -996,4 +1183,14 @@ OplogEntry _opLogEntryFromRow(Map<String, Object?> row) {
     oldRow: row['oldRow'] as String?,
     clearTags: row['clearTags']! as String,
   );
+}
+
+class ApplyIncomingResult {
+  final List<String> tableNames;
+  final List<Statement> statements;
+
+  ApplyIncomingResult({
+    required this.tableNames,
+    required this.statements,
+  });
 }

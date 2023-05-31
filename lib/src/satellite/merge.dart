@@ -2,12 +2,26 @@
 // so that the last write wins.
 import 'package:electric_client/src/satellite/oplog.dart';
 import 'package:electric_client/src/util/sets.dart';
+import 'package:electric_client/src/util/types.dart' show Row;
 
+/// Merge two sets of changes, using the timestamp to arbitrate conflicts
+/// so that the last write wins.
+///
+/// The [fullRow] is mutated to reflect the outcome of LWW.
+/// For columns that have no changes in `second` we assign the
+/// column value from [first].
+///
+/// [firstOrigin] - Origin of the first changes
+/// [first] - Changes
+/// [secondOrigin] - Origin of the second changes
+/// [second] - Changes
+/// [fullRow] - The complete row after changes in [second]
 OplogColumnChanges mergeChangesLastWriteWins(
   String firstOrigin,
   OplogColumnChanges first,
   String secondOrigin,
   OplogColumnChanges second,
+  Row fullRow,
 ) {
   final uniqueKeys = <String>{...first.keys, ...second.keys};
 
@@ -37,6 +51,11 @@ OplogColumnChanges mergeChangesLastWriteWins(
             : secondValue;
       }
     }
+
+    // update value of this key in the full row with the value picked by LWW
+    // if the value was modified in `first` but not in `second`
+    // acc[key] will contain the value of that column in `first`
+    fullRow[key] = acc[key]!.value;
 
     return acc;
   });

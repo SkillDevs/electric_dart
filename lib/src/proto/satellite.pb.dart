@@ -22,7 +22,7 @@ class SatPingReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -63,7 +63,7 @@ class SatPingResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -130,7 +130,7 @@ class SatAuthHeaderPair extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..e<SatAuthHeader>(
         1,
@@ -222,7 +222,7 @@ class SatAuthReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -323,7 +323,7 @@ class SatAuthResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -403,7 +403,7 @@ class SatErrorResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..e<SatErrorResp_ErrorCode>(
         1,
@@ -474,7 +474,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -582,7 +582,7 @@ class SatInStartReplicationResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -626,7 +626,7 @@ class SatInStopReplicationReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -670,7 +670,7 @@ class SatInStopReplicationResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -714,7 +714,7 @@ class SatRelationColumn extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -726,12 +726,19 @@ class SatRelationColumn extends $pb.GeneratedMessage {
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'type')
+    ..aOB(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'primaryKey',
+        protoName: 'primaryKey')
     ..hasRequiredFields = false;
 
   SatRelationColumn._() : super();
   factory SatRelationColumn({
     $core.String? name,
     $core.String? type,
+    $core.bool? primaryKey,
   }) {
     final _result = create();
     if (name != null) {
@@ -739,6 +746,9 @@ class SatRelationColumn extends $pb.GeneratedMessage {
     }
     if (type != null) {
       _result.type = type;
+    }
+    if (primaryKey != null) {
+      _result.primaryKey = primaryKey;
     }
     return _result;
   }
@@ -792,6 +802,18 @@ class SatRelationColumn extends $pb.GeneratedMessage {
   $core.bool hasType() => $_has(1);
   @$pb.TagNumber(2)
   void clearType() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get primaryKey => $_getBF(2);
+  @$pb.TagNumber(3)
+  set primaryKey($core.bool v) {
+    $_setBool(2, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasPrimaryKey() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPrimaryKey() => clearField(3);
 }
 
 class SatRelation extends $pb.GeneratedMessage {
@@ -802,7 +824,7 @@ class SatRelation extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -950,7 +972,7 @@ class SatOpLog extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..pc<SatTransOp>(
         1,
@@ -1020,7 +1042,7 @@ class SatTransOp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..oo(0, [1, 2, 3, 4, 5, 6])
     ..aOM<SatOpBegin>(
@@ -1213,7 +1235,7 @@ class SatOpBegin extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$fixnum.Int64>(
         1,
@@ -1366,7 +1388,7 @@ class SatOpCommit extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$fixnum.Int64>(
         1,
@@ -1477,7 +1499,7 @@ class SatOpInsert extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1580,7 +1602,7 @@ class SatOpUpdate extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1707,7 +1729,7 @@ class SatOpDelete extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1810,7 +1832,7 @@ class SatMigrationNotification extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -1942,7 +1964,7 @@ class SatOpRow extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -2022,7 +2044,7 @@ class SatOpMigrate_Stmt extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..e<SatOpMigrate_Type>(
         1,
@@ -2114,7 +2136,7 @@ class SatOpMigrate_PgColumnType extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -2209,7 +2231,7 @@ class SatOpMigrate_Column extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -2321,7 +2343,7 @@ class SatOpMigrate_ForeignKey extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..pPS(
         1,
@@ -2414,7 +2436,7 @@ class SatOpMigrate_Table extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -2521,7 +2543,7 @@ class SatOpMigrate extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_2'),
+              : 'Electric.Satellite.v1_3'),
       createEmptyInstance: create)
     ..aOS(
         1,
