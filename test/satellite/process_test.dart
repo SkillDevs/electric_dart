@@ -888,7 +888,7 @@ void main() {
       lsn: kDefaultLogPos,
       commitTimestamp: Int64.ZERO,
       changes: [
-        t.Change(
+        t.DataChange(
           relation: relations["parent"]!,
           type: DataChangeType.insert,
           record: {"id": 0},
@@ -957,14 +957,14 @@ void main() {
         lsn: numberToBytes(2),
         commitTimestamp: Int64.ZERO,
         changes: [
-          t.Change(
+          t.DataChange(
             relation: kTestRelations["parent"]!,
             type: DataChangeType.insert,
             record: {"id": 0},
             oldRecord: null,
             tags: [],
           ),
-          t.Change(
+          t.DataChange(
             relation: kTestRelations["parent"]!,
             type: DataChangeType.insert,
             record: {"id": 1},
@@ -977,7 +977,7 @@ void main() {
         lsn: numberToBytes(3),
         commitTimestamp: Int64(1000),
         changes: [
-          t.Change(
+          t.DataChange(
             relation: kTestRelations["parent"]!,
             type: DataChangeType.insert,
             record: {"id": 2},
@@ -1088,3 +1088,4 @@ void main() {
 }
 // Document if we support CASCADE https://www.sqlite.org/foreignkeys.html
 // Document that we do not maintian the order of execution of incoming operations and therefore we defer foreign key checks to the outermost commit
+ 

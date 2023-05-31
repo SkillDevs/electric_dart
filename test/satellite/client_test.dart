@@ -485,11 +485,11 @@ void main() {
 
     await client.startReplication(null);
 
-    final transaction = Transaction(
+    final transaction = DataTransaction(
       lsn: lsn_1,
       commitTimestamp: Int64.ZERO,
       changes: [
-        Change(
+        DataChange(
           relation: kTestRelations["parent"]!,
           type: DataChangeType.insert,
           record: {"id": 0},
@@ -533,7 +533,7 @@ void main() {
     final rel = Relation(
       id: 1,
       schema: 'schema',
-      table: 'items',
+      table: 'Items',
       tableType: SatRelation_RelationType.TABLE,
       columns: [
         RelationColumn(name: 'id', type: 'uuid'),
@@ -665,9 +665,10 @@ void main() {
 
     client.on('transaction', (TransactionEvent transactionEvent) {
       final transaction = transactionEvent.transaction;
-      expect(record!['id'], transaction.changes[0].record!['id']);
-      expect(record['content'], transaction.changes[0].record!['content']);
-      expect(record['text_null'], transaction.changes[0].record!['text_null']);
+      final changes = transaction.changes.cast<DataChange>();
+      expect(record!['id'], changes[0].record!['id']);
+      expect(record['content'], changes[0].record!['content']);
+      expect(record['text_null'], changes[0].record!['text_null']);
       completer.complete();
     });
 

@@ -94,38 +94,27 @@ class LogPositions {
   });
 }
 
-class _BaseTransaction with EquatableMixin {
+class BaseTransaction<ChangeT> with EquatableMixin {
   final Int64 commitTimestamp;
   LSN lsn;
 
   // This field is only set by transactions coming from Electric
   String? origin;
 
-  _BaseTransaction({
+  final List<ChangeT> changes;
+
+  BaseTransaction({
     required this.commitTimestamp,
     required this.lsn,
+    required this.changes,
     this.origin,
   });
 
   @override
-  List<Object?> get props => [commitTimestamp, lsn, origin];
-}
+  List<Object?> get props => [commitTimestamp, lsn, origin, changes];
 
-class Transaction extends _BaseTransaction with EquatableMixin {
-  final List<Change> changes;
-
-  Transaction({
-    required super.commitTimestamp,
-    required super.lsn,
-    required this.changes,
-    super.origin,
-  });
-
-  @override
-  List<Object?> get props => [...super.props, changes];
-
-  Transaction clone() {
-    return Transaction(
+  BaseTransaction<ChangeT> clone() {
+    return BaseTransaction<ChangeT>(
       commitTimestamp: commitTimestamp,
       lsn: lsn,
       changes: changes,
@@ -133,31 +122,12 @@ class Transaction extends _BaseTransaction with EquatableMixin {
     );
   }
 }
+
+typedef Transaction = BaseTransaction<Change>;
 
 // A transaction whose changes are only DML statements
 // i.e. the transaction does not contain migrations
-class DataTransaction extends _BaseTransaction with EquatableMixin {
-  final List<DataChange> changes;
-
-  DataTransaction({
-    required super.commitTimestamp,
-    required super.lsn,
-    required this.changes,
-    super.origin,
-  });
-
-  @override
-  List<Object?> get props => [...super.props, changes];
-
-  Transaction clone() {
-    return Transaction(
-      commitTimestamp: commitTimestamp,
-      lsn: lsn,
-      changes: changes,
-      origin: origin,
-    );
-  }
-}
+typedef DataTransaction = BaseTransaction<DataChange>;
 
 enum DataChangeType {
   insert,

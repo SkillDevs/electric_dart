@@ -724,7 +724,7 @@ class SatelliteClient extends EventEmitter implements Client {
       final lastTxnIdx = replication.transactions.length - 1;
       if (op.hasCommit()) {
         final lastTx = replication.transactions[lastTxnIdx];
-        final Transaction transaction = Transaction(
+        final transaction = Transaction(
           commitTimestamp: lastTx.commitTimestamp,
           lsn: lastTx.lsn,
           changes: lastTx.changes,
