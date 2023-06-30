@@ -191,23 +191,21 @@ List<Statement> generateTableTriggers(
 
 /// Generates triggers for all the provided tables.
 /// @param tables - Dictionary mapping full table names to the corresponding tables.
-/// @param isInit - Flag to indicate if the meta tables need to be created and initialized.
 /// @returns An array of SQLite statements that add the necessary oplog and compensation triggers for all tables.
-List<Statement> generateTriggers(Tables tables, bool isInit) {
+List<Statement> generateTriggers(Tables tables) {
   final List<Statement> tableTriggers = [];
   tables.forEach((tableFullName, _table) {
     final triggers = generateTableTriggers(tableFullName, tables);
     tableTriggers.addAll(triggers);
   });
 
-  final List<Statement> stmts = isInit ? createMetaTables : [];
-  stmts.addAll([
+  final List<Statement> stmts = [
     Statement('DROP TABLE IF EXISTS _electric_trigger_settings;'),
     Statement(
-      'CREATE TABLE _electric_trigger_settings(tablename STRING PRIMARY KEY, flag INTEGER);',
+      'CREATE TABLE _electric_trigger_settings(tablename TEXT PRIMARY KEY, flag INTEGER);',
     ),
     ...tableTriggers
-  ]);
+  ];
 
   return stmts;
 }
@@ -219,39 +217,3 @@ String joinColsForJSON(List<String> cols, String? target) {
     return cols.map((col) => "'$col', $target.$col").join(', ');
   }
 }
-
-final List<Statement> createMetaTables = [
-  '''
-  -- The ops log table
-  CREATE TABLE IF NOT EXISTS _electric_oplog (
-    rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-    namespace TEXT NOT NULL,
-    tablename TEXT NOT NULL,
-    optype TEXT NOT NULL,
-    primaryKey TEXT NOT NULL,
-    newRow TEXT,
-    oldRow TEXT,
-    timestamp TEXT
-  );
-  ''',
-  '''
-  -- Somewhere to keep our metadata
-  CREATE TABLE IF NOT EXISTS _electric_meta (
-    key TEXT PRIMARY KEY,
-    value BLOB
-  );
-  ''',
-  '''
-  -- Somewhere to track migrations
-  CREATE TABLE IF NOT EXISTS _electric_migrations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    sha256 TEXT NOT NULL,
-    applied_at TEXT NOT NULL
-  );
-  ''',
-  '''
-  -- Initialisation of the metadata table
-  INSERT INTO _electric_meta (key, value) VALUES ('compensations', 0), ('lastAckdRowId','0'), ('lastSentRowId', '0'), ('lsn', 'MA=='), ('clientId', '');
-  ''',
-].map(Statement.new).toList();

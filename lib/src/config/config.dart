@@ -1,39 +1,50 @@
+import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
 
 typedef AppName = String;
 typedef EnvName = String;
 
 class ElectricConfig {
-  final AppName app;
-  final EnvName env;
-  final List<Migration> migrations;
-  final ConsoleConfig? console;
-  final ReplicationConfig? replication;
+  final AuthConfig auth;
+
+  /// Optional path to the Electric sync service.
+  /// Should have the following format:
+  /// `electric://<host>:<port>`
+  /// Defaults to:
+  /// `electric://127.0.0.1:5133`
+  final String? url;
+
+  ///  Optional flag to activate debug mode
+  ///  which produces more verbose output.
+  ///  Defaults to `false`.
   final bool? debug;
 
   ElectricConfig({
-    required this.app,
-    required this.env,
-    required this.migrations,
-    this.console,
-    this.replication,
+    required this.auth,
+    this.url,
     this.debug,
   });
 }
 
 class ElectricConfigFilled {
-  final AppName app;
-  final EnvName env;
-  final List<Migration> migrations;
-  final ConsoleConfig console;
+  final AuthConfig auth;
   final ReplicationConfig replication;
   final bool debug;
 
   ElectricConfigFilled({
-    required this.app,
-    required this.env,
-    required this.console,
-    required this.migrations,
+    required this.auth,
+    required this.replication,
+    required this.debug,
+  });
+}
+
+class InternalElectricConfig {
+  final AuthConfig auth;
+  final ReplicationConfig? replication;
+  final bool? debug;
+
+  InternalElectricConfig({
+    required this.auth,
     required this.replication,
     required this.debug,
   });
