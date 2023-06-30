@@ -35,7 +35,7 @@ https://user-images.githubusercontent.com/22084723/233607256-2a36c911-152b-483b-
 
 Install the `protoc_plugin` Dart package. Version used: `^20.0.1`
 
-`dart pub global activate protoc_plugin`
+`dart pub global activate protoc_plugin 20.0.1`
 
 To generate the code
 
