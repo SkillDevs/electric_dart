@@ -3,7 +3,6 @@ import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
-import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
@@ -16,10 +15,7 @@ abstract class Registry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ConsoleClient console,
     required ElectricConfigFilled config,
-    AuthState? authState,
-    SatelliteOverrides? opts,
   });
 
   Future<Satellite> ensureAlreadyStarted(DbName dbName);
@@ -43,7 +39,7 @@ abstract class Satellite {
   Migrator get migrator;
   Notifier get notifier;
 
-  Future<ConnectionWrapper> start(AuthState? authState);
+  Future<ConnectionWrapper> start(AuthConfig authConfig);
   Future<void> stop();
 }
 
@@ -58,19 +54,17 @@ abstract class Client {
   bool isClosed();
   Future<Either<SatelliteException, void>> startReplication(LSN? lsn);
   Future<Either<SatelliteException, void>> stopReplication();
-  void  subscribeToRelations(void Function(Relation relation) callback);
+  void subscribeToRelations(void Function(Relation relation) callback);
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   );
-  Either<SatelliteException, void> enqueueTransaction(DataTransaction transaction);
+  Either<SatelliteException, void> enqueueTransaction(
+    DataTransaction transaction,
+  );
   EventListener<AckLsnEvent> subscribeToAck(AckCallback callback);
   void unsubscribeToAck(EventListener<AckLsnEvent> eventListener);
   void resetOutboundLogPositions(LSN sent, LSN ack);
   LogPositions getOutboundLogPositions();
   EventListener<void> subscribeToOutboundEvent(void Function() callback);
   void unsubscribeToOutboundEvent(EventListener<void> eventListener);
-}
-
-abstract class ConsoleClient {
-  Future<TokenResponse> token(TokenRequest req);
 }

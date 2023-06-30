@@ -594,7 +594,11 @@ class SatelliteClient extends EventEmitter implements Client {
   ) {
     for (var change in transaction.changes) {
       final relation = change.relation;
-      if (!outbound.relations.containsKey(relation.id)) {
+      if (
+          // this is a new relation
+          !outbound.relations.containsKey(relation.id) ||
+              // or, the relation has changed
+              outbound.relations[relation.id] != relation) {
         replication.relations[relation.id] = relation;
 
         final satRelation = SatRelation(
@@ -816,6 +820,15 @@ class SatelliteClient extends EventEmitter implements Client {
       }
 
       if (op.hasMigrate()) {
+        // store the version of this migration transaction
+        // (within 1 transaction, every SatOpMigrate message
+        //  has the same version number)
+        // TODO: in the protocol: move the `version` field to the SatOpBegin message
+        //       or replace the `is_migration` field by an optional `version` field
+        //       --> see issue VAX-718 on linear.
+        final tx = replication.transactions[lastTxnIdx];
+        tx.migrationVersion = op.migrate.version;
+
         final stmts = op.migrate.stmts;
 
         for (final stmt in stmts) {
@@ -824,7 +837,7 @@ class SatelliteClient extends EventEmitter implements Client {
             migrationType: stmt.type,
             sql: stmt.sql,
           );
-          replication.transactions[lastTxnIdx].changes.add(change);
+          tx.changes.add(change);
         }
       }
     }

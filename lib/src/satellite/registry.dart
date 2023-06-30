@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/electric/adapter.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
@@ -23,10 +22,8 @@ abstract class BaseRegistry implements Registry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ConsoleClient console,
     required ElectricConfigFilled config,
-    AuthState? authState,
-    SatelliteOverrides? opts,
+    SatelliteOverrides? overrides,
   }) {
     throw "Subclasses must implement startProcess";
   }
@@ -38,9 +35,7 @@ abstract class BaseRegistry implements Registry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ConsoleClient console,
     required ElectricConfigFilled config,
-    AuthState? authState,
     SatelliteOverrides? opts,
   }) async {
     // If we're in the process of stopping the satellite process for this
@@ -56,9 +51,7 @@ abstract class BaseRegistry implements Registry {
           migrator: migrator,
           notifier: notifier,
           socketFactory: socketFactory,
-          console: console,
           config: config,
-          authState: authState,
           opts: opts,
         ),
       );
@@ -90,9 +83,7 @@ abstract class BaseRegistry implements Registry {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
       config: config,
-      authState: authState,
     ).then((satellite) {
       startingPromises.remove(dbName);
 
@@ -177,21 +168,14 @@ class GlobalRegistry extends BaseRegistry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ConsoleClient console,
     required ElectricConfigFilled config,
-    AuthState? authState,
-    SatelliteOverrides? opts,
+    SatelliteOverrides? overrides,
   }) async {
     // validateConfig should not be necessary, because we are already using a typed class
     // final foundErrors = validateConfig(config);
     // if (foundErrors.length > 0) {
     //   throw Exception("invalid config: ${foundErrors}");
     // }
-
-    final satelliteConfig = SatelliteConfig(
-      app: config.app,
-      env: config.env,
-    );
 
     final satelliteClientOpts = SatelliteClientOpts(
       host: config.replication.host,
@@ -211,11 +195,9 @@ class GlobalRegistry extends BaseRegistry {
       migrator: migrator,
       notifier: notifier,
       client: client,
-      console: console,
-      config: satelliteConfig,
       opts: kSatelliteDefaults,
     );
-    await satellite.start(authState);
+    await satellite.start(config.auth);
 
     return satellite;
   }

@@ -32,9 +32,7 @@ class SatelliteProcess implements Satellite {
   @override
   final Notifier notifier;
   final Client client;
-  final ConsoleClient console;
 
-  final SatelliteConfig config;
   final SatelliteOpts opts;
 
   @visibleForTesting
@@ -59,9 +57,7 @@ class SatelliteProcess implements Satellite {
 
   SatelliteProcess({
     required this.dbName,
-    required this.console,
     required this.client,
-    required this.config,
     required this.opts,
     required this.adapter,
     required this.migrator,
@@ -82,7 +78,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @override
-  Future<ConnectionWrapper> start(AuthState? authStateParam) async {
+  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -90,7 +86,11 @@ class SatelliteProcess implements Satellite {
       throw Exception('Invalid database schema.');
     }
 
-    await setAuthState(authStateParam);
+    final configClientId = authConfig.clientId;
+    final clientId = configClientId != null && configClientId != ''
+        ? configClientId
+        : await _getClientId();
+    await setAuthState(AuthState(clientId: clientId, token: authConfig.token));
 
     _authStateSubscription ??=
         notifier.subscribeToAuthStateChanges(_updateAuthState);
@@ -149,25 +149,8 @@ class SatelliteProcess implements Satellite {
   }
 
   @visibleForTesting
-  Future<void> setAuthState([AuthState? newAuthState]) async {
-    if (newAuthState != null) {
-      throw UnimplementedError();
-      // this._authState = authState
-    } else {
-      final app = config.app;
-      final env = config.env;
-      final clientId = await _getClientId();
-      final token = await getMeta('token');
-      final refreshToken = await getMeta('refreshToken');
-
-      authState = AuthState(
-        app: app,
-        env: env,
-        clientId: clientId,
-        token: token,
-        refreshToken: refreshToken,
-      );
-    }
+  Future<void> setAuthState(AuthState newAuthState) async {
+    authState = newAuthState;
   }
 
   void setClientListeners() {
@@ -230,15 +213,14 @@ class SatelliteProcess implements Satellite {
   Future<Either<SatelliteException, void>> _connectAndStartReplication() async {
     logger.info("connecting and starting replication");
 
-    final localAuthState = authState;
-    if (localAuthState == null) {
+    final _authState = authState;
+    if (_authState == null) {
       throw Exception("trying to connect before authentication");
     }
 
     return client
         .connect()
-        .then((_) => refreshAuthState(localAuthState))
-        .then((freshAuthState) => client.authenticate(freshAuthState))
+        .then((_) => client.authenticate(_authState))
         .then((_) => client.startReplication(_lsn))
         .onError(
       (error, st) {
@@ -246,33 +228,6 @@ class SatelliteProcess implements Satellite {
         return const Right(null);
       },
     );
-  }
-
-  FutureOr<AuthState> refreshAuthState(AuthState authStateParam) async {
-    try {
-      final tokenResponse = await console.token(
-        TokenRequest(
-          app: authStateParam.app,
-          env: authStateParam.env,
-          clientId: authStateParam.clientId,
-        ),
-      );
-      await setMeta('token', tokenResponse.token);
-      // TODO(dart): Bug?
-      await setMeta('refreshToken', tokenResponse.token);
-
-      return AuthState(
-        app: authStateParam.app,
-        env: authStateParam.env,
-        clientId: authStateParam.clientId,
-        token: tokenResponse.token,
-        refreshToken: tokenResponse.refreshToken,
-      );
-    } catch (error) {
-      logger.warning("unable to refresh token: $error");
-    }
-
-    return authStateParam;
   }
 
   Future<bool> _verifyTableStructure() async {
@@ -742,7 +697,15 @@ class SatelliteProcess implements Satellite {
     // DML operations are ran through conflict resolution logic.
     // DDL operations are applied as is against the local DB.
 
+    // `stmts` will store all SQL statements
+    // that need to be executed
     final stmts = <Statement>[];
+    // `txStmts` will store the statements related to the transaction
+    // including the creation of triggers
+    // but not statements that disable/enable the triggers
+    // neither statements that update meta tables or modify pragmas.
+    // The `txStmts` is used to compute the hash of migration transactions
+    final txStmts = <Statement>[];
     final tablenamesSet = <String>{};
     var newTables = <String>{};
     final opLogEntries = <OplogEntry>[];
@@ -811,8 +774,9 @@ class SatelliteProcess implements Satellite {
 
       // Also add statements to create the necessary triggers for the created/updated table
       affectedTables.values.forEach((table) {
-        final triggers = _generateTriggersForTable(table);
+        final triggers = generateTriggersForTable(table);
         stmts.addAll(triggers);
+        txStmts.addAll(triggers);
       });
 
       // Disable the newly created triggers
@@ -879,36 +843,26 @@ class SatelliteProcess implements Satellite {
     final notNewTableNames =
         tablenames.filter((t) => !newTables.contains(t)).toList();
 
-    await adapter.runInTransaction([
+    final allStatements = [
       ..._disableTriggers(notNewTableNames),
       ...stmts,
       ..._enableTriggers(tablenames)
-    ]);
+    ];
+
+    if (transaction.migrationVersion != null) {
+      // If a migration version is specified
+      // then the transaction is a migration
+      await migrator.applyIfNotAlready(
+        StmtMigration(
+          statements: allStatements,
+          version: transaction.migrationVersion!,
+        ),
+      );
+    } else {
+      await adapter.runInTransaction(allStatements);
+    }
 
     await notifyChangesAndGCopLog(opLogEntries, origin, commitTimestamp);
-  }
-
-  List<Statement> _generateTriggersForTable(MigrationTable tbl) {
-    final table = Table(
-      tableName: tbl.name,
-      namespace: 'main',
-      columns: tbl.columns.map((col) => col.name).toList(),
-      primary: tbl.pks,
-      foreignKeys: tbl.fks.map((fk) {
-        if (fk.fkCols.length != 1 || fk.pkCols.length != 1) {
-          throw Exception(
-            'Satellite does not yet support compound foreign keys.',
-          );
-        }
-        return ForeignKey(
-          table: fk.pkTable,
-          childKey: fk.fkCols[0],
-          parentKey: fk.pkCols[0],
-        );
-      }).toList(),
-    );
-    final fullTableName = table.namespace + '.' + table.tableName;
-    return generateOplogTriggers(fullTableName, table);
   }
 
   @visibleForTesting
@@ -1156,6 +1110,29 @@ Statement _applyNonDeleteOperation(
   }
 
   return Statement(insertStmt, columnValues);
+}
+
+List<Statement> generateTriggersForTable(MigrationTable tbl) {
+  final table = Table(
+    tableName: tbl.name,
+    namespace: 'main',
+    columns: tbl.columns.map((col) => col.name).toList(),
+    primary: tbl.pks,
+    foreignKeys: tbl.fks.map((fk) {
+      if (fk.fkCols.length != 1 || fk.pkCols.length != 1) {
+        throw Exception(
+          'Satellite does not yet support compound foreign keys.',
+        );
+      }
+      return ForeignKey(
+        table: fk.pkTable,
+        childKey: fk.fkCols[0],
+        parentKey: fk.pkCols[0],
+      );
+    }).toList(),
+  );
+  final fullTableName = table.namespace + '.' + table.tableName;
+  return generateOplogTriggers(fullTableName, table);
 }
 
 class _WhereAndValues {

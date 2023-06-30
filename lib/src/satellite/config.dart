@@ -1,12 +1,5 @@
 import 'package:electric_client/src/util/tablename.dart';
 
-class SatelliteConfig {
-  final String app;
-  final String env;
-
-  SatelliteConfig({required this.app, required this.env});
-}
-
 const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   metaTable: QualifiedTablename('main', '_electric_meta'),
   migrationsTable: QualifiedTablename('main', '_electric_migrations'),
