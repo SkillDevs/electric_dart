@@ -21,8 +21,6 @@ import 'server_ws_stub.dart';
 late SatelliteWSServerStub server;
 late SatelliteClient client;
 late String clientId;
-late String app;
-late String env;
 late String token;
 
 void main() {
@@ -45,8 +43,6 @@ void main() {
     );
     clientId = '91eba0c8-28ba-4a86-a6e8-42731c2c6694';
 
-    app = 'fake_id';
-    env = 'default';
     token = 'fake_token';
   });
 
@@ -678,11 +674,8 @@ void main() {
 
 AuthState createAuthState() {
   return AuthState(
-    app: app,
-    env: env,
     token: token,
     clientId: clientId,
-    refreshToken: null,
   );
 }
 

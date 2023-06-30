@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
@@ -34,6 +35,8 @@ DateTime get timestamp => context.timestamp;
 SatelliteProcess get satellite => context.satellite;
 MockSatelliteClient get client => context.client;
 String get dbName => context.dbName;
+AuthState get authState => context.authState;
+AuthConfig get authConfig => context.authConfig;
 
 void main() {
   setUp(() async {
@@ -45,7 +48,7 @@ void main() {
   });
 
   test('start creates system tables', () async {
-    await satellite.start(null);
+    await satellite.start(context.authConfig);
 
     const sql = "select name from sqlite_master where type = 'table'";
     final rows = await adapter.query(Statement(sql));
@@ -64,35 +67,21 @@ void main() {
       "lastSentRowId": '0',
       "lsn": '',
       "clientId": '',
-      "token":
-          'INITIAL_INVALID_TOKEN', // we need some value here for auth service
-      "refreshToken": '',
     });
   });
 
   test('set persistent client id', () async {
-    await satellite.start(null);
+    await satellite.start(authConfig);
     final clientId1 = satellite.authState!.clientId;
     await satellite.stop();
 
-    await satellite.start(null);
+    await satellite.start(authConfig);
 
     final clientId2 = satellite.authState!.clientId;
 
     expect(clientId1, clientId2);
 
     await Future<void>.delayed(const Duration(milliseconds: 500));
-  });
-
-  test('connect saves new token', () async {
-    await runMigrations();
-
-    final initToken = await satellite.getMeta('token');
-    final connectionWrapper = await satellite.start(null);
-    await connectionWrapper.connectionFuture;
-    final receivedToken = await satellite.getMeta('token');
-
-    expect(initToken, isNot(receivedToken));
   });
 
   test('cannot UPDATE primary key', () async {
@@ -114,7 +103,7 @@ void main() {
 
   test('snapshot works', () async {
     await runMigrations();
-    await satellite.setAuthState(null);
+    await satellite.setAuthState(authState);
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
 
@@ -147,7 +136,7 @@ void main() {
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
 
-    await satellite.start(null);
+    await satellite.start(authConfig);
 
     await Future<void>.delayed(opts.pollingInterval);
 
@@ -164,7 +153,7 @@ void main() {
 
     expect(notifier.notifications.length, 2);
 
-    await satellite.start(null);
+    await satellite.start(authConfig);
     await Future<void>.delayed(Duration.zero);
 
     expect(notifier.notifications.length, 3);
@@ -196,7 +185,7 @@ void main() {
     await adapter.run(Statement("DELETE FROM parent WHERE id=1"));
     await adapter.run(Statement("INSERT INTO parent(id) VALUES (1)"));
 
-    await satellite.setAuthState(null);
+    await satellite.setAuthState(authState);
     await satellite.performSnapshot();
     final entries = await satellite.getEntries();
     final clientId = satellite.authState!.clientId;
@@ -235,7 +224,7 @@ void main() {
       ),
     );
 
-    await satellite.setAuthState(null);
+    await satellite.setAuthState(authState);
     final localTime = await satellite.performSnapshot();
     final clientId = satellite.authState!.clientId;
 
@@ -284,7 +273,7 @@ void main() {
       ),
     );
 
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
     await satellite.performSnapshot();
 
@@ -348,7 +337,7 @@ void main() {
       ),
     );
 
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTimestamp = await satellite.performSnapshot();
@@ -423,7 +412,7 @@ void main() {
       },
       oldValues: {},
     );
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     await satellite.apply([incomingEntry], 'remote');
 
     const sql = 'SELECT * from parent WHERE id=1';
@@ -437,7 +426,7 @@ void main() {
   test('apply empty incoming', () async {
     await runMigrations();
 
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
 
     // TODO(dart): Is this an empty incoming? When can it happen?
     await satellite.apply([], "");
@@ -462,7 +451,7 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
 
     satellite.relations =
         kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
@@ -500,7 +489,7 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
 
     satellite.relations =
         kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
@@ -522,7 +511,7 @@ void main() {
 
   test('INSERT wins over DELETE and restored deleted values', () async {
     await runMigrations();
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTs = DateTime.now();
@@ -602,7 +591,7 @@ void main() {
 
   test('concurrent updates take all changed values', () async {
     await runMigrations();
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTs = DateTime.now().millisecondsSinceEpoch;
@@ -691,7 +680,7 @@ void main() {
 
   test('merge incoming with empty local', () async {
     await runMigrations();
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTs = DateTime.now();
@@ -808,7 +797,7 @@ void main() {
 
     await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
     await satellite.setMeta('compensations', 0);
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
 
     final incoming = generateLocalOplogEntry(
       tableInfo,
@@ -823,7 +812,7 @@ void main() {
       },
     );
 
-    await satellite.setAuthState();
+    // await satellite.setAuthState(authState);
 
     satellite.relations =
         kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
@@ -855,7 +844,7 @@ void main() {
 
     await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
     await satellite.setMeta('compensations', 0);
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final childInsertEntry = generateRemoteOplogEntry(
@@ -890,7 +879,6 @@ void main() {
     );
     await adapter.run(Statement("DELETE FROM main.parent WHERE id=1"));
 
-    await satellite.setAuthState();
     await satellite.performSnapshot();
 
     satellite.relations =
@@ -933,7 +921,7 @@ void main() {
     await adapter.run(
       Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
     );
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     await satellite.performSnapshot();
     await satellite.ack(1, true);
 
@@ -987,7 +975,7 @@ void main() {
     await adapter.run(
       Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
     );
-    await satellite.setAuthState();
+    await satellite.setAuthState(authState);
     await satellite.performSnapshot();
     await satellite.ack(1, true);
 
@@ -1101,7 +1089,7 @@ void main() {
           ),
           t.DataChange(
             relation: kTestRelations["parent"]!,
-            type: DataChangeType.insert,
+            type: DataChangeType.update,
             record: {"id": 1},
             oldRecord: {"id": 1},
             tags: [],
@@ -1129,7 +1117,7 @@ void main() {
 
   test('rowid acks updates meta', () async {
     await runMigrations();
-    await satellite.start(null);
+    await satellite.start(authConfig);
 
     final lsn1 = numberToBytes(1);
     client.emit('ack_lsn', AckLsnEvent(lsn1, AckType.localSend));
@@ -1141,7 +1129,7 @@ void main() {
   test('handling connectivity state change stops queueing operations',
       () async {
     await runMigrations();
-    await satellite.start(null);
+    await satellite.start(authConfig);
 
     await adapter.run(
       Statement(
@@ -1188,9 +1176,7 @@ void main() {
       'garbage collection is triggered when transaction from the same origin is replicated',
       () async {
     await runMigrations();
-    await satellite.start(null);
-
-    final clientId = satellite.authState!.clientId;
+    await satellite.start(authConfig);
 
     await adapter.run(
       Statement(
@@ -1214,6 +1200,8 @@ void main() {
 
     final old_oplog = await satellite.getEntries();
     final transactions = toTransactions(old_oplog, kTestRelations);
+
+    final clientId = satellite.authState!.clientId;
     transactions[0].origin = clientId;
 
     await satellite.applyTransaction(transactions[0]);

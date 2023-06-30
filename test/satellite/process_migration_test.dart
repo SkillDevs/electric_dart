@@ -63,7 +63,7 @@ void main() {
     context = await makeContext();
 
     final satellite = context.satellite;
-    await satellite.start(null);
+    await satellite.start(context.authConfig);
     clientId = satellite.authState!.clientId; // store clientId in the context
     await populateDB(context);
     txDate = await satellite.performSnapshot();

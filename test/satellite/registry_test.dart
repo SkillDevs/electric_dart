@@ -1,3 +1,4 @@
+import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/auth/mock.dart';
 import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/electric/adapter.dart';
@@ -13,26 +14,16 @@ import 'package:electric_client/src/util/types.dart';
 import 'package:test/test.dart';
 
 const dbName = 'test.db';
-const app = 'app';
-const env = 'test';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
 final Migrator migrator = MockMigrator();
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
-final console = MockConsoleClient();
 
 final ElectricConfigFilled config = ElectricConfigFilled(
-  app: app,
-  console: ConsoleConfig(
-    host: '127.0.0.1',
-    port: 4000,
-    ssl: false,
-  ),
   debug: true,
-  env: env,
-  migrations: [],
   replication: ReplicationConfig(host: '127.0.0.1', port: 5133, ssl: false),
+  auth: AuthConfig(clientId: null, token: 'test-token'),
 );
 
 void main() {
@@ -51,7 +42,6 @@ void main() {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
       config: config,
     );
     final s2 = await mockRegistry.startProcess(
@@ -60,7 +50,6 @@ void main() {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
       config: config,
     );
     final s3 = await mockRegistry.startProcess(
@@ -69,7 +58,6 @@ void main() {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
       config: config,
     );
 
@@ -93,7 +81,6 @@ void main() {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
       config: config,
     );
     final s2 = await mockRegistry.ensureStarted(
@@ -102,7 +89,6 @@ void main() {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
       config: config,
     );
     final s3 = await mockRegistry.ensureStarted(
@@ -111,7 +97,6 @@ void main() {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
       config: config,
     );
 
@@ -246,7 +231,6 @@ Future<Satellite> _callStartProcess(MockRegistry mockRegistry) {
     migrator: migrator,
     notifier: notifier,
     socketFactory: socketFactory,
-    console: console,
     config: config,
   );
 }
@@ -261,7 +245,6 @@ Future<Satellite> _callEnsureStarted(
     migrator: migrator,
     notifier: notifier,
     socketFactory: socketFactory,
-    console: console,
     config: config,
   );
 }
