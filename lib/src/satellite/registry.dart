@@ -22,7 +22,7 @@ abstract class BaseRegistry implements Registry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ElectricConfigFilled config,
+    required HydratedConfig config,
     SatelliteOverrides? overrides,
   }) {
     throw "Subclasses must implement startProcess";
@@ -35,7 +35,7 @@ abstract class BaseRegistry implements Registry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ElectricConfigFilled config,
+    required HydratedConfig config,
     SatelliteOverrides? opts,
   }) async {
     // If we're in the process of stopping the satellite process for this
@@ -168,7 +168,7 @@ class GlobalRegistry extends BaseRegistry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ElectricConfigFilled config,
+    required HydratedConfig config,
     SatelliteOverrides? overrides,
   }) async {
     // validateConfig should not be necessary, because we are already using a typed class

@@ -58,7 +58,7 @@ class MockRegistry extends BaseRegistry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ElectricConfigFilled config,
+    required HydratedConfig config,
     SatelliteOverrides? overrides,
   }) async {
     var effectiveOpts = kSatelliteDefaults;

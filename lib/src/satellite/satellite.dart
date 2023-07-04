@@ -15,7 +15,7 @@ abstract class Registry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ElectricConfigFilled config,
+    required HydratedConfig config,
   });
 
   Future<Satellite> ensureAlreadyStarted(DbName dbName);

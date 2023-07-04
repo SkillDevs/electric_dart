@@ -1,10 +1,3 @@
-import 'dart:convert';
-
-import 'package:electric_client/src/config/config.dart';
-import 'package:electric_client/src/satellite/satellite.dart';
-import 'package:electric_client/src/util/debug/debug.dart';
-import 'package:http/http.dart' as http;
-
 class AuthState {
   final String clientId;
   final String token;
@@ -20,7 +13,7 @@ class AuthConfig {
   final String token;
 
   AuthConfig({
-    required this.clientId,
+    this.clientId,
     required this.token,
   });
 }

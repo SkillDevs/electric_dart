@@ -56,16 +56,19 @@ List<Statement> generateOplogTriggers(
 
   return <String>[
     '''
+
     -- Toggles for turning the triggers on and off
     INSERT OR IGNORE INTO _electric_trigger_settings(tablename,flag) VALUES ('$tableFullName', 1);
     ''',
     '''
+
     /* Triggers for table $tableName */
 
     -- ensures primary key is immutable
     DROP TRIGGER IF EXISTS update_ensure_${namespace}_${tableName}_primarykey;
     ''',
     '''
+
     CREATE TRIGGER update_ensure_${namespace}_${tableName}_primarykey
       BEFORE UPDATE ON $tableFullName
     BEGIN
@@ -76,10 +79,12 @@ List<Statement> generateOplogTriggers(
     END;
     ''',
     '''
+
     -- Triggers that add INSERT, UPDATE, DELETE operation to the _opslog table
     DROP TRIGGER IF EXISTS insert_${namespace}_${tableName}_into_oplog;
     ''',
     '''
+
     CREATE TRIGGER insert_${namespace}_${tableName}_into_oplog
        AFTER INSERT ON $tableFullName
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
@@ -89,9 +94,11 @@ List<Statement> generateOplogTriggers(
     END;
     ''',
     '''
+
     DROP TRIGGER IF EXISTS update_${namespace}_${tableName}_into_oplog;
     ''',
     '''
+
     CREATE TRIGGER update_${namespace}_${tableName}_into_oplog
        AFTER UPDATE ON $tableFullName
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
@@ -101,9 +108,11 @@ List<Statement> generateOplogTriggers(
     END;
     ''',
     '''
+
     DROP TRIGGER IF EXISTS delete_${namespace}_${tableName}_into_oplog;
     ''',
     '''
+
     CREATE TRIGGER delete_${namespace}_${tableName}_into_oplog
        AFTER DELETE ON $tableFullName
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')

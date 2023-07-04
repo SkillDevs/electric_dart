@@ -20,7 +20,7 @@ final Migrator migrator = MockMigrator();
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
 
-final ElectricConfigFilled config = ElectricConfigFilled(
+final HydratedConfig config = HydratedConfig(
   debug: true,
   replication: ReplicationConfig(host: '127.0.0.1', port: 5133, ssl: false),
   auth: AuthConfig(clientId: null, token: 'test-token'),

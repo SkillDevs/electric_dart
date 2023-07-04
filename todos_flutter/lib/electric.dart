@@ -46,7 +46,7 @@ Future<Satellite> startElectric(String dbPath, DatabaseAdapter adapter) async {
         replication: replicationConfig,
       ),
     ),
-    config: ElectricConfigFilled(
+    config: HydratedConfig(
       app: app,
       env: env,
       console: consoleConfig,
