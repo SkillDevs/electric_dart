@@ -2,16 +2,11 @@ import 'package:electric_client/electric_dart.dart';
 
 final todoMigrations = [
   Migration(
-    name: "20230124_160941_413_init",
-    satelliteBody: [],
-    sha256: "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-    title: "init",
-    encoding: null,
+    statements: [],
+    version: '1',
   ),
   Migration(
-    encoding: null,
-    name: "20230124_160958_566_create_todomvc_schema",
-    satelliteBody: [
+    statements: [
       "CREATE TABLE \"todolist\" (\n    \"id\" TEXT NOT NULL,\n    \"filter\" TEXT,\n    \"editing\" TEXT,\n    PRIMARY KEY (\"id\")\n) WITHOUT ROWID;",
       "CREATE TABLE \"todo\" (\n    \"id\" TEXT NOT NULL,\n    \"listid\" TEXT,\n    \"text\" TEXT,\n    \"completed\" INTEGER DEFAULT 0 NOT NULL,\n    PRIMARY KEY (\"id\")\n  ) WITHOUT ROWID;",
       "DROP TABLE IF EXISTS _electric_trigger_settings;",
@@ -35,7 +30,6 @@ final todoMigrations = [
       "DROP TRIGGER IF EXISTS delete_main_todolist_into_oplog;",
       "CREATE TRIGGER delete_main_todolist_into_oplog\n   AFTER DELETE ON main.todolist\n   WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == 'main.todolist')\nBEGIN\n  INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)\n  VALUES ('main', 'todolist', 'DELETE', json_object('id', old.id), NULL, json_object('id', old.id, 'filter', old.filter, 'editing', old.editing), NULL);\nEND;"
     ],
-    sha256: "93193dbaae0539a71847187e38a1240e3888512c1bf833381d0252eb68702f9d",
-    title: "create todoMVC schema",
+    version: "2",
   ),
 ];

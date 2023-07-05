@@ -2,7 +2,7 @@ class AuthState {
   final String clientId;
   final String token;
 
-  AuthState({
+  const AuthState({
     required this.clientId,
     required this.token,
   });
@@ -12,7 +12,7 @@ class AuthConfig {
   final String? clientId;
   final String token;
 
-  AuthConfig({
+  const AuthConfig({
     this.clientId,
     required this.token,
   });

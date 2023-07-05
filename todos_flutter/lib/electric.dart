@@ -10,20 +10,17 @@ final connectivityStateProvider = StateProvider<ConnectivityState>((ref) {
   return ConnectivityState.disconnected;
 });
 
+const kElectricAuthConfig = AuthConfig(
+  token:
+      'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJsb2NhbC1kZXZlbG9wbWVudCIsInR5cGUiOiJhY2Nlc3MiLCJ1c2VyX2lkIjoidGVzdC11c2VyIiwiaWF0IjoxNjg3ODc3OTQ1LCJleHAiOjE2OTc4ODE1NDV9.L5Ui2sA9o5MeYDuy67u9lBV-2FzpOWL9dKcitRvgorg',
+);
+
 Future<Satellite> startElectric(String dbPath, DatabaseAdapter adapter) async {
   final dbName = dbPath;
-  const app = "my-todos";
-  const env = "local";
 
   final replicationConfig = ReplicationConfig(
     host: '127.0.0.1',
     port: 5133,
-    ssl: false,
-  );
-
-  final consoleConfig = ConsoleConfig(
-    host: '127.0.0.1',
-    port: 4000,
     ssl: false,
   );
 
@@ -37,20 +34,8 @@ Future<Satellite> startElectric(String dbPath, DatabaseAdapter adapter) async {
     migrator: BundleMigrator(adapter: adapter, migrations: todoMigrations),
     notifier: notifier,
     socketFactory: WebSocketIOFactory(),
-    console: ConsoleHttpClient(
-      ElectricConfig(
-        app: app,
-        env: env,
-        console: consoleConfig,
-        migrations: todoMigrations,
-        replication: replicationConfig,
-      ),
-    ),
     config: HydratedConfig(
-      app: app,
-      env: env,
-      console: consoleConfig,
-      migrations: todoMigrations,
+      auth: kElectricAuthConfig,
       replication: replicationConfig,
       debug: true,
     ),

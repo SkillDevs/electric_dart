@@ -126,7 +126,7 @@ class ConnectivityButton extends HookConsumerWidget {
         if (connectivityState == ConnectivityState.connected) {
           await satellite.stop();
         } else {
-          await satellite.start(null);
+          await satellite.start(kElectricAuthConfig);
         }
       },
       child: Text(
