@@ -102,15 +102,20 @@ class BaseTransaction<ChangeT> with EquatableMixin {
 
   final List<ChangeT> changes;
 
+  String?
+      migrationVersion; // TODO(update): review if we can do this only for Transaction class
+
   BaseTransaction({
     required this.commitTimestamp,
     required this.lsn,
     required this.changes,
     this.origin,
+    this.migrationVersion,
   });
 
   @override
-  List<Object?> get props => [commitTimestamp, lsn, origin, changes];
+  List<Object?> get props =>
+      [commitTimestamp, lsn, origin, changes, migrationVersion];
 
   BaseTransaction<ChangeT> clone() {
     return BaseTransaction<ChangeT>(
@@ -118,6 +123,7 @@ class BaseTransaction<ChangeT> with EquatableMixin {
       lsn: lsn,
       changes: changes,
       origin: origin,
+      migrationVersion: migrationVersion,
     );
   }
 }
@@ -184,12 +190,22 @@ class DataChange extends Change with EquatableMixin {
       ];
 }
 
-class Relation {
+class Relation with EquatableMixin {
   final int id;
   final String schema;
   final String table;
+  //TODO(update): Test that this is comparable
   final SatRelation_RelationType tableType;
   final List<RelationColumn> columns;
+
+  @override
+  List<Object?> get props => [
+        id,
+        schema,
+        table,
+        tableType,
+        columns,
+      ];
 
   Relation({
     required this.id,
@@ -216,7 +232,7 @@ class Relation {
   }
 }
 
-class RelationColumn {
+class RelationColumn with EquatableMixin {
   final String name;
   final String type;
   final bool? primaryKey;
@@ -226,6 +242,9 @@ class RelationColumn {
     required this.type,
     this.primaryKey,
   });
+
+  @override
+  List<Object?> get props => [name, type, primaryKey];
 }
 
 enum AckType {

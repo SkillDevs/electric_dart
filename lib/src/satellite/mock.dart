@@ -15,7 +15,6 @@ import 'package:events_emitter/events_emitter.dart';
 import 'package:fpdart/fpdart.dart';
 
 class MockSatelliteProcess implements Satellite {
-  final SatelliteConfig config;
   @override
   final DbName dbName;
   @override
@@ -25,7 +24,6 @@ class MockSatelliteProcess implements Satellite {
   @override
   final Notifier notifier;
   final SocketFactory socketFactory;
-  final ConsoleClient console;
   final SatelliteOpts opts;
 
   MockSatelliteProcess({
@@ -34,13 +32,11 @@ class MockSatelliteProcess implements Satellite {
     required this.migrator,
     required this.notifier,
     required this.socketFactory,
-    required this.console,
-    required this.config,
     required this.opts,
   });
 
   @override
-  Future<ConnectionWrapper> start(AuthState? authState) async {
+  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     return ConnectionWrapper(
@@ -62,14 +58,12 @@ class MockRegistry extends BaseRegistry {
     required Migrator migrator,
     required Notifier notifier,
     required SocketFactory socketFactory,
-    required ConsoleClient console,
-    required ElectricConfigFilled config,
-    AuthState? authState,
-    SatelliteOverrides? opts,
+    required HydratedConfig config,
+    SatelliteOverrides? overrides,
   }) async {
     var effectiveOpts = kSatelliteDefaults;
-    if (opts != null) {
-      effectiveOpts = effectiveOpts.copyWithOverrides(opts);
+    if (overrides != null) {
+      effectiveOpts = effectiveOpts.copyWithOverrides(overrides);
     }
 
     final satellite = MockSatelliteProcess(
@@ -78,14 +72,9 @@ class MockRegistry extends BaseRegistry {
       migrator: migrator,
       notifier: notifier,
       socketFactory: socketFactory,
-      console: console,
-      config: SatelliteConfig(
-        app: config.app,
-        env: config.env,
-      ),
       opts: effectiveOpts,
     );
-    await satellite.start(authState);
+    await satellite.start(config.auth);
 
     return satellite;
   }

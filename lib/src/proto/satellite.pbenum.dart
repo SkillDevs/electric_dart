@@ -148,6 +148,53 @@ class SatInStartReplicationReq_Option extends $pb.ProtobufEnum {
       : super(v, n);
 }
 
+class SatInStartReplicationResp_ReplicationError_Code extends $pb.ProtobufEnum {
+  static const SatInStartReplicationResp_ReplicationError_Code
+      CODE_UNSPECIFIED = SatInStartReplicationResp_ReplicationError_Code._(
+          0,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'CODE_UNSPECIFIED');
+  static const SatInStartReplicationResp_ReplicationError_Code BEHIND_WINDOW =
+      SatInStartReplicationResp_ReplicationError_Code._(
+          1,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'BEHIND_WINDOW');
+  static const SatInStartReplicationResp_ReplicationError_Code
+      INVALID_POSITION = SatInStartReplicationResp_ReplicationError_Code._(
+          2,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'INVALID_POSITION');
+  static const SatInStartReplicationResp_ReplicationError_Code
+      SUBSCRIPTION_NOT_FOUND =
+      SatInStartReplicationResp_ReplicationError_Code._(
+          3,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'SUBSCRIPTION_NOT_FOUND');
+
+  static const $core.List<SatInStartReplicationResp_ReplicationError_Code>
+      values = <SatInStartReplicationResp_ReplicationError_Code>[
+    CODE_UNSPECIFIED,
+    BEHIND_WINDOW,
+    INVALID_POSITION,
+    SUBSCRIPTION_NOT_FOUND,
+  ];
+
+  static final $core
+          .Map<$core.int, SatInStartReplicationResp_ReplicationError_Code>
+      _byValue = $pb.ProtobufEnum.initByValue(values);
+  static SatInStartReplicationResp_ReplicationError_Code? valueOf(
+          $core.int value) =>
+      _byValue[value];
+
+  const SatInStartReplicationResp_ReplicationError_Code._(
+      $core.int v, $core.String n)
+      : super(v, n);
+}
+
 class SatRelation_RelationType extends $pb.ProtobufEnum {
   static const SatRelation_RelationType TABLE = SatRelation_RelationType._(
       0,
@@ -213,4 +260,57 @@ class SatOpMigrate_Type extends $pb.ProtobufEnum {
   static SatOpMigrate_Type? valueOf($core.int value) => _byValue[value];
 
   const SatOpMigrate_Type._($core.int v, $core.String n) : super(v, n);
+}
+
+class SatSubsError_Code extends $pb.ProtobufEnum {
+  static const SatSubsError_Code CODE_UNSPECIFIED = SatSubsError_Code._(
+      0,
+      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+          ? ''
+          : 'CODE_UNSPECIFIED');
+  static const SatSubsError_Code SHAPE_REQUEST_ERROR = SatSubsError_Code._(
+      1,
+      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+          ? ''
+          : 'SHAPE_REQUEST_ERROR');
+
+  static const $core.List<SatSubsError_Code> values = <SatSubsError_Code>[
+    CODE_UNSPECIFIED,
+    SHAPE_REQUEST_ERROR,
+  ];
+
+  static final $core.Map<$core.int, SatSubsError_Code> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static SatSubsError_Code? valueOf($core.int value) => _byValue[value];
+
+  const SatSubsError_Code._($core.int v, $core.String n) : super(v, n);
+}
+
+class SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
+  static const SatSubsError_ShapeReqError_Code CODE_UNSPECIFIED =
+      SatSubsError_ShapeReqError_Code._(
+          0,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'CODE_UNSPECIFIED');
+  static const SatSubsError_ShapeReqError_Code TABLE_NOT_FOUND =
+      SatSubsError_ShapeReqError_Code._(
+          1,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'TABLE_NOT_FOUND');
+
+  static const $core.List<SatSubsError_ShapeReqError_Code> values =
+      <SatSubsError_ShapeReqError_Code>[
+    CODE_UNSPECIFIED,
+    TABLE_NOT_FOUND,
+  ];
+
+  static final $core.Map<$core.int, SatSubsError_ShapeReqError_Code> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static SatSubsError_ShapeReqError_Code? valueOf($core.int value) =>
+      _byValue[value];
+
+  const SatSubsError_ShapeReqError_Code._($core.int v, $core.String n)
+      : super(v, n);
 }

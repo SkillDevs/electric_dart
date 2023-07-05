@@ -1,34 +1,47 @@
 // export { BundleMigrator } from './bundle'
 // export { MockMigrator } from './mock'
 
+import 'package:electric_client/src/util/types.dart';
+
 class Migration {
-  final List<String> satelliteBody;
-  final String? encoding;
-  final String name;
-  final String sha256;
-  final String title;
+  final List<String> statements;
+  final String version;
 
   Migration({
-    required this.satelliteBody,
-    required this.encoding,
-    required this.name,
-    required this.sha256,
-    required this.title,
+    required this.statements,
+    required this.version,
+  });
+}
+
+class StmtMigration {
+  final List<Statement> statements;
+  final String version;
+
+  StmtMigration({
+    required this.statements,
+    required this.version,
   });
 }
 
 class MigrationRecord {
-  final String name;
-  final String sha256;
+  final String version;
 
   MigrationRecord({
-    required this.name,
-    required this.sha256,
+    required this.version,
   });
+}
+
+StmtMigration makeStmtMigration(Migration migration) {
+  return StmtMigration(
+    statements: migration.statements.map((sql) => Statement(sql)).toList(),
+    version: migration.version,
+  );
 }
 
 abstract class Migrator {
   Future<int> up();
+  Future<void> apply(StmtMigration migration);
+  Future<bool> applyIfNotAlready(StmtMigration migration);
 }
 
 class MigratorOptions {

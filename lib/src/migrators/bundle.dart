@@ -6,12 +6,11 @@ import 'package:electric_client/src/util/types.dart';
 
 const kElectricMigrationsTable = "_electric_migrations";
 
-final VALID_NAME_EXP = RegExp(r"^[a-z0-9_]+$", caseSensitive: false);
-final VALID_SHA256_EXP = RegExp(r"^[a-z0-9]{64}$");
+final VALID_VERSION_EXP = RegExp(r"^[0-9_]+$");
 
 class BundleMigrator implements Migrator {
   final DatabaseAdapter adapter;
-  late final List<Migration> migrations;
+  late final List<StmtMigration> migrations;
 
   late final String tableName;
 
@@ -20,7 +19,9 @@ class BundleMigrator implements Migrator {
     required List<Migration> migrations,
     String? tableName,
   }) {
-    this.migrations = [...kBaseMigrations, ...migrations];
+    this.migrations = [...kBaseMigrations, ...migrations]
+        .map((migration) => makeStmtMigration(migration))
+        .toList();
     this.tableName = tableName ?? kElectricMigrationsTable;
   }
 
@@ -31,7 +32,7 @@ class BundleMigrator implements Migrator {
 
     for (int i = 0; i < unapplied.length; i++) {
       final migration = unapplied[i];
-      logger.info("applying migration: ${migration.name} ${migration.sha256}");
+      logger.info("applying migration: ${migration.version}");
       await apply(migration);
     }
 
@@ -42,59 +43,50 @@ class BundleMigrator implements Migrator {
     // If this is the first time we're running migrations, then the
     // migrations table won't exist.
     const tableExists = '''
-      SELECT count(name) as numTables FROM sqlite_master
+      SELECT 1 FROM sqlite_master
         WHERE type = 'table'
           AND name = ?
     ''';
-    final res = await adapter.query(
+    final resTables = await adapter.query(
       Statement(
         tableExists,
         [tableName],
       ),
     );
-    final numTables = res.first["numTables"]! as int;
-    if (numTables == 0) {
+    if (resTables.isEmpty) {
       return [];
     }
 
     // The migrations table exists, so let's query the name and hash of
     // the previously applied migrations.
     final existingRecords = '''
-      SELECT name, sha256 FROM $tableName
+      SELECT version FROM $tableName
         ORDER BY id ASC
     ''';
     final rows = await adapter.query(Statement(existingRecords));
     return rows
         .map(
           (r) => MigrationRecord(
-            name: r["name"]! as String,
-            sha256: r["sha256"]! as String,
+            version: r["version"]! as String,
           ),
         )
         .toList();
   }
 
-  Future<List<Migration>> validateApplied(
-    List<Migration> migrations,
+  Future<List<StmtMigration>> validateApplied(
+    List<StmtMigration> migrations,
     List<MigrationRecord> existing,
   ) async {
     // First we validate that the existing records are the first migrations.
     for (var i = 0; i < existing.length; i++) {
       final migrationRecord = existing[i];
-      final name = migrationRecord.name;
-      final sha256 = migrationRecord.sha256;
+      final version = migrationRecord.version;
 
       final migration = migrations[i];
 
-      if (migration.name != name) {
+      if (migration.version != version) {
         throw Exception(
-          "Migrations cannot be altered once applied: expecting $name at index $i.",
-        );
-      }
-
-      if (migration.sha256 != sha256) {
-        throw Exception(
-          "Migrations cannot be altered once applied: expecting $name to have sha256 of $sha256",
+          "Migrations cannot be altered once applied: expecting $version at index $i.",
         );
       }
     }
@@ -105,27 +97,52 @@ class BundleMigrator implements Migrator {
     return localMigrations;
   }
 
-  Future<void> apply(Migration migration) async {
-    final name = migration.name;
-    final sha256 = migration.sha256;
-    final satelliteBody = migration.satelliteBody;
+  @override
+  Future<void> apply(StmtMigration migration) async {
+    final statements = migration.statements;
+    final version = migration.version;
 
-    if (!VALID_NAME_EXP.hasMatch(name)) {
-      throw Exception("Invalid migration name, must match $VALID_NAME_EXP");
-    }
-
-    if (!VALID_SHA256_EXP.hasMatch(sha256)) {
-      throw Exception("Invalid migration sha256, must match $VALID_SHA256_EXP");
+    if (!VALID_VERSION_EXP.hasMatch(version)) {
+      throw Exception(
+          "Invalid migration version, must match $VALID_VERSION_EXP");
     }
 
     final applied = '''
     INSERT INTO $tableName
-        ('name', 'sha256', 'applied_at') VALUES (?, ?, ?)
+        ('version', 'applied_at') VALUES (?, ?)
         ''';
 
     await adapter.runInTransaction([
-      ...satelliteBody.map((sql) => Statement(sql)),
-      Statement(applied, [name, sha256, DateTime.now().millisecondsSinceEpoch])
+      ...statements,
+      Statement(applied, [version, DateTime.now().millisecondsSinceEpoch])
     ]);
+  }
+
+  /// Applies the provided migration only if it has not yet been applied.
+  /// `migration`: The migration to apply.
+  /// Returns A future that resolves to a boolean
+  /// that indicates if the migration was applied.
+  @override
+  Future<bool> applyIfNotAlready(StmtMigration migration) async {
+    final versionExists = '''
+      SELECT 1 FROM $tableName
+        WHERE version = ?
+    ''';
+    final rows = await adapter.query(
+      Statement(
+        versionExists,
+        [migration.version],
+      ),
+    );
+
+    final shouldApply = rows.isEmpty;
+
+    if (shouldApply) {
+      // This is a new migration because its version number
+      // is not in our migrations table.
+      await apply(migration);
+    }
+
+    return shouldApply;
   }
 }

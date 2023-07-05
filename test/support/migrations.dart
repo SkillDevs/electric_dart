@@ -10,24 +10,19 @@ import 'package:electric_client/src/migrators/migrators.dart';
 
 final kTestMigrations = [
   Migration(
-    encoding: 'escaped',
-    name: '20230123_170527_569_init',
-    satelliteBody: [
+    statements: [
       'DROP TABLE IF EXISTS _electric_trigger_settings;',
-      'CREATE TABLE _electric_trigger_settings(tablename STRING PRIMARY KEY, flag INTEGER);',
+      'CREATE TABLE _electric_trigger_settings(tablename TEXT PRIMARY KEY, flag INTEGER);',
     ],
-    sha256: '01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',
-    title: 'init',
+    version: '1',
   ),
   Migration(
-    encoding: 'escaped',
-    name: '20230123_170646_833_test_schema',
-    satelliteBody: [
+    statements: [
       'CREATE TABLE IF NOT EXISTS items (\n  value TEXT PRIMARY KEY NOT NULL\n) WITHOUT ROWID;',
       'CREATE TABLE IF NOT EXISTS parent (\n  id INTEGER PRIMARY KEY NOT NULL,\n  value TEXT,\n  other INTEGER DEFAULT 0\n) WITHOUT ROWID;',
       'CREATE TABLE IF NOT EXISTS child (\n  id INTEGER PRIMARY KEY NOT NULL,\n  parent INTEGER NOT NULL,\n  FOREIGN KEY(parent) REFERENCES parent(id)\n) WITHOUT ROWID;',
       'DROP TABLE IF EXISTS _electric_trigger_settings;',
-      'CREATE TABLE _electric_trigger_settings(tablename STRING PRIMARY KEY, flag INTEGER);',
+      'CREATE TABLE _electric_trigger_settings(tablename TEXT PRIMARY KEY, flag INTEGER);',
       "INSERT INTO _electric_trigger_settings(tablename,flag) VALUES ('main.child', 1);",
       "INSERT INTO _electric_trigger_settings(tablename,flag) VALUES ('main.items', 1);",
       "INSERT INTO _electric_trigger_settings(tablename,flag) VALUES ('main.parent', 1);",
@@ -60,7 +55,6 @@ final kTestMigrations = [
       'DROP TRIGGER IF EXISTS delete_main_parent_into_oplog;',
       "CREATE TRIGGER delete_main_parent_into_oplog\n   AFTER DELETE ON main.parent\n   WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == 'main.parent')\nBEGIN\n  INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)\n  VALUES ('main', 'parent', 'DELETE', json_object('id', old.id), NULL, json_object('id', old.id, 'value', old.value, 'other', old.other), NULL);\nEND;",
     ],
-    sha256: '18fdba77e785b8f278386e1122e8435d9abf542a95920492a5772ac6d58031bf',
-    title: 'test schema',
+    version: "2",
   ),
 ];

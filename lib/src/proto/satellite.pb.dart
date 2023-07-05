@@ -22,7 +22,7 @@ class SatPingReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -63,7 +63,7 @@ class SatPingResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -130,7 +130,7 @@ class SatAuthHeaderPair extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..e<SatAuthHeader>(
         1,
@@ -222,7 +222,7 @@ class SatAuthReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -323,7 +323,7 @@ class SatAuthResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -403,7 +403,7 @@ class SatErrorResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..e<SatErrorResp_ErrorCode>(
         1,
@@ -474,7 +474,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -497,6 +497,11 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
             ? ''
             : 'syncBatchSize',
         $pb.PbFieldType.O3)
+    ..pPS(
+        4,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'subscriptionIds')
     ..hasRequiredFields = false;
 
   SatInStartReplicationReq._() : super();
@@ -504,6 +509,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     $core.List<$core.int>? lsn,
     $core.Iterable<SatInStartReplicationReq_Option>? options,
     $core.int? syncBatchSize,
+    $core.Iterable<$core.String>? subscriptionIds,
   }) {
     final _result = create();
     if (lsn != null) {
@@ -514,6 +520,9 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     }
     if (syncBatchSize != null) {
       _result.syncBatchSize = syncBatchSize;
+    }
+    if (subscriptionIds != null) {
+      _result.subscriptionIds.addAll(subscriptionIds);
     }
     return _result;
   }
@@ -572,6 +581,109 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
   $core.bool hasSyncBatchSize() => $_has(2);
   @$pb.TagNumber(3)
   void clearSyncBatchSize() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.List<$core.String> get subscriptionIds => $_getList(3);
+}
+
+class SatInStartReplicationResp_ReplicationError extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatInStartReplicationResp.ReplicationError',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..e<SatInStartReplicationResp_ReplicationError_Code>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'code',
+        $pb.PbFieldType.OE,
+        defaultOrMaker:
+            SatInStartReplicationResp_ReplicationError_Code.CODE_UNSPECIFIED,
+        valueOf: SatInStartReplicationResp_ReplicationError_Code.valueOf,
+        enumValues: SatInStartReplicationResp_ReplicationError_Code.values)
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'message')
+    ..hasRequiredFields = false;
+
+  SatInStartReplicationResp_ReplicationError._() : super();
+  factory SatInStartReplicationResp_ReplicationError({
+    SatInStartReplicationResp_ReplicationError_Code? code,
+    $core.String? message,
+  }) {
+    final _result = create();
+    if (code != null) {
+      _result.code = code;
+    }
+    if (message != null) {
+      _result.message = message;
+    }
+    return _result;
+  }
+  factory SatInStartReplicationResp_ReplicationError.fromBuffer(
+          $core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatInStartReplicationResp_ReplicationError.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatInStartReplicationResp_ReplicationError clone() =>
+      SatInStartReplicationResp_ReplicationError()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatInStartReplicationResp_ReplicationError copyWith(
+          void Function(SatInStartReplicationResp_ReplicationError) updates) =>
+      super.copyWith((message) =>
+              updates(message as SatInStartReplicationResp_ReplicationError))
+          as SatInStartReplicationResp_ReplicationError; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatInStartReplicationResp_ReplicationError create() =>
+      SatInStartReplicationResp_ReplicationError._();
+  SatInStartReplicationResp_ReplicationError createEmptyInstance() => create();
+  static $pb.PbList<SatInStartReplicationResp_ReplicationError>
+      createRepeated() =>
+          $pb.PbList<SatInStartReplicationResp_ReplicationError>();
+  @$core.pragma('dart2js:noInline')
+  static SatInStartReplicationResp_ReplicationError getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<
+          SatInStartReplicationResp_ReplicationError>(create);
+  static SatInStartReplicationResp_ReplicationError? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  SatInStartReplicationResp_ReplicationError_Code get code => $_getN(0);
+  @$pb.TagNumber(1)
+  set code(SatInStartReplicationResp_ReplicationError_Code v) {
+    setField(1, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCode() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => clearField(2);
 }
 
 class SatInStartReplicationResp extends $pb.GeneratedMessage {
@@ -582,12 +694,26 @@ class SatInStartReplicationResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
+    ..aOM<SatInStartReplicationResp_ReplicationError>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'err',
+        subBuilder: SatInStartReplicationResp_ReplicationError.create)
     ..hasRequiredFields = false;
 
   SatInStartReplicationResp._() : super();
-  factory SatInStartReplicationResp() => create();
+  factory SatInStartReplicationResp({
+    SatInStartReplicationResp_ReplicationError? err,
+  }) {
+    final _result = create();
+    if (err != null) {
+      _result.err = err;
+    }
+    return _result;
+  }
   factory SatInStartReplicationResp.fromBuffer($core.List<$core.int> i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(i, r);
@@ -616,6 +742,20 @@ class SatInStartReplicationResp extends $pb.GeneratedMessage {
   static SatInStartReplicationResp getDefault() => _defaultInstance ??=
       $pb.GeneratedMessage.$_defaultFor<SatInStartReplicationResp>(create);
   static SatInStartReplicationResp? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  SatInStartReplicationResp_ReplicationError get err => $_getN(0);
+  @$pb.TagNumber(1)
+  set err(SatInStartReplicationResp_ReplicationError v) {
+    setField(1, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasErr() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearErr() => clearField(1);
+  @$pb.TagNumber(1)
+  SatInStartReplicationResp_ReplicationError ensureErr() => $_ensure(0);
 }
 
 class SatInStopReplicationReq extends $pb.GeneratedMessage {
@@ -626,7 +766,7 @@ class SatInStopReplicationReq extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -670,7 +810,7 @@ class SatInStopReplicationResp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..hasRequiredFields = false;
 
@@ -714,7 +854,7 @@ class SatRelationColumn extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -824,7 +964,7 @@ class SatRelation extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -972,7 +1112,7 @@ class SatOpLog extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..pc<SatTransOp>(
         1,
@@ -1042,7 +1182,7 @@ class SatTransOp extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..oo(0, [1, 2, 3, 4, 5, 6])
     ..aOM<SatOpBegin>(
@@ -1235,7 +1375,7 @@ class SatOpBegin extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$fixnum.Int64>(
         1,
@@ -1388,7 +1528,7 @@ class SatOpCommit extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$fixnum.Int64>(
         1,
@@ -1499,7 +1639,7 @@ class SatOpInsert extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1602,7 +1742,7 @@ class SatOpUpdate extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1729,7 +1869,7 @@ class SatOpDelete extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$core.int>(
         1,
@@ -1832,7 +1972,7 @@ class SatMigrationNotification extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -1964,7 +2104,7 @@ class SatOpRow extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..a<$core.List<$core.int>>(
         1,
@@ -2044,7 +2184,7 @@ class SatOpMigrate_Stmt extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..e<SatOpMigrate_Type>(
         1,
@@ -2136,7 +2276,7 @@ class SatOpMigrate_PgColumnType extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -2231,7 +2371,7 @@ class SatOpMigrate_Column extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -2343,7 +2483,7 @@ class SatOpMigrate_ForeignKey extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..pPS(
         1,
@@ -2436,7 +2576,7 @@ class SatOpMigrate_Table extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -2543,7 +2683,7 @@ class SatOpMigrate extends $pb.GeneratedMessage {
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
-              : 'Electric.Satellite.v1_3'),
+              : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
     ..aOS(
         1,
@@ -2638,4 +2778,927 @@ class SatOpMigrate extends $pb.GeneratedMessage {
   void clearTable() => clearField(3);
   @$pb.TagNumber(3)
   SatOpMigrate_Table ensureTable() => $_ensure(2);
+}
+
+class SatSubsReq extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsReq',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..pc<SatShapeReq>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'shapeRequests',
+        $pb.PbFieldType.PM,
+        subBuilder: SatShapeReq.create)
+    ..hasRequiredFields = false;
+
+  SatSubsReq._() : super();
+  factory SatSubsReq({
+    $core.Iterable<SatShapeReq>? shapeRequests,
+  }) {
+    final _result = create();
+    if (shapeRequests != null) {
+      _result.shapeRequests.addAll(shapeRequests);
+    }
+    return _result;
+  }
+  factory SatSubsReq.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsReq.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsReq clone() => SatSubsReq()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsReq copyWith(void Function(SatSubsReq) updates) =>
+      super.copyWith((message) => updates(message as SatSubsReq))
+          as SatSubsReq; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsReq create() => SatSubsReq._();
+  SatSubsReq createEmptyInstance() => create();
+  static $pb.PbList<SatSubsReq> createRepeated() => $pb.PbList<SatSubsReq>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsReq getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsReq>(create);
+  static SatSubsReq? _defaultInstance;
+
+  @$pb.TagNumber(2)
+  $core.List<SatShapeReq> get shapeRequests => $_getList(0);
+}
+
+class SatSubsResp extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsResp',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'subscriptionId')
+    ..hasRequiredFields = false;
+
+  SatSubsResp._() : super();
+  factory SatSubsResp({
+    $core.String? subscriptionId,
+  }) {
+    final _result = create();
+    if (subscriptionId != null) {
+      _result.subscriptionId = subscriptionId;
+    }
+    return _result;
+  }
+  factory SatSubsResp.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsResp.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsResp clone() => SatSubsResp()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsResp copyWith(void Function(SatSubsResp) updates) =>
+      super.copyWith((message) => updates(message as SatSubsResp))
+          as SatSubsResp; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsResp create() => SatSubsResp._();
+  SatSubsResp createEmptyInstance() => create();
+  static $pb.PbList<SatSubsResp> createRepeated() => $pb.PbList<SatSubsResp>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsResp getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsResp>(create);
+  static SatSubsResp? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get subscriptionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set subscriptionId($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasSubscriptionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSubscriptionId() => clearField(1);
+}
+
+class SatUnsubsReq extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatUnsubsReq',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..pPS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'subscriptionIds')
+    ..hasRequiredFields = false;
+
+  SatUnsubsReq._() : super();
+  factory SatUnsubsReq({
+    $core.Iterable<$core.String>? subscriptionIds,
+  }) {
+    final _result = create();
+    if (subscriptionIds != null) {
+      _result.subscriptionIds.addAll(subscriptionIds);
+    }
+    return _result;
+  }
+  factory SatUnsubsReq.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatUnsubsReq.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatUnsubsReq clone() => SatUnsubsReq()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatUnsubsReq copyWith(void Function(SatUnsubsReq) updates) =>
+      super.copyWith((message) => updates(message as SatUnsubsReq))
+          as SatUnsubsReq; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsReq create() => SatUnsubsReq._();
+  SatUnsubsReq createEmptyInstance() => create();
+  static $pb.PbList<SatUnsubsReq> createRepeated() =>
+      $pb.PbList<SatUnsubsReq>();
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsReq getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatUnsubsReq>(create);
+  static SatUnsubsReq? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.String> get subscriptionIds => $_getList(0);
+}
+
+class SatUnsubsResp extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatUnsubsResp',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..hasRequiredFields = false;
+
+  SatUnsubsResp._() : super();
+  factory SatUnsubsResp() => create();
+  factory SatUnsubsResp.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatUnsubsResp.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatUnsubsResp clone() => SatUnsubsResp()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatUnsubsResp copyWith(void Function(SatUnsubsResp) updates) =>
+      super.copyWith((message) => updates(message as SatUnsubsResp))
+          as SatUnsubsResp; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsResp create() => SatUnsubsResp._();
+  SatUnsubsResp createEmptyInstance() => create();
+  static $pb.PbList<SatUnsubsResp> createRepeated() =>
+      $pb.PbList<SatUnsubsResp>();
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsResp getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatUnsubsResp>(create);
+  static SatUnsubsResp? _defaultInstance;
+}
+
+class SatShapeReq extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatShapeReq',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'requestId')
+    ..aOM<SatShapeDef>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'shapeDefinition',
+        subBuilder: SatShapeDef.create)
+    ..hasRequiredFields = false;
+
+  SatShapeReq._() : super();
+  factory SatShapeReq({
+    $core.String? requestId,
+    SatShapeDef? shapeDefinition,
+  }) {
+    final _result = create();
+    if (requestId != null) {
+      _result.requestId = requestId;
+    }
+    if (shapeDefinition != null) {
+      _result.shapeDefinition = shapeDefinition;
+    }
+    return _result;
+  }
+  factory SatShapeReq.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatShapeReq.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatShapeReq clone() => SatShapeReq()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatShapeReq copyWith(void Function(SatShapeReq) updates) =>
+      super.copyWith((message) => updates(message as SatShapeReq))
+          as SatShapeReq; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatShapeReq create() => SatShapeReq._();
+  SatShapeReq createEmptyInstance() => create();
+  static $pb.PbList<SatShapeReq> createRepeated() => $pb.PbList<SatShapeReq>();
+  @$core.pragma('dart2js:noInline')
+  static SatShapeReq getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatShapeReq>(create);
+  static SatShapeReq? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get requestId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set requestId($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasRequestId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRequestId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  SatShapeDef get shapeDefinition => $_getN(1);
+  @$pb.TagNumber(2)
+  set shapeDefinition(SatShapeDef v) {
+    setField(2, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasShapeDefinition() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearShapeDefinition() => clearField(2);
+  @$pb.TagNumber(2)
+  SatShapeDef ensureShapeDefinition() => $_ensure(1);
+}
+
+class SatShapeDef_Select extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatShapeDef.Select',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'tablename')
+    ..hasRequiredFields = false;
+
+  SatShapeDef_Select._() : super();
+  factory SatShapeDef_Select({
+    $core.String? tablename,
+  }) {
+    final _result = create();
+    if (tablename != null) {
+      _result.tablename = tablename;
+    }
+    return _result;
+  }
+  factory SatShapeDef_Select.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatShapeDef_Select.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatShapeDef_Select clone() => SatShapeDef_Select()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatShapeDef_Select copyWith(void Function(SatShapeDef_Select) updates) =>
+      super.copyWith((message) => updates(message as SatShapeDef_Select))
+          as SatShapeDef_Select; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDef_Select create() => SatShapeDef_Select._();
+  SatShapeDef_Select createEmptyInstance() => create();
+  static $pb.PbList<SatShapeDef_Select> createRepeated() =>
+      $pb.PbList<SatShapeDef_Select>();
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDef_Select getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatShapeDef_Select>(create);
+  static SatShapeDef_Select? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get tablename => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set tablename($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasTablename() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTablename() => clearField(1);
+}
+
+class SatShapeDef extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatShapeDef',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..pc<SatShapeDef_Select>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'selects',
+        $pb.PbFieldType.PM,
+        subBuilder: SatShapeDef_Select.create)
+    ..hasRequiredFields = false;
+
+  SatShapeDef._() : super();
+  factory SatShapeDef({
+    $core.Iterable<SatShapeDef_Select>? selects,
+  }) {
+    final _result = create();
+    if (selects != null) {
+      _result.selects.addAll(selects);
+    }
+    return _result;
+  }
+  factory SatShapeDef.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatShapeDef.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatShapeDef clone() => SatShapeDef()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatShapeDef copyWith(void Function(SatShapeDef) updates) =>
+      super.copyWith((message) => updates(message as SatShapeDef))
+          as SatShapeDef; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDef create() => SatShapeDef._();
+  SatShapeDef createEmptyInstance() => create();
+  static $pb.PbList<SatShapeDef> createRepeated() => $pb.PbList<SatShapeDef>();
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDef getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatShapeDef>(create);
+  static SatShapeDef? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<SatShapeDef_Select> get selects => $_getList(0);
+}
+
+class SatSubsError_ShapeReqError extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsError.ShapeReqError',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..e<SatSubsError_ShapeReqError_Code>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'code',
+        $pb.PbFieldType.OE,
+        defaultOrMaker: SatSubsError_ShapeReqError_Code.CODE_UNSPECIFIED,
+        valueOf: SatSubsError_ShapeReqError_Code.valueOf,
+        enumValues: SatSubsError_ShapeReqError_Code.values)
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'message')
+    ..aOS(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'requestId')
+    ..hasRequiredFields = false;
+
+  SatSubsError_ShapeReqError._() : super();
+  factory SatSubsError_ShapeReqError({
+    SatSubsError_ShapeReqError_Code? code,
+    $core.String? message,
+    $core.String? requestId,
+  }) {
+    final _result = create();
+    if (code != null) {
+      _result.code = code;
+    }
+    if (message != null) {
+      _result.message = message;
+    }
+    if (requestId != null) {
+      _result.requestId = requestId;
+    }
+    return _result;
+  }
+  factory SatSubsError_ShapeReqError.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsError_ShapeReqError.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsError_ShapeReqError clone() =>
+      SatSubsError_ShapeReqError()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsError_ShapeReqError copyWith(
+          void Function(SatSubsError_ShapeReqError) updates) =>
+      super.copyWith(
+              (message) => updates(message as SatSubsError_ShapeReqError))
+          as SatSubsError_ShapeReqError; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsError_ShapeReqError create() => SatSubsError_ShapeReqError._();
+  SatSubsError_ShapeReqError createEmptyInstance() => create();
+  static $pb.PbList<SatSubsError_ShapeReqError> createRepeated() =>
+      $pb.PbList<SatSubsError_ShapeReqError>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsError_ShapeReqError getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsError_ShapeReqError>(create);
+  static SatSubsError_ShapeReqError? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  SatSubsError_ShapeReqError_Code get code => $_getN(0);
+  @$pb.TagNumber(1)
+  set code(SatSubsError_ShapeReqError_Code v) {
+    setField(1, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCode() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get requestId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set requestId($core.String v) {
+    $_setString(2, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasRequestId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRequestId() => clearField(3);
+}
+
+class SatSubsError extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsError',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..e<SatSubsError_Code>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'code',
+        $pb.PbFieldType.OE,
+        defaultOrMaker: SatSubsError_Code.CODE_UNSPECIFIED,
+        valueOf: SatSubsError_Code.valueOf,
+        enumValues: SatSubsError_Code.values)
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'message')
+    ..aOS(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'subscriptionId')
+    ..pc<SatSubsError_ShapeReqError>(
+        4,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'shapeRequestError',
+        $pb.PbFieldType.PM,
+        subBuilder: SatSubsError_ShapeReqError.create)
+    ..hasRequiredFields = false;
+
+  SatSubsError._() : super();
+  factory SatSubsError({
+    SatSubsError_Code? code,
+    $core.String? message,
+    $core.String? subscriptionId,
+    $core.Iterable<SatSubsError_ShapeReqError>? shapeRequestError,
+  }) {
+    final _result = create();
+    if (code != null) {
+      _result.code = code;
+    }
+    if (message != null) {
+      _result.message = message;
+    }
+    if (subscriptionId != null) {
+      _result.subscriptionId = subscriptionId;
+    }
+    if (shapeRequestError != null) {
+      _result.shapeRequestError.addAll(shapeRequestError);
+    }
+    return _result;
+  }
+  factory SatSubsError.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsError.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsError clone() => SatSubsError()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsError copyWith(void Function(SatSubsError) updates) =>
+      super.copyWith((message) => updates(message as SatSubsError))
+          as SatSubsError; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsError create() => SatSubsError._();
+  SatSubsError createEmptyInstance() => create();
+  static $pb.PbList<SatSubsError> createRepeated() =>
+      $pb.PbList<SatSubsError>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsError getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsError>(create);
+  static SatSubsError? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  SatSubsError_Code get code => $_getN(0);
+  @$pb.TagNumber(1)
+  set code(SatSubsError_Code v) {
+    setField(1, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCode() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get subscriptionId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set subscriptionId($core.String v) {
+    $_setString(2, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasSubscriptionId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSubscriptionId() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.List<SatSubsError_ShapeReqError> get shapeRequestError => $_getList(3);
+}
+
+class SatSubsDataBegin extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsDataBegin',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'subscriptionId')
+    ..hasRequiredFields = false;
+
+  SatSubsDataBegin._() : super();
+  factory SatSubsDataBegin({
+    $core.String? subscriptionId,
+  }) {
+    final _result = create();
+    if (subscriptionId != null) {
+      _result.subscriptionId = subscriptionId;
+    }
+    return _result;
+  }
+  factory SatSubsDataBegin.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsDataBegin.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsDataBegin clone() => SatSubsDataBegin()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsDataBegin copyWith(void Function(SatSubsDataBegin) updates) =>
+      super.copyWith((message) => updates(message as SatSubsDataBegin))
+          as SatSubsDataBegin; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsDataBegin create() => SatSubsDataBegin._();
+  SatSubsDataBegin createEmptyInstance() => create();
+  static $pb.PbList<SatSubsDataBegin> createRepeated() =>
+      $pb.PbList<SatSubsDataBegin>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsDataBegin getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsDataBegin>(create);
+  static SatSubsDataBegin? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get subscriptionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set subscriptionId($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasSubscriptionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSubscriptionId() => clearField(1);
+}
+
+class SatSubsDataEnd extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsDataEnd',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..hasRequiredFields = false;
+
+  SatSubsDataEnd._() : super();
+  factory SatSubsDataEnd() => create();
+  factory SatSubsDataEnd.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsDataEnd.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsDataEnd clone() => SatSubsDataEnd()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsDataEnd copyWith(void Function(SatSubsDataEnd) updates) =>
+      super.copyWith((message) => updates(message as SatSubsDataEnd))
+          as SatSubsDataEnd; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsDataEnd create() => SatSubsDataEnd._();
+  SatSubsDataEnd createEmptyInstance() => create();
+  static $pb.PbList<SatSubsDataEnd> createRepeated() =>
+      $pb.PbList<SatSubsDataEnd>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsDataEnd getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsDataEnd>(create);
+  static SatSubsDataEnd? _defaultInstance;
+}
+
+class SatShapeDataBegin extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatShapeDataBegin',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'requestId')
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'uuid')
+    ..hasRequiredFields = false;
+
+  SatShapeDataBegin._() : super();
+  factory SatShapeDataBegin({
+    $core.String? requestId,
+    $core.String? uuid,
+  }) {
+    final _result = create();
+    if (requestId != null) {
+      _result.requestId = requestId;
+    }
+    if (uuid != null) {
+      _result.uuid = uuid;
+    }
+    return _result;
+  }
+  factory SatShapeDataBegin.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatShapeDataBegin.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatShapeDataBegin clone() => SatShapeDataBegin()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatShapeDataBegin copyWith(void Function(SatShapeDataBegin) updates) =>
+      super.copyWith((message) => updates(message as SatShapeDataBegin))
+          as SatShapeDataBegin; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDataBegin create() => SatShapeDataBegin._();
+  SatShapeDataBegin createEmptyInstance() => create();
+  static $pb.PbList<SatShapeDataBegin> createRepeated() =>
+      $pb.PbList<SatShapeDataBegin>();
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDataBegin getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatShapeDataBegin>(create);
+  static SatShapeDataBegin? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get requestId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set requestId($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasRequestId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRequestId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get uuid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set uuid($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasUuid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUuid() => clearField(2);
+}
+
+class SatShapeDataEnd extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatShapeDataEnd',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..hasRequiredFields = false;
+
+  SatShapeDataEnd._() : super();
+  factory SatShapeDataEnd() => create();
+  factory SatShapeDataEnd.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatShapeDataEnd.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatShapeDataEnd clone() => SatShapeDataEnd()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatShapeDataEnd copyWith(void Function(SatShapeDataEnd) updates) =>
+      super.copyWith((message) => updates(message as SatShapeDataEnd))
+          as SatShapeDataEnd; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDataEnd create() => SatShapeDataEnd._();
+  SatShapeDataEnd createEmptyInstance() => create();
+  static $pb.PbList<SatShapeDataEnd> createRepeated() =>
+      $pb.PbList<SatShapeDataEnd>();
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDataEnd getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatShapeDataEnd>(create);
+  static SatShapeDataEnd? _defaultInstance;
 }

@@ -5,4 +5,14 @@ class MockMigrator implements Migrator {
   Future<int> up() async {
     return 0;
   }
+
+  @override
+  Future<void> apply(StmtMigration migration) async {
+    return;
+  }
+
+  @override
+  Future<bool> applyIfNotAlready(StmtMigration migration) async {
+    return true;
+  }
 }

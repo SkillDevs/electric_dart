@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/auth/mock.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
 import 'package:electric_client/src/proto/satellite.pb.dart';
@@ -66,11 +67,6 @@ final opts = kSatelliteDefaults.copyWith(
   pollingInterval: const Duration(milliseconds: 200),
 );
 
-final satelliteConfig = SatelliteConfig(
-  app: 'test',
-  env: 'default',
-);
-
 Future<SatelliteTestContext> makeContext({
   SatelliteOpts? options,
 }) async {
@@ -83,20 +79,19 @@ Future<SatelliteTestContext> makeContext({
       BundleMigrator(adapter: adapter, migrations: kTestMigrations);
   final notifier = MockNotifier(dbName);
   final client = MockSatelliteClient();
-  final console = MockConsoleClient();
   final satellite = SatelliteProcess(
     dbName: dbName,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,
     client: client,
-    console: console,
-    config: satelliteConfig,
     opts: options ?? opts,
   );
 
   final tableInfo = initTableInfo();
   final timestamp = DateTime.now();
+
+  final authConfig = AuthConfig(clientId: '', token: 'test-token');
 
   return SatelliteTestContext(
     dbName: dbName,
@@ -108,6 +103,7 @@ Future<SatelliteTestContext> makeContext({
     satellite: satellite,
     tableInfo: tableInfo,
     timestamp: timestamp,
+    authConfig: authConfig,
   );
 }
 
@@ -121,6 +117,10 @@ class SatelliteTestContext {
   final SatelliteProcess satellite;
   final TableInfo tableInfo;
   final DateTime timestamp;
+  final AuthConfig authConfig;
+
+  late final AuthState authState =
+      AuthState(clientId: authConfig.clientId!, token: authConfig.token);
 
   SatelliteTestContext({
     required this.dbName,
@@ -132,6 +132,7 @@ class SatelliteTestContext {
     required this.satellite,
     required this.tableInfo,
     required this.timestamp,
+    required this.authConfig,
   });
 
   Future<void> runMigrations() async {

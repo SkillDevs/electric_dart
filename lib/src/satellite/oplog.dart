@@ -98,6 +98,19 @@ OpType changeTypeToOpType(DataChangeType opTypeStr) {
   }
 }
 
+DataChangeType opTypeToChangeType(OpType opType) {
+  switch (opType) {
+    case OpType.delete:
+      return DataChangeType.delete;
+    case OpType.insert:
+      return DataChangeType.insert;
+    case OpType.update:
+      return DataChangeType.update;
+    case OpType.upsert: // TODO(update): Upsert may not be necessary
+      throw UnimplementedError();
+  }
+}
+
 const shadowTagsDefault = '[]';
 
 OpType opTypeStrToOpType(String str) {
@@ -487,13 +500,8 @@ DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
     throw Exception("Could not find relation for ${entry.tablename}");
   }
 
-  // FIXME: We should not loose UPDATE information here, as otherwise
-  // it will be identical to setting all values in a transaction, instead
-  // of updating values (different CR outcome)
   return DataChange(
-    type: entry.optype == OpType.delete
-        ? DataChangeType.delete
-        : DataChangeType.insert,
+    type: opTypeToChangeType(entry.optype),
     relation: relation,
     record: record,
     oldRecord: oldRecord,

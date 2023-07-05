@@ -63,7 +63,7 @@ void main() {
     context = await makeContext();
 
     final satellite = context.satellite;
-    await satellite.start(null);
+    await satellite.start(context.authConfig);
     clientId = satellite.authState!.clientId; // store clientId in the context
     await populateDB(context);
     txDate = await satellite.performSnapshot();
@@ -111,6 +111,10 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [createTable, addColumn],
       lsn: [],
+      // starts at 3, because the app already defines 2 migrations
+      // (see test/support/migrations/migrations.js)
+      // which are loaded when Satellite is started
+      migrationVersion: "3",
     );
 
     // Apply the migration transaction
@@ -270,6 +274,7 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [...dml1, ...ddl1, ...dml2],
       lsn: [],
+      migrationVersion: "4", // TODO(dart): Value doesn't matter in the test?
     );
 
     final rowsBeforeMigration = await fetchParentRows(adapter);
@@ -372,6 +377,7 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [...ddl, ...dml],
       lsn: [],
+      migrationVersion: "5",
     );
 
     final rowsBeforeMigration = await fetchParentRows(adapter);
@@ -468,6 +474,7 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [...ddl, insertChangeB],
       lsn: [],
+      migrationVersion: "6",
     );
 
     final rowsBeforeMigration = await fetchParentRows(adapter);

@@ -2,7 +2,7 @@
 
 # Electric Dart
 
-Dart client implementation for [Electric](https://electric-sql.com/) based on commit `1d78f9fa49a99a18284adbe17d26368ee3cde5b3`
+Dart client implementation for [Electric](https://electric-sql.com/) based on commit `b5bfe18001eb3af59f1f733b76b69ccea77512eb` of the [electric git repository](https://github.com/electric-sql/electric)
 
 - Client based on the typescript client from the `clients/typescript` subfolder.
 
@@ -35,7 +35,7 @@ https://user-images.githubusercontent.com/22084723/233607256-2a36c911-152b-483b-
 
 Install the `protoc_plugin` Dart package. Version used: `^20.0.1`
 
-`dart pub global activate protoc_plugin`
+`dart pub global activate protoc_plugin 20.0.1`
 
 To generate the code
 
