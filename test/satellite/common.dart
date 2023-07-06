@@ -145,7 +145,7 @@ class SatelliteTestContext {
   }
 
   Future<void> cleanAndStopSatellite() async {
-    await clean();
     await satellite.stop();
+    await clean();
   }
 }
