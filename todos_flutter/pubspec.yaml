@@ -7,7 +7,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=2.19.6 <3.0.0'
+  sdk: '>=3.0.0 <4.0.0'
   flutter: '>=3.10.0'
 
 
@@ -19,12 +19,12 @@ dependencies:
     path: ../
 
   cupertino_icons: ^1.0.2
-  sqlite3: ^1.11.0
+  sqlite3: ^2.0.0
   path: ^1.8.2
   hooks_riverpod: ^2.3.5
   path_provider: ^2.0.14
-  logging: ^1.1.1
-  drift: ^2.8.0
+  logging: ^1.2.0
+  drift: ^2.9.0
 
   
   flutter_hooks: ^0.18.6
