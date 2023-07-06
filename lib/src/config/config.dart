@@ -1,5 +1,4 @@
 import 'package:electric_client/src/auth/auth.dart';
-import 'package:electric_client/src/migrators/migrators.dart';
 
 typedef AppName = String;
 typedef EnvName = String;

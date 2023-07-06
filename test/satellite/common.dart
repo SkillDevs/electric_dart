@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:electric_client/electric_dart.dart';
 import 'package:electric_client/src/auth/auth.dart';
-import 'package:electric_client/src/auth/mock.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
 import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/config.dart';

@@ -102,8 +102,7 @@ class BaseTransaction<ChangeT> with EquatableMixin {
 
   final List<ChangeT> changes;
 
-  String?
-      migrationVersion; // TODO(update): review if we can do this only for Transaction class
+  String? migrationVersion;
 
   BaseTransaction({
     required this.commitTimestamp,

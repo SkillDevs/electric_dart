@@ -1,5 +1,4 @@
 import 'package:electric_client/src/auth/auth.dart';
-import 'package:electric_client/src/auth/mock.dart';
 import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/electric/adapter.dart';
 import 'package:electric_client/src/electric/mock.dart';
@@ -23,7 +22,7 @@ final notifier = MockNotifier(dbName);
 final HydratedConfig config = HydratedConfig(
   debug: true,
   replication: ReplicationConfig(host: '127.0.0.1', port: 5133, ssl: false),
-  auth: AuthConfig(clientId: null, token: 'test-token'),
+  auth: const AuthConfig(clientId: null, token: 'test-token'),
 );
 
 void main() {

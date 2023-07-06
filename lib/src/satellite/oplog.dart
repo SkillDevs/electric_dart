@@ -17,7 +17,6 @@ enum OpType {
   delete,
   insert,
   update,
-  upsert,
 }
 
 enum ChangesOpType {
@@ -106,8 +105,6 @@ DataChangeType opTypeToChangeType(OpType opType) {
       return DataChangeType.insert;
     case OpType.update:
       return DataChangeType.update;
-    case OpType.upsert: // TODO(update): Upsert may not be necessary
-      throw UnimplementedError();
   }
 }
 
@@ -119,8 +116,6 @@ OpType opTypeStrToOpType(String str) {
       return OpType.delete;
     case "update":
       return OpType.update;
-    case "upsert":
-      return OpType.upsert;
     case "insert":
       return OpType.insert;
   }
