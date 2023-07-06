@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:electric_client/drivers/drift.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/drivers/drift.dart';
 import 'package:todos_electrified/database/database.dart' as m;
 
 part 'database.g.dart';
