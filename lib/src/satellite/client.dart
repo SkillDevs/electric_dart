@@ -878,7 +878,6 @@ class SatelliteClient extends EventEmitter implements Client {
               tags: tags,
             ),
           );
-          break;
         case DataChangeType.insert:
           changeOp = SatTransOp(
             insert: SatOpInsert(
@@ -887,7 +886,6 @@ class SatelliteClient extends EventEmitter implements Client {
               tags: tags,
             ),
           );
-          break;
         case DataChangeType.update:
           changeOp = SatTransOp(
             update: SatOpUpdate(
@@ -897,7 +895,6 @@ class SatelliteClient extends EventEmitter implements Client {
               tags: tags,
             ),
           );
-          break;
       }
       ops.add(changeOp);
     }

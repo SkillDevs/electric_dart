@@ -26,6 +26,7 @@ Future<void> main() async {
 
   driftRepo.db.setElectricNotifier(satellite.notifier);
 
+  // ignore: unused_local_variable
   final dispose = adapter.hookToNotifier(satellite.notifier);
 
   runApp(

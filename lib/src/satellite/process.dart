@@ -438,7 +438,6 @@ class SatelliteProcess implements Satellite {
           case ChangesOpType.delete:
             stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
             stmts.add(_deleteShadowTagsQuery(shadowEntry));
-            break;
 
           default:
             stmts.add(_applyNonDeleteOperation(entryChanges, tablenameStr));

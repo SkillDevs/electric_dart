@@ -1,3 +1,5 @@
+// ignore_for_file: unreachable_from_main
+
 import 'package:electric_client/src/electric/adapter.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/mock.dart';

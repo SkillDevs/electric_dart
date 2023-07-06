@@ -90,7 +90,7 @@ Future<SatelliteTestContext> makeContext({
   final tableInfo = initTableInfo();
   final timestamp = DateTime.now();
 
-  final authConfig = AuthConfig(clientId: '', token: 'test-token');
+  const authConfig = AuthConfig(clientId: '', token: 'test-token');
 
   return SatelliteTestContext(
     dbName: dbName,
