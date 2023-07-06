@@ -1,3 +1,5 @@
+// ignore_for_file: unreachable_from_main
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -274,7 +276,7 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [...dml1, ...ddl1, ...dml2],
       lsn: [],
-      migrationVersion: "4", // TODO(dart): Value doesn't matter in the test?
+      migrationVersion: "4",
     );
 
     final rowsBeforeMigration = await fetchParentRows(adapter);

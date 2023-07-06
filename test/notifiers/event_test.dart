@@ -11,7 +11,7 @@ void main() {
 
     final notifications = <PotentialChangeNotification>[];
 
-    target.subscribeToPotentialDataChanges((x) => {notifications.add(x)});
+    target.subscribeToPotentialDataChanges((x) => notifications.add(x));
 
     source.potentiallyChanged();
 
@@ -25,8 +25,8 @@ void main() {
 
     final notifications = <Notification>[];
 
-    t1.subscribeToPotentialDataChanges((x) => {notifications.add(x)});
-    t2.subscribeToPotentialDataChanges((x) => {notifications.add(x)});
+    t1.subscribeToPotentialDataChanges((x) => notifications.add(x));
+    t2.subscribeToPotentialDataChanges((x) => notifications.add(x));
 
     source.potentiallyChanged();
 
@@ -44,7 +44,7 @@ void main() {
 
     final notifications = <Notification>[];
 
-    target.subscribeToDataChanges((x) => {notifications.add(x)});
+    target.subscribeToDataChanges((x) => notifications.add(x));
 
     const qualifiedTablename = QualifiedTablename('main', 'Items');
 
@@ -63,8 +63,8 @@ void main() {
 
     final notifications = <Notification>[];
 
-    t1.subscribeToDataChanges((x) => {notifications.add(x)});
-    t2.subscribeToDataChanges((x) => {notifications.add(x)});
+    t1.subscribeToDataChanges((x) => notifications.add(x));
+    t2.subscribeToDataChanges((x) => notifications.add(x));
 
     const qualifiedTablename = QualifiedTablename('main', 'Items');
     final changes = [Change(qualifiedTablename: qualifiedTablename)];

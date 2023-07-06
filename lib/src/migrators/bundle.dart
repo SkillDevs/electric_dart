@@ -104,7 +104,8 @@ class BundleMigrator implements Migrator {
 
     if (!VALID_VERSION_EXP.hasMatch(version)) {
       throw Exception(
-          "Invalid migration version, must match $VALID_VERSION_EXP");
+        "Invalid migration version, must match $VALID_VERSION_EXP",
+      );
     }
 
     final applied = '''

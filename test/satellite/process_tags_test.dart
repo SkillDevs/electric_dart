@@ -1,3 +1,5 @@
+// ignore_for_file: unreachable_from_main
+
 import 'dart:convert';
 
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;

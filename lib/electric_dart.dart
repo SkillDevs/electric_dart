@@ -1,8 +1,9 @@
+/// Dart implementation of Electric SQL
 library electric_dart;
 
 export 'src/auth/auth.dart' show AuthConfig;
 export 'src/config/config.dart'
-    show ConsoleConfig, ReplicationConfig, ElectricConfig, HydratedConfig;
+    show ConsoleConfig, ElectricConfig, HydratedConfig, ReplicationConfig;
 
 export "src/drivers/drift/drift_adapter.dart" show DriftAdapter;
 export "src/drivers/drift/electrify.dart" show ElectricfiedDriftDatabaseMixin;

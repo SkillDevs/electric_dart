@@ -1,12 +1,8 @@
-import 'dart:convert';
 
 import 'package:electric_client/electric_dart.dart';
-import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electric_client/src/migrators/builder.dart';
 import 'package:electric_client/src/proto/satellite.pb.dart';
-import 'package:electric_client/src/util/proto.dart';
-import 'package:electric_client/src/util/random.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
@@ -109,7 +105,7 @@ void main() {
       dbName: dbName,
       migrations: [migration],
       config: ElectricConfig(
-        auth: AuthConfig(
+        auth: const AuthConfig(
           token: 'test-token',
         ),
       ),

@@ -102,8 +102,7 @@ class BaseTransaction<ChangeT> with EquatableMixin {
 
   final List<ChangeT> changes;
 
-  String?
-      migrationVersion; // TODO(update): review if we can do this only for Transaction class
+  String? migrationVersion;
 
   BaseTransaction({
     required this.commitTimestamp,
@@ -194,7 +193,6 @@ class Relation with EquatableMixin {
   final int id;
   final String schema;
   final String table;
-  //TODO(update): Test that this is comparable
   final SatRelation_RelationType tableType;
   final List<RelationColumn> columns;
 
@@ -203,6 +201,8 @@ class Relation with EquatableMixin {
         id,
         schema,
         table,
+        // TableType is comparable already because protobuf generated
+        // static const values as an enum
         tableType,
         columns,
       ];
