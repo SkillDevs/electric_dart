@@ -23,18 +23,18 @@ Future<void> main() async {
   // final todosDb = TodosDatabase(sqliteRepo);
   // final adapter = SqliteAdapter(sqliteRepo.db);
 
-  final satellite = await startElectric(dbPath, adapter);
+  final electricClient = await startElectricDrift(dbPath, driftRepo.db);
 
-  driftRepo.db.setElectricNotifier(satellite.notifier);
+  driftRepo.db.setElectricNotifier(electricClient.notifier);
 
   // ignore: unused_local_variable
-  final dispose = adapter.hookToNotifier(satellite.notifier);
+  final dispose = adapter.hookToNotifier(electricClient.notifier);
 
   runApp(
     ProviderScope(
       overrides: [
         todosDatabaseProvider.overrideWithValue(todosDb),
-        satelliteProvider.overrideWithValue(satellite),
+        electricClientProvider.overrideWithValue(electricClient),
       ],
       child: const MyApp(),
     ),
@@ -66,8 +66,8 @@ class MyHomePage extends HookConsumerWidget {
     // final todos = ref.watch(todosProvider);
 
     useEffect(() {
-      final satellite = ref.read(satelliteProvider);
-      satellite.notifier.subscribeToConnectivityStateChange((change) {
+      final electric = ref.read(electricClientProvider);
+      electric.notifier.subscribeToConnectivityStateChange((change) {
         print("connectivity state changed ${change.connectivityState}");
         final notifier = ref.read(connectivityStateProvider.notifier);
         notifier.update((state) => change.connectivityState);
@@ -124,12 +124,17 @@ class ConnectivityButton extends HookConsumerWidget {
 
     return ElevatedButton(
       onPressed: () async {
-        final satellite = ref.read(satelliteProvider);
-        if (connectivityState == ConnectivityState.connected) {
-          await satellite.stop();
-        } else {
-          await satellite.start(kElectricAuthConfig);
-        }
+        final electric = ref.read(electricClientProvider);
+        final nextState = connectivityState == ConnectivityState.connected
+            ? ConnectivityState.disconnected
+            : ConnectivityState.connected;
+        // if (connectivityState == ConnectivityState.connected) {
+        //   await electric.stop();
+        // } else {
+        //   await electric.start(kElectricAuthConfig);
+        // }
+        final dbName = electric.notifier.dbName;
+        electric.notifier.connectivityStateChange(dbName, nextState);
       },
       child: Text(
         connectivityState == ConnectivityState.connected

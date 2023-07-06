@@ -2,9 +2,9 @@
 library electric_dart;
 
 export 'src/auth/auth.dart' show AuthConfig;
+export 'src/client/model/client.dart' show ElectricClient;
 export 'src/config/config.dart'
     show ConsoleConfig, ElectricConfig, HydratedConfig, ReplicationConfig;
-
 export 'src/electric/adapter.dart' show DatabaseAdapter;
 export 'src/migrators/bundle.dart' show BundleMigrator;
 export "src/migrators/migrators.dart" show Migration;

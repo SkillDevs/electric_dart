@@ -1,5 +1,4 @@
 import 'package:electric_client/electric_dart.dart';
-import 'package:electric_client/src/client/model/client.dart';
 import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
@@ -36,8 +35,7 @@ Future<ElectricClient> electrify({
   required List<Migration> migrations,
   required ElectricConfig config,
   required ElectrifyOptions opts,
-}) async // : Promise<ElectricClient<DB>> => {
-{
+}) async {
   setLogLevel((config.debug ?? false) ? Level.ALL : Level.WARNING);
 
   final adapter = opts.adapter;
