@@ -1,3 +1,4 @@
+/// Dart implementation of Electric SQL
 library electric_dart;
 
 export 'src/auth/auth.dart' show AuthConfig;
