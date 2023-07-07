@@ -49,6 +49,27 @@ enum SatelliteErrorCode {
   protocolViolation,
   unknownDataType,
   authError,
+
+  subscriptionAlreadyExists,
+  unexpectedSubscriptionState,
+
+  // start replication errors
+  behindWindow,
+  invalidPosition,
+  subscriptionNotFound,
+  subscriptionError,
+
+  // subscription errors
+  shapeRequestError,
+  subscriptionIdAlreadyExists,
+
+  // shape request errors
+  tableNotFound,
+  referentialIntegrityViolation,
+
+  // shape data errors
+  shapeDeliveryError,
+  shapeSizeLimitExceeded,
 }
 
 class BaseReplication<TransactionType> {

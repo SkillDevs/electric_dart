@@ -2790,6 +2790,11 @@ class SatSubsReq extends $pb.GeneratedMessage {
               ? ''
               : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
+    ..aOS(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'subscriptionId')
     ..pc<SatShapeReq>(
         2,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
@@ -2801,9 +2806,13 @@ class SatSubsReq extends $pb.GeneratedMessage {
 
   SatSubsReq._() : super();
   factory SatSubsReq({
+    $core.String? subscriptionId,
     $core.Iterable<SatShapeReq>? shapeRequests,
   }) {
     final _result = create();
+    if (subscriptionId != null) {
+      _result.subscriptionId = subscriptionId;
+    }
     if (shapeRequests != null) {
       _result.shapeRequests.addAll(shapeRequests);
     }
@@ -2835,8 +2844,249 @@ class SatSubsReq extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<SatSubsReq>(create);
   static SatSubsReq? _defaultInstance;
 
+  @$pb.TagNumber(1)
+  $core.String get subscriptionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set subscriptionId($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasSubscriptionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSubscriptionId() => clearField(1);
+
   @$pb.TagNumber(2)
-  $core.List<SatShapeReq> get shapeRequests => $_getList(0);
+  $core.List<SatShapeReq> get shapeRequests => $_getList(1);
+}
+
+class SatSubsResp_SatSubsError_ShapeReqError extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsResp.SatSubsError.ShapeReqError',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..e<SatSubsResp_SatSubsError_ShapeReqError_Code>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'code',
+        $pb.PbFieldType.OE,
+        defaultOrMaker:
+            SatSubsResp_SatSubsError_ShapeReqError_Code.CODE_UNSPECIFIED,
+        valueOf: SatSubsResp_SatSubsError_ShapeReqError_Code.valueOf,
+        enumValues: SatSubsResp_SatSubsError_ShapeReqError_Code.values)
+    ..aOS(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'message')
+    ..aOS(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'requestId')
+    ..hasRequiredFields = false;
+
+  SatSubsResp_SatSubsError_ShapeReqError._() : super();
+  factory SatSubsResp_SatSubsError_ShapeReqError({
+    SatSubsResp_SatSubsError_ShapeReqError_Code? code,
+    $core.String? message,
+    $core.String? requestId,
+  }) {
+    final _result = create();
+    if (code != null) {
+      _result.code = code;
+    }
+    if (message != null) {
+      _result.message = message;
+    }
+    if (requestId != null) {
+      _result.requestId = requestId;
+    }
+    return _result;
+  }
+  factory SatSubsResp_SatSubsError_ShapeReqError.fromBuffer(
+          $core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsResp_SatSubsError_ShapeReqError.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsResp_SatSubsError_ShapeReqError clone() =>
+      SatSubsResp_SatSubsError_ShapeReqError()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsResp_SatSubsError_ShapeReqError copyWith(
+          void Function(SatSubsResp_SatSubsError_ShapeReqError) updates) =>
+      super.copyWith((message) =>
+              updates(message as SatSubsResp_SatSubsError_ShapeReqError))
+          as SatSubsResp_SatSubsError_ShapeReqError; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsResp_SatSubsError_ShapeReqError create() =>
+      SatSubsResp_SatSubsError_ShapeReqError._();
+  SatSubsResp_SatSubsError_ShapeReqError createEmptyInstance() => create();
+  static $pb.PbList<SatSubsResp_SatSubsError_ShapeReqError> createRepeated() =>
+      $pb.PbList<SatSubsResp_SatSubsError_ShapeReqError>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsResp_SatSubsError_ShapeReqError getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<
+          SatSubsResp_SatSubsError_ShapeReqError>(create);
+  static SatSubsResp_SatSubsError_ShapeReqError? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  SatSubsResp_SatSubsError_ShapeReqError_Code get code => $_getN(0);
+  @$pb.TagNumber(1)
+  set code(SatSubsResp_SatSubsError_ShapeReqError_Code v) {
+    setField(1, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCode() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get requestId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set requestId($core.String v) {
+    $_setString(2, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasRequestId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRequestId() => clearField(3);
+}
+
+class SatSubsResp_SatSubsError extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SatSubsResp.SatSubsError',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'Electric.Satellite.v1_4'),
+      createEmptyInstance: create)
+    ..e<SatSubsResp_SatSubsError_Code>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'code',
+        $pb.PbFieldType.OE,
+        defaultOrMaker: SatSubsResp_SatSubsError_Code.CODE_UNSPECIFIED,
+        valueOf: SatSubsResp_SatSubsError_Code.valueOf,
+        enumValues: SatSubsResp_SatSubsError_Code.values)
+    ..aOS(
+        3,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'message')
+    ..pc<SatSubsResp_SatSubsError_ShapeReqError>(
+        4,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'shapeRequestError',
+        $pb.PbFieldType.PM,
+        subBuilder: SatSubsResp_SatSubsError_ShapeReqError.create)
+    ..hasRequiredFields = false;
+
+  SatSubsResp_SatSubsError._() : super();
+  factory SatSubsResp_SatSubsError({
+    SatSubsResp_SatSubsError_Code? code,
+    $core.String? message,
+    $core.Iterable<SatSubsResp_SatSubsError_ShapeReqError>? shapeRequestError,
+  }) {
+    final _result = create();
+    if (code != null) {
+      _result.code = code;
+    }
+    if (message != null) {
+      _result.message = message;
+    }
+    if (shapeRequestError != null) {
+      _result.shapeRequestError.addAll(shapeRequestError);
+    }
+    return _result;
+  }
+  factory SatSubsResp_SatSubsError.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatSubsResp_SatSubsError.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatSubsResp_SatSubsError clone() =>
+      SatSubsResp_SatSubsError()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatSubsResp_SatSubsError copyWith(
+          void Function(SatSubsResp_SatSubsError) updates) =>
+      super.copyWith((message) => updates(message as SatSubsResp_SatSubsError))
+          as SatSubsResp_SatSubsError; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static SatSubsResp_SatSubsError create() => SatSubsResp_SatSubsError._();
+  SatSubsResp_SatSubsError createEmptyInstance() => create();
+  static $pb.PbList<SatSubsResp_SatSubsError> createRepeated() =>
+      $pb.PbList<SatSubsResp_SatSubsError>();
+  @$core.pragma('dart2js:noInline')
+  static SatSubsResp_SatSubsError getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsResp_SatSubsError>(create);
+  static SatSubsResp_SatSubsError? _defaultInstance;
+
+  @$pb.TagNumber(2)
+  SatSubsResp_SatSubsError_Code get code => $_getN(0);
+  @$pb.TagNumber(2)
+  set code(SatSubsResp_SatSubsError_Code v) {
+    setField(2, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasCode() => $_has(0);
+  @$pb.TagNumber(2)
+  void clearCode() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(3)
+  set message($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(3)
+  void clearMessage() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.List<SatSubsResp_SatSubsError_ShapeReqError> get shapeRequestError =>
+      $_getList(2);
 }
 
 class SatSubsResp extends $pb.GeneratedMessage {
@@ -2854,15 +3104,25 @@ class SatSubsResp extends $pb.GeneratedMessage {
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'subscriptionId')
+    ..aOM<SatSubsResp_SatSubsError>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'error',
+        subBuilder: SatSubsResp_SatSubsError.create)
     ..hasRequiredFields = false;
 
   SatSubsResp._() : super();
   factory SatSubsResp({
     $core.String? subscriptionId,
+    SatSubsResp_SatSubsError? error,
   }) {
     final _result = create();
     if (subscriptionId != null) {
       _result.subscriptionId = subscriptionId;
+    }
+    if (error != null) {
+      _result.error = error;
     }
     return _result;
   }
@@ -2903,6 +3163,20 @@ class SatSubsResp extends $pb.GeneratedMessage {
   $core.bool hasSubscriptionId() => $_has(0);
   @$pb.TagNumber(1)
   void clearSubscriptionId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  SatSubsResp_SatSubsError get error => $_getN(1);
+  @$pb.TagNumber(2)
+  set error(SatSubsResp_SatSubsError v) {
+    setField(2, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasError() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearError() => clearField(2);
+  @$pb.TagNumber(2)
+  SatSubsResp_SatSubsError ensureError() => $_ensure(1);
 }
 
 class SatUnsubsReq extends $pb.GeneratedMessage {
@@ -3221,25 +3495,25 @@ class SatShapeDef extends $pb.GeneratedMessage {
   $core.List<SatShapeDef_Select> get selects => $_getList(0);
 }
 
-class SatSubsError_ShapeReqError extends $pb.GeneratedMessage {
+class SatSubsDataError_ShapeReqError extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       const $core.bool.fromEnvironment('protobuf.omit_message_names')
           ? ''
-          : 'SatSubsError.ShapeReqError',
+          : 'SatSubsDataError.ShapeReqError',
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
               : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
-    ..e<SatSubsError_ShapeReqError_Code>(
+    ..e<SatSubsDataError_ShapeReqError_Code>(
         1,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'code',
         $pb.PbFieldType.OE,
-        defaultOrMaker: SatSubsError_ShapeReqError_Code.CODE_UNSPECIFIED,
-        valueOf: SatSubsError_ShapeReqError_Code.valueOf,
-        enumValues: SatSubsError_ShapeReqError_Code.values)
+        defaultOrMaker: SatSubsDataError_ShapeReqError_Code.CODE_UNSPECIFIED,
+        valueOf: SatSubsDataError_ShapeReqError_Code.valueOf,
+        enumValues: SatSubsDataError_ShapeReqError_Code.values)
     ..aOS(
         2,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
@@ -3252,9 +3526,9 @@ class SatSubsError_ShapeReqError extends $pb.GeneratedMessage {
             : 'requestId')
     ..hasRequiredFields = false;
 
-  SatSubsError_ShapeReqError._() : super();
-  factory SatSubsError_ShapeReqError({
-    SatSubsError_ShapeReqError_Code? code,
+  SatSubsDataError_ShapeReqError._() : super();
+  factory SatSubsDataError_ShapeReqError({
+    SatSubsDataError_ShapeReqError_Code? code,
     $core.String? message,
     $core.String? requestId,
   }) {
@@ -3270,40 +3544,41 @@ class SatSubsError_ShapeReqError extends $pb.GeneratedMessage {
     }
     return _result;
   }
-  factory SatSubsError_ShapeReqError.fromBuffer($core.List<$core.int> i,
+  factory SatSubsDataError_ShapeReqError.fromBuffer($core.List<$core.int> i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(i, r);
-  factory SatSubsError_ShapeReqError.fromJson($core.String i,
+  factory SatSubsDataError_ShapeReqError.fromJson($core.String i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
   @$core.Deprecated('Using this can add significant overhead to your binary. '
       'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
       'Will be removed in next major version')
-  SatSubsError_ShapeReqError clone() =>
-      SatSubsError_ShapeReqError()..mergeFromMessage(this);
+  SatSubsDataError_ShapeReqError clone() =>
+      SatSubsDataError_ShapeReqError()..mergeFromMessage(this);
   @$core.Deprecated('Using this can add significant overhead to your binary. '
       'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
       'Will be removed in next major version')
-  SatSubsError_ShapeReqError copyWith(
-          void Function(SatSubsError_ShapeReqError) updates) =>
+  SatSubsDataError_ShapeReqError copyWith(
+          void Function(SatSubsDataError_ShapeReqError) updates) =>
       super.copyWith(
-              (message) => updates(message as SatSubsError_ShapeReqError))
-          as SatSubsError_ShapeReqError; // ignore: deprecated_member_use
+              (message) => updates(message as SatSubsDataError_ShapeReqError))
+          as SatSubsDataError_ShapeReqError; // ignore: deprecated_member_use
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
-  static SatSubsError_ShapeReqError create() => SatSubsError_ShapeReqError._();
-  SatSubsError_ShapeReqError createEmptyInstance() => create();
-  static $pb.PbList<SatSubsError_ShapeReqError> createRepeated() =>
-      $pb.PbList<SatSubsError_ShapeReqError>();
+  static SatSubsDataError_ShapeReqError create() =>
+      SatSubsDataError_ShapeReqError._();
+  SatSubsDataError_ShapeReqError createEmptyInstance() => create();
+  static $pb.PbList<SatSubsDataError_ShapeReqError> createRepeated() =>
+      $pb.PbList<SatSubsDataError_ShapeReqError>();
   @$core.pragma('dart2js:noInline')
-  static SatSubsError_ShapeReqError getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<SatSubsError_ShapeReqError>(create);
-  static SatSubsError_ShapeReqError? _defaultInstance;
+  static SatSubsDataError_ShapeReqError getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsDataError_ShapeReqError>(create);
+  static SatSubsDataError_ShapeReqError? _defaultInstance;
 
   @$pb.TagNumber(1)
-  SatSubsError_ShapeReqError_Code get code => $_getN(0);
+  SatSubsDataError_ShapeReqError_Code get code => $_getN(0);
   @$pb.TagNumber(1)
-  set code(SatSubsError_ShapeReqError_Code v) {
+  set code(SatSubsDataError_ShapeReqError_Code v) {
     setField(1, v);
   }
 
@@ -3337,25 +3612,25 @@ class SatSubsError_ShapeReqError extends $pb.GeneratedMessage {
   void clearRequestId() => clearField(3);
 }
 
-class SatSubsError extends $pb.GeneratedMessage {
+class SatSubsDataError extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       const $core.bool.fromEnvironment('protobuf.omit_message_names')
           ? ''
-          : 'SatSubsError',
+          : 'SatSubsDataError',
       package: const $pb.PackageName(
           const $core.bool.fromEnvironment('protobuf.omit_message_names')
               ? ''
               : 'Electric.Satellite.v1_4'),
       createEmptyInstance: create)
-    ..e<SatSubsError_Code>(
+    ..e<SatSubsDataError_Code>(
         1,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'code',
         $pb.PbFieldType.OE,
-        defaultOrMaker: SatSubsError_Code.CODE_UNSPECIFIED,
-        valueOf: SatSubsError_Code.valueOf,
-        enumValues: SatSubsError_Code.values)
+        defaultOrMaker: SatSubsDataError_Code.CODE_UNSPECIFIED,
+        valueOf: SatSubsDataError_Code.valueOf,
+        enumValues: SatSubsDataError_Code.values)
     ..aOS(
         2,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
@@ -3366,21 +3641,21 @@ class SatSubsError extends $pb.GeneratedMessage {
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'subscriptionId')
-    ..pc<SatSubsError_ShapeReqError>(
+    ..pc<SatSubsDataError_ShapeReqError>(
         4,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'shapeRequestError',
         $pb.PbFieldType.PM,
-        subBuilder: SatSubsError_ShapeReqError.create)
+        subBuilder: SatSubsDataError_ShapeReqError.create)
     ..hasRequiredFields = false;
 
-  SatSubsError._() : super();
-  factory SatSubsError({
-    SatSubsError_Code? code,
+  SatSubsDataError._() : super();
+  factory SatSubsDataError({
+    SatSubsDataError_Code? code,
     $core.String? message,
     $core.String? subscriptionId,
-    $core.Iterable<SatSubsError_ShapeReqError>? shapeRequestError,
+    $core.Iterable<SatSubsDataError_ShapeReqError>? shapeRequestError,
   }) {
     final _result = create();
     if (code != null) {
@@ -3397,37 +3672,37 @@ class SatSubsError extends $pb.GeneratedMessage {
     }
     return _result;
   }
-  factory SatSubsError.fromBuffer($core.List<$core.int> i,
+  factory SatSubsDataError.fromBuffer($core.List<$core.int> i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(i, r);
-  factory SatSubsError.fromJson($core.String i,
+  factory SatSubsDataError.fromJson($core.String i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
   @$core.Deprecated('Using this can add significant overhead to your binary. '
       'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
       'Will be removed in next major version')
-  SatSubsError clone() => SatSubsError()..mergeFromMessage(this);
+  SatSubsDataError clone() => SatSubsDataError()..mergeFromMessage(this);
   @$core.Deprecated('Using this can add significant overhead to your binary. '
       'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
       'Will be removed in next major version')
-  SatSubsError copyWith(void Function(SatSubsError) updates) =>
-      super.copyWith((message) => updates(message as SatSubsError))
-          as SatSubsError; // ignore: deprecated_member_use
+  SatSubsDataError copyWith(void Function(SatSubsDataError) updates) =>
+      super.copyWith((message) => updates(message as SatSubsDataError))
+          as SatSubsDataError; // ignore: deprecated_member_use
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
-  static SatSubsError create() => SatSubsError._();
-  SatSubsError createEmptyInstance() => create();
-  static $pb.PbList<SatSubsError> createRepeated() =>
-      $pb.PbList<SatSubsError>();
+  static SatSubsDataError create() => SatSubsDataError._();
+  SatSubsDataError createEmptyInstance() => create();
+  static $pb.PbList<SatSubsDataError> createRepeated() =>
+      $pb.PbList<SatSubsDataError>();
   @$core.pragma('dart2js:noInline')
-  static SatSubsError getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<SatSubsError>(create);
-  static SatSubsError? _defaultInstance;
+  static SatSubsDataError getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatSubsDataError>(create);
+  static SatSubsDataError? _defaultInstance;
 
   @$pb.TagNumber(1)
-  SatSubsError_Code get code => $_getN(0);
+  SatSubsDataError_Code get code => $_getN(0);
   @$pb.TagNumber(1)
-  set code(SatSubsError_Code v) {
+  set code(SatSubsDataError_Code v) {
     setField(1, v);
   }
 
@@ -3461,7 +3736,8 @@ class SatSubsError extends $pb.GeneratedMessage {
   void clearSubscriptionId() => clearField(3);
 
   @$pb.TagNumber(4)
-  $core.List<SatSubsError_ShapeReqError> get shapeRequestError => $_getList(3);
+  $core.List<SatSubsDataError_ShapeReqError> get shapeRequestError =>
+      $_getList(3);
 }
 
 class SatSubsDataBegin extends $pb.GeneratedMessage {

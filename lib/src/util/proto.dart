@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:electric_client/src/proto/satellite.pb.dart';
+import 'package:electric_client/src/proto/satellite.pb.dart';
+import 'package:electric_client/src/satellite/shapes/types.dart';
+import 'package:electric_client/src/util/types.dart';
 
 const kProtobufPackage = "Electric.Satellite.v1_4";
 
@@ -128,4 +131,144 @@ Uint8List getSizeBuf(SatMsgType msgType) {
 
 String getProtocolVersion() {
   return kProtobufPackage;
+}
+
+const Map<SatInStartReplicationResp_ReplicationError_Code, SatelliteErrorCode>
+    startReplicationErrorToSatError = {
+  SatInStartReplicationResp_ReplicationError_Code.CODE_UNSPECIFIED:
+      SatelliteErrorCode.internal,
+  SatInStartReplicationResp_ReplicationError_Code.BEHIND_WINDOW:
+      SatelliteErrorCode.behindWindow,
+  SatInStartReplicationResp_ReplicationError_Code.INVALID_POSITION:
+      SatelliteErrorCode.invalidPosition,
+  SatInStartReplicationResp_ReplicationError_Code.SUBSCRIPTION_NOT_FOUND:
+      SatelliteErrorCode.subscriptionNotFound,
+};
+
+const Map<SatSubsResp_SatSubsError_Code, SatelliteErrorCode>
+    subsErrorToSatError = {
+  SatSubsResp_SatSubsError_Code.CODE_UNSPECIFIED: SatelliteErrorCode.internal,
+  SatSubsResp_SatSubsError_Code.SHAPE_REQUEST_ERROR:
+      SatelliteErrorCode.shapeRequestError,
+  SatSubsResp_SatSubsError_Code.SUBSCRIPTION_ID_ALREADY_EXISTS:
+      SatelliteErrorCode.subscriptionIdAlreadyExists,
+};
+
+const Map<SatSubsResp_SatSubsError_ShapeReqError_Code, SatelliteErrorCode>
+    subsErrorShapeReqErrorToSatError = {
+  SatSubsResp_SatSubsError_ShapeReqError_Code.CODE_UNSPECIFIED:
+      SatelliteErrorCode.internal,
+  SatSubsResp_SatSubsError_ShapeReqError_Code.TABLE_NOT_FOUND:
+      SatelliteErrorCode.tableNotFound,
+  SatSubsResp_SatSubsError_ShapeReqError_Code.REFERENTIAL_INTEGRITY_VIOLATION:
+      SatelliteErrorCode.referentialIntegrityViolation,
+};
+
+const Map<SatSubsDataError_Code, SatelliteErrorCode> subsDataErrorToSatError = {
+  SatSubsDataError_Code.CODE_UNSPECIFIED: SatelliteErrorCode.internal,
+  SatSubsDataError_Code.SHAPE_DELIVERY_ERROR:
+      SatelliteErrorCode.shapeDeliveryError,
+};
+
+const Map<SatSubsDataError_ShapeReqError_Code, SatelliteErrorCode>
+    subsDataErrorShapeReqToSatError = {
+  SatSubsDataError_ShapeReqError_Code.CODE_UNSPECIFIED:
+      SatelliteErrorCode.internal,
+  SatSubsDataError_ShapeReqError_Code.SHAPE_SIZE_LIMIT_EXCEEDED:
+      SatelliteErrorCode.shapeSizeLimitExceeded,
+};
+
+SatelliteException startReplicationErrorToSatelliteError(
+  SatInStartReplicationResp_ReplicationError error,
+) {
+  return SatelliteException(
+    startReplicationErrorToSatError[error.code] ?? SatelliteErrorCode.internal,
+    error.message,
+  );
+}
+
+SatelliteException subsErrorToSatelliteError(
+  SatSubsResp_SatSubsError satError,
+) {
+  final shapeRequestError = satError.shapeRequestError;
+  final message = satError.message;
+  final code = satError.code;
+
+  if (shapeRequestError.isNotEmpty) {
+    final shapeErrorMsgs = shapeRequestError
+        .map(subsShapeReqErrorToSatelliteError)
+        .map((e) => e.message)
+        .join('; ');
+    final composed =
+        "subscription error message: $message; shape error messages: $shapeErrorMsgs";
+    return SatelliteException(
+      subsErrorToSatError[code] ?? SatelliteErrorCode.internal,
+      composed,
+    );
+  }
+  return SatelliteException(
+    subsErrorToSatError[code] ?? SatelliteErrorCode.internal,
+    message,
+  );
+}
+
+SatelliteException subsShapeReqErrorToSatelliteError(
+  SatSubsResp_SatSubsError_ShapeReqError error,
+) {
+  return SatelliteException(
+    subsErrorShapeReqErrorToSatError[error.code] ?? SatelliteErrorCode.internal,
+    error.message,
+  );
+}
+
+SatelliteException subsDataErrorToSatelliteError(SatSubsDataError satError) {
+  final shapeRequestError = satError.shapeRequestError;
+  final message = satError.message;
+  final code = satError.code;
+
+  if (shapeRequestError.isNotEmpty) {
+    final shapeErrorMsgs = shapeRequestError
+        .map(subsDataShapeErrorToSatelliteError)
+        .map((e) => e.message)
+        .join('; ');
+    final composed =
+        "subscription data error message: $message; shape error messages: $shapeErrorMsgs";
+    return SatelliteException(
+      subsDataErrorToSatError[code] ?? SatelliteErrorCode.internal,
+      composed,
+    );
+  }
+  return SatelliteException(
+    subsDataErrorToSatError[code] ?? SatelliteErrorCode.internal,
+    message,
+  );
+}
+
+SatelliteException subsDataShapeErrorToSatelliteError(
+  SatSubsDataError_ShapeReqError error,
+) {
+  return SatelliteException(
+    subsDataErrorShapeReqToSatError[error.code] ?? SatelliteErrorCode.internal,
+    error.message,
+  );
+}
+
+List<SatShapeReq> shapeRequestToSatShapeReq(List<ShapeRequest> shapeRequests) {
+  final shapeReqs = <SatShapeReq>[];
+  for (final sr in shapeRequests) {
+    final requestId = sr.requestId;
+    final selects = sr.definition.selects.map(
+      (s) => SatShapeDef_Select(
+        tablename: s.tablename,
+      ),
+    );
+    final shapeDefinition = SatShapeDef(selects: selects);
+
+    final req = SatShapeReq(
+      requestId: requestId,
+      shapeDefinition: shapeDefinition,
+    );
+    shapeReqs.add(req);
+  }
+  return shapeReqs;
 }
