@@ -112,7 +112,7 @@ void main() {
     // empty response will trigger client timeout
     server.nextResponses([]);
     try {
-      await client.startReplication(null);
+      await client.startReplication(null, null);
       fail("start replication should throw");
     } catch (error) {
       expect(
@@ -143,7 +143,7 @@ void main() {
     final startResp = SatInStartReplicationResp();
     server.nextResponses([startResp]);
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
   });
 
   test('replication start sends FIRST_LSN', () async {
@@ -165,7 +165,7 @@ void main() {
         }
       },
     ]);
-    unawaited(client.startReplication(null));
+    unawaited(client.startReplication(null, null));
     await completer.future;
   });
 
@@ -176,8 +176,8 @@ void main() {
     server.nextResponses([startResp]);
 
     try {
-      await client.startReplication(null);
-      await client.startReplication(null); // fails
+      await client.startReplication(null, null);
+      await client.startReplication(null, null); // fails
     } catch (error) {
       expect(
         error,
@@ -198,7 +198,7 @@ void main() {
     server.nextResponses([start]);
     server.nextResponses([stop]);
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
     await client.stopReplication();
   });
 
@@ -239,7 +239,7 @@ void main() {
     ]);
     server.nextResponses([stop]);
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
     await client.stopReplication();
 
     await completer.future;
@@ -318,7 +318,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
     await completer.future;
   });
 
@@ -357,7 +357,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
     await completer.future;
   });
 
@@ -455,7 +455,7 @@ void main() {
       },
     ]);
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
 
     // wait a little for replication to start in the opposite direction
     await Future.delayed(
@@ -479,7 +479,7 @@ void main() {
     server.nextResponses([]);
     server.nextResponses([pingResponse]);
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
 
     final transaction = DataTransaction(
       lsn: lsn_1,
@@ -668,7 +668,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null);
+    await client.startReplication(null, null);
   });
 }
 

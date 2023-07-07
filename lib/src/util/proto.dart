@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:electric_client/src/proto/satellite.pb.dart';
-import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/types.dart';
 
@@ -19,7 +18,16 @@ enum SatMsgType {
   inStopReplicationResp(code: 8),
   opLog(code: 9),
   relation(code: 10),
-  migrationNotification(code: 11);
+  migrationNotification(code: 11),
+  subsReq(code: 12),
+  subsResp(code: 13),
+  subsDataError(code: 14),
+  subsDataBegin(code: 15),
+  subsDataEnd(code: 16),
+  shapeDataBegin(code: 17),
+  shapeDataEnd(code: 18),
+  unsubsReq(code: 19),
+  unsubsResp(code: 20);
 
   const SatMsgType({
     required this.code,
@@ -60,6 +68,24 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
       return SatRelation.fromBuffer(data);
     case SatMsgType.migrationNotification:
       return SatMigrationNotification.fromBuffer(data);
+    case SatMsgType.subsReq:
+      return SatSubsReq.fromBuffer(data);
+    case SatMsgType.subsResp:
+      return SatSubsResp.fromBuffer(data);
+    case SatMsgType.subsDataError:
+      return SatSubsDataError.fromBuffer(data);
+    case SatMsgType.subsDataBegin:
+      return SatSubsDataBegin.fromBuffer(data);
+    case SatMsgType.subsDataEnd:
+      return SatSubsDataEnd.fromBuffer(data);
+    case SatMsgType.shapeDataBegin:
+      return SatShapeDataBegin.fromBuffer(data);
+    case SatMsgType.shapeDataEnd:
+      return SatShapeDataEnd.fromBuffer(data);
+    case SatMsgType.unsubsReq:
+      return SatUnsubsReq.fromBuffer(data);
+    case SatMsgType.unsubsResp:
+      return SatUnsubsResp.fromBuffer(data);
   }
 }
 

@@ -11,6 +11,9 @@ import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/satellite/merge.dart';
 import 'package:electric_client/src/satellite/oplog.dart';
 import 'package:electric_client/src/satellite/satellite.dart';
+import 'package:electric_client/src/satellite/shapes/manager.dart';
+import 'package:electric_client/src/satellite/shapes/shapes.dart';
+import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/sets.dart';
@@ -21,6 +24,11 @@ import 'package:fpdart/fpdart.dart';
 import 'package:meta/meta.dart';
 
 typedef ChangeAccumulator = Map<String, Change>;
+
+const throwErrors = [
+  SatelliteErrorCode.invalidPosition,
+  SatelliteErrorCode.behindWindow,
+];
 
 class SatelliteProcess implements Satellite {
   @override
@@ -55,6 +63,10 @@ class SatelliteProcess implements Satellite {
 
   RelationsCache relations = {};
 
+  late SubscriptionsManager subscriptions;
+  late String Function() subscriptionIdGenerator;
+  late String Function() shapeRequestIdGenerator;
+
   SatelliteProcess({
     required this.dbName,
     required this.client,
@@ -75,10 +87,20 @@ class SatelliteProcess implements Satellite {
       performSnapshot,
       opts.minSnapshotWindow,
     );
+
+    subscriptions = InMemorySubscriptionsManager(
+      _garbageCollectShapeHandler,
+    );
+
+    subscriptionIdGenerator = () => uuid();
+    shapeRequestIdGenerator = subscriptionIdGenerator;
   }
 
   @override
-  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+  Future<ConnectionWrapper> start(
+    AuthConfig authConfig, {
+    SatelliteReplicationOptions? opts,
+  }) async {
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -115,7 +137,7 @@ class SatelliteProcess implements Satellite {
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
-      opts.pollingInterval,
+      this.opts.pollingInterval,
       (_) => throttledSnapshot(),
     );
 
@@ -142,7 +164,12 @@ class SatelliteProcess implements Satellite {
       logger.info("no lsn retrieved from store");
     }
 
-    final connectionFuture = _connectAndStartReplication();
+    final subscriptionsState = await getMeta('subscriptions');
+    if (subscriptionsState.isNotEmpty) {
+      subscriptions.setState(subscriptionsState);
+    }
+
+    final connectionFuture = _connectAndStartReplication(opts);
     return ConnectionWrapper(
       connectionFuture: connectionFuture,
     );
@@ -151,6 +178,30 @@ class SatelliteProcess implements Satellite {
   @visibleForTesting
   Future<void> setAuthState(AuthState newAuthState) async {
     authState = newAuthState;
+  }
+
+  Future<void> _garbageCollectShapeHandler(
+    List<ShapeDefinition> shapeDefs,
+  ) async {
+    final stmts = <Statement>[];
+    // reverts to off on commit/abort
+    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
+    shapeDefs
+        .expand((ShapeDefinition def) => def.definition.selects)
+        .map((ShapeSelect select) => select.tablename)
+        .fold(stmts, (List<Statement> stmts, String tablename) {
+      stmts.addAll([
+        ..._disableTriggers([tablename]),
+        Statement(
+          "DELETE FROM $tablename",
+        ),
+        ..._enableTriggers([tablename])
+      ]);
+      return stmts;
+      // does not delete shadow rows but we can do that
+    });
+
+    await adapter.runInTransaction(stmts);
   }
 
   void setClientListeners() {
@@ -163,6 +214,11 @@ class SatelliteProcess implements Satellite {
       await ack(decoded, evt.ackType == AckType.remoteCommit);
     });
     client.subscribeToOutboundEvent(() => throttledSnapshot());
+
+    client.subscribeToSubscriptionEvents(
+      _handleSubscriptionData,
+      _handleSubscriptionError,
+    );
   }
 
   @override
@@ -183,6 +239,123 @@ class SatelliteProcess implements Satellite {
     await client.close();
   }
 
+  @override
+  Future<void> subscribe(List<ClientShapeDefinition> shapeDefinitions) async {
+    final List<ShapeRequest> shapeReqs = shapeDefinitions
+        .map(
+          (definition) => ShapeRequest(
+            requestId: shapeRequestIdGenerator(),
+            definition: definition,
+          ),
+        )
+        .toList();
+
+    final SubscribeResponse(:subscriptionId, :error) =
+        await client.subscribe(subscriptionIdGenerator(), shapeReqs);
+    if (error != null) {
+      subscriptions.subscriptionCancelled(subscriptionId);
+      throw error;
+    } else {
+      subscriptions.subscriptionRequested(subscriptionId, shapeReqs);
+    }
+  }
+
+  @override
+  Future<void> unsubscribe(String _subscriptionId) async {
+    throw SatelliteException(
+      SatelliteErrorCode.internal,
+      'unsubscribe shape not supported',
+    );
+    // return this.subscriptions.unsubscribe(subscriptionId)
+  }
+
+  Future<void> _handleSubscriptionData(SubscriptionData subsData) async {
+    subscriptions.subscriptionDelivered(subsData);
+    if (subsData.data.isNotEmpty) {
+      await _applySubscriptionData(subsData.data);
+    }
+  }
+
+  // Applies initial data for a shape subscription. Current implementation
+  // assumes there are no conflicts INSERTing new rows and only expects
+  // subscriptions for entire tables.
+  Future<void> _applySubscriptionData(List<InitialDataChange> changes) async {
+    final stmts = <Statement>[];
+    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
+
+    for (final op in changes) {
+      final InitialDataChange(:relation, :record, :tags) = op;
+
+      final qualifiedTablename = QualifiedTablename('main', relation.table);
+      final tablenameStr = qualifiedTablename.toString();
+
+      final columnNames = record!.keys.toList();
+      final columnValues = record.values.toList();
+
+      final insertStmt = '''
+INSERT INTO $tablenameStr (${columnNames.join(
+        ', ',
+      )}) VALUES (${columnValues.map((_) => '?').join(', ')})''';
+      final insertArgs = [...columnValues];
+
+      final primaryKeyCols = relation.columns.fold(
+        <String, Object>{},
+        (prev, RelationColumn curr) {
+          if (curr.primaryKey == true) {
+            prev[curr.name] = record[curr.name]!;
+          }
+          return prev;
+        },
+      );
+
+      final upsertShadowStmt = '''
+        INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES (?,?,?,?)''';
+      final upsertShadowArgs = [
+        relation.schema,
+        relation.table,
+        primaryKeyToStr(primaryKeyCols),
+        encodeTags(tags),
+      ];
+
+      stmts.addAll(_disableTriggers([tablenameStr]));
+      stmts.add(Statement(insertStmt, insertArgs));
+      stmts.add(Statement(upsertShadowStmt, upsertShadowArgs));
+      stmts.addAll(_enableTriggers([tablenameStr]));
+    }
+
+    // persist subscriptions state
+    stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
+
+    try {
+      await adapter.runInTransaction(stmts);
+    } catch (e) {
+      unawaited(
+        _handleSubscriptionError(
+          SatelliteException(
+            SatelliteErrorCode.internal,
+            "Error applying subscription data: $e",
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleSubscriptionError(
+    SatelliteException _satelliteError,
+  ) async {
+    // this is obviously too conservative and note
+    // that it does not update meta transactionally
+    final ids = await subscriptions.unsubscribeAll();
+
+    _lsn = null;
+    await adapter.runInTransaction([
+      _setMetaStatement('lsn', null),
+      _setMetaStatement('subscriptions', subscriptions.serialize())
+    ]);
+
+    await client.unsubscribe(ids);
+  }
+
   @visibleForTesting
   Future<Either<SatelliteException, void>> connectivityStateChange(
     ConnectivityState status,
@@ -192,7 +365,7 @@ class SatelliteProcess implements Satellite {
       case ConnectivityState.available:
         {
           setClientListeners();
-          return _connectAndStartReplication();
+          return _connectAndStartReplication(null);
         }
       case ConnectivityState.error:
       case ConnectivityState.disconnected:
@@ -210,7 +383,8 @@ class SatelliteProcess implements Satellite {
     }
   }
 
-  Future<Either<SatelliteException, void>> _connectAndStartReplication() async {
+  Future<Either<SatelliteException, void>> _connectAndStartReplication(
+      SatelliteReplicationOptions? opts,) async {
     logger.info("connecting and starting replication");
 
     final _authState = authState;
@@ -221,9 +395,21 @@ class SatelliteProcess implements Satellite {
     return client
         .connect()
         .then((_) => client.authenticate(_authState))
-        .then((_) => client.startReplication(_lsn))
+        .then((_) => client.startReplication(_lsn, null))
         .onError(
       (error, st) {
+        if (error is SatelliteException) {
+          if (error.code == SatelliteErrorCode.behindWindow &&
+              opts?.clearOnBehindWindow == true) {
+            return _handleSubscriptionError(error).then(
+              (_) => _connectAndStartReplication(opts),
+            );
+          }
+
+          if (throwErrors.contains(error.code)) {
+            throw error;
+          }
+        }
         logger.warning("couldn't start replication: $error");
         return const Right(null);
       },
@@ -413,6 +599,10 @@ class SatelliteProcess implements Satellite {
   // Apply a set of incoming transactions against pending local operations,
   // applying conflict resolution rules. Takes all changes per each key before
   // merging, for local and remote operations.
+  //
+  // TODO: in case the subscriptions between the client and server become
+  // out of sync, the server might send operations that do not belong to
+  // any existing subscription. We need a way to detect and prevent that.
   @visibleForTesting
   Future<ApplyIncomingResult> apply(
     List<OplogEntry> incoming,
@@ -934,14 +1124,19 @@ class SatelliteProcess implements Satellite {
     }
   }
 
-  @visibleForTesting
-  Future<void> setMeta(String key, Object? value) async {
+  Statement _setMetaStatement(String key, Object? value) {
     final meta = opts.metaTable.toString();
 
     final sql = "UPDATE $meta SET value = ? WHERE key = ?";
     final args = <Object?>[value, key];
 
-    await adapter.run(Statement(sql, args));
+    return Statement(sql, args);
+  }
+
+  @visibleForTesting
+  Future<void> setMeta(String key, Object? value) async {
+    final stmt = _setMetaStatement(key, value);
+    await adapter.run(stmt);
   }
 
   @visibleForTesting
