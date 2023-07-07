@@ -8,6 +8,7 @@ import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/client.dart';
 import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/satellite/oplog.dart';
+import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/sockets/io.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/proto.dart';
@@ -120,6 +121,25 @@ void main() {
         isA<SatelliteException>()
             .having((e) => e.code, "code", SatelliteErrorCode.timeout),
       );
+    }
+  });
+
+  test('connect subscription error', () async {
+    final startResp = SatInStartReplicationResp(
+      err: SatInStartReplicationResp_ReplicationError(
+        code: SatInStartReplicationResp_ReplicationError_Code.BEHIND_WINDOW,
+        message: 'Test',
+      ),
+    );
+    await client.connect();
+
+    server.nextResponses([startResp]);
+
+    try {
+      await client.startReplication(null, null);
+      fail("Should have failed");
+    } catch (e) {
+      expect((e as SatelliteException).code, SatelliteErrorCode.behindWindow);
     }
   });
 
@@ -669,6 +689,28 @@ void main() {
     });
 
     await client.startReplication(null, null);
+  });
+
+  test('subscription succesful', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+    server.nextResponses([startResp]);
+    await client.startReplication(null, null);
+
+    final shapeReq = ShapeRequest(
+      requestId: 'fake',
+      definition: ClientShapeDefinition(
+        selects: [ShapeSelect(tablename: 'fake')],
+      ),
+    );
+
+    const subscriptionId = 'THE_ID';
+    final subsResp = SatSubsResp(subscriptionId: subscriptionId);
+    server.nextResponses([subsResp]);
+
+    final res = await client.subscribe(subscriptionId, [shapeReq]);
+    expect(res.subscriptionId, subscriptionId);
   });
 }
 

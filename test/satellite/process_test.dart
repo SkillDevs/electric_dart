@@ -69,6 +69,7 @@ void main() {
       "lastSentRowId": '0',
       "lsn": '',
       "clientId": '',
+      "subscriptions": '',
     });
   });
 

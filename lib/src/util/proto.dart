@@ -114,6 +114,24 @@ SatMsgType? getTypeFromSatObject(Object object) {
     return SatMsgType.relation;
   } else if (object is SatMigrationNotification) {
     return SatMsgType.migrationNotification;
+  } else if (object is SatSubsReq) {
+    return SatMsgType.subsReq;
+  } else if (object is SatSubsResp) {
+    return SatMsgType.subsResp;
+  } else if (object is SatSubsDataError) {
+    return SatMsgType.subsDataError;
+  } else if (object is SatSubsDataBegin) {
+    return SatMsgType.subsDataBegin;
+  } else if (object is SatSubsDataEnd) {
+    return SatMsgType.subsDataEnd;
+  } else if (object is SatShapeDataBegin) {
+    return SatMsgType.shapeDataBegin;
+  } else if (object is SatShapeDataEnd) {
+    return SatMsgType.shapeDataEnd;
+  } else if (object is SatUnsubsReq) {
+    return SatMsgType.unsubsReq;
+  } else if (object is SatUnsubsResp) {
+    return SatMsgType.unsubsResp;
   }
 
   return null;
@@ -143,6 +161,24 @@ Uint8List encodeMessage(Object message) {
   } else if (message is SatRelation) {
     return message.writeToBuffer();
   } else if (message is SatMigrationNotification) {
+    return message.writeToBuffer();
+  } else if (message is SatSubsReq) {
+    return message.writeToBuffer();
+  } else if (message is SatSubsResp) {
+    return message.writeToBuffer();
+  } else if (message is SatSubsDataError) {
+    return message.writeToBuffer();
+  } else if (message is SatSubsDataBegin) {
+    return message.writeToBuffer();
+  } else if (message is SatSubsDataEnd) {
+    return message.writeToBuffer();
+  } else if (message is SatShapeDataBegin) {
+    return message.writeToBuffer();
+  } else if (message is SatShapeDataEnd) {
+    return message.writeToBuffer();
+  } else if (message is SatUnsubsReq) {
+    return message.writeToBuffer();
+  } else if (message is SatUnsubsResp) {
     return message.writeToBuffer();
   }
 

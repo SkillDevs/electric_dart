@@ -58,6 +58,19 @@ Map<String, Relation> kTestRelations = {
       ),
     ],
   ),
+  "another": Relation(
+    id: 2,
+    schema: 'public',
+    table: 'another',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'id',
+        type: 'INTEGER',
+        primaryKey: true,
+      ),
+    ],
+  ),
 };
 
 // Speed up the intervals for testing.
