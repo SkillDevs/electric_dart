@@ -35,14 +35,17 @@ class DriftAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
 
   @override
   Future<RunResult> runInTransaction(List<Statement> statements) async {
-    await db.transaction(() async {
+    return await db.transaction(() async {
+      int rowsAffected = 0;
       for (final statement in statements) {
-        await db.customStatement(statement.sql, statement.args);
+        final changes = await db.customUpdate(
+          statement.sql,
+          variables: _dynamicArgsToVariables(statement.args),
+        );
+        rowsAffected += changes;
       }
+      return RunResult(rowsAffected: rowsAffected);
     });
-
-    // TODO(dart): Should runInTransaction return the rows affected?
-    return RunResult(rowsAffected: 0);
   }
 
   @override
@@ -121,16 +124,16 @@ class Transaction implements adp.Transaction {
     void Function(Object error)? errorCallback,
   ) {
     adapter.db
-        .customStatement(
+        .customUpdate(
       statement.sql,
-      statement.args,
+      variables: _dynamicArgsToVariables(statement.args),
     )
-        .then((_) {
+        .then((rowsAffected) {
       successCallback?.call(
         this,
         RunResult(
-          rowsAffected: 0,
-        ), // TODO(dart): we could call select changes()
+          rowsAffected: rowsAffected,
+        ),
       );
     }).catchError((Object e) {
       errorCallback?.call(e);
