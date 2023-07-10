@@ -26,28 +26,28 @@ class SqliteAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
 
   @override
   Future<RunResult> runInTransaction(List<Statement> statements) async {
-    bool open = false;
-    try {
-      // SQL-js accepts multiple statements in a string and does
-      // not run them as transaction.
-      db.execute('BEGIN');
-      open = true;
-      for (var statement in statements) {
-        db.execute(statement.sql, statement.args ?? []);
-      }
-      // TODO(dart): Review
-      final rowsAffected = db.getUpdatedRows();
+    return txLock.synchronized(() async {
+      try {
+        // SQL-js accepts multiple statements in a string and does
+        // not run them as transaction.
+        db.execute('BEGIN');
 
-      return RunResult(rowsAffected: rowsAffected);
-    } catch (error) {
-      db.execute('ROLLBACK');
-      open = false;
-      rethrow; // rejects the promise with the reason for the rollback
-    } finally {
-      if (open) {
+        for (var statement in statements) {
+          db.execute(statement.sql, statement.args ?? []);
+        }
+
         db.execute('COMMIT');
+
+        // TODO(dart): Review
+        final rowsAffected = db.getUpdatedRows();
+
+        return RunResult(rowsAffected: rowsAffected);
+      } catch (error) {
+        db.execute('ROLLBACK');
+
+        rethrow; // rejects the promise with the reason for the rollback
       }
-    }
+    });
   }
 
   @override
@@ -64,9 +64,13 @@ class SqliteAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
       f(tx, (T res) {
         // Commit the transaction when the user sets the result.
         // This assumes that the user does not execute any more queries after setting the result.
-        db.execute('COMMIT');
-
-        completer.complete(res);
+        try {
+          db.execute('COMMIT');
+          completer.complete(res);
+        } catch (e) {
+          db.execute('ROLLBACK');
+          completer.completeError(e);
+        }
       });
 
       return await completer.future;

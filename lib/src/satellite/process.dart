@@ -101,6 +101,9 @@ class SatelliteProcess implements Satellite {
     AuthConfig authConfig, {
     SatelliteReplicationOptions? opts,
   }) async {
+    // TODO(dart): Explicitly enable foreign keys, which is used by Electric
+    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();

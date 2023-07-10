@@ -171,11 +171,14 @@ class MockSatelliteClient extends EventEmitter implements Client {
     }
 
     Timer(const Duration(milliseconds: 1), () {
-      emit(SUBSCRIPTION_DELIVERED, {
-        subscriptionId,
-        data,
-        shapeReqToUuid,
-      });
+      emit(
+        SUBSCRIPTION_DELIVERED,
+        SubscriptionData(
+          subscriptionId: subscriptionId,
+          data: data,
+          shapeReqToUuid: shapeReqToUuid,
+        ),
+      );
     });
 
     return Future.value(
