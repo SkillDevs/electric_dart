@@ -53,7 +53,7 @@ class DriftAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
 
     unawaited(
       db.transaction(() async {
-        final tx = Transaction(this);
+        final tx = Transaction(this, (e) => completer.completeError(e));
         f(tx, (T res) {
           completer.complete(res);
         });
@@ -87,8 +87,9 @@ class DriftAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
 
 class Transaction implements adp.Transaction {
   final DriftAdapter adapter;
+  final void Function(Object reason) signalFailure;
 
-  Transaction(this.adapter);
+  Transaction(this.adapter, this.signalFailure);
 
   @override
   void query(
@@ -124,15 +125,16 @@ class Transaction implements adp.Transaction {
       statement.sql,
       statement.args,
     )
-        .catchError((Object e) {
-      errorCallback?.call(e);
-    }).then((_) {
+        .then((_) {
       successCallback?.call(
         this,
         RunResult(
           rowsAffected: 0,
         ), // TODO(dart): we could call select changes()
       );
+    }).catchError((Object e) {
+      errorCallback?.call(e);
+      signalFailure(e);
     });
   }
 }
