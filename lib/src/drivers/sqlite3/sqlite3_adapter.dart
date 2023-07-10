@@ -32,14 +32,13 @@ class SqliteAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
         // not run them as transaction.
         db.execute('BEGIN');
 
+        int rowsAffected = 0;
         for (var statement in statements) {
           db.execute(statement.sql, statement.args ?? []);
+          rowsAffected += db.getUpdatedRows();
         }
 
         db.execute('COMMIT');
-
-        // TODO(dart): Review
-        final rowsAffected = db.getUpdatedRows();
 
         return RunResult(rowsAffected: rowsAffected);
       } catch (error) {
