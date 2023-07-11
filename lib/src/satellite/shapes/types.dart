@@ -1,4 +1,5 @@
 import 'package:electric_client/src/util/types.dart';
+import 'package:equatable/equatable.dart';
 
 const SUBSCRIPTION_DELIVERED = 'subscription_delivered';
 const SUBSCRIPTION_ERROR = 'subscription_error';
@@ -16,14 +17,17 @@ class SubscribeResponse {
   });
 }
 
-typedef UnsubscribeResponse = Map<String, Never>;
+class UnsubscribeResponse {}
 
-class ClientShapeDefinition {
+class ClientShapeDefinition with EquatableMixin {
   final List<ShapeSelect> selects;
 
   ClientShapeDefinition({
     required this.selects,
   });
+
+  @override
+  List<Object?> get props => [selects];
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
@@ -42,12 +46,15 @@ class ClientShapeDefinition {
   }
 }
 
-sealed class ShapeRequestOrDefinition {
+sealed class ShapeRequestOrDefinition with EquatableMixin {
   final ClientShapeDefinition definition;
 
   ShapeRequestOrDefinition({
     required this.definition,
   });
+
+  @override
+  List<Object?> get props => [definition];
 }
 
 class ShapeRequest extends ShapeRequestOrDefinition {
@@ -57,6 +64,9 @@ class ShapeRequest extends ShapeRequestOrDefinition {
     required this.requestId,
     required super.definition,
   });
+
+  @override
+  List<Object?> get props => [...super.props, requestId];
 }
 
 class ShapeDefinition extends ShapeRequestOrDefinition {
@@ -66,6 +76,9 @@ class ShapeDefinition extends ShapeRequestOrDefinition {
     required this.uuid,
     required super.definition,
   });
+
+  @override
+  List<Object?> get props => [...super.props, uuid];
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
@@ -83,12 +96,15 @@ class ShapeDefinition extends ShapeRequestOrDefinition {
   }
 }
 
-class ShapeSelect {
+class ShapeSelect with EquatableMixin {
   final String tablename;
 
   ShapeSelect({
     required this.tablename,
   });
+
+  @override
+  List<Object?> get props => [tablename];
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
