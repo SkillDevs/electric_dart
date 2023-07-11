@@ -205,7 +205,7 @@ class SubscriptionDataInternal {
   Never internalError( SatelliteErrorCode code, String msg) {
     reset();
     final error = SatelliteException(code, msg);
-    emit(SUBSCRIPTION_ERROR, error);
+    emit(SUBSCRIPTION_ERROR, SubscriptionErrorData(subscriptionId: null, error: error));
 
     throw error;
   }
@@ -234,7 +234,7 @@ class SubscriptionDataInternal {
       );
     }
 
-    emit(SUBSCRIPTION_ERROR, error);
+    emit(SUBSCRIPTION_ERROR, SubscriptionErrorData(subscriptionId: null, error: error));
     throw error;
   }
 

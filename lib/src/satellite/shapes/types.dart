@@ -5,7 +5,17 @@ const SUBSCRIPTION_DELIVERED = 'subscription_delivered';
 const SUBSCRIPTION_ERROR = 'subscription_error';
 
 typedef SubscriptionDeliveredCallback = void Function(SubscriptionData data);
-typedef SubscriptionErrorCallback = void Function(SatelliteException error);
+typedef SubscriptionErrorCallback = void Function(SubscriptionErrorData error);
+
+class SubscriptionErrorData {
+  final String? subscriptionId;
+  final SatelliteException error;
+
+  SubscriptionErrorData({
+    required this.subscriptionId,
+    required this.error,
+  });
+}
 
 class SubscribeResponse {
   final String subscriptionId;
