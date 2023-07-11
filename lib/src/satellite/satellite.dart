@@ -3,11 +3,14 @@ import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
+import 'package:electric_client/src/satellite/process.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 import 'package:fpdart/fpdart.dart';
+
+export 'package:electric_client/src/satellite/process.dart' show Sub;
 
 abstract class Registry {
   Future<Satellite> ensureStarted({
@@ -51,7 +54,7 @@ abstract class Satellite {
     SatelliteReplicationOptions? opts,
   });
   Future<void> stop();
-  Future<void> subscribe(List<ClientShapeDefinition> shapeDefinitions);
+  Future<Sub> subscribe(List<ClientShapeDefinition> shapeDefinitions);
   Future<void> unsubscribe(String shapeUuid);
 }
 
@@ -101,7 +104,7 @@ abstract class Client {
 
 class SubscriptionEventListeners {
   final EventListener<SubscriptionData> successEventListener;
-  final EventListener<SatelliteException> errorEventListener;
+  final EventListener<SubscriptionErrorData> errorEventListener;
 
   SubscriptionEventListeners({
     required this.successEventListener,

@@ -25,6 +25,17 @@ import 'package:meta/meta.dart';
 
 typedef ChangeAccumulator = Map<String, Change>;
 
+class Sub {
+  final Future<void> dataReceived;
+
+  Sub({required this.dataReceived});
+}
+
+typedef SubscriptionNotifier = ({
+  void Function() success,
+  void Function(Object error) failure
+});
+
 const throwErrors = [
   SatelliteErrorCode.invalidPosition,
   SatelliteErrorCode.behindWindow,
@@ -64,6 +75,7 @@ class SatelliteProcess implements Satellite {
   RelationsCache relations = {};
 
   late SubscriptionsManager subscriptions;
+  final Map<String, SubscriptionNotifier> subscriptionNotifiers = {};
   late String Function() subscriptionIdGenerator;
   late String Function() shapeRequestIdGenerator;
 
@@ -243,7 +255,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @override
-  Future<void> subscribe(List<ClientShapeDefinition> shapeDefinitions) async {
+  Future<Sub> subscribe(List<ClientShapeDefinition> shapeDefinitions) async {
     final List<ShapeRequest> shapeReqs = shapeDefinitions
         .map(
           (definition) => ShapeRequest(
@@ -253,13 +265,43 @@ class SatelliteProcess implements Satellite {
         )
         .toList();
 
+    final subId = subscriptionIdGenerator();
+    final fut = Future(() async {
+      final completer = Completer<void>();
+      // store the resolve and reject
+      // such that we can resolve/reject
+      // the promise later when the shape
+      // is fulfilled or when an error arrives
+      // we store it before making the actual request
+      // to avoid that the answer would arrive too fast
+      // and this resolver and rejecter would not yet be stored
+      // this could especially happen in unit tests
+      final notifier = (
+        success: () => completer.complete(),
+        failure: (Object error) => completer.completeError(error)
+      );
+      subscriptionNotifiers[subId] = notifier;
+
+      await completer.future;
+    });
+
     final SubscribeResponse(:subscriptionId, :error) =
-        await client.subscribe(subscriptionIdGenerator(), shapeReqs);
+        await client.subscribe(subId, shapeReqs);
+    if (subId != subscriptionId) {
+      throw Exception(
+        "Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId",
+      );
+    }
     if (error != null) {
+      subscriptionNotifiers.remove(subId);
       subscriptions.subscriptionCancelled(subscriptionId);
       throw error;
     } else {
       subscriptions.subscriptionRequested(subscriptionId, shapeReqs);
+
+      return Sub(
+        dataReceived: fut,
+      );
     }
   }
 
@@ -277,6 +319,13 @@ class SatelliteProcess implements Satellite {
     if (subsData.data.isNotEmpty) {
       await _applySubscriptionData(subsData.data);
     }
+
+    // Call the `onSuccess` callback for this subscription
+    final (success: onSuccess, failure: _) =
+        subscriptionNotifiers[subsData.subscriptionId]!;
+    // GC the notifiers for this subscription ID
+    subscriptionNotifiers.remove(subsData.subscriptionId);
+    onSuccess();
   }
 
   // Applies initial data for a shape subscription. Current implementation
@@ -333,9 +382,12 @@ INSERT INTO $tablenameStr (${columnNames.join(
     } catch (e) {
       unawaited(
         _handleSubscriptionError(
-          SatelliteException(
-            SatelliteErrorCode.internal,
-            "Error applying subscription data: $e",
+          SubscriptionErrorData(
+            error: SatelliteException(
+              SatelliteErrorCode.internal,
+              "Error applying subscription data: $e",
+            ),
+            subscriptionId: null,
           ),
         ),
       );
@@ -343,8 +395,11 @@ INSERT INTO $tablenameStr (${columnNames.join(
   }
 
   Future<void> _handleSubscriptionError(
-    SatelliteException _satelliteError,
+    SubscriptionErrorData errorData,
   ) async {
+    final subscriptionId = errorData.subscriptionId;
+    final satelliteError = errorData.error;
+
     // this is obviously too conservative and note
     // that it does not update meta transactionally
     final ids = await subscriptions.unsubscribeAll();
@@ -356,6 +411,16 @@ INSERT INTO $tablenameStr (${columnNames.join(
     ]);
 
     await client.unsubscribe(ids);
+
+    // Call the `onSuccess` callback for this subscription
+    if (subscriptionId != null) {
+      final (success: _, failure: onFailure) =
+          subscriptionNotifiers[subscriptionId]!;
+
+      // GC the notifiers for this subscription ID
+      subscriptionNotifiers.remove(subscriptionId);
+      onFailure(satelliteError);
+    }
   }
 
   @visibleForTesting
@@ -404,7 +469,12 @@ INSERT INTO $tablenameStr (${columnNames.join(
         if (error is SatelliteException) {
           if (error.code == SatelliteErrorCode.behindWindow &&
               opts?.clearOnBehindWindow == true) {
-            return _handleSubscriptionError(error).then(
+            return _handleSubscriptionError(
+              SubscriptionErrorData(
+                error: error,
+                subscriptionId: null,
+              ),
+            ).then(
               (_) => _connectAndStartReplication(opts),
             );
           }

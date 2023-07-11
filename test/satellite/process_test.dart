@@ -1240,7 +1240,7 @@ void main() {
       await conn.connectionFuture;
       final lsnAfter = await satellite.getMeta('lsn');
       expect(lsnAfter, isNot(base64lsn));
-    } catch (e, st) {
+    } catch (e) {
       fail('start should not throw');
     }
 
@@ -1281,41 +1281,30 @@ void main() {
 
     satellite.relations = kTestRelations;
 
-    await satellite.subscribe([shapeDef]);
+    final Sub(:dataReceived) = await satellite.subscribe([shapeDef]);
+    await dataReceived;
 
-    final completer = Completer<void>();
-    client.subscribeToSubscriptionEvents(
-      (_) {
-        // wait for process to apply shape data
-        Timer(const Duration(milliseconds: 10), () async {
-          try {
-            final row = await adapter.query(
-              Statement(
-                "SELECT id FROM $qualified",
-              ),
-            );
-            expect(row.length, 1);
+    try {
+      final row = await adapter.query(
+        Statement(
+          "SELECT id FROM $qualified",
+        ),
+      );
+      expect(row.length, 1);
 
-            final shadowRows = await adapter.query(
-              Statement(
-                "SELECT tags FROM _electric_shadow",
-              ),
-            );
-            expect(shadowRows.length, 1);
+      final shadowRows = await adapter.query(
+        Statement(
+          "SELECT tags FROM _electric_shadow",
+        ),
+      );
+      expect(shadowRows.length, 1);
 
-            final subsMeta = (await satellite.getMeta('subscriptions'))!;
-            final subsObj = json.decode(subsMeta) as Map<String, Object?>;
-            expect(subsObj.length, 1);
-            completer.complete(null);
-          } catch (e) {
-            completer.completeError(e);
-          }
-        });
-      },
-      (e) {},
-    );
-
-    await completer.future;
+      final subsMeta = (await satellite.getMeta('subscriptions'))!;
+      final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+      expect(subsObj.length, 1);
+    } catch (e, st) {
+      fail("Reason: $e\n$st");
+    }
   });
 
   test(
@@ -1339,30 +1328,20 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    await satellite.subscribe([shapeDef1]);
+    final Sub(:dataReceived) = await satellite.subscribe([shapeDef1]);
+    await dataReceived; // wait for subscription to be fulfilled
 
-    final completer = Completer<void>();
-    client.subscribeToSubscriptionEvents(
-      (_) {
-        Timer(const Duration(milliseconds: 10), () async {
-          try {
-            final row = await adapter.query(
-              Statement(
-                "SELECT id FROM $qualified",
-              ),
-            );
+    try {
+      final row = await adapter.query(
+        Statement(
+          "SELECT id FROM $qualified",
+        ),
+      );
 
-            expect(row.length, 0);
-            completer.complete(null);
-          } catch (e) {
-            completer.completeError(e);
-          }
-        });
-      },
-      (_) {},
-    );
-
-    await completer.future;
+      expect(row.length, 0);
+    } catch (e, st) {
+      fail("Reason: $e\n$st");
+    }
   });
 
   test('a second successful subscription', () async {
@@ -1388,45 +1367,30 @@ void main() {
 
     satellite.relations = kTestRelations;
     await satellite.subscribe([shapeDef1]);
-    await satellite.subscribe([shapeDef2]);
+    final Sub(:dataReceived) = await satellite.subscribe([shapeDef2]);
+    await dataReceived;
 
-    final completer = Completer<void>();
+    try {
+      final row = await adapter.query(
+        Statement(
+          "SELECT id FROM $qualified",
+        ),
+      );
+      expect(row.length, 1);
 
-    client.subscribeToSubscriptionEvents(
-      (data) => {
-        // only test after second subscription delivery
-        if (data.data[0].relation.table == tablename)
-          {
-            Timer(const Duration(milliseconds: 10), () async {
-              try {
-                final row = await adapter.query(
-                  Statement(
-                    "SELECT id FROM $qualified",
-                  ),
-                );
-                expect(row.length, 1);
+      final shadowRows = await adapter.query(
+        Statement(
+          "SELECT tags FROM _electric_shadow",
+        ),
+      );
+      expect(shadowRows.length, 2);
 
-                final shadowRows = await adapter.query(
-                  Statement(
-                    "SELECT tags FROM _electric_shadow",
-                  ),
-                );
-                expect(shadowRows.length, 2);
-
-                final subsMeta = (await satellite.getMeta('subscriptions'))!;
-                final subsObj = json.decode(subsMeta) as Map<String, Object?>;
-                expect(subsObj.length, 2);
-                completer.complete();
-              } catch (e) {
-                completer.completeError(e);
-              }
-            })
-          }
-      },
-      (_) {},
-    );
-
-    await completer.future;
+      final subsMeta = (await satellite.getMeta('subscriptions'))!;
+      final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+      expect(subsObj.length, 2);
+    } catch (e, st) {
+      fail("Reason: $e\n$st");
+    }
   });
 
   test('a single subscribe with multiple tables with FKs', () async {
@@ -1501,40 +1465,40 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    await satellite.subscribe([shapeDef1]);
-    await satellite.subscribe([shapeDef2]);
 
-    final completer = Completer<void>();
-    client.subscribeToSubscriptionEvents((_) {}, (expected) {
-      Timer(const Duration(milliseconds: 10), () async {
-        try {
-          final row = await adapter.query(
-            Statement(
-              "SELECT id FROM $qualified",
-            ),
-          );
-          expect(row.length, 0);
+    final Sub(dataReceived: dataReceived1) =
+        await satellite.subscribe([shapeDef1]);
+    await dataReceived1;
+    final Sub(:dataReceived) = await satellite.subscribe([shapeDef2]);
 
-          final shadowRows = await adapter.query(
-            Statement("SELECT tags FROM _electric_shadow"),
-          );
-          expect(shadowRows.length, 1);
+    try {
+      await dataReceived;
+      fail("Expected a subscription error");
+    } catch (expected) {
+      try {
+        final row = await adapter.query(
+          Statement(
+            "SELECT id FROM $qualified",
+          ),
+        );
+        expect(row.length, 0);
 
-          final subsMeta = (await satellite.getMeta('subscriptions'))!;
-          final subsObj = json.decode(subsMeta) as Map<String, Object?>;
-          expect(subsObj, <String, Object?>{});
-          expect(
-            expected.message!.indexOf("table 'another'"),
-            greaterThanOrEqualTo(0),
-          );
-          completer.complete();
-        } catch (e) {
-          completer.completeError(e);
-        }
-      });
-    });
+        final shadowRows = await adapter.query(
+          Statement("SELECT tags FROM _electric_shadow"),
+        );
+        expect(shadowRows.length, 1);
 
-    await completer.future;
+        final subsMeta = (await satellite.getMeta('subscriptions'))!;
+        final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+        expect(subsObj, <String, Object?>{});
+        expect(
+          (expected as SatelliteException).message!.indexOf("table 'another'"),
+          greaterThanOrEqualTo(0),
+        );
+      } catch (e, st) {
+        fail("Reason: $e\n$st");
+      }
+    }
   });
 
   test('a subscription request failure does not clear the manager state',
@@ -1559,37 +1523,28 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    await satellite.subscribe([shapeDef1]);
+    final Sub(:dataReceived) = await satellite.subscribe([shapeDef1]);
+    await dataReceived;
 
-    final completer = Completer<void>();
+    try {
+      final row = await adapter.query(
+        Statement(
+          "SELECT id FROM $qualified",
+        ),
+      );
+      expect(row.length, 1);
+    } catch (e, st) {
+      fail("Reason: $e\n$st");
+    }
 
-    client.subscribeToSubscriptionEvents(
-      (_) {
-        Timer(const Duration(milliseconds: 10), () async {
-          try {
-            final row = await adapter.query(
-              Statement(
-                "SELECT id FROM $qualified",
-              ),
-            );
-            expect(row.length, 1);
-            completer.complete();
-          } catch (e) {
-            completer.completeError(e);
-          }
-        });
-      },
-      (_) {},
-    );
-
-    await completer.future
-        .then((_) => satellite.subscribe([shapeDef2]))
-        .catchError((Object error) {
+    try {
+      await satellite.subscribe([shapeDef2]);
+    } catch (error) {
       expect(
         (error as SatelliteException).code,
         SatelliteErrorCode.tableNotFound,
       );
-    });
+    }
   });
 }
 

@@ -45,7 +45,9 @@ class MockSatelliteProcess implements Satellite {
   });
 
   @override
-  Future<void> subscribe(List<ClientShapeDefinition> shapeDefinitions) async {}
+  Future<Sub> subscribe(List<ClientShapeDefinition> shapeDefinitions) async {
+    return Sub(dataReceived: Future.value());
+  }
 
   @override
   Future<void> unsubscribe(String shapeUuid) async {
@@ -138,7 +140,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
     for (final shape in shapes) {
       for (final ShapeSelect(:tablename) in shape.definition.selects) {
-        if (tablename == 'failure') {
+        if (tablename == 'failure' || tablename == 'Items') {
           return Future.value(
             SubscribeResponse(
               subscriptionId: subscriptionId,
@@ -146,14 +148,14 @@ class MockSatelliteClient extends EventEmitter implements Client {
             ),
           );
         }
-        if (tablename == 'another') {
-          sendErrorAfterTimeout(subscriptionId, 1);
-          return Future.value(
-            SubscribeResponse(
+        if (tablename == 'another' || tablename == 'User') {
+          return Future(() {
+            sendErrorAfterTimeout(subscriptionId, 1);
+            return SubscribeResponse(
               subscriptionId: subscriptionId,
               error: null,
-            ),
-          );
+            );
+          });
         } else {
           shapeReqToUuid[shape.requestId] = uuid();
           final List<DataRecord> records = relationData[tablename]!;
@@ -170,23 +172,23 @@ class MockSatelliteClient extends EventEmitter implements Client {
       }
     }
 
-    Timer(const Duration(milliseconds: 1), () {
-      emit(
-        SUBSCRIPTION_DELIVERED,
-        SubscriptionData(
-          subscriptionId: subscriptionId,
-          data: data,
-          shapeReqToUuid: shapeReqToUuid,
-        ),
-      );
-    });
+    return Future(() {
+      Timer(const Duration(milliseconds: 1), () {
+        emit(
+          SUBSCRIPTION_DELIVERED,
+          SubscriptionData(
+            subscriptionId: subscriptionId,
+            data: data,
+            shapeReqToUuid: shapeReqToUuid,
+          ),
+        );
+      });
 
-    return Future.value(
-      SubscribeResponse(
+      return SubscribeResponse(
         subscriptionId: subscriptionId,
         error: null,
-      ),
-    );
+      );
+    });
   }
 
   @override
@@ -368,7 +370,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
 
       final satError = subsDataErrorToSatelliteError(satSubsError);
-      emit(SUBSCRIPTION_ERROR, satError);
+      emit(SUBSCRIPTION_ERROR, SubscriptionErrorData(subscriptionId: subscriptionId, error: satError));
     });
   }
 }
