@@ -97,8 +97,6 @@ void main() {
     final clientId2 = satellite.authState!.clientId;
 
     expect(clientId1, clientId2);
-
-    await Future<void>.delayed(const Duration(milliseconds: 500));
   });
 
   test('cannot UPDATE primary key', () async {
