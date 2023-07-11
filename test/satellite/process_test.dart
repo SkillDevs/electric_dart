@@ -1281,41 +1281,30 @@ void main() {
 
     satellite.relations = kTestRelations;
 
-    await satellite.subscribe([shapeDef]);
+    final Sub(:dataReceived) = await satellite.subscribe([shapeDef]);
+    await dataReceived;
 
-    final completer = Completer<void>();
-    client.subscribeToSubscriptionEvents(
-      (_) {
-        // wait for process to apply shape data
-        Timer(const Duration(milliseconds: 10), () async {
-          try {
-            final row = await adapter.query(
-              Statement(
-                "SELECT id FROM $qualified",
-              ),
-            );
-            expect(row.length, 1);
+    try {
+      final row = await adapter.query(
+        Statement(
+          "SELECT id FROM $qualified",
+        ),
+      );
+      expect(row.length, 1);
 
-            final shadowRows = await adapter.query(
-              Statement(
-                "SELECT tags FROM _electric_shadow",
-              ),
-            );
-            expect(shadowRows.length, 1);
+      final shadowRows = await adapter.query(
+        Statement(
+          "SELECT tags FROM _electric_shadow",
+        ),
+      );
+      expect(shadowRows.length, 1);
 
-            final subsMeta = (await satellite.getMeta('subscriptions'))!;
-            final subsObj = json.decode(subsMeta) as Map<String, Object?>;
-            expect(subsObj.length, 1);
-            completer.complete(null);
-          } catch (e) {
-            completer.completeError(e);
-          }
-        });
-      },
-      (e) {},
-    );
-
-    await completer.future;
+      final subsMeta = (await satellite.getMeta('subscriptions'))!;
+      final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+      expect(subsObj.length, 1);
+    } catch (e, st) {
+      fail("Reason: $e\n$st");
+    }
   });
 
   test(
@@ -1339,30 +1328,20 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    await satellite.subscribe([shapeDef1]);
+    final Sub(:dataReceived) = await satellite.subscribe([shapeDef1]);
+    await dataReceived; // wait for subscription to be fulfilled
 
-    final completer = Completer<void>();
-    client.subscribeToSubscriptionEvents(
-      (_) {
-        Timer(const Duration(milliseconds: 10), () async {
-          try {
-            final row = await adapter.query(
-              Statement(
-                "SELECT id FROM $qualified",
-              ),
-            );
+    try {
+      final row = await adapter.query(
+        Statement(
+          "SELECT id FROM $qualified",
+        ),
+      );
 
-            expect(row.length, 0);
-            completer.complete(null);
-          } catch (e) {
-            completer.completeError(e);
-          }
-        });
-      },
-      (_) {},
-    );
-
-    await completer.future;
+      expect(row.length, 0);
+    } catch (e, st) {
+      fail("Reason: $e\n$st");
+    }
   });
 
   test('a second successful subscription', () async {
