@@ -10,13 +10,15 @@ Dart client implementation for [Electric](https://electric-sql.com/) based on co
 
 ### Run the Todos example
 
-Flutter version used: 3.10.X
+Flutter version used: 3.10.x
 
 This demo is compatible with the `todoMVC` official example [Link](https://github.com/electric-sql/examples).
 
 1. Run the Electric backend ([Instructions](https://electric-sql.com/docs/overview/examples))
 
-2. From inside the todos_flutter directory: `flutter run`
+2. Apply the migrations in Postgres following the Migrations section [here](./todos_flutter/README.md)
+
+3. From inside the todos_flutter directory: `flutter run`
 
 Note:
 
@@ -26,6 +28,8 @@ Note:
 https://user-images.githubusercontent.com/22084723/233607256-2a36c911-152b-483b-9adf-81b4e5ff051d.mp4
 
 ## Development
+
+Dart 3.x required
 
 ### Fetch the dependencies
 
