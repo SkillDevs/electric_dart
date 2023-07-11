@@ -42,13 +42,13 @@ String get dbName => context.dbName;
 AuthState get authState => context.authState;
 AuthConfig get authConfig => context.authConfig;
 
-const parentRecord = {
+const parentRecord = <String, Object?>{
   "id": 1,
   "value": 'incoming',
   "other": 1,
 };
 
-const childRecord = {
+const childRecord = <String, Object?>{
   "id": 1,
   "parent": 1,
 };
