@@ -17,7 +17,10 @@ class SubscribeResponse {
   });
 }
 
-class UnsubscribeResponse {}
+class UnsubscribeResponse with EquatableMixin {
+  @override
+  List<Object?> get props => [];
+}
 
 class ClientShapeDefinition with EquatableMixin {
   final List<ShapeSelect> selects;
@@ -82,6 +85,7 @@ class ShapeDefinition extends ShapeRequestOrDefinition {
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
+      'definition': definition.toMap(),
       'uuid': uuid,
     };
   }

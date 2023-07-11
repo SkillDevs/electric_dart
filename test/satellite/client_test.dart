@@ -8,6 +8,7 @@ import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/client.dart';
 import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/satellite/oplog.dart';
+import 'package:electric_client/src/satellite/satellite.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/sockets/io.dart';
 import 'package:electric_client/src/util/common.dart';
@@ -712,6 +713,264 @@ void main() {
     final res = await client.subscribe(subscriptionId, [shapeReq]);
     expect(res.subscriptionId, subscriptionId);
   });
+
+  test('listen to subscription events: error', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+    server.nextResponses([startResp]);
+    await client.startReplication(null, null);
+
+    final shapeReq = ShapeRequest(
+      requestId: 'fake',
+      definition: ClientShapeDefinition(
+        selects: [ShapeSelect(tablename: 'fake')],
+      ),
+    );
+
+    const subscriptionId = 'THE_ID';
+
+    final subsResp = SatSubsResp(subscriptionId: subscriptionId);
+    final subsError = SatSubsDataError(
+      code: SatSubsDataError_Code.SHAPE_DELIVERY_ERROR,
+      message: 'FAKE ERROR',
+      subscriptionId: subscriptionId,
+    );
+    server.nextResponses([subsResp, subsError]);
+
+    final success = (_) => fail("Should have failed");
+    final error = (_) {};
+
+    client.subscribeToSubscriptionEvents(success, error);
+    final res = await client.subscribe(subscriptionId, [shapeReq]);
+    expect(res.subscriptionId, subscriptionId);
+  });
+
+  test('subscription incorrect protocol sequence', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+    server.nextResponses([startResp]);
+    await client.startReplication(
+      null,
+      null,
+    );
+
+    const requestId = 'THE_REQUEST_ID';
+    const subscriptionId = 'THE_SUBS_ID';
+    const shapeUuid = 'THE_SHAPE_ID';
+    const tablename = 'THE_TABLE_ID';
+
+    final shapeReq = ShapeRequest(
+      requestId: requestId,
+      definition: ClientShapeDefinition(
+        selects: [ShapeSelect(tablename: tablename)],
+      ),
+    );
+
+    final subsResp = SatSubsResp(subscriptionId: subscriptionId);
+    final subsRespWithErr = SatSubsResp(
+      subscriptionId: subscriptionId,
+      error: SatSubsResp_SatSubsError(
+        code: SatSubsResp_SatSubsError_Code.SHAPE_REQUEST_ERROR,
+      ),
+    );
+    final beginSub = SatSubsDataBegin(subscriptionId: subscriptionId);
+    final beginShape = SatShapeDataBegin(
+      requestId: requestId,
+      uuid: shapeUuid,
+    );
+    final endShape = SatShapeDataEnd();
+    final endSub = SatSubsDataEnd();
+    final satOpLog = SatOpLog();
+
+    final begin = SatOpBegin(
+      commitTimestamp: Int64.ZERO,
+    );
+    final commit = SatOpCommit();
+
+    final insert = SatOpInsert();
+
+    final satTransOpBegin = SatTransOp(begin: begin);
+    final satTransOpInsert = SatTransOp(insert: insert);
+    final satTransOpCommit = SatTransOp(commit: commit);
+
+    final wrongSatOpLog1 = SatOpLog(
+      ops: [satTransOpCommit],
+    );
+
+    final wrongSatOpLog2 = SatOpLog(
+      ops: [satTransOpBegin],
+    );
+
+    final wrongSatOpLog3 = SatOpLog(
+      ops: [satTransOpInsert, satTransOpBegin],
+    );
+
+    final wrongSatOpLog4 = SatOpLog(
+      ops: [satTransOpInsert, satTransOpCommit],
+    );
+
+    final validSatOpLog = SatOpLog(
+      ops: [satTransOpInsert, satTransOpInsert],
+    );
+
+    final testCases = [
+      [subsResp, beginShape],
+      [subsResp, endShape],
+      [subsResp, endSub],
+      [subsResp, beginSub, endShape],
+      [subsResp, beginSub, beginShape, endSub],
+      [subsResp, beginSub, endShape],
+      [subsResp, beginSub, satOpLog],
+      [subsResp, beginSub, beginShape, endShape, satOpLog],
+      [subsResp, beginSub, beginShape, satOpLog, endSub],
+      [subsResp, beginSub, beginShape, wrongSatOpLog1],
+      [subsResp, beginSub, beginShape, wrongSatOpLog2],
+      [subsResp, beginSub, beginShape, wrongSatOpLog3],
+      [subsResp, beginSub, beginShape, wrongSatOpLog4],
+      [subsResp, beginSub, beginShape, validSatOpLog, endShape, validSatOpLog],
+      [subsRespWithErr, beginSub],
+    ];
+
+    while (testCases.isNotEmpty) {
+      final next = testCases.removeAt(0);
+      server.nextResponses(next);
+
+      final completer = Completer<void>();
+      final success = (_) {
+        completer.completeError('invalid subscription messages sequence');
+      };
+
+      late SubscriptionEventListeners subListeners;
+      final error = (_) {
+        // if (testCases.isEmpty) {
+        //   t.pass()
+        //   globalRes()
+        // }
+        client.unsubscribeToSubscriptionEvents(subListeners);
+        completer.complete(null);
+      };
+
+      subListeners = client.subscribeToSubscriptionEvents(success, error);
+      unawaited(client.subscribe(subscriptionId, [shapeReq, shapeReq]));
+
+      await completer.future;
+    }
+  });
+
+  test('subscription correct protocol sequence with data', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+    server.nextResponses([startResp]);
+    await client.startReplication(null, null);
+
+    final Relation rel = Relation(
+      id: 0,
+      schema: 'schema',
+      table: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        RelationColumn(name: 'name1', type: 'TEXT'),
+        RelationColumn(name: 'name2', type: 'TEXT'),
+      ],
+    );
+
+    client.inbound.relations[0] = rel;
+
+    const requestId1 = 'THE_REQUEST_ID_1';
+    const requestId2 = 'THE_REQUEST_ID_2';
+    const subscriptionId = 'THE_SUBS_ID';
+    const uuid1 = 'THE_SHAPE_ID_1';
+    const uuid2 = 'THE_SHAPE_ID_2';
+    const tablename = 'THE_TABLE_ID';
+
+    final shapeReq1 = ShapeRequest(
+      requestId: requestId1,
+      definition: ClientShapeDefinition(
+        selects: [ShapeSelect(tablename: tablename)],
+      ),
+    );
+
+    final shapeReq2 = ShapeRequest(
+      requestId: requestId2,
+      definition: ClientShapeDefinition(
+        selects: [ShapeSelect(tablename: tablename)],
+      ),
+    );
+
+    final subsResp = SatSubsResp(subscriptionId: subscriptionId);
+    final beginSub = SatSubsDataBegin(subscriptionId: subscriptionId);
+    final beginShape1 = SatShapeDataBegin(
+      requestId: requestId1,
+      uuid: uuid1,
+    );
+    final beginShape2 = SatShapeDataBegin(
+      requestId: requestId2,
+      uuid: uuid2,
+    );
+    final endShape = SatShapeDataEnd();
+    final endSub = SatSubsDataEnd();
+
+    final completer = Completer<void>();
+    final success = (_) {
+      //t.pass()
+      completer.complete(null);
+    };
+
+    final error = (Object e) {
+      completer.completeError((e as SatelliteException).message!);
+    };
+    client.subscribeToSubscriptionEvents(success, error);
+
+    final insertOp = SatOpInsert(
+      relationId: 0,
+      rowData: serializeRow(
+        {"name1": 'Foo', "name2": 'Bar'},
+        rel,
+      ),
+    );
+
+    final satTransOpInsert = SatTransOp(insert: insertOp);
+
+    final satOpLog1 = SatOpLog(
+      ops: [satTransOpInsert],
+    );
+
+    server.nextResponses([
+      subsResp,
+      beginSub,
+      beginShape1,
+      satOpLog1,
+      endShape,
+      beginShape2,
+      satOpLog1,
+      endShape,
+      endSub,
+    ]);
+    await client.subscribe(subscriptionId, [shapeReq1, shapeReq2]);
+
+    await completer.future;
+  });
+
+  test(
+    'unsubscribe successfull',
+    () async {
+      await connectAndAuth();
+
+      final startResp = SatInStartReplicationResp();
+      server.nextResponses([startResp]);
+      await client.startReplication(null, null);
+
+      const subscriptionId = 'THE_ID';
+
+      final unsubResp = SatUnsubsResp();
+      server.nextResponses([unsubResp]);
+      final resp = await client.unsubscribe([subscriptionId]);
+      expect(resp, UnsubscribeResponse());
+    },
+  );
 }
 
 AuthState createAuthState() {
