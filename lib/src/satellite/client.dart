@@ -8,6 +8,8 @@ import 'package:electric_client/src/notifiers/notifiers.dart' hide Change;
 import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/config.dart';
 import 'package:electric_client/src/satellite/satellite.dart';
+import 'package:electric_client/src/satellite/shapes/cache.dart';
+import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
@@ -43,6 +45,10 @@ class SatelliteClient extends EventEmitter implements Client {
 
   late Replication inbound;
   late OutgoingReplication outbound;
+
+  // can only handle a single subscription at a time
+  final SubscriptionsDataCache _subscriptionsDataCache =
+      SubscriptionsDataCache();
 
   Throttle<void>? throttledPushTransaction;
   void Function(Uint8List bytes)? socketHandler;
@@ -152,6 +158,45 @@ class SatelliteClient extends EventEmitter implements Client {
           isRpc: false,
         );
 
+      case SatMsgType.subsResp:
+        return IncomingHandler(
+          handle: (v) => handleSubscription(v! as SatSubsResp),
+          isRpc: true,
+        );
+
+      case SatMsgType.subsDataError:
+        return IncomingHandler(
+          handle: (v) => handleSubscriptionError(v! as SatSubsDataError),
+          isRpc: false,
+        );
+      case SatMsgType.subsDataBegin:
+        return IncomingHandler(
+          handle: (v) => handleSubscriptionDataBegin(v! as SatSubsDataBegin),
+          isRpc: false,
+        );
+
+      case SatMsgType.subsDataEnd:
+        return IncomingHandler(
+          handle: (v) => handleSubscriptionDataEnd(v! as SatSubsDataEnd),
+          isRpc: false,
+        );
+      case SatMsgType.shapeDataBegin:
+        return IncomingHandler(
+          handle: (v) => handleShapeDataBegin(v! as SatShapeDataBegin),
+          isRpc: false,
+        );
+      case SatMsgType.shapeDataEnd:
+        return IncomingHandler(
+          handle: (v) => handleShapeDataEnd(v! as SatShapeDataEnd),
+          isRpc: false,
+        );
+      case SatMsgType.unsubsResp:
+        return IncomingHandler(
+          handle: (v) => handleUnsubscribeResponse(v! as SatUnsubsResp),
+          isRpc: true,
+        );
+      case SatMsgType.subsReq:
+      case SatMsgType.unsubsReq:
       case SatMsgType.authReq:
       case SatMsgType.migrationNotification:
         throw UnimplementedError();
@@ -284,10 +329,16 @@ class SatelliteClient extends EventEmitter implements Client {
       },
       (messageInfo) {
         final handler = getIncomingHandlerForMessage(messageInfo.msgType);
-        final response = handler.handle(messageInfo.msg);
+        try {
+          final response = handler.handle(messageInfo.msg);
 
-        if (handler.isRpc) {
-          emit("rpc_response", response);
+          if (handler.isRpc) {
+            emit("rpc_response", response);
+          }
+        } catch (error) {
+          logger.warning(
+            "uncaught errors while processing incoming message: $error",
+          );
         }
       },
     );
@@ -351,7 +402,10 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> startReplication(LSN? lsn) async {
+  Future<Either<SatelliteException, void>> startReplication(
+    LSN? lsn,
+    List<String>? subscriptionIds,
+  ) async {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(
         SatelliteErrorCode.replicationAlreadyStarted,
@@ -367,6 +421,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
       request = SatInStartReplicationReq(
         options: [SatInStartReplicationReq_Option.FIRST_LSN],
+        subscriptionIds: subscriptionIds,
       );
     } else {
       logger.info("starting replication with lsn: ${base64.encode(lsn)}");
@@ -486,9 +541,14 @@ class SatelliteClient extends EventEmitter implements Client {
     return AuthResponse(serverId, error);
   }
 
-  void handleStartResp(SatInStartReplicationResp value) {
+  void handleStartResp(SatInStartReplicationResp resp) {
     if (inbound.isReplicating == ReplicationStatus.starting) {
-      inbound.isReplicating = ReplicationStatus.active;
+      if (resp.hasErr()) {
+        inbound.isReplicating = ReplicationStatus.stopped;
+        emit('error', startReplicationErrorToSatelliteError(resp.err));
+      } else {
+        inbound.isReplicating = ReplicationStatus.active;
+      }
     } else {
       emit(
         "error",
@@ -586,6 +646,75 @@ class SatelliteClient extends EventEmitter implements Client {
   @override
   void unsubscribeToOutboundEvent(EventListener<void> eventListener) {
     removeEventListener(eventListener);
+  }
+
+  @override
+  SubscriptionEventListeners subscribeToSubscriptionEvents(
+    SubscriptionDeliveredCallback successCallback,
+    SubscriptionErrorCallback errorCallback,
+  ) {
+    final successListener =
+        _subscriptionsDataCache.on(SUBSCRIPTION_DELIVERED, successCallback);
+    final errorListener =
+        _subscriptionsDataCache.on(SUBSCRIPTION_ERROR, errorCallback);
+
+    return SubscriptionEventListeners(
+      successEventListener: successListener,
+      errorEventListener: errorListener,
+    );
+  }
+
+  @override
+  void unsubscribeToSubscriptionEvents(
+    SubscriptionEventListeners listeners,
+  ) {
+    _subscriptionsDataCache.removeEventListener(
+      listeners.successEventListener,
+    );
+    _subscriptionsDataCache.removeEventListener(
+      listeners.errorEventListener,
+    );
+  }
+
+  @override
+  Future<SubscribeResponse> subscribe(
+    String subscriptionId,
+    List<ShapeRequest> shapes,
+  ) {
+    if (inbound.isReplicating != ReplicationStatus.active) {
+      return Future.error(
+        SatelliteException(
+          SatelliteErrorCode.replicationNotStarted,
+          "replication not active",
+        ),
+      );
+    }
+
+    final request = SatSubsReq(
+      subscriptionId: subscriptionId,
+      shapeRequests: shapeRequestToSatShapeReq(shapes),
+    );
+
+    _subscriptionsDataCache.subscriptionRequest(request);
+    return rpc<SubscribeResponse>(request);
+  }
+
+  @override
+  Future<UnsubscribeResponse> unsubscribe(List<String> subIds) {
+    if (inbound.isReplicating != ReplicationStatus.active) {
+      return Future.error(
+        SatelliteException(
+          SatelliteErrorCode.replicationNotStarted,
+          "replication not active",
+        ),
+      );
+    }
+
+    final request = SatUnsubsReq(
+      subscriptionIds: subIds,
+    );
+
+    return rpc(request);
   }
 
   void sendMissingRelations(
@@ -708,7 +837,15 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleTransaction(SatOpLog message) {
-    processOpLogMessage(message, inbound);
+    if (!_subscriptionsDataCache.isDelivering()) {
+      processOpLogMessage(message);
+    } else {
+      try {
+        _subscriptionsDataCache.transaction(message.ops);
+      } catch (e) {
+        logger.info("Error applying transaction message for subs $e");
+      }
+    }
   }
 
   void handleErrorResp(SatErrorResp error) {
@@ -718,10 +855,49 @@ class SatelliteClient extends EventEmitter implements Client {
     );
   }
 
-  void processOpLogMessage(
-    SatOpLog opLogMessage,
-    Replication replication,
-  ) {
+  SubscribeResponse handleSubscription(SatSubsResp msg) {
+    if (msg.hasError()) {
+      final error = subsErrorToSatelliteError(msg.error);
+      _subscriptionsDataCache.subscriptionError();
+      return SubscribeResponse(
+        subscriptionId: msg.subscriptionId,
+        error: error,
+      );
+    } else {
+      _subscriptionsDataCache.subscriptionResponse(msg);
+      return SubscribeResponse(subscriptionId: msg.subscriptionId, error: null);
+    }
+  }
+
+  void handleSubscriptionError(SatSubsDataError msg) {
+    _subscriptionsDataCache.subscriptionDataError(msg);
+  }
+
+  void handleSubscriptionDataBegin(SatSubsDataBegin msg) {
+    _subscriptionsDataCache.subscriptionDataBegin(msg);
+  }
+
+  void handleSubscriptionDataEnd(SatSubsDataEnd msg) {
+    _subscriptionsDataCache.subscriptionDataEnd(inbound.relations);
+  }
+
+  void handleShapeDataBegin(SatShapeDataBegin msg) {
+    _subscriptionsDataCache.shapeDataBegin(msg);
+  }
+
+  void handleShapeDataEnd(SatShapeDataEnd _msg) {
+    _subscriptionsDataCache.shapeDataEnd();
+  }
+
+  // For now, unsubscribe responses doesn't send any information back
+  // It might eventually confirm that the server processed it or was noop.
+  UnsubscribeResponse handleUnsubscribeResponse(SatUnsubsResp msg) {
+    return UnsubscribeResponse();
+  }
+
+  void processOpLogMessage(SatOpLog opLogMessage) {
+    final replication = inbound;
+
     //print("PROCESS! ${opLogMessage.ops.length}");
     for (var op in opLogMessage.ops) {
       if (op.hasBegin()) {
@@ -743,7 +919,6 @@ class SatelliteClient extends EventEmitter implements Client {
           changes: lastTx.changes,
           origin: lastTx.origin,
         );
-        // in the future, emitting this event can be decoupled
         emit<TransactionEvent>(
           'transaction',
           TransactionEvent(

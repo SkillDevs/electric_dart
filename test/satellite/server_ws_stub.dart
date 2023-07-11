@@ -93,6 +93,41 @@ class SatelliteWSServerStub {
               socketClient
                   .add(encodeSocketMessage(msgType, msg as SatPingResp));
             }
+
+            if (msgType == SatMsgType.subsResp) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatSubsResp));
+            }
+
+            if (msgType == SatMsgType.subsDataError) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatSubsDataError));
+            }
+
+            if (msgType == SatMsgType.subsDataBegin) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatSubsDataBegin));
+            }
+
+            if (msgType == SatMsgType.subsDataEnd) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatSubsDataEnd));
+            }
+
+            if (msgType == SatMsgType.shapeDataBegin) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatShapeDataBegin));
+            }
+
+            if (msgType == SatMsgType.shapeDataEnd) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatShapeDataEnd));
+            }
+
+            if (msgType == SatMsgType.unsubsResp) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatUnsubsResp));
+            }
           }
         });
       } else {

@@ -1,6 +1,7 @@
 // ignore_for_file: unreachable_from_main
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
@@ -10,6 +11,8 @@ import 'package:electric_client/src/notifiers/notifiers.dart';
 import 'package:electric_client/src/satellite/mock.dart';
 import 'package:electric_client/src/satellite/oplog.dart';
 import 'package:electric_client/src/satellite/process.dart';
+import 'package:electric_client/src/satellite/satellite.dart';
+import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
@@ -40,6 +43,17 @@ String get dbName => context.dbName;
 AuthState get authState => context.authState;
 AuthConfig get authConfig => context.authConfig;
 
+const parentRecord = <String, Object?>{
+  "id": 1,
+  "value": 'incoming',
+  "other": 1,
+};
+
+const childRecord = <String, Object?>{
+  "id": 1,
+  "parent": 1,
+};
+
 void main() {
   setUp(() async {
     context = await makeContext();
@@ -69,6 +83,7 @@ void main() {
       "lastSentRowId": '0',
       "lsn": '',
       "clientId": '',
+      "subscriptions": '',
     });
   });
 
@@ -1210,6 +1225,380 @@ void main() {
     final new_oplog = await satellite.getEntries();
     expect(new_oplog, isEmpty);
   });
+
+  // stub client and make satellite throw the error with option off/succeed with option on
+  test('clear database on BEHIND_WINDOW', () async {
+    await runMigrations();
+
+    final base64lsn = base64.encode(numberToBytes(MOCK_BEHIND_WINDOW_LSN));
+    await satellite.setMeta('lsn', base64lsn);
+    try {
+      final conn = await satellite.start(
+        authConfig,
+        opts: SatelliteReplicationOptions(clearOnBehindWindow: true),
+      );
+      await conn.connectionFuture;
+      final lsnAfter = await satellite.getMeta('lsn');
+      expect(lsnAfter, isNot(base64lsn));
+    } catch (e, st) {
+      fail('start should not throw');
+    }
+
+    // TODO: test clear subscriptions
+  });
+
+  test('throw other replication errors', () async {
+    await runMigrations();
+
+    final base64lsn = base64.encode(numberToBytes(MOCK_INVALID_POSITION_LSN));
+    await satellite.setMeta('lsn', base64lsn);
+    try {
+      final conn = await satellite.start(authConfig);
+      await conn.connectionFuture;
+      fail('start should throw');
+    } on SatelliteException catch (e) {
+      expect(e.code, SatelliteErrorCode.invalidPosition);
+    }
+  });
+
+  test('apply shape data and persist subscription', () async {
+    await runMigrations();
+
+    const namespace = 'main';
+    const tablename = 'parent';
+    final qualified = const QualifiedTablename(namespace, tablename).toString();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
+
+    satellite.relations = kTestRelations;
+
+    await satellite.subscribe([shapeDef]);
+
+    final completer = Completer<void>();
+    client.subscribeToSubscriptionEvents(
+      (_) {
+        // wait for process to apply shape data
+        Timer(const Duration(milliseconds: 10), () async {
+          try {
+            final row = await adapter.query(
+              Statement(
+                "SELECT id FROM $qualified",
+              ),
+            );
+            expect(row.length, 1);
+
+            final shadowRows = await adapter.query(
+              Statement(
+                "SELECT tags FROM _electric_shadow",
+              ),
+            );
+            expect(shadowRows.length, 1);
+
+            final subsMeta = (await satellite.getMeta('subscriptions'))!;
+            final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+            expect(subsObj.length, 1);
+            completer.complete(null);
+          } catch (e) {
+            completer.completeError(e);
+          }
+        });
+      },
+      (e) {},
+    );
+
+    await completer.future;
+  });
+
+  test(
+      'a subscription that failed to apply because of FK constraint triggers GC',
+      () async {
+    await runMigrations();
+
+    const tablename = 'child';
+    const namespace = 'main';
+    final qualified = const QualifiedTablename(namespace, tablename).toString();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, childRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef1 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
+
+    satellite.relations = kTestRelations;
+    await satellite.subscribe([shapeDef1]);
+
+    final completer = Completer<void>();
+    client.subscribeToSubscriptionEvents(
+      (_) {
+        Timer(const Duration(milliseconds: 10), () async {
+          try {
+            final row = await adapter.query(
+              Statement(
+                "SELECT id FROM $qualified",
+              ),
+            );
+
+            expect(row.length, 0);
+            completer.complete(null);
+          } catch (e) {
+            completer.completeError(e);
+          }
+        });
+      },
+      (_) {},
+    );
+
+    await completer.future;
+  });
+
+  test('a second successful subscription', () async {
+    await runMigrations();
+
+    const tablename = 'child';
+    final qualified = const QualifiedTablename('main', tablename).toString();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData('parent', parentRecord);
+    client.setRelationData(tablename, childRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef1 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: 'parent')],
+    );
+    final ClientShapeDefinition shapeDef2 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
+
+    satellite.relations = kTestRelations;
+    await satellite.subscribe([shapeDef1]);
+    await satellite.subscribe([shapeDef2]);
+
+    final completer = Completer<void>();
+
+    client.subscribeToSubscriptionEvents(
+      (data) => {
+        // only test after second subscription delivery
+        if (data.data[0].relation.table == tablename)
+          {
+            Timer(const Duration(milliseconds: 10), () async {
+              try {
+                final row = await adapter.query(
+                  Statement(
+                    "SELECT id FROM $qualified",
+                  ),
+                );
+                expect(row.length, 1);
+
+                final shadowRows = await adapter.query(
+                  Statement(
+                    "SELECT tags FROM _electric_shadow",
+                  ),
+                );
+                expect(shadowRows.length, 2);
+
+                final subsMeta = (await satellite.getMeta('subscriptions'))!;
+                final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+                expect(subsObj.length, 2);
+                completer.complete();
+              } catch (e) {
+                completer.completeError(e);
+              }
+            })
+          }
+      },
+      (_) {},
+    );
+
+    await completer.future;
+  });
+
+  test('a single subscribe with multiple tables with FKs', () async {
+    await runMigrations();
+
+    final qualifiedChild = const QualifiedTablename('main', 'child').toString();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData('parent', parentRecord);
+    client.setRelationData('child', childRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: 'child')],
+    );
+    final shapeDef2 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: 'parent')],
+    );
+
+    satellite.relations = kTestRelations;
+    await satellite.subscribe([shapeDef1, shapeDef2]);
+
+    final completer = Completer<void>();
+    client.subscribeToSubscriptionEvents(
+      (data) {
+        // child is applied first
+        expect(data.data[0].relation.table, 'child');
+        expect(data.data[1].relation.table, 'parent');
+
+        Timer(const Duration(milliseconds: 10), () async {
+          try {
+            final row = await adapter.query(
+              Statement(
+                "SELECT id FROM $qualifiedChild",
+              ),
+            );
+            expect(row.length, 1);
+
+            completer.complete();
+          } catch (e) {
+            completer.completeError(e);
+          }
+        });
+      },
+      (_) {},
+    );
+    await completer.future;
+  });
+
+  test('a shape delivery that triggers garbage collection', () async {
+    await runMigrations();
+
+    const tablename = 'parent';
+    final qualified = const QualifiedTablename('main', tablename).toString();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+    client.setRelationData('another', {});
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: 'parent')],
+    );
+    final shapeDef2 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: 'another')],
+    );
+
+    satellite.relations = kTestRelations;
+    await satellite.subscribe([shapeDef1]);
+    await satellite.subscribe([shapeDef2]);
+
+    final completer = Completer<void>();
+    client.subscribeToSubscriptionEvents((_) {}, (expected) {
+      Timer(const Duration(milliseconds: 10), () async {
+        try {
+          final row = await adapter.query(
+            Statement(
+              "SELECT id FROM $qualified",
+            ),
+          );
+          expect(row.length, 0);
+
+          final shadowRows = await adapter.query(
+            Statement("SELECT tags FROM _electric_shadow"),
+          );
+          expect(shadowRows.length, 1);
+
+          final subsMeta = (await satellite.getMeta('subscriptions'))!;
+          final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+          expect(subsObj, <String, Object?>{});
+          expect(
+            expected.message!.indexOf("table 'another'"),
+            greaterThanOrEqualTo(0),
+          );
+          completer.complete();
+        } catch (e) {
+          completer.completeError(e);
+        }
+      });
+    });
+
+    await completer.future;
+  });
+
+  test('a subscription request failure does not clear the manager state',
+      () async {
+    await runMigrations();
+
+    // relations must be present at subscription delivery
+    const tablename = 'parent';
+    final qualified = const QualifiedTablename('main', tablename).toString();
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef1 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
+
+    final shapeDef2 = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: 'failure')],
+    );
+
+    satellite.relations = kTestRelations;
+    await satellite.subscribe([shapeDef1]);
+
+    final completer = Completer<void>();
+
+    client.subscribeToSubscriptionEvents(
+      (_) {
+        Timer(const Duration(milliseconds: 10), () async {
+          try {
+            final row = await adapter.query(
+              Statement(
+                "SELECT id FROM $qualified",
+              ),
+            );
+            expect(row.length, 1);
+            completer.complete();
+          } catch (e) {
+            completer.completeError(e);
+          }
+        });
+      },
+      (_) {},
+    );
+
+    await completer.future
+        .then((_) => satellite.subscribe([shapeDef2]))
+        .catchError((Object error) {
+      expect(
+        (error as SatelliteException).code,
+        SatelliteErrorCode.tableNotFound,
+      );
+    });
+  });
 }
-// Document if we support CASCADE https://www.sqlite.org/foreignkeys.html
-// Document that we do not maintian the order of execution of incoming operations and therefore we defer foreign key checks to the outermost commit
+
+// TODO: implement reconnect protocol
+
+// test('resume out of window clears subscriptions and clears oplog after ack', async (t) => {})
+
+// test('not possible to subscribe while oplog is not pushed', async (t) => {})
+
+// test('process restart loads previous subscriptions', async (t) => {})
+
+// test('oplog messages allowed between SatSubsRep and SatSubsDataBegin', async (t) => {})
