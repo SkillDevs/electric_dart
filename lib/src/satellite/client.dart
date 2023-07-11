@@ -649,24 +649,30 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToSubscriptionEvents(
+  SubscriptionEventListeners subscribeToSubscriptionEvents(
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   ) {
-    _subscriptionsDataCache.on(SUBSCRIPTION_DELIVERED, successCallback);
-    _subscriptionsDataCache.on(SUBSCRIPTION_ERROR, errorCallback);
+    final successListener =
+        _subscriptionsDataCache.on(SUBSCRIPTION_DELIVERED, successCallback);
+    final errorListener =
+        _subscriptionsDataCache.on(SUBSCRIPTION_ERROR, errorCallback);
+
+    return SubscriptionEventListeners(
+      successEventListener: successListener,
+      errorEventListener: errorListener,
+    );
   }
 
   @override
   void unsubscribeToSubscriptionEvents(
-    EventListener successEventListener,
-    EventListener errorEventListener,
+    SubscriptionEventListeners listeners,
   ) {
     _subscriptionsDataCache.removeEventListener(
-      successEventListener,
+      listeners.successEventListener,
     );
     _subscriptionsDataCache.removeEventListener(
-      errorEventListener,
+      listeners.errorEventListener,
     );
   }
 

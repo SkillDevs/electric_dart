@@ -197,21 +197,23 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToSubscriptionEvents(
+  SubscriptionEventListeners subscribeToSubscriptionEvents(
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   ) {
-    on(SUBSCRIPTION_DELIVERED, successCallback);
-    on(SUBSCRIPTION_ERROR, errorCallback);
+    final successListener = on(SUBSCRIPTION_DELIVERED, successCallback);
+    final errorListener = on(SUBSCRIPTION_ERROR, errorCallback);
+
+    return SubscriptionEventListeners(
+      successEventListener: successListener,
+      errorEventListener: errorListener,
+    );
   }
 
   @override
-  void unsubscribeToSubscriptionEvents(
-    EventListener successEventListener,
-    EventListener errorEventListener,
-  ) {
-    removeEventListener(successEventListener);
-    removeEventListener(errorEventListener);
+  void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners) {
+    removeEventListener(listeners.successEventListener);
+    removeEventListener(listeners.errorEventListener);
   }
 
   @override

@@ -95,12 +95,19 @@ abstract class Client {
   // TODO: there is currently no way of unsubscribing from the server
   // unsubscribe(subscriptionId: string): Promise<void>
 
-  void subscribeToSubscriptionEvents(
+  SubscriptionEventListeners subscribeToSubscriptionEvents(
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   );
-  void unsubscribeToSubscriptionEvents(
-    EventListener successEventListener,
-    EventListener errorEventListener,
-  );
+  void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners);
+}
+
+class SubscriptionEventListeners {
+  final EventListener<SubscriptionData> successEventListener;
+  final EventListener<SubscriptionErrorData> errorEventListener;
+
+  SubscriptionEventListeners({
+    required this.successEventListener,
+    required this.errorEventListener,
+  });
 }
