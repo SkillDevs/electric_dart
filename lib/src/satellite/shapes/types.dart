@@ -69,6 +69,7 @@ class ShapeDefinition extends ShapeRequestOrDefinition {
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
+      'definition': definition.toMap(),
       'uuid': uuid,
     };
   }

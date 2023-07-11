@@ -171,11 +171,14 @@ class MockSatelliteClient extends EventEmitter implements Client {
     }
 
     Timer(const Duration(milliseconds: 1), () {
-      emit(SUBSCRIPTION_DELIVERED, {
-        subscriptionId,
-        data,
-        shapeReqToUuid,
-      });
+      emit(
+        SUBSCRIPTION_DELIVERED,
+        SubscriptionData(
+          subscriptionId: subscriptionId,
+          data: data,
+          shapeReqToUuid: shapeReqToUuid,
+        ),
+      );
     });
 
     return Future.value(
@@ -192,21 +195,23 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToSubscriptionEvents(
+  SubscriptionEventListeners subscribeToSubscriptionEvents(
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   ) {
-    on(SUBSCRIPTION_DELIVERED, successCallback);
-    on(SUBSCRIPTION_ERROR, errorCallback);
+    final successListener = on(SUBSCRIPTION_DELIVERED, successCallback);
+    final errorListener = on(SUBSCRIPTION_ERROR, errorCallback);
+
+    return SubscriptionEventListeners(
+      successEventListener: successListener,
+      errorEventListener: errorListener,
+    );
   }
 
   @override
-  void unsubscribeToSubscriptionEvents(
-    EventListener successEventListener,
-    EventListener errorEventListener,
-  ) {
-    removeEventListener(successEventListener);
-    removeEventListener(errorEventListener);
+  void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners) {
+    removeEventListener(listeners.successEventListener);
+    removeEventListener(listeners.errorEventListener);
   }
 
   @override

@@ -101,6 +101,9 @@ class SatelliteProcess implements Satellite {
     AuthConfig authConfig, {
     SatelliteReplicationOptions? opts,
   }) async {
+    // Necessary for Electric
+    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -147,8 +150,8 @@ class SatelliteProcess implements Satellite {
     // Need to reload primary keys after schema migration
     relations = await getLocalRelations();
 
-    _lastAckdRowId = int.parse(await getMeta('lastAckdRowId'));
-    lastSentRowId = int.parse(await getMeta('lastSentRowId'));
+    _lastAckdRowId = int.parse((await getMeta('lastAckdRowId'))!);
+    lastSentRowId = int.parse((await getMeta('lastSentRowId'))!);
 
     setClientListeners();
     client.resetOutboundLogPositions(
@@ -156,7 +159,7 @@ class SatelliteProcess implements Satellite {
       numberToBytes(lastSentRowId),
     );
 
-    final lsnBase64 = await getMeta('lsn');
+    final lsnBase64 = (await getMeta('lsn'))!;
     if (lsnBase64.isNotEmpty) {
       logger.info("retrieved lsn $_lsn");
       _lsn = base64.decode(lsnBase64);
@@ -164,7 +167,7 @@ class SatelliteProcess implements Satellite {
       logger.info("no lsn retrieved from store");
     }
 
-    final subscriptionsState = await getMeta('subscriptions');
+    final subscriptionsState = (await getMeta('subscriptions'))!;
     if (subscriptionsState.isNotEmpty) {
       subscriptions.setState(subscriptionsState);
     }
@@ -325,16 +328,15 @@ INSERT INTO $tablenameStr (${columnNames.join(
 
     // persist subscriptions state
     stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
-
     try {
       await adapter.runInTransaction(stmts);
     } catch (e) {
       unawaited(
-        _handleSubscriptionError(
-          SatelliteException(
-            SatelliteErrorCode.internal,
-            "Error applying subscription data: $e",
-          ),
+
+      await _handleSubscriptionError(
+        SatelliteException(
+          SatelliteErrorCode.internal,
+          "Error applying subscription data: $e",
         ),
       );
     }
@@ -384,7 +386,8 @@ INSERT INTO $tablenameStr (${columnNames.join(
   }
 
   Future<Either<SatelliteException, void>> _connectAndStartReplication(
-      SatelliteReplicationOptions? opts,) async {
+    SatelliteReplicationOptions? opts,
+  ) async {
     logger.info("connecting and starting replication");
 
     final _authState = authState;
@@ -1140,7 +1143,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
   }
 
   @visibleForTesting
-  Future<String> getMeta(String key) async {
+  Future<String?> getMeta(String key) async {
     final meta = opts.metaTable.toString();
 
     final sql = "SELECT value from $meta WHERE key = ?";
@@ -1151,13 +1154,13 @@ INSERT INTO $tablenameStr (${columnNames.join(
       throw "Invalid metadata table: missing $key";
     }
 
-    return rows.first["value"]! as String;
+    return rows.first["value"] as String?;
   }
 
   Future<String> _getClientId() async {
     const clientIdKey = 'clientId';
 
-    String clientId = await getMeta(clientIdKey);
+    String clientId = (await getMeta(clientIdKey))!;
 
     if (clientId.isEmpty) {
       clientId = uuid();
