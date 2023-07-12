@@ -1013,7 +1013,7 @@ void main() {
       ),
     ];
 
-    // TODO(dart) No expectations?
+    // Should not throw
     await satellite.apply(incoming, "");
   });
 
