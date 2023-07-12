@@ -19,7 +19,11 @@ Future<void> main() async {
   runApp(_Entrypoint());
 }
 
-typedef _InitData = ({TodosDatabase todosDb, ElectricClient electricClient});
+typedef _InitData = ({
+  TodosDatabase todosDb,
+  ElectricClient electricClient,
+  ConnectivityStateController connectivityStateController,
+});
 
 class _Entrypoint extends HookWidget {
   @override
@@ -36,9 +40,13 @@ class _Entrypoint extends HookWidget {
 
         final electricClient = await startElectricDrift(dbPath, driftRepo.db);
 
+        final connectivityStateController =
+            ConnectivityStateController(electricClient)..init();
+
         initDataVN.value = (
           todosDb: todosDb,
           electricClient: electricClient,
+          connectivityStateController: connectivityStateController,
         );
       }();
       return null;
@@ -55,6 +63,8 @@ class _Entrypoint extends HookWidget {
       overrides: [
         todosDatabaseProvider.overrideWithValue(initData.todosDb),
         electricClientProvider.overrideWithValue(initData.electricClient),
+        connectivityStateControllerProvider
+            .overrideWith(((ref) => initData.connectivityStateController)),
       ],
       child: const MyApp(),
     );
@@ -83,18 +93,6 @@ class MyHomePage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final todos = ref.watch(todosProvider);
-
-    useEffect(() {
-      final electric = ref.read(electricClientProvider);
-      electric.notifier.subscribeToConnectivityStateChange((change) {
-        print("connectivity state changed ${change.connectivityState}");
-        final notifier = ref.read(connectivityStateProvider.notifier);
-        notifier.update((state) => change.connectivityState);
-      });
-      return null;
-    }, []);
-
     final todosAV = ref.watch(todosProvider);
 
     return Scaffold(
@@ -174,21 +172,16 @@ class ConnectivityButton extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final connectivityState = ref.watch(connectivityStateProvider);
+    final connectivityState = ref.watch(
+      connectivityStateControllerProvider
+          .select((value) => value.connectivityState),
+    );
 
     return ElevatedButton(
       onPressed: () async {
-        final electric = ref.read(electricClientProvider);
-        final nextState = connectivityState == ConnectivityState.connected
-            ? ConnectivityState.disconnected
-            : ConnectivityState.connected;
-        // if (connectivityState == ConnectivityState.connected) {
-        //   await electric.stop();
-        // } else {
-        //   await electric.start(kElectricAuthConfig);
-        // }
-        final dbName = electric.notifier.dbName;
-        electric.notifier.connectivityStateChange(dbName, nextState);
+        final connectivityStateController =
+            ref.read(connectivityStateControllerProvider);
+        connectivityStateController.toggleConnectivityState();
       },
       child: Text(
         connectivityState == ConnectivityState.connected
