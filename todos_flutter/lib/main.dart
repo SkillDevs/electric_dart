@@ -18,17 +18,13 @@ Future<void> main() async {
   final dbPath = await getDatabasePath();
   final driftRepo = await initDriftTodosDatabase(dbPath);
   final todosDb = TodosDatabase(driftRepo);
-  final adapter = DriftAdapter(driftRepo.db);
   // final sqliteRepo = initSqliteRepository(dbPath);
   // final todosDb = TodosDatabase(sqliteRepo);
   // final adapter = SqliteAdapter(sqliteRepo.db);
 
   final electricClient = await startElectricDrift(dbPath, driftRepo.db);
 
-  driftRepo.db.setElectricNotifier(electricClient.notifier);
-
-  // ignore: unused_local_variable
-  final dispose = adapter.hookToNotifier(electricClient.notifier);
+  
 
   runApp(
     ProviderScope(

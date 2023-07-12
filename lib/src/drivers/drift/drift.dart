@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:electric_client/drivers/drift.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:electric_client/src/electric/electric.dart' as electrify_lib;
@@ -6,7 +5,7 @@ import 'package:electric_client/src/electric/electric.dart';
 
 Future<ElectricClient> electrify({
   required String dbName,
-  required DatabaseConnectionUser db,
+  required ElectricfiedDriftDatabaseMixin db,
   required List<Migration> migrations,
   required ElectricConfig config,
   ElectrifyOptions? opts,
@@ -26,6 +25,14 @@ Future<ElectricClient> electrify({
       registry: opts?.registry,
     ),
   );
+
+  final notifier = namespace.notifier;
+
+  db.setElectricNotifier(notifier);
+
+  // TODO(dart): Where to unsubscribe?
+  // ignore: unused_local_variable
+  final dispose = (namespace.adapter as DriftAdapter).hookToNotifier(notifier);
 
   return namespace;
 }

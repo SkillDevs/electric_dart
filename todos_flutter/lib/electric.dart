@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:electric_client/drivers/drift.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,7 +17,7 @@ const kElectricAuthConfig = AuthConfig(
 
 Future<ElectricClient> startElectricDrift(
   String dbPath,
-  DatabaseConnectionUser db,
+  ElectricfiedDriftDatabaseMixin db,
 ) async {
   final dbName = dbPath;
 
