@@ -262,55 +262,132 @@ class SatOpMigrate_Type extends $pb.ProtobufEnum {
   const SatOpMigrate_Type._($core.int v, $core.String n) : super(v, n);
 }
 
-class SatSubsError_Code extends $pb.ProtobufEnum {
-  static const SatSubsError_Code CODE_UNSPECIFIED = SatSubsError_Code._(
-      0,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'CODE_UNSPECIFIED');
-  static const SatSubsError_Code SHAPE_REQUEST_ERROR = SatSubsError_Code._(
-      1,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'SHAPE_REQUEST_ERROR');
-
-  static const $core.List<SatSubsError_Code> values = <SatSubsError_Code>[
-    CODE_UNSPECIFIED,
-    SHAPE_REQUEST_ERROR,
-  ];
-
-  static final $core.Map<$core.int, SatSubsError_Code> _byValue =
-      $pb.ProtobufEnum.initByValue(values);
-  static SatSubsError_Code? valueOf($core.int value) => _byValue[value];
-
-  const SatSubsError_Code._($core.int v, $core.String n) : super(v, n);
-}
-
-class SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
-  static const SatSubsError_ShapeReqError_Code CODE_UNSPECIFIED =
-      SatSubsError_ShapeReqError_Code._(
+class SatSubsResp_SatSubsError_Code extends $pb.ProtobufEnum {
+  static const SatSubsResp_SatSubsError_Code CODE_UNSPECIFIED =
+      SatSubsResp_SatSubsError_Code._(
           0,
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'CODE_UNSPECIFIED');
-  static const SatSubsError_ShapeReqError_Code TABLE_NOT_FOUND =
-      SatSubsError_ShapeReqError_Code._(
+  static const SatSubsResp_SatSubsError_Code SUBSCRIPTION_ID_ALREADY_EXISTS =
+      SatSubsResp_SatSubsError_Code._(
+          1,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'SUBSCRIPTION_ID_ALREADY_EXISTS');
+  static const SatSubsResp_SatSubsError_Code SHAPE_REQUEST_ERROR =
+      SatSubsResp_SatSubsError_Code._(
+          2,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'SHAPE_REQUEST_ERROR');
+
+  static const $core.List<SatSubsResp_SatSubsError_Code> values =
+      <SatSubsResp_SatSubsError_Code>[
+    CODE_UNSPECIFIED,
+    SUBSCRIPTION_ID_ALREADY_EXISTS,
+    SHAPE_REQUEST_ERROR,
+  ];
+
+  static final $core.Map<$core.int, SatSubsResp_SatSubsError_Code> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static SatSubsResp_SatSubsError_Code? valueOf($core.int value) =>
+      _byValue[value];
+
+  const SatSubsResp_SatSubsError_Code._($core.int v, $core.String n)
+      : super(v, n);
+}
+
+class SatSubsResp_SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
+  static const SatSubsResp_SatSubsError_ShapeReqError_Code CODE_UNSPECIFIED =
+      SatSubsResp_SatSubsError_ShapeReqError_Code._(
+          0,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'CODE_UNSPECIFIED');
+  static const SatSubsResp_SatSubsError_ShapeReqError_Code TABLE_NOT_FOUND =
+      SatSubsResp_SatSubsError_ShapeReqError_Code._(
           1,
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'TABLE_NOT_FOUND');
+  static const SatSubsResp_SatSubsError_ShapeReqError_Code
+      REFERENTIAL_INTEGRITY_VIOLATION =
+      SatSubsResp_SatSubsError_ShapeReqError_Code._(
+          2,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'REFERENTIAL_INTEGRITY_VIOLATION');
 
-  static const $core.List<SatSubsError_ShapeReqError_Code> values =
-      <SatSubsError_ShapeReqError_Code>[
+  static const $core.List<SatSubsResp_SatSubsError_ShapeReqError_Code> values =
+      <SatSubsResp_SatSubsError_ShapeReqError_Code>[
     CODE_UNSPECIFIED,
     TABLE_NOT_FOUND,
+    REFERENTIAL_INTEGRITY_VIOLATION,
   ];
 
-  static final $core.Map<$core.int, SatSubsError_ShapeReqError_Code> _byValue =
-      $pb.ProtobufEnum.initByValue(values);
-  static SatSubsError_ShapeReqError_Code? valueOf($core.int value) =>
+  static final $core.Map<$core.int, SatSubsResp_SatSubsError_ShapeReqError_Code>
+      _byValue = $pb.ProtobufEnum.initByValue(values);
+  static SatSubsResp_SatSubsError_ShapeReqError_Code? valueOf(
+          $core.int value) =>
       _byValue[value];
 
-  const SatSubsError_ShapeReqError_Code._($core.int v, $core.String n)
+  const SatSubsResp_SatSubsError_ShapeReqError_Code._(
+      $core.int v, $core.String n)
+      : super(v, n);
+}
+
+class SatSubsDataError_Code extends $pb.ProtobufEnum {
+  static const SatSubsDataError_Code CODE_UNSPECIFIED = SatSubsDataError_Code._(
+      0,
+      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+          ? ''
+          : 'CODE_UNSPECIFIED');
+  static const SatSubsDataError_Code SHAPE_DELIVERY_ERROR =
+      SatSubsDataError_Code._(
+          1,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'SHAPE_DELIVERY_ERROR');
+
+  static const $core.List<SatSubsDataError_Code> values =
+      <SatSubsDataError_Code>[
+    CODE_UNSPECIFIED,
+    SHAPE_DELIVERY_ERROR,
+  ];
+
+  static final $core.Map<$core.int, SatSubsDataError_Code> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static SatSubsDataError_Code? valueOf($core.int value) => _byValue[value];
+
+  const SatSubsDataError_Code._($core.int v, $core.String n) : super(v, n);
+}
+
+class SatSubsDataError_ShapeReqError_Code extends $pb.ProtobufEnum {
+  static const SatSubsDataError_ShapeReqError_Code CODE_UNSPECIFIED =
+      SatSubsDataError_ShapeReqError_Code._(
+          0,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'CODE_UNSPECIFIED');
+  static const SatSubsDataError_ShapeReqError_Code SHAPE_SIZE_LIMIT_EXCEEDED =
+      SatSubsDataError_ShapeReqError_Code._(
+          1,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'SHAPE_SIZE_LIMIT_EXCEEDED');
+
+  static const $core.List<SatSubsDataError_ShapeReqError_Code> values =
+      <SatSubsDataError_ShapeReqError_Code>[
+    CODE_UNSPECIFIED,
+    SHAPE_SIZE_LIMIT_EXCEEDED,
+  ];
+
+  static final $core.Map<$core.int, SatSubsDataError_ShapeReqError_Code>
+      _byValue = $pb.ProtobufEnum.initByValue(values);
+  static SatSubsDataError_ShapeReqError_Code? valueOf($core.int value) =>
+      _byValue[value];
+
+  const SatSubsDataError_ShapeReqError_Code._($core.int v, $core.String n)
       : super(v, n);
 }

@@ -1,4 +1,5 @@
 import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/src/client/model/shapes.dart';
 import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
@@ -47,9 +48,7 @@ Future<ElectricClient> electrify({
   final notifier = opts.notifier ?? EventNotifier(dbName: dbName);
   final registry = opts.registry ?? globalRegistry;
 
-  final electric = ElectricClient(adapter: adapter, notifier: notifier);
-
-  await registry.ensureStarted(
+  final satellite = await registry.ensureStarted(
     dbName: dbName,
     adapter: adapter,
     migrator: migrator,
@@ -57,6 +56,10 @@ Future<ElectricClient> electrify({
     socketFactory: socketFactory,
     config: configWithDefaults,
   );
+
+  // initialize the shape manager
+  shapeManager.init(satellite);
+  final electric = ElectricClient(adapter: adapter, notifier: notifier);
 
   return electric;
 }
