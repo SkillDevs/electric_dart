@@ -54,6 +54,11 @@ class DriftRepository implements m.TodosRepository {
   DriftRepository(this.db);
 
   @override
+  Future<void> close() async {
+    await db.close();
+  }
+
+  @override
   Future<List<m.Todo>> fetchTodos() async {
     return db.todos
         .select()

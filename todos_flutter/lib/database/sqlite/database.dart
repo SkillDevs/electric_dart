@@ -16,6 +16,11 @@ class TodosRepositorySqlite implements TodosRepository {
   TodosRepositorySqlite(this.db);
 
   @override
+  Future<void> close() async {
+    db.dispose();
+  }
+
+  @override
   Future<List<Todo>> fetchTodos() async {
     const query = "SELECT * FROM todo";
     final rows = db.select(query);
