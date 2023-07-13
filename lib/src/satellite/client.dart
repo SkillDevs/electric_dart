@@ -1086,9 +1086,9 @@ SatOpRow serializeRow(Record rec, Relation relation) {
   final recordValues = relation.columns.fold<List<List<int>>>(
     [],
     (List<List<int>> acc, RelationColumn c) {
-      if (rec[c.name] != null) {
-        // TODO(dart): Review this. This can be a number and it's treated as a string
-        acc.add(serializeColumnData(rec[c.name]!.toString()));
+      final Object? value = rec[c.name];
+      if (value != null) {
+        acc.add(serializeColumnData(value));
       } else {
         acc.add(serializeNullData());
         setMaskBit(recordNullBitMask, recordNumColumn);
@@ -1176,8 +1176,8 @@ Object deserializeColumnData(
 }
 
 // All values serialized as textual representation
-List<int> serializeColumnData(String column) {
-  return TypeEncoder.text(column);
+List<int> serializeColumnData(Object columnValue) {
+  return TypeEncoder.text(columnValue.toString());
 }
 
 List<int> serializeNullData() {

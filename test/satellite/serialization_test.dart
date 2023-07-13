@@ -14,6 +14,10 @@ void main() {
         RelationColumn(name: 'name1', type: 'TEXT'),
         RelationColumn(name: 'name2', type: 'TEXT'),
         RelationColumn(name: 'name3', type: 'TEXT'),
+        RelationColumn(name: 'int1', type: 'INTEGER'),
+        RelationColumn(name: 'int2', type: 'INTEGER'),
+        RelationColumn(name: 'float1', type: 'FLOAT4'),
+        RelationColumn(name: 'float2', type: 'FLOAT4'),
       ],
     );
 
@@ -21,6 +25,10 @@ void main() {
       "name1": 'Hello',
       "name2": 'World!',
       "name3": null,
+      "int1": 1,
+      "int2": -30,
+      "float1": 1.1,
+      "float2": -30.3,
     };
     final sRow = serializeRow(record, rel);
     final dRow = deserializeRow(sRow, rel);
