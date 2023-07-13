@@ -1179,12 +1179,11 @@ void main() {
     final lsn1 = await satellite.getMeta('lastSentRowId');
     expect(lsn1, '1');
 
-    await satellite.connectivityStateChange(ConnectivityState.connected);
+    await satellite.connectivityStateChange(ConnectivityState.available);
 
-    // TODO(dart) This test is not passing in TS when awaiting the 200 ms
-    /* await Future<void>.delayed(const Duration(milliseconds: 200));
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     final lsn2 = await satellite.getMeta('lastSentRowId');
-    expect(lsn2, '2'); */
+    expect(lsn2, '2');
   });
 
   test(
