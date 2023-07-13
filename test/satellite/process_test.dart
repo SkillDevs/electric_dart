@@ -443,8 +443,7 @@ void main() {
 
     await satellite.setAuthState(authState);
 
-    // TODO(dart): Is this an empty incoming? When can it happen?
-    await satellite.apply([], "");
+    await satellite.apply([], "external");
   });
 
   test('apply incoming with null on column with default', () async {
