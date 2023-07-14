@@ -9,10 +9,6 @@ final Provider<ElectricClient> electricClientProvider =
 
 final connectivityStateControllerProvider = ChangeNotifierProvider<ConnectivityStateController>((ref) => throw UnimplementedError());
 
-const kElectricAuthConfig = AuthConfig(
-  token:
-      'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJsb2NhbC1kZXZlbG9wbWVudCIsInR5cGUiOiJhY2Nlc3MiLCJ1c2VyX2lkIjoidGVzdC11c2VyIiwiaWF0IjoxNjg3ODc3OTQ1LCJleHAiOjE2OTc4ODE1NDV9.L5Ui2sA9o5MeYDuy67u9lBV-2FzpOWL9dKcitRvgorg',
-);
 
 Future<ElectricClient> startElectricDrift(
   String dbPath,
@@ -25,7 +21,9 @@ Future<ElectricClient> startElectricDrift(
     db: db,
     migrations: todoMigrations,
     config: ElectricConfig(
-      auth: kElectricAuthConfig,
+      auth: AuthConfig(
+        token: await authToken(iss: 'local-development', key: 'local-development-key-minimum-32-symbols'),
+      ),
       debug: true,
     ),
   );
