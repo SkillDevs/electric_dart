@@ -27,6 +27,7 @@ dependencies:
   logging: ^1.2.0
   drift: ^2.10.0
   animated_emoji: ^2.0.0
+  material_design_icons_flutter: ^7.0.7296
 
   
   flutter_hooks: ^0.18.6

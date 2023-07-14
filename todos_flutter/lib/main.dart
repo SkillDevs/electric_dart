@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:todos_electrified/database/database.dart';
 import 'package:todos_electrified/database/drift/connection/connection.dart'
     as impl;
@@ -104,11 +105,15 @@ class MyHomePage extends HookConsumerWidget {
             child: FlutterLogo(
           size: 35,
         )),
-        title: const Row(
+        title: Row(
           children: [
-            Text("todos", style: TextStyle(fontSize: 30)),
-            SizedBox(width: 10),
-            AnimatedEmoji(
+            const Text("todos", style: TextStyle(fontSize: 30)),
+            const SizedBox(width: 20),
+            Icon(getIconForPlatform()),
+            const SizedBox(width: 5),
+            Text(getPlatformName()),
+            const SizedBox(width: 10),
+            const AnimatedEmoji(
               AnimatedEmojis.electricity,
               size: 24,
             ),
@@ -137,10 +142,10 @@ class MyHomePage extends HookConsumerWidget {
             const Align(
               alignment: Alignment.centerLeft,
               child: Padding(
-              padding: EdgeInsets.all(8.0),
-              child: _DeleteDbButton(),
-            ),
-          )
+                padding: EdgeInsets.all(8.0),
+                child: _DeleteDbButton(),
+              ),
+            )
         ],
       ),
     );
@@ -322,5 +327,45 @@ class TodoTile extends ConsumerWidget {
         icon: const Icon(Icons.delete),
       ),
     );
+  }
+}
+
+IconData getIconForPlatform() {
+  if (kIsWeb) {
+    return MdiIcons.web;
+  } else if (defaultTargetPlatform == TargetPlatform.android) {
+    return MdiIcons.android;
+  } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+    return MdiIcons.appleIos;
+  } else if (defaultTargetPlatform == TargetPlatform.fuchsia) {
+    return MdiIcons.google;
+  } else if (defaultTargetPlatform == TargetPlatform.linux) {
+    return MdiIcons.linux;
+  } else if (defaultTargetPlatform == TargetPlatform.windows) {
+    return MdiIcons.microsoftWindows;
+  } else if (defaultTargetPlatform == TargetPlatform.macOS) {
+    return MdiIcons.apple;
+  } else {
+    return Icons.help_outline;
+  }
+}
+
+String getPlatformName() {
+  if (kIsWeb) {
+    return "Web";
+  } else if (defaultTargetPlatform == TargetPlatform.android) {
+    return "Android";
+  } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+    return "iOS";
+  } else if (defaultTargetPlatform == TargetPlatform.fuchsia) {
+    return "Fuchsia";
+  } else if (defaultTargetPlatform == TargetPlatform.linux) {
+    return "Linux";
+  } else if (defaultTargetPlatform == TargetPlatform.windows) {
+    return "Windows";
+  } else if (defaultTargetPlatform == TargetPlatform.macOS) {
+    return "macOS";
+  } else {
+    return "Unknown";
   }
 }
