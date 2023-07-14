@@ -136,16 +136,18 @@ class SatelliteProcess implements Satellite {
     _potentialDataChangeSubscription =
         notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
-    void connectivityChangeCallback(
-      ConnectivityStateChangeNotification notification,
-    ) {
-      connectivityStateChange(notification.connectivityState);
-    }
-
     // TODO(dart): Should the subscription be removed here, before assigning a new one?
 
     _connectivityChangeSubscription =
-        notifier.subscribeToConnectivityStateChange(connectivityChangeCallback);
+        notifier.subscribeToConnectivityStateChange(
+      (ConnectivityStateChangeNotification notification) async {
+        // Wait for the next event loop to ensure that other listeners get a
+        // chance to handle the change before actually handling it internally in the process
+        await Future<void>.delayed(Duration.zero);
+
+        await connectivityStateChange(notification.connectivityState);
+      },
+    );
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(

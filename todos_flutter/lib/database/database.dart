@@ -1,8 +1,4 @@
-import 'dart:io';
-
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 
 final Provider<TodosDatabase> todosDatabaseProvider =
     Provider((ref) => throw UnimplementedError());
@@ -67,16 +63,4 @@ abstract class TodosRepository {
   Future<void> removeTodo(String id);
   Future<void> insertTodo(Todo todo);
   Future<void> close();
-}
-
-Future<String> getDatabasePath() async {
-  final appDocsDir = await getApplicationDocumentsDirectory();
-  final appDir = Directory(join(appDocsDir.path, "todos-electric"));
-  if (!await appDir.exists()) {
-    await appDir.create(recursive: true);
-  }
-
-  final todosDbPath = join(appDir.path, "todos.db");
-
-  return todosDbPath;
 }

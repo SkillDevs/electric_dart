@@ -4,7 +4,6 @@ import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
 import 'package:electric_client/src/satellite/satellite.dart';
-import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:logging/logging.dart';
 
@@ -48,6 +47,10 @@ Future<ElectricClient> electrify({
   final notifier = opts.notifier ?? EventNotifier(dbName: dbName);
   final registry = opts.registry ?? globalRegistry;
 
+  // It needs to be before ensureStarted, so that the internal connectivity state
+  // listener is ready to receive events.
+  final electric = ElectricClient(adapter: adapter, notifier: notifier);
+  
   final satellite = await registry.ensureStarted(
     dbName: dbName,
     adapter: adapter,
@@ -59,7 +62,6 @@ Future<ElectricClient> electrify({
 
   // initialize the shape manager
   shapeManager.init(satellite);
-  final electric = ElectricClient(adapter: adapter, notifier: notifier);
 
   return electric;
 }

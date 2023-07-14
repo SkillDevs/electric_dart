@@ -1,15 +1,18 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:electric_client/electric_dart.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:todos_electrified/database/database.dart';
+import 'package:todos_electrified/database/drift/connection/connection.dart'
+    as impl;
 import 'package:todos_electrified/database/drift/database.dart' hide Todo;
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/todos.dart';
 import 'package:todos_electrified/util.dart';
+import 'package:animated_emoji/animated_emoji.dart';
 
 const kClientId = "FAKE-CLIENT-ID";
 
@@ -31,14 +34,14 @@ class _Entrypoint extends HookWidget {
     final initDataVN = useState<_InitData?>(null);
     useEffect(() {
       () async {
-        final dbPath = await getDatabasePath();
-        final driftRepo = await initDriftTodosDatabase(dbPath);
+        final driftRepo = await initDriftTodosDatabase();
         final todosDb = TodosDatabase(driftRepo);
         // final sqliteRepo = initSqliteRepository(dbPath);
         // final todosDb = TodosDatabase(sqliteRepo);
         // final adapter = SqliteAdapter(sqliteRepo.db);
 
-        final electricClient = await startElectricDrift(dbPath, driftRepo.db);
+        const dbName = "todos_db";
+        final electricClient = await startElectricDrift(dbName, driftRepo.db);
 
         final connectivityStateController =
             ConnectivityStateController(electricClient)..init();
@@ -101,18 +104,21 @@ class MyHomePage extends HookConsumerWidget {
             child: FlutterLogo(
           size: 35,
         )),
-        title: Row(
+        title: const Row(
           children: [
-            const Text("todos "),
-            Image.network(
-                "https://images.emojiterra.com/google/android-12l/512px/26a1.png",
-                width: 20,
-                height: 20),
+            Text("todos", style: TextStyle(fontSize: 30)),
+            SizedBox(width: 10),
+            AnimatedEmoji(
+              AnimatedEmojis.electricity,
+              size: 24,
+            ),
           ],
         ),
       ),
       body: Column(
         children: [
+          const SizedBox(height: 10),
+          const _ConnectivityStatusText(),
           const SizedBox(height: 10),
           const ConnectivityButton(),
           const SizedBox(height: 10),
@@ -127,15 +133,36 @@ class MyHomePage extends HookConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
             ),
           ),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
+          if (!kIsWeb)
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
               padding: EdgeInsets.all(8.0),
               child: _DeleteDbButton(),
             ),
           )
         ],
       ),
+    );
+  }
+}
+
+class _ConnectivityStatusText extends ConsumerWidget {
+  const _ConnectivityStatusText();
+
+  @override
+  Widget build(BuildContext context, ref) {
+    final connectivity = ref.watch(connectivityStateControllerProvider
+        .select((value) => value.connectivityState));
+
+    Color? textColor = Theme.of(context).textTheme.bodySmall!.color;
+    if (connectivity == ConnectivityState.disconnected) {
+      textColor = Theme.of(context).colorScheme.error;
+    }
+
+    return Text(
+      connectivity.name,
+      style: TextStyle(color: textColor),
     );
   }
 }
@@ -148,10 +175,7 @@ class _DeleteDbButton extends StatelessWidget {
     return TextButton.icon(
       style: TextButton.styleFrom(foregroundColor: Colors.red),
       onPressed: () async {
-        final dbFile = File(await getDatabasePath());
-        if (dbFile.existsSync()) {
-          await dbFile.delete();
-        }
+        await impl.deleteTodosDbFile();
 
         // TODO: False positive remove in Dart 3.1.0
         // ignore: use_build_context_synchronously

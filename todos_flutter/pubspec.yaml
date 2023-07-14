@@ -25,7 +25,8 @@ dependencies:
   hooks_riverpod: ^2.3.5
   path_provider: ^2.0.14
   logging: ^1.2.0
-  drift: ^2.9.0
+  drift: ^2.10.0
+  animated_emoji: ^2.0.0
 
   
   flutter_hooks: ^0.18.6
@@ -45,4 +46,7 @@ dev_dependencies:
 flutter:
 
   uses-material-design: true
+
+  assets:
+    - packages/animated_emoji/lottie/electricity.json
 
