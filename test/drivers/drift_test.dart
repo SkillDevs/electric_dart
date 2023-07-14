@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/backends.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:electric_client/drivers/drift.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:test/test.dart';

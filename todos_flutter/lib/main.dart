@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:electric_client/electric_dart.dart';
 import 'package:flutter/material.dart';
@@ -14,30 +15,60 @@ const kClientId = "FAKE-CLIENT-ID";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final dbPath = await getDatabasePath();
-  final driftRepo = await initDriftTodosDatabase(dbPath);
-  final todosDb = TodosDatabase(driftRepo);
-  final adapter = DriftAdapter(driftRepo.db);
-  // final sqliteRepo = initSqliteRepository(dbPath);
-  // final todosDb = TodosDatabase(sqliteRepo);
-  // final adapter = SqliteAdapter(sqliteRepo.db);
 
-  final satellite = await startElectric(dbPath, adapter);
+  runApp(_Entrypoint());
+}
 
-  driftRepo.db.setElectricNotifier(satellite.notifier);
+typedef _InitData = ({
+  TodosDatabase todosDb,
+  ElectricClient electricClient,
+  ConnectivityStateController connectivityStateController,
+});
 
-  // ignore: unused_local_variable
-  final dispose = adapter.hookToNotifier(satellite.notifier);
+class _Entrypoint extends HookWidget {
+  @override
+  Widget build(BuildContext context) {
+    final initDataVN = useState<_InitData?>(null);
+    useEffect(() {
+      () async {
+        final dbPath = await getDatabasePath();
+        final driftRepo = await initDriftTodosDatabase(dbPath);
+        final todosDb = TodosDatabase(driftRepo);
+        // final sqliteRepo = initSqliteRepository(dbPath);
+        // final todosDb = TodosDatabase(sqliteRepo);
+        // final adapter = SqliteAdapter(sqliteRepo.db);
 
-  runApp(
-    ProviderScope(
+        final electricClient = await startElectricDrift(dbPath, driftRepo.db);
+
+        final connectivityStateController =
+            ConnectivityStateController(electricClient)..init();
+
+        initDataVN.value = (
+          todosDb: todosDb,
+          electricClient: electricClient,
+          connectivityStateController: connectivityStateController,
+        );
+      }();
+      return null;
+    }, []);
+
+    final initData = initDataVN.value;
+    if (initData == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return ProviderScope(
       overrides: [
-        todosDatabaseProvider.overrideWithValue(todosDb),
-        satelliteProvider.overrideWithValue(satellite),
+        todosDatabaseProvider.overrideWithValue(initData.todosDb),
+        electricClientProvider.overrideWithValue(initData.electricClient),
+        connectivityStateControllerProvider
+            .overrideWith(((ref) => initData.connectivityStateController)),
       ],
       child: const MyApp(),
-    ),
-  );
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -62,18 +93,6 @@ class MyHomePage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final todos = ref.watch(todosProvider);
-
-    useEffect(() {
-      final satellite = ref.read(satelliteProvider);
-      satellite.notifier.subscribeToConnectivityStateChange((change) {
-        print("connectivity state changed ${change.connectivityState}");
-        final notifier = ref.read(connectivityStateProvider.notifier);
-        notifier.update((state) => change.connectivityState);
-      });
-      return null;
-    }, []);
-
     final todosAV = ref.watch(todosProvider);
 
     return Scaffold(
@@ -99,17 +118,51 @@ class MyHomePage extends HookConsumerWidget {
           const SizedBox(height: 10),
           Expanded(
             child: todosAV.when(
-                data: (todos) {
-                  return _TodosLoaded(todos: todos);
-                },
-                error: (e, st) {
-                  return Center(child: Text(e.toString()));
-                },
-                loading: () =>
-                    const Center(child: CircularProgressIndicator())),
+              data: (todos) {
+                return _TodosLoaded(todos: todos);
+              },
+              error: (e, st) {
+                return Center(child: Text(e.toString()));
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
           ),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.all(8.0),
+              child: _DeleteDbButton(),
+            ),
+          )
         ],
       ),
+    );
+  }
+}
+
+class _DeleteDbButton extends StatelessWidget {
+  const _DeleteDbButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      style: TextButton.styleFrom(foregroundColor: Colors.red),
+      onPressed: () async {
+        final dbFile = File(await getDatabasePath());
+        if (dbFile.existsSync()) {
+          await dbFile.delete();
+        }
+
+        // TODO: False positive remove in Dart 3.1.0
+        // ignore: use_build_context_synchronously
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Database deleted, restart the app")),
+        );
+      },
+      icon: const Icon(Icons.delete),
+      label: const Text("Delete local database"),
     );
   }
 }
@@ -119,16 +172,16 @@ class ConnectivityButton extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final connectivityState = ref.watch(connectivityStateProvider);
+    final connectivityState = ref.watch(
+      connectivityStateControllerProvider
+          .select((value) => value.connectivityState),
+    );
 
     return ElevatedButton(
       onPressed: () async {
-        final satellite = ref.read(satelliteProvider);
-        if (connectivityState == ConnectivityState.connected) {
-          await satellite.stop();
-        } else {
-          await satellite.start(kElectricAuthConfig);
-        }
+        final connectivityStateController =
+            ref.read(connectivityStateControllerProvider);
+        connectivityStateController.toggleConnectivityState();
       },
       child: Text(
         connectivityState == ConnectivityState.connected

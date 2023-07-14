@@ -58,9 +58,6 @@ class SatelliteProcess implements Satellite {
   AuthState? authState;
   String? _authStateSubscription;
 
-  // TODO(dart): Unused in typescript
-  //DateTime? _lastSnapshotTimestamp;
-
   Timer? _pollingInterval;
   String? _potentialDataChangeSubscription;
   String? _connectivityChangeSubscription;

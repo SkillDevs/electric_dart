@@ -1,17 +1,16 @@
-import 'package:electric_client/drivers/sqlite3.dart';
+import 'package:electric_client/drivers/drift.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:electric_client/src/electric/electric.dart' as electrify_lib;
 import 'package:electric_client/src/electric/electric.dart';
-import 'package:sqlite3/sqlite3.dart';
 
 Future<ElectricClient> electrify({
   required String dbName,
-  required Database db,
+  required ElectricfiedDriftDatabaseMixin db,
   required List<Migration> migrations,
   required ElectricConfig config,
   ElectrifyOptions? opts,
 }) async {
-  final adapter = opts?.adapter ?? SqliteAdapter(db);
+  final adapter = opts?.adapter ?? DriftAdapter(db);
   final socketFactory = opts?.socketFactory ?? WebSocketIOFactory();
 
   final namespace = await electrify_lib.electrify(
@@ -26,6 +25,14 @@ Future<ElectricClient> electrify({
       registry: opts?.registry,
     ),
   );
+
+  final notifier = namespace.notifier;
+
+  db.setElectricNotifier(notifier);
+
+  // TODO(dart): Where to unsubscribe?
+  // ignore: unused_local_variable
+  final dispose = (namespace.adapter as DriftAdapter).hookToNotifier(notifier);
 
   return namespace;
 }

@@ -23,6 +23,7 @@ linter:
   # producing the lint.
   rules:
     avoid_print: false
+    library_private_types_in_public_api: false
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
 # Additional information about this file can be found at
