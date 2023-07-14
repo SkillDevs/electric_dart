@@ -18,14 +18,13 @@ This demo is compatible with the `todoMVC` official example [Link](https://githu
 
 2. Apply the migrations in Postgres following the Migrations section [here](./todos_flutter/README.md)
 
-3. From inside the todos_flutter directory: `flutter run`
+3. From inside the todos_flutter directory: `flutter run` with the platform of your choice.
 
 Note:
 
 > Right now the `todoMVC` web examples are running against Electric client version 0.4.3. Which is incompatible with the server in the commit this is based on. You'll need to compile the typescript client and use that build in the web examples.
 
-
-https://user-images.githubusercontent.com/22084723/233607256-2a36c911-152b-483b-9adf-81b4e5ff051d.mp4
+https://github.com/SkillDevs/electric_dart/assets/22084723/0c0478ca-c329-43f7-a4b8-b3f46f5ddd43
 
 ## Development
 
