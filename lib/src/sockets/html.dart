@@ -13,6 +13,7 @@ class WebSocketHtmlFactory implements SocketFactory {
 }
 
 class WebSocketHtml implements Socket {
+  html.WebSocket? ws;
   HtmlWebSocketChannel? _channel;
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
@@ -39,6 +40,7 @@ class WebSocketHtml implements Socket {
     _subscriptions = [];
 
     _channel?.sink.close();
+    ws?.close();
 
     final closeCallbacks = [..._closeCallbacks];
     _closeCallbacks = [];
@@ -50,6 +52,7 @@ class WebSocketHtml implements Socket {
     _messageCallbacks = [];
 
     _channel = null;
+    ws = null;
   }
 
   @override
@@ -84,11 +87,11 @@ class WebSocketHtml implements Socket {
   }
 
   Future<void> _asyncStart(ConnectionOptions opts) async {
-    late final html.WebSocket ws;
     try {
       ws = html.WebSocket(
         opts.url,
       );
+      ws!.binaryType = 'arraybuffer';
     } catch (e) {
       _notifyErrorAndCloseSocket(Exception('failed to establish connection'));
       return;
@@ -99,7 +102,7 @@ class WebSocketHtml implements Socket {
       _onceConnectCallbacks.removeLast()();
     }
 
-    _channel = HtmlWebSocketChannel(ws);
+    _channel = HtmlWebSocketChannel(ws!);
     final msgSubscription = _channel!.stream //
         .listen(
       (rawData) {

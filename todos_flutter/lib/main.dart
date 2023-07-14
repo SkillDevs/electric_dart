@@ -153,15 +153,13 @@ class _ConnectivityStatusText extends ConsumerWidget {
     final connectivity = ref.watch(connectivityStateControllerProvider
         .select((value) => value.connectivityState));
 
-    final counter = ref.watch(myTestProvider.select((value) => value.value));
-
     Color? textColor = Theme.of(context).textTheme.bodySmall!.color;
     if (connectivity == ConnectivityState.disconnected) {
       textColor = Theme.of(context).colorScheme.error;
     }
 
     return Text(
-      "$counter ${connectivity.name}",
+      connectivity.name,
       style: TextStyle(color: textColor),
     );
   }
