@@ -2,6 +2,7 @@
 library electric_dart;
 
 export 'src/auth/auth.dart' show AuthConfig;
+export 'src/auth/util.dart' show authToken;
 export 'src/config/config.dart'
     show ConsoleConfig, ElectricConfig, HydratedConfig, ReplicationConfig;
 

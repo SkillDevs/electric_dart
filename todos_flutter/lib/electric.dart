@@ -10,10 +10,6 @@ final connectivityStateProvider = StateProvider<ConnectivityState>((ref) {
   return ConnectivityState.disconnected;
 });
 
-const kElectricAuthConfig = AuthConfig(
-  token:
-      'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJsb2NhbC1kZXZlbG9wbWVudCIsInR5cGUiOiJhY2Nlc3MiLCJ1c2VyX2lkIjoidGVzdC11c2VyIiwiaWF0IjoxNjg3ODc3OTQ1LCJleHAiOjE2OTc4ODE1NDV9.L5Ui2sA9o5MeYDuy67u9lBV-2FzpOWL9dKcitRvgorg',
-);
 
 Future<Satellite> startElectric(String dbPath, DatabaseAdapter adapter) async {
   final dbName = dbPath;
@@ -35,7 +31,9 @@ Future<Satellite> startElectric(String dbPath, DatabaseAdapter adapter) async {
     notifier: notifier,
     socketFactory: WebSocketIOFactory(),
     config: HydratedConfig(
-      auth: kElectricAuthConfig,
+      auth: AuthConfig(
+        token: await authToken(iss: 'local-development', key: 'local-development-key-minimum-32-symbols'),
+      ),
       replication: replicationConfig,
       debug: true,
     ),
