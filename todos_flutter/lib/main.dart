@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:electric_client/electric_dart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:todos_electrified/database/database.dart';
+import 'package:todos_electrified/database/drift/connection/connection.dart' as impl;
 import 'package:todos_electrified/database/drift/database.dart' hide Todo;
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/todos.dart';
@@ -31,14 +31,14 @@ class _Entrypoint extends HookWidget {
     final initDataVN = useState<_InitData?>(null);
     useEffect(() {
       () async {
-        final dbPath = await getDatabasePath();
-        final driftRepo = await initDriftTodosDatabase(dbPath);
+        final driftRepo = await initDriftTodosDatabase();
         final todosDb = TodosDatabase(driftRepo);
         // final sqliteRepo = initSqliteRepository(dbPath);
         // final todosDb = TodosDatabase(sqliteRepo);
         // final adapter = SqliteAdapter(sqliteRepo.db);
 
-        final electricClient = await startElectricDrift(dbPath, driftRepo.db);
+        const dbName = "todos_db";
+        final electricClient = await startElectricDrift(dbName, driftRepo.db);
 
         final connectivityStateController =
             ConnectivityStateController(electricClient)..init();
@@ -148,10 +148,7 @@ class _DeleteDbButton extends StatelessWidget {
     return TextButton.icon(
       style: TextButton.styleFrom(foregroundColor: Colors.red),
       onPressed: () async {
-        final dbFile = File(await getDatabasePath());
-        if (dbFile.existsSync()) {
-          await dbFile.delete();
-        }
+        await impl.deleteTodosDbFile();
 
         // TODO: False positive remove in Dart 3.1.0
         // ignore: use_build_context_synchronously

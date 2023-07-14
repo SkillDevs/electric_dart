@@ -4,7 +4,6 @@ import 'package:electric_client/src/config/config.dart';
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
 import 'package:electric_client/src/satellite/satellite.dart';
-import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:logging/logging.dart';
 

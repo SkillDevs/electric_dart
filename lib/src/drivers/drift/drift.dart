@@ -1,7 +1,7 @@
 import 'package:electric_client/drivers/drift.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:electric_client/src/electric/electric.dart' as electrify_lib;
-import 'package:electric_client/src/electric/electric.dart';
+import 'package:electric_client/src/sockets/platform/platform.dart';
 
 Future<ElectricClient> electrify({
   required String dbName,
@@ -11,7 +11,7 @@ Future<ElectricClient> electrify({
   ElectrifyOptions? opts,
 }) async {
   final adapter = opts?.adapter ?? DriftAdapter(db);
-  final socketFactory = opts?.socketFactory ?? WebSocketIOFactory();
+  final socketFactory = opts?.socketFactory ?? getDefaultSocketFactory();
 
   final namespace = await electrify_lib.electrify(
     dbName: dbName,

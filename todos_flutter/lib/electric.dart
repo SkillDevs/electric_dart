@@ -11,11 +11,9 @@ final connectivityStateControllerProvider = ChangeNotifierProvider<ConnectivityS
 
 
 Future<ElectricClient> startElectricDrift(
-  String dbPath,
+  String dbName,
   ElectricfiedDriftDatabaseMixin db,
 ) async {
-  final dbName = dbPath;
-
   final namespace = await electrify(
     dbName: dbName,
     db: db,

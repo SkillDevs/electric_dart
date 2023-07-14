@@ -1,9 +1,7 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 import 'package:electric_client/drivers/drift.dart';
 import 'package:todos_electrified/database/database.dart' as m;
+import 'connection/connection.dart' as impl;
 
 part 'database.g.dart';
 
@@ -38,10 +36,8 @@ class TodoLists extends Table {
   TextColumn get editing => text().nullable()();
 }
 
-Future<DriftRepository> initDriftTodosDatabase(String dbPath) async {
-  print("Using todos database at path $dbPath");
-
-  final db = AppDatabase(dbPath);
+Future<DriftRepository> initDriftTodosDatabase() async {
+  final db = AppDatabase();
 
   await db.customSelect("SELECT 1").get();
 
@@ -121,8 +117,7 @@ class DriftRepository implements m.TodosRepository {
 
 @DriftDatabase(tables: [Todos, TodoLists])
 class AppDatabase extends _$AppDatabase with ElectricfiedDriftDatabaseMixin {
-  final String dbPath;
-  AppDatabase(this.dbPath) : super(_openConnection(dbPath));
+  AppDatabase() : super(impl.connect());
 
   @override
   int get schemaVersion => 1;
@@ -136,9 +131,4 @@ class AppDatabase extends _$AppDatabase with ElectricfiedDriftDatabaseMixin {
       },
     );
   }
-}
-
-QueryExecutor _openConnection(String dbPath) {
-  final file = File(dbPath);
-  return NativeDatabase.createInBackground(file);
 }
