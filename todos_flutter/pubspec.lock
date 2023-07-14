@@ -33,6 +33,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.2"
+  animated_emoji:
+    dependency: "direct main"
+    description:
+      name: animated_emoji
+      sha256: "1be7a676dffa68c3d3c4230bf89b064afb461a7b64e7d21fe112519d643d9544"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  archive:
+    dependency: transitive
+    description:
+      name: archive
+      sha256: "0c8368c9b3f0abbc193b9d6133649a614204b528982bebc7026372d61677ce3a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.3.7"
   args:
     dependency: transitive
     description:
@@ -221,18 +237,18 @@ packages:
     dependency: "direct main"
     description:
       name: drift
-      sha256: a8ec4e44b4359ef44eab3d2c2f8e44b41a00c15673b879984484b34d27656ad5
+      sha256: "01e7237766b3404f08489ed0dc531a2fa5f5a42d7fa7787da6cc0a10e8d2632f"
       url: "https://pub.dev"
     source: hosted
-    version: "2.9.0"
+    version: "2.10.0"
   drift_dev:
     dependency: "direct dev"
     description:
       name: drift_dev
-      sha256: "2713aabc91d8e9cdf269b2ecfa503f103341925b07186e845de11a781015f7eb"
+      sha256: "407eb1f149332238c567f06cc89b6aaee848de00d9031c76dc372dc16d993bca"
       url: "https://pub.dev"
     source: hosted
-    version: "2.9.0"
+    version: "2.10.0"
   ed25519_edwards:
     dependency: transitive
     description:
@@ -434,6 +450,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+  lottie:
+    dependency: transitive
+    description:
+      name: lottie
+      sha256: f461105d3a35887b27089abf9c292334478dd292f7b47ecdccb6ae5c37a22c80
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.0"
   matcher:
     dependency: transitive
     description:

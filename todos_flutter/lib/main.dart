@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:todos_electrified/database/database.dart';
-import 'package:todos_electrified/database/drift/connection/connection.dart' as impl;
+import 'package:todos_electrified/database/drift/connection/connection.dart'
+    as impl;
 import 'package:todos_electrified/database/drift/database.dart' hide Todo;
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/todos.dart';
 import 'package:todos_electrified/util.dart';
+import 'package:animated_emoji/animated_emoji.dart';
 
 const kClientId = "FAKE-CLIENT-ID";
 
@@ -101,18 +103,21 @@ class MyHomePage extends HookConsumerWidget {
             child: FlutterLogo(
           size: 35,
         )),
-        title: Row(
+        title: const Row(
           children: [
-            const Text("todos "),
-            Image.network(
-                "https://images.emojiterra.com/google/android-12l/512px/26a1.png",
-                width: 20,
-                height: 20),
+            Text("todos", style: TextStyle(fontSize: 30)),
+            SizedBox(width: 10),
+            AnimatedEmoji(
+              AnimatedEmojis.electricity,
+              size: 24,
+            ),
           ],
         ),
       ),
       body: Column(
         children: [
+          const SizedBox(height: 10),
+          const _ConnectivityStatusText(),
           const SizedBox(height: 10),
           const ConnectivityButton(),
           const SizedBox(height: 10),
@@ -136,6 +141,28 @@ class MyHomePage extends HookConsumerWidget {
           )
         ],
       ),
+    );
+  }
+}
+
+class _ConnectivityStatusText extends ConsumerWidget {
+  const _ConnectivityStatusText();
+
+  @override
+  Widget build(BuildContext context, ref) {
+    final connectivity = ref.watch(connectivityStateControllerProvider
+        .select((value) => value.connectivityState));
+
+    final counter = ref.watch(myTestProvider.select((value) => value.value));
+
+    Color? textColor = Theme.of(context).textTheme.bodySmall!.color;
+    if (connectivity == ConnectivityState.disconnected) {
+      textColor = Theme.of(context).colorScheme.error;
+    }
+
+    return Text(
+      "$counter ${connectivity.name}",
+      style: TextStyle(color: textColor),
     );
   }
 }
