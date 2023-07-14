@@ -5,6 +5,10 @@ import 'dart:typed_data';
 import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:web_socket_channel/html.dart';
 
+SocketFactory getDefaultSocketFactory() {
+  return WebSocketHtmlFactory();
+}
+
 class WebSocketHtmlFactory implements SocketFactory {
   @override
   Socket create() {

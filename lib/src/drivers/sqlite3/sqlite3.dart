@@ -1,7 +1,7 @@
 import 'package:electric_client/drivers/sqlite3.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:electric_client/src/electric/electric.dart' as electrify_lib;
-import 'package:electric_client/src/sockets/platform/platform.dart';
+import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 Future<ElectricClient> electrify({
