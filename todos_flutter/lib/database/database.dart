@@ -66,6 +66,7 @@ abstract class TodosRepository {
   Future<void> updateTodo(Todo todo);
   Future<void> removeTodo(String id);
   Future<void> insertTodo(Todo todo);
+  Future<void> close();
 }
 
 Future<String> getDatabasePath() async {

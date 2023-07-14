@@ -1,4 +1,3 @@
-import 'package:electric_client/src/satellite/process.dart';
 import 'package:electric_client/src/satellite/satellite.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 
