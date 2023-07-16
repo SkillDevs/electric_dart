@@ -24,7 +24,7 @@ Note:
 
 > Right now the `todoMVC` web examples are running against Electric client version 0.4.3. Which is incompatible with the server in the commit this is based on. You'll need to compile the typescript client and use that build in the web examples.
 
-https://github.com/SkillDevs/electric_dart/assets/22084723/0c0478ca-c329-43f7-a4b8-b3f46f5ddd43
+https://user-images.githubusercontent.com/22084723/253615129-0c0478ca-c329-43f7-a4b8-b3f46f5ddd43.mp4
 
 ## Development
 
