@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart';
-import 'package:electric_client/drivers/drift.dart';
 import 'package:todos_electrified/database/database.dart' as m;
 import 'connection/connection.dart' as impl;
 
@@ -116,7 +115,7 @@ class DriftRepository implements m.TodosRepository {
 }
 
 @DriftDatabase(tables: [Todos, TodoLists])
-class AppDatabase extends _$AppDatabase with ElectricfiedDriftDatabaseMixin {
+class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(impl.connect());
 
   @override

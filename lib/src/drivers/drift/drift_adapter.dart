@@ -68,7 +68,9 @@ class DriftAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
     return await completer.future;
   }
 
-  void Function() hookToNotifier(Notifier notifier) {
+  void Function() hookToNotifier(
+    Notifier notifier,
+  ) {
     final key = notifier.subscribeToDataChanges(
       (notification) {
         final tablesChanged = notification.changes.map((e) {
@@ -82,8 +84,16 @@ class DriftAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
       },
     );
 
+    final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
+      logger.info(
+        "Drift tables have been updated $updatedTables. Notifying Electric.",
+      );
+      notifier.potentiallyChanged();
+    });
+
     return () {
       notifier.unsubscribeFromDataChanges(key);
+      tableUpdateSub.cancel();
     };
   }
 }
