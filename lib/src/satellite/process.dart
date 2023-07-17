@@ -520,70 +520,82 @@ INSERT INTO $tablenameStr (${columnNames.join(
     authState = notification.authState;
   }
 
+  bool _runningSnapshot = false;
+
   // Perform a snapshot and notify which data actually changed.
   @visibleForTesting
   Future<DateTime> performSnapshot() async {
     final timestamp = DateTime.now();
+    if (_runningSnapshot) {
+      // TODO(dart): https://github.com/electric-sql/electric/issues/258
+      logger.info("Perform snapshot already running. Skipping.");
+      return timestamp;
+    }
+    try {
+      _runningSnapshot = true;
 
-    await _updateOplogTimestamp(timestamp);
-    final oplogEntries = await _getUpdatedEntries(timestamp);
+      await _updateOplogTimestamp(timestamp);
+      final oplogEntries = await _getUpdatedEntries(timestamp);
 
-    final List<Future> promises = [];
+      final List<Future> promises = [];
 
-    if (oplogEntries.isNotEmpty) {
-      promises.add(_notifyChanges(oplogEntries));
+      if (oplogEntries.isNotEmpty) {
+        promises.add(_notifyChanges(oplogEntries));
 
-      final shadowEntries = <String, ShadowEntry>{};
+        final shadowEntries = <String, ShadowEntry>{};
 
-      for (final oplogEntry in oplogEntries) {
-        final shadowEntryLookup =
-            await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
-        final cached = shadowEntryLookup.cached;
-        final shadowEntry = shadowEntryLookup.entry;
+        for (final oplogEntry in oplogEntries) {
+          final shadowEntryLookup =
+              await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
+          final cached = shadowEntryLookup.cached;
+          final shadowEntry = shadowEntryLookup.entry;
 
-        // Clear should not contain the tag for this timestamp, so if
-        // the entry was previously in cache - it means, that we already
-        // read it within the same snapshot
-        if (cached) {
-          oplogEntry.clearTags = encodeTags(
-            difference(decodeTags(shadowEntry.tags), [
-              _generateTag(timestamp),
-            ]),
-          );
-        } else {
-          oplogEntry.clearTags = shadowEntry.tags;
+          // Clear should not contain the tag for this timestamp, so if
+          // the entry was previously in cache - it means, that we already
+          // read it within the same snapshot
+          if (cached) {
+            oplogEntry.clearTags = encodeTags(
+              difference(decodeTags(shadowEntry.tags), [
+                _generateTag(timestamp),
+              ]),
+            );
+          } else {
+            oplogEntry.clearTags = shadowEntry.tags;
+          }
+
+          if (oplogEntry.optype == OpType.delete) {
+            shadowEntry.tags = shadowTagsDefault;
+          } else {
+            final newTag = _generateTag(timestamp);
+            shadowEntry.tags = encodeTags([newTag]);
+          }
+
+          promises.add(_updateOplogEntryTags(oplogEntry));
+          _updateCachedShadowEntry(oplogEntry, shadowEntry, shadowEntries);
         }
 
-        if (oplogEntry.optype == OpType.delete) {
-          shadowEntry.tags = shadowTagsDefault;
-        } else {
-          final newTag = _generateTag(timestamp);
-          shadowEntry.tags = encodeTags([newTag]);
-        }
-
-        promises.add(_updateOplogEntryTags(oplogEntry));
-        _updateCachedShadowEntry(oplogEntry, shadowEntry, shadowEntries);
+        shadowEntries.forEach((String _key, ShadowEntry value) {
+          if (value.tags == shadowTagsDefault) {
+            promises.add(adapter.run(_deleteShadowTagsQuery(value)));
+          } else {
+            promises.add(_updateShadowTags(value));
+          }
+        });
       }
+      await Future.wait(promises);
 
-      shadowEntries.forEach((String _key, ShadowEntry value) {
-        if (value.tags == shadowTagsDefault) {
-          promises.add(adapter.run(_deleteShadowTagsQuery(value)));
-        } else {
-          promises.add(_updateShadowTags(value));
-        }
-      });
+      if (!client.isClosed()) {
+        final enqueued = client.getOutboundLogPositions().enqueued;
+        final enqueuedLogPos = bytesToNumber(enqueued);
+
+        // TODO: take next N transactions instead of all
+        await getEntries(since: enqueuedLogPos)
+            .then((missing) => _replicateSnapshotChanges(missing));
+      }
+      return timestamp;
+    } finally {
+      _runningSnapshot = false;
     }
-    await Future.wait(promises);
-
-    if (!client.isClosed()) {
-      final enqueued = client.getOutboundLogPositions().enqueued;
-      final enqueuedLogPos = bytesToNumber(enqueued);
-
-      // TODO: take next N transactions instead of all
-      await getEntries(since: enqueuedLogPos)
-          .then((missing) => _replicateSnapshotChanges(missing));
-    }
-    return timestamp;
   }
 
   void _updateCachedShadowEntry(
