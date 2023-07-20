@@ -1,1 +1,1 @@
-export 'sample_command.dart';
+export 'generate_migrations_command.dart';

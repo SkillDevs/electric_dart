@@ -1,6 +1,6 @@
 name: electric_client
 description: A Dart implementation for Electric (electric-sql.com).
-version: 1.0.0
+version: 0.1.0
 # repository: https://github.com/my_org/my_repo
 
 environment:
