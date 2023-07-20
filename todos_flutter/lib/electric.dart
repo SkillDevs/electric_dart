@@ -3,7 +3,7 @@ import 'package:electric_client/drivers/drift.dart';
 import 'package:electric_client/electric_dart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:todos_electrified/migrations.dart';
+import 'package:todos_electrified/generated/electric_migrations.dart';
 
 final Provider<ElectricClient> electricClientProvider =
     Provider((ref) => throw UnimplementedError());
@@ -19,7 +19,7 @@ Future<ElectricClient> startElectricDrift(
   final namespace = await electrify(
     dbName: dbName,
     db: db,
-    migrations: todoMigrations,
+    migrations: kElectricMigrations,
     config: ElectricConfig(
       auth: AuthConfig(
         token:

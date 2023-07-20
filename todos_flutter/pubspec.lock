@@ -161,6 +161,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.3"
+  cli_completion:
+    dependency: transitive
+    description:
+      name: cli_completion
+      sha256: "595b192451285749369e99b3c2fd9a9aea7d74ed1aba61cddeb9ad8c84a44812"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   cli_util:
     dependency: transitive
     description:
@@ -257,13 +265,20 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
+  electric_cli:
+    dependency: "direct dev"
+    description:
+      path: "../electric_cli"
+      relative: true
+    source: path
+    version: "0.1.0"
   electric_client:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "1.0.0"
+    version: "0.1.0"
   equatable:
     dependency: transitive
     description:
@@ -458,6 +473,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.0"
+  mason_logger:
+    dependency: transitive
+    description:
+      name: mason_logger
+      sha256: ba82162ab33d58324f040e37f9270bc1b7c00710315b385d1dc2f14917263cbb
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.7"
   matcher:
     dependency: transitive
     description:
