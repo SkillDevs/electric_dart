@@ -444,7 +444,8 @@ class ShadowEntryChanges with EquatableMixin {
 }
 
 String primaryKeyToStr(Map<String, Object> primaryKeyJson) {
-  final sortedValues = primaryKeyJson.values.toList()..sort();
+  final sortedValues = primaryKeyJson.values.map((e) => e.toString()).toList()
+    ..sort();
   return sortedValues.join("_");
 }
 
