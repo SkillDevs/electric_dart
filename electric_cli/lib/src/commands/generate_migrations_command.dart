@@ -217,7 +217,10 @@ String generateSingleMigrationDartCode(
 ) {
   final stmtIndent = '$indent\t\t\t';
   final statments = migration.statements.map((stmt) {
-    final singleLineStmt = stmt.replaceAll('\n', r'\n').replaceAll('"', r'\"');
+    final singleLineStmt = stmt
+        .replaceAll('\n', r'\n')
+        .replaceAll('"', r'\"')
+        .replaceAll('\t', r'\t');
     return '$stmtIndent"$singleLineStmt",';
   });
   final statementsString = statments.join('\n');
