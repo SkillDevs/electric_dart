@@ -19,9 +19,9 @@ dev_dependencies:
   build_runner: ^2.4.4
   build_verify: ^3.1.0
   build_version: ^2.1.1
+  lint: ^2.1.2
   mocktail: ^0.3.0
   test: ^1.24.2
-  very_good_analysis: ^5.0.0
 
 dependency_overrides:
   electric_client:
