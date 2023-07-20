@@ -14,10 +14,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  electric_client:
-    path: ../
-
+  electric_client: ^0.1.0
   cupertino_icons: ^1.0.2
   sqlite3: ^2.0.0
   sqlite3_flutter_libs: ^0.5.15
@@ -38,10 +35,18 @@ dependencies:
 dev_dependencies:
   drift_dev: ^2.8.2
   build_runner: ^2.4.4
+  electric_cli:
+    path: ../electric_cli
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^2.0.0
+
+dependency_overrides:
+  electric_cli:
+    path: ../electric_cli
+  electric_client:
+    path: ..
 
 
 flutter:
