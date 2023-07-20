@@ -1,5 +1,5 @@
 
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 import 'package:electric_client/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electric_client/src/migrators/builder.dart';
 import 'package:electric_client/src/proto/satellite.pb.dart';

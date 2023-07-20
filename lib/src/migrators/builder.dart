@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/process.dart';
 import 'package:electric_client/src/util/proto.dart';

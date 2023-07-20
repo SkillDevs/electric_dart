@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:electric_client/drivers/drift.dart';
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 import 'package:electric_client/src/electric/electric.dart' as electrify_lib;
 import 'package:electric_client/src/sockets/sockets.dart';
 

@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
 
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 import 'package:electric_client/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
 import 'package:electric_client/src/proto/satellite.pb.dart';

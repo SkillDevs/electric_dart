@@ -1,5 +1,5 @@
 /// Dart implementation of Electric SQL
-library electric_dart;
+library electric_client;
 
 export 'src/auth/auth.dart' show AuthConfig, AuthState;
 export 'src/auth/util.dart' show authToken;

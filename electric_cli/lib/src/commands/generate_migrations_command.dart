@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
@@ -203,7 +203,7 @@ String generateMigrationsDartCode(List<Migration> migrations) {
   return '''
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: prefer_single_quotes, lines_longer_than_80_chars, avoid_escaping_inner_quotes
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 
 final kElectricMigrations = [
 $migrationsStr

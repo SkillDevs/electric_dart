@@ -1,4 +1,4 @@
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 import 'package:electric_client/src/notifiers/notifiers.dart';
 
 class ElectricNamespace {

@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: prefer_single_quotes, lines_longer_than_80_chars, avoid_escaping_inner_quotes
-import 'package:electric_client/electric_dart.dart';
+import 'package:electric_client/electric_client.dart';
 
 final kElectricMigrations = [
 	Migration(
