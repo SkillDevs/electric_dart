@@ -25,8 +25,7 @@ To create a new migration:
 To apply the migrations using the Postgres connection the Electric local-stack has:
 `migrate -path migrations -database "postgres://postgres:password@localhost:5432/electric?sslmode=disable" up`
 
-Right now the migrations bundled in the app itself are manually created from the `migrations.js` that
-`npx electric-sql generate` creates.
+Every time the schema changes in Postgres, we need to update the client bundling the required migrations. You can do that following the next section, although in this example they have already been generated.
 
 ### Generate the client migrations file
 
