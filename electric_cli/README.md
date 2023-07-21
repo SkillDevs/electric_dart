@@ -1,6 +1,6 @@
 ## electric_cli
 
-CLI to communicate with the Electric service. Mimics some behavior from the electric-sql CLI NPM package.
+CLI to communicate with the Electric service. Mimics some behavior from the electric-sql CLI NPM package. https://www.npmjs.com/package/electric-sql
 
 ---
 
