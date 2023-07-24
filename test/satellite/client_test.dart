@@ -210,7 +210,7 @@ void main() {
         completer.complete();
       },
     ]);
-    await client.startReplication([], '20230711', null);
+    unawaited(client.startReplication([], '20230711', null));
 
     await completer.future;
   });
@@ -861,7 +861,8 @@ void main() {
 
       final completer = Completer<void>();
       final success = (_) {
-        completer.completeError("expected the client to fail on an invalid message sequence");
+        completer.completeError(
+            "expected the client to fail on an invalid message sequence");
       };
 
       late SubscriptionEventListeners subListeners;

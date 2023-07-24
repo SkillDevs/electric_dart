@@ -97,6 +97,9 @@ void main() {
     final clientId2 = satellite.authState!.clientId;
 
     expect(clientId1, clientId2);
+    // Give time for the starting performSnapshot to finish
+    // Otherwise the database might not exist because the test ended
+    await Future<void>.delayed(const Duration(milliseconds: 100));
   });
 
   test('cannot UPDATE primary key', () async {
@@ -1605,7 +1608,7 @@ void main() {
   });
 
   // TODO(update):
- /*  test("Garbage collecting the subscription doesn't generate oplog entries", async (t) => {
+  /*  test("Garbage collecting the subscription doesn't generate oplog entries", async (t) => {
   const { adapter, runMigrations, satellite, authState } = t.context
   await satellite.start(authState)
   await runMigrations()
