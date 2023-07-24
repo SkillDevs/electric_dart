@@ -114,7 +114,7 @@ void main() {
     // empty response will trigger client timeout
     server.nextResponses([]);
     try {
-      await client.startReplication(null, null);
+      await client.startReplication(null, null, null);
       fail("start replication should throw");
     } catch (error) {
       expect(
@@ -137,7 +137,7 @@ void main() {
     server.nextResponses([startResp]);
 
     try {
-      await client.startReplication(null, null);
+      await client.startReplication(null, null, null);
       fail("Should have failed");
     } catch (e) {
       expect((e as SatelliteException).code, SatelliteErrorCode.behindWindow);
@@ -152,7 +152,7 @@ void main() {
 
     final res = await client.authenticate(createAuthState());
     expect(
-      res.getOrElse((l) => throw StateError("auth error")).serverId,
+      res.serverId,
       'server_identity',
     );
     expect(client.inbound.authenticated, isTrue);
@@ -164,10 +164,10 @@ void main() {
     final startResp = SatInStartReplicationResp();
     server.nextResponses([startResp]);
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
   });
 
-  test('replication start sends FIRST_LSN', () async {
+  test('replication start sends empty', () async {
     await connectAndAuth();
     final completer = Completer<void>();
 
@@ -179,14 +179,39 @@ void main() {
         if (msgType == SatMsgType.inStartReplicationReq) {
           final decodedMsg = decode(data);
           expect(
-            (decodedMsg.msg as SatInStartReplicationReq).options[0],
-            SatInStartReplicationReq_Option.FIRST_LSN,
+            (decodedMsg.msg as SatInStartReplicationReq).lsn,
+            isEmpty,
           );
           completer.complete();
         }
       },
     ]);
-    unawaited(client.startReplication(null, null));
+    unawaited(client.startReplication(null, null, null));
+    await completer.future;
+  });
+
+  test('replication start sends schemaVersion', () async {
+    await connectAndAuth();
+
+    final completer = Completer<void>();
+    server.nextResponses([
+      (Uint8List data) {
+        final decodedMsg = decode(data);
+        expect(
+          decodedMsg.msgType,
+          SatMsgType.inStartReplicationReq,
+        );
+
+        expect(
+          (decodedMsg.msg as SatInStartReplicationReq).schemaVersion,
+          '20230711',
+        );
+
+        completer.complete();
+      },
+    ]);
+    await client.startReplication([], '20230711', null);
+
     await completer.future;
   });
 
@@ -197,8 +222,8 @@ void main() {
     server.nextResponses([startResp]);
 
     try {
-      await client.startReplication(null, null);
-      await client.startReplication(null, null); // fails
+      await client.startReplication(null, null, null);
+      await client.startReplication(null, null, null); // fails
     } catch (error) {
       expect(
         error,
@@ -219,7 +244,7 @@ void main() {
     server.nextResponses([start]);
     server.nextResponses([stop]);
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
     await client.stopReplication();
   });
 
@@ -260,7 +285,7 @@ void main() {
     ]);
     server.nextResponses([stop]);
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
     await client.stopReplication();
 
     await completer.future;
@@ -339,7 +364,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
     await completer.future;
   });
 
@@ -378,7 +403,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
     await completer.future;
   });
 
@@ -476,7 +501,7 @@ void main() {
       },
     ]);
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
 
     // wait a little for replication to start in the opposite direction
     await Future.delayed(
@@ -500,7 +525,7 @@ void main() {
     server.nextResponses([]);
     server.nextResponses([pingResponse]);
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
 
     final transaction = DataTransaction(
       lsn: lsn_1,
@@ -689,7 +714,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
   });
 
   test('subscription succesful', () async {
@@ -697,7 +722,7 @@ void main() {
 
     final startResp = SatInStartReplicationResp();
     server.nextResponses([startResp]);
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
 
     final shapeReq = ShapeRequest(
       requestId: 'fake',
@@ -719,7 +744,7 @@ void main() {
 
     final startResp = SatInStartReplicationResp();
     server.nextResponses([startResp]);
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
 
     final shapeReq = ShapeRequest(
       requestId: 'fake',
@@ -751,10 +776,7 @@ void main() {
 
     final startResp = SatInStartReplicationResp();
     server.nextResponses([startResp]);
-    await client.startReplication(
-      null,
-      null,
-    );
+    await client.startReplication(null, null, null);
 
     const requestId = 'THE_REQUEST_ID';
     const subscriptionId = 'THE_SUBS_ID';
@@ -771,7 +793,7 @@ void main() {
     final subsResp = SatSubsResp(subscriptionId: subscriptionId);
     final subsRespWithErr = SatSubsResp(
       subscriptionId: subscriptionId,
-      error: SatSubsResp_SatSubsError(
+      err: SatSubsResp_SatSubsError(
         code: SatSubsResp_SatSubsError_Code.SHAPE_REQUEST_ERROR,
       ),
     );
@@ -839,7 +861,7 @@ void main() {
 
       final completer = Completer<void>();
       final success = (_) {
-        completer.completeError('invalid subscription messages sequence');
+        completer.completeError("expected the client to fail on an invalid message sequence");
       };
 
       late SubscriptionEventListeners subListeners;
@@ -864,7 +886,7 @@ void main() {
 
     final startResp = SatInStartReplicationResp();
     server.nextResponses([startResp]);
-    await client.startReplication(null, null);
+    await client.startReplication(null, null, null);
 
     final Relation rel = Relation(
       id: 0,
@@ -961,7 +983,7 @@ void main() {
 
       final startResp = SatInStartReplicationResp();
       server.nextResponses([startResp]);
-      await client.startReplication(null, null);
+      await client.startReplication(null, null, null);
 
       const subscriptionId = 'THE_ID';
 

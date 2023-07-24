@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:electric_client/src/satellite/shapes/manager.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:test/test.dart';
@@ -54,6 +56,7 @@ void main() {
 
     final subscriptionData = SubscriptionData(
       subscriptionId: subscriptionId,
+      lsn: base64.decode('MTIz'),
       data: [dataChange],
       shapeReqToUuid: shapeReqToUuid,
     );

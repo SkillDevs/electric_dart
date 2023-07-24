@@ -209,6 +209,9 @@ class SatelliteClient extends EventEmitter implements Client {
   }) async {
     Future<void> _attemptBody() {
       initializing = Completer();
+      // This is so that errors can be sent to the completer even when no one is
+      // waiting for the future
+      initializing!.future.ignore();
 
       final Completer<void> connectCompleter = Completer();
 
@@ -284,8 +287,8 @@ class SatelliteClient extends EventEmitter implements Client {
       );
     } catch (e) {
       // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       initializing!.completeError(e);
+      initializing = null;
       rethrow;
     }
 
@@ -293,7 +296,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> close() async {
+  Future<void> close() async {
     logger.info('closing client');
 
     outbound = resetReplication(outbound.enqueuedLsn, outbound.ackLsn, null);
@@ -305,6 +308,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
     socketHandler = null;
     removeAllListeners();
+
+    initializing?.future.ignore();
     initializing?.completeError(
       SatelliteException(
         SatelliteErrorCode.internal,
@@ -317,8 +322,6 @@ class SatelliteClient extends EventEmitter implements Client {
       socket!.closeAndRemoveListeners();
       socket = null;
     }
-
-    return const Right(null);
   }
 
   @override
@@ -377,6 +380,7 @@ class SatelliteClient extends EventEmitter implements Client {
     );
     return rpc<AuthResponse>(request).catchError((Object e) {
       initializing?.completeError(e);
+      initializing = null;
       throw e;
     });
   }
@@ -457,10 +461,12 @@ class SatelliteClient extends EventEmitter implements Client {
     }
 
     // Then set the replication state
-    final future = rpc<void>(request)
-        .then((_) => initializing?.complete())
-        .catchError((Object e) {
+    final future = rpc<void>(request).then((_) {
+      initializing?.complete();
+      initializing = null;
+    }).catchError((Object e) {
       initializing?.completeError(e);
+      initializing = null;
       throw e;
     });
     inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
@@ -469,7 +475,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> stopReplication() async {
+  Future<void> stopReplication() {
     if (inbound.isReplicating != ReplicationStatus.active) {
       return Future.error(
         SatelliteException(
@@ -481,9 +487,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
     inbound.isReplicating = ReplicationStatus.stopping;
     final request = SatInStopReplicationReq();
-    await rpc<void>(request);
-
-    return const Right(null);
+    return rpc<void>(request);
   }
 
   void sendMessage(Object request) {
