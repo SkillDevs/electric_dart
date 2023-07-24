@@ -172,8 +172,8 @@ class SatelliteProcess implements Satellite {
       numberToBytes(lastSentRowId),
     );
 
-    final lsnBase64 = (await getMeta('lsn'))!;
-    if (lsnBase64.isNotEmpty) {
+    final lsnBase64 = await getMeta('lsn');
+    if (lsnBase64 != null && lsnBase64.isNotEmpty) {
       _lsn = base64.decode(lsnBase64);
       logger.info("retrieved lsn $_lsn");
     } else {

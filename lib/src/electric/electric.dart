@@ -50,7 +50,7 @@ Future<ElectricClient> electrify({
   // It needs to be before ensureStarted, so that the internal connectivity state
   // listener is ready to receive events.
   final electric = ElectricClient(adapter: adapter, notifier: notifier);
-  
+
   final satellite = await registry.ensureStarted(
     dbName: dbName,
     adapter: adapter,

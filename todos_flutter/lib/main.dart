@@ -99,6 +99,12 @@ class MyHomePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final todosAV = ref.watch(todosProvider);
 
+    final electricClient = ref.watch(electricClientProvider);
+    useEffect(() {
+      electricClient.syncTables(["todo", "todolist"]);
+      return null;
+    }, []);
+
     return Scaffold(
       appBar: AppBar(
         leading: const Center(
