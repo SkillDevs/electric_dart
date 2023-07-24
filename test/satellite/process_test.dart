@@ -1280,9 +1280,9 @@ void main() {
 
     satellite.relations = kTestRelations;
 
-    final ShapeSubscription(synced: dataReceived) =
+    final ShapeSubscription(synced: synced) =
         await satellite.subscribe([shapeDef]);
-    await dataReceived;
+    await synced;
 
     try {
       final row = await adapter.query(
