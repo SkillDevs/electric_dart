@@ -862,7 +862,8 @@ void main() {
       final completer = Completer<void>();
       final success = (_) {
         completer.completeError(
-            "expected the client to fail on an invalid message sequence");
+          "expected the client to fail on an invalid message sequence",
+        );
       };
 
       late SubscriptionEventListeners subListeners;

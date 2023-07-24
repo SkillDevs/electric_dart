@@ -17,7 +17,6 @@ import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/proto.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
-import 'package:fpdart/fpdart.dart';
 
 typedef DataRecord = Record;
 
@@ -47,7 +46,8 @@ class MockSatelliteProcess implements Satellite {
 
   @override
   Future<ShapeSubscription> subscribe(
-      List<ClientShapeDefinition> shapeDefinitions) async {
+    List<ClientShapeDefinition> shapeDefinitions,
+  ) async {
     return ShapeSubscription(synced: Future.value());
   }
 
@@ -64,7 +64,7 @@ class MockSatelliteProcess implements Satellite {
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     return ConnectionWrapper(
-      connectionFuture: Future.value(const Right(null)),
+      connectionFuture: Future.value(),
     );
   }
 
@@ -370,9 +370,9 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
       final satError = subsDataErrorToSatelliteError(satSubsError);
       emit(
-          SUBSCRIPTION_ERROR,
-          SubscriptionErrorData(
-              subscriptionId: subscriptionId, error: satError));
+        SUBSCRIPTION_ERROR,
+        SubscriptionErrorData(subscriptionId: subscriptionId, error: satError),
+      );
     });
   }
 }

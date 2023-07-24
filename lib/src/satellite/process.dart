@@ -14,10 +14,10 @@ import 'package:electric_client/src/satellite/satellite.dart';
 import 'package:electric_client/src/satellite/shapes/manager.dart';
 import 'package:electric_client/src/satellite/shapes/shapes.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
-import 'package:electric_client/src/util/statements.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/sets.dart';
+import 'package:electric_client/src/util/statements.dart';
 import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
 import 'package:electric_client/src/util/types.dart' as types;
@@ -171,7 +171,7 @@ class SatelliteProcess implements Satellite {
 
     // Need to reload primary keys after schema migration
     relations = await getLocalRelations();
-    checkMaxSqlParameters();
+    await checkMaxSqlParameters();
 
     _lastAckdRowId = int.parse((await getMeta('lastAckdRowId'))!);
     lastSentRowId = int.parse((await getMeta('lastSentRowId'))!);
@@ -381,11 +381,11 @@ class SatelliteProcess implements Satellite {
     for (final op in changes) {
       final tableName = QualifiedTablename('main', op.relation.table);
       if (groupedChanges.containsKey(tableName.toString())) {
-        groupedChanges[tableName.toString()]?.records.add(op.record!);
+        groupedChanges[tableName.toString()]?.records.add(op.record);
       } else {
         groupedChanges[tableName.toString()] = (
           columns: op.relation.columns.map((x) => x.name).toList(),
-          records: [op.record!]
+          records: [op.record]
         );
       }
 
@@ -393,7 +393,7 @@ class SatelliteProcess implements Satellite {
       final primaryKeyCols =
           op.relation.columns.fold(<String, Object>{}, (agg, col) {
         if (col.primaryKey != null && col.primaryKey!) {
-          agg[col.name] = op.record![col.name]!;
+          agg[col.name] = op.record[col.name]!;
         }
         return agg;
       });

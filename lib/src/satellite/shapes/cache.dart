@@ -202,8 +202,10 @@ class SubscriptionsDataCache extends EventEmitter {
     subId = subId ?? inDelivery?.subscriptionId;
     reset(subId);
     final error = SatelliteException(code, msg);
-    emit(SUBSCRIPTION_ERROR,
-        SubscriptionErrorData(subscriptionId: null, error: error));
+    emit(
+      SUBSCRIPTION_ERROR,
+      SubscriptionErrorData(subscriptionId: null, error: error),
+    );
 
     throw error;
   }
