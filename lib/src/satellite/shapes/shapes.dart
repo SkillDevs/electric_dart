@@ -23,6 +23,15 @@ abstract class SubscriptionsManager {
   /// @param subId the identifier of the subscription
   List<ShapeDefinition>? shapesForActiveSubscription(String subId);
 
+  /// @returns An array of fulfilled subscriptions that are active.
+  List<SubscriptionId> getFulfilledSubscriptions();
+
+  /// Check if a subscription with exactly the same shape requests has already been issued
+  /// @param shapes Shapes for a potential request
+  DuplicatingSubRes? getDuplicatingSubscription(
+    List<ClientShapeDefinition> shapes,
+  );
+
   /// Deletes the subscription from the manager.
   /// @param subId the identifier of the subscription
   Future<void> unsubscribe(String subId);
@@ -39,4 +48,18 @@ abstract class SubscriptionsManager {
 
   /// loads the subscription manager state from a text representation
   void setState(String serialized);
+}
+
+sealed class DuplicatingSubRes {}
+
+class DuplicatingSubInFlight extends DuplicatingSubRes {
+  final String inFlight;
+
+  DuplicatingSubInFlight(this.inFlight);
+}
+
+class DuplicatingSubFulfilled extends DuplicatingSubRes {
+  final String fulfilled;
+
+  DuplicatingSubFulfilled(this.fulfilled);
 }

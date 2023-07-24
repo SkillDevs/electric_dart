@@ -24,9 +24,7 @@ abstract class BaseRegistry implements Registry {
     required SocketFactory socketFactory,
     required HydratedConfig config,
     SatelliteOverrides? overrides,
-  }) {
-    throw "Subclasses must implement startProcess";
-  }
+  });
 
   @override
   Future<Satellite> ensureStarted({

@@ -58,6 +58,8 @@ enum SatelliteErrorCode {
   invalidPosition,
   subscriptionNotFound,
   subscriptionError,
+  malformedLsn,
+  unknownSchemaVersion,
 
   // subscription errors
   shapeRequestError,
@@ -66,6 +68,8 @@ enum SatelliteErrorCode {
   // shape request errors
   tableNotFound,
   referentialIntegrityViolation,
+  emptyShapeDefinition,
+  duplicateTableInShapeDefinition,
 
   // shape data errors
   shapeDeliveryError,

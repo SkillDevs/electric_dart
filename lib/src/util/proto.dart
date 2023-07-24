@@ -205,6 +205,10 @@ const Map<SatInStartReplicationResp_ReplicationError_Code, SatelliteErrorCode>
       SatelliteErrorCode.invalidPosition,
   SatInStartReplicationResp_ReplicationError_Code.SUBSCRIPTION_NOT_FOUND:
       SatelliteErrorCode.subscriptionNotFound,
+  SatInStartReplicationResp_ReplicationError_Code.MALFORMED_LSN:
+      SatelliteErrorCode.malformedLsn,
+  SatInStartReplicationResp_ReplicationError_Code.UNKNOWN_SCHEMA_VSN:
+      SatelliteErrorCode.unknownSchemaVersion,
 };
 
 const Map<SatSubsResp_SatSubsError_Code, SatelliteErrorCode>
@@ -224,6 +228,11 @@ const Map<SatSubsResp_SatSubsError_ShapeReqError_Code, SatelliteErrorCode>
       SatelliteErrorCode.tableNotFound,
   SatSubsResp_SatSubsError_ShapeReqError_Code.REFERENTIAL_INTEGRITY_VIOLATION:
       SatelliteErrorCode.referentialIntegrityViolation,
+  SatSubsResp_SatSubsError_ShapeReqError_Code.EMPTY_SHAPE_DEFINITION:
+      SatelliteErrorCode.emptyShapeDefinition,
+  SatSubsResp_SatSubsError_ShapeReqError_Code
+          .DUPLICATE_TABLE_IN_SHAPE_DEFINITION:
+      SatelliteErrorCode.duplicateTableInShapeDefinition,
 };
 
 const Map<SatSubsDataError_Code, SatelliteErrorCode> subsDataErrorToSatError = {

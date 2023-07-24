@@ -19,13 +19,16 @@
 syntax = "proto3";
 
 // NOTE: Part after Electric.Satellite is used as a version of the protocol
-// itself where the format vMAJOR.MINOR is treated in the following way:
-// MAJOR version when incompatible API changes are introduced
-// MINOR version when functionality or bugfix in a backwards compatible manner
-// are introduced.
+// itself where the format vMAJOR_MINOR is treated in the following way:
+//
+//   - MAJOR version is incremented when breaking API changes are introduced
+//
+//   - MINOR version is incremented when new API or bugfixes are introduced
+//     in a backwards-compatible manner
+//
 package Electric.Satellite.v1_4;
 
-// Ping request. Can be send by any party
+// Ping request. Can be sent by any party.
 message SatPingReq{
 }
 
@@ -33,22 +36,18 @@ message SatPingReq{
 message SatPingResp{
     // If LSN is present, it conveys to producer the latest LSN position that
     // was applied on the consumer side. If there is no active replication
-    // ongoing the field should be left 0
+    // ongoing the field should be left empty.
     optional bytes lsn = 1;
 }
 
 enum SatAuthHeader {
-    // protobuff required to have this by default
+    // Required by the Protobuf spec.
     UNSPECIFIED = 0;
+
     // required header
     // protobuf protocol version, this version is picked from
     // the package statement of this protobuf file, for example "Electric.Satellite.v10_13"
     PROTO_VERSION = 1;
-
-    // required header
-    // last schema version applied on the client. Is prepended with the hash
-    // algorithm type, for example: "sha256:71c9f..."
-    SCHEMA_VERSION = 2;
 }
 
 message SatAuthHeaderPair {
@@ -59,9 +58,8 @@ message SatAuthHeaderPair {
 // (Client) Auth request
 //
 // Client request is the first request that the client should send before
-// executing any other request
+// executing any other request.
 message SatAuthReq {
-
     // Identity of the Satellite application. Is expected to be something like
     // UUID. Required field
     string id = 1;
@@ -80,7 +78,7 @@ message SatAuthResp {
 }
 
 // General purpose error message, that could be sent to any request from any
-// sides. FIXME: We might want to separate that into Client/Server parts
+// side. FIXME: We might want to separate that into Client/Server parts.
 message SatErrorResp {
     enum ErrorCode {
         INTERNAL = 0;
@@ -88,8 +86,8 @@ message SatErrorResp {
         AUTH_FAILED = 2;
         REPLICATION_FAILED = 3;
         INVALID_REQUEST = 4;
-        PROTO_VSN_MISSMATCH = 5;
-        SCHEMA_VSN_MISSMATCH = 6;
+        PROTO_VSN_MISMATCH = 5;
+        SCHEMA_VSN_MISMATCH = 6;
     }
 
     ErrorCode error_type = 1;
@@ -98,20 +96,13 @@ message SatErrorResp {
 // (Consumer) Starts replication stream from producer to consumer
 message SatInStartReplicationReq {
     enum Option {
+        reserved 1, 3, 4;
+
+        // Required by the Protobuf spec.
         NONE = 0;
-        // Flag that indicates to Producer, to start replication from the latest
-        // position that has been acknowledged by this Consumer. In such a case
-        // provided lsn will be ignored
-        LAST_ACKNOWLEDGED = 1;
         // In sync mode consumer of the stream is expected to send SatPingResp
         // message for every committed batch of SatOpLog messages
         SYNC_MODE = 2;
-        // Asks receiver to start replication from the first transaction in the log
-        // without necessity to know about the actual internal format of the LSN
-        FIRST_LSN = 3;
-        // Asks receiver to start replication from the last position in the log,
-        // whatever this position is. Used for tests only.
-        LAST_LSN = 4;
     }
     // LSN position of the log on the producer side
     bytes lsn = 1;
@@ -122,6 +113,9 @@ message SatInStartReplicationReq {
 
     // the subscriptions identifiers the client wants to resume subscription    
     repeated string subscription_ids = 4;
+
+    // The version of the most recent migration seen by the client.
+    optional string schema_version = 5;
 
     // Note:
     // - a client might resume replication only for a subset of previous subscriptions 
@@ -140,7 +134,7 @@ message SatInStartReplicationResp {
     message ReplicationError {
         // error code enum
         enum Code {
-            // Required to satisfy linter
+            // Required by the Protobuf spec.
             CODE_UNSPECIFIED = 0;
 
             // requested LSN is behind the current replication window
@@ -151,6 +145,13 @@ message SatInStartReplicationResp {
 
             // requested subscription not found
             SUBSCRIPTION_NOT_FOUND = 3;
+
+            // the replication request has malformed LSN
+            MALFORMED_LSN = 4;
+
+            // consumer requested replication at schema version that is
+            // not known to the producer
+            UNKNOWN_SCHEMA_VSN = 5;
         }
 
         // error code
@@ -377,7 +378,7 @@ message SatSubsResp {
     string subscription_id = 1;
 
     // the error details if the request failed
-    optional SatSubsError error = 2;
+    optional SatSubsError err = 2;
 
     // Error message returned by the Producer when it encounters
     // an error handling subscription request
@@ -385,7 +386,7 @@ message SatSubsResp {
         
         // error code enum
         enum Code {
-            // Required code
+            // Required by the Protobuf spec.
             CODE_UNSPECIFIED = 0;
             
             // DUPLICATE IDENTIFIER
@@ -408,7 +409,7 @@ message SatSubsResp {
         message ShapeReqError {
             // error code enum
             enum Code {
-                // Required code
+                // Required by the Protobuf spec.
                 CODE_UNSPECIFIED = 0;
 
                 // Table does not exist in current schema version
@@ -416,6 +417,12 @@ message SatSubsResp {
 
                 // Requested shape does not maintain referential integirty
                 REFERENTIAL_INTEGRITY_VIOLATION = 2;
+
+                // The shape request contains an empty shape definition 
+                EMPTY_SHAPE_DEFINITION = 3;
+
+                // Attempt to request the same table more than once in one shape
+                DUPLICATE_TABLE_IN_SHAPE_DEFINITION = 4;
             }
 
             // error code
@@ -466,7 +473,7 @@ message SatShapeDef {
 message SatSubsDataError {
     // error code enum
     enum Code {
-        // Required code
+        // Required by the Protobuf spec.
         CODE_UNSPECIFIED = 0;
 
         // Error delivering shape
@@ -489,7 +496,7 @@ message SatSubsDataError {
     message ShapeReqError {
         // error code enum
         enum Code {
-            // Required code
+            // Required by the Protobuf spec.
             CODE_UNSPECIFIED = 0;
 
             // Requested shape exceed the maximum allowed shape size
@@ -511,6 +518,8 @@ message SatSubsDataError {
 message SatSubsDataBegin {
     // Identifier of the subscription
     string subscription_id = 1;
+    // LSN at which this data is being sent. May be a duplicate of a transaction that was sent immediately before.
+    bytes lsn = 2;
 }
 
 // End delimiter for the incoming subscription data

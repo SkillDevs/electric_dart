@@ -20,16 +20,10 @@ class SatAuthHeader extends $pb.ProtobufEnum {
       const $core.bool.fromEnvironment('protobuf.omit_enum_names')
           ? ''
           : 'PROTO_VERSION');
-  static const SatAuthHeader SCHEMA_VERSION = SatAuthHeader._(
-      2,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'SCHEMA_VERSION');
 
   static const $core.List<SatAuthHeader> values = <SatAuthHeader>[
     UNSPECIFIED,
     PROTO_VERSION,
-    SCHEMA_VERSION,
   ];
 
   static final $core.Map<$core.int, SatAuthHeader> _byValue =
@@ -67,18 +61,18 @@ class SatErrorResp_ErrorCode extends $pb.ProtobufEnum {
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'INVALID_REQUEST');
-  static const SatErrorResp_ErrorCode PROTO_VSN_MISSMATCH =
+  static const SatErrorResp_ErrorCode PROTO_VSN_MISMATCH =
       SatErrorResp_ErrorCode._(
           5,
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
-              : 'PROTO_VSN_MISSMATCH');
-  static const SatErrorResp_ErrorCode SCHEMA_VSN_MISSMATCH =
+              : 'PROTO_VSN_MISMATCH');
+  static const SatErrorResp_ErrorCode SCHEMA_VSN_MISMATCH =
       SatErrorResp_ErrorCode._(
           6,
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
-              : 'SCHEMA_VSN_MISSMATCH');
+              : 'SCHEMA_VSN_MISMATCH');
 
   static const $core.List<SatErrorResp_ErrorCode> values =
       <SatErrorResp_ErrorCode>[
@@ -87,8 +81,8 @@ class SatErrorResp_ErrorCode extends $pb.ProtobufEnum {
     AUTH_FAILED,
     REPLICATION_FAILED,
     INVALID_REQUEST,
-    PROTO_VSN_MISSMATCH,
-    SCHEMA_VSN_MISSMATCH,
+    PROTO_VSN_MISMATCH,
+    SCHEMA_VSN_MISMATCH,
   ];
 
   static final $core.Map<$core.int, SatErrorResp_ErrorCode> _byValue =
@@ -105,38 +99,17 @@ class SatInStartReplicationReq_Option extends $pb.ProtobufEnum {
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'NONE');
-  static const SatInStartReplicationReq_Option LAST_ACKNOWLEDGED =
-      SatInStartReplicationReq_Option._(
-          1,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'LAST_ACKNOWLEDGED');
   static const SatInStartReplicationReq_Option SYNC_MODE =
       SatInStartReplicationReq_Option._(
           2,
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'SYNC_MODE');
-  static const SatInStartReplicationReq_Option FIRST_LSN =
-      SatInStartReplicationReq_Option._(
-          3,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'FIRST_LSN');
-  static const SatInStartReplicationReq_Option LAST_LSN =
-      SatInStartReplicationReq_Option._(
-          4,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'LAST_LSN');
 
   static const $core.List<SatInStartReplicationReq_Option> values =
       <SatInStartReplicationReq_Option>[
     NONE,
-    LAST_ACKNOWLEDGED,
     SYNC_MODE,
-    FIRST_LSN,
-    LAST_LSN,
   ];
 
   static final $core.Map<$core.int, SatInStartReplicationReq_Option> _byValue =
@@ -174,6 +147,18 @@ class SatInStartReplicationResp_ReplicationError_Code extends $pb.ProtobufEnum {
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'SUBSCRIPTION_NOT_FOUND');
+  static const SatInStartReplicationResp_ReplicationError_Code MALFORMED_LSN =
+      SatInStartReplicationResp_ReplicationError_Code._(
+          4,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'MALFORMED_LSN');
+  static const SatInStartReplicationResp_ReplicationError_Code
+      UNKNOWN_SCHEMA_VSN = SatInStartReplicationResp_ReplicationError_Code._(
+          5,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'UNKNOWN_SCHEMA_VSN');
 
   static const $core.List<SatInStartReplicationResp_ReplicationError_Code>
       values = <SatInStartReplicationResp_ReplicationError_Code>[
@@ -181,6 +166,8 @@ class SatInStartReplicationResp_ReplicationError_Code extends $pb.ProtobufEnum {
     BEHIND_WINDOW,
     INVALID_POSITION,
     SUBSCRIPTION_NOT_FOUND,
+    MALFORMED_LSN,
+    UNKNOWN_SCHEMA_VSN,
   ];
 
   static final $core
@@ -318,12 +305,27 @@ class SatSubsResp_SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'REFERENTIAL_INTEGRITY_VIOLATION');
+  static const SatSubsResp_SatSubsError_ShapeReqError_Code
+      EMPTY_SHAPE_DEFINITION = SatSubsResp_SatSubsError_ShapeReqError_Code._(
+          3,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'EMPTY_SHAPE_DEFINITION');
+  static const SatSubsResp_SatSubsError_ShapeReqError_Code
+      DUPLICATE_TABLE_IN_SHAPE_DEFINITION =
+      SatSubsResp_SatSubsError_ShapeReqError_Code._(
+          4,
+          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
+              ? ''
+              : 'DUPLICATE_TABLE_IN_SHAPE_DEFINITION');
 
   static const $core.List<SatSubsResp_SatSubsError_ShapeReqError_Code> values =
       <SatSubsResp_SatSubsError_ShapeReqError_Code>[
     CODE_UNSPECIFIED,
     TABLE_NOT_FOUND,
     REFERENTIAL_INTEGRITY_VIOLATION,
+    EMPTY_SHAPE_DEFINITION,
+    DUPLICATE_TABLE_IN_SHAPE_DEFINITION,
   ];
 
   static final $core.Map<$core.int, SatSubsResp_SatSubsError_ShapeReqError_Code>

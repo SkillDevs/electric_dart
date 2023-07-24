@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:electric_client/src/satellite/shapes/shapes.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/types.dart';
@@ -10,12 +12,14 @@ typedef SubcriptionShapeDefinitions = Map<String, List<ShapeDefinition>>;
 typedef SubcriptionShapeRequests = Map<String, List<ShapeRequest>>;
 
 typedef GarbageCollectShapeHandler = Future<void> Function(
-    List<ShapeDefinition> shapeDefs,);
+  List<ShapeDefinition> shapeDefs,
+);
 
 class InMemorySubscriptionsManager extends EventEmitter
     implements SubscriptionsManager {
   SubcriptionShapeRequests _inFlight = {};
-  SubcriptionShapeDefinitions _subToShapes = {};
+  SubcriptionShapeDefinitions _fulfilledSubscriptions = {};
+  Map<String, SubscriptionId> _shapeRequestHashmap = {};
 
   final GarbageCollectShapeHandler? _gcHandler;
 
@@ -23,18 +27,32 @@ class InMemorySubscriptionsManager extends EventEmitter
       : _gcHandler = gcHandler;
 
   @override
-  void subscriptionRequested(String subId, List<ShapeRequest> shapeRequests) {
-    if (_inFlight[subId] != null || _subToShapes[subId] != null) {
-      throw SatelliteException(SatelliteErrorCode.subscriptionAlreadyExists,
-          "a subscription with id $subId already exists",);
+  void subscriptionRequested(
+      SubscriptionId subId, List<ShapeRequest> shapeRequests) {
+    if (_inFlight[subId] != null || _fulfilledSubscriptions[subId] != null) {
+      throw SatelliteException(
+        SatelliteErrorCode.subscriptionAlreadyExists,
+        "a subscription with id $subId already exists",
+      );
+    }
+
+    final requestHash = computeRequestsHash(shapeRequests);
+
+    if (_shapeRequestHashmap.containsKey(requestHash)) {
+      throw SatelliteException(
+        SatelliteErrorCode.subscriptionAlreadyExists,
+        'Subscription with exactly the same shape requests exists. Calling code should use "getDuplicatingSubscription" to avoid establishing same subscription twice',
+      );
     }
 
     _inFlight[subId] = shapeRequests;
+    _shapeRequestHashmap[requestHash] = subId;
   }
 
   @override
-  void subscriptionCancelled(String subId) {
+  void subscriptionCancelled(SubscriptionId subId) {
     _inFlight.remove(subId);
+    removeSubscriptionFromHash(subId);
   }
 
   @override
@@ -48,27 +66,45 @@ class InMemorySubscriptionsManager extends EventEmitter
     final inflight = _inFlight[subscriptionId]!;
     _inFlight.remove(subscriptionId);
     for (final shapeReq in inflight) {
-      final shapeRequestOrResolved = shapeReq; // as ShapeRequestOrDefinition;
+      final resolvedRequest = ShapeDefinition(
+        uuid: shapeReqToUuid[shapeReq.requestId]!,
+        definition: shapeReq.definition,
+      );
 
-      if (!_subToShapes.containsKey(subscriptionId)) {
-        _subToShapes[subscriptionId] = [];
-      }
-      final shapes = _subToShapes[subscriptionId]!;
-
-      final uuid = shapeReqToUuid[shapeReq.requestId]!;
-      final shapeDef = ShapeDefinition(
-          uuid: uuid, definition: shapeRequestOrResolved.definition,);
-      shapes.add(shapeDef);
+      _fulfilledSubscriptions[subscriptionId] =
+          _fulfilledSubscriptions[subscriptionId] ?? [];
+      _fulfilledSubscriptions[subscriptionId]!.add(resolvedRequest);
     }
   }
 
   @override
-  List<ShapeDefinition>? shapesForActiveSubscription(String subId) {
-    return _subToShapes[subId];
+  List<ShapeDefinition>? shapesForActiveSubscription(SubscriptionId subId) {
+    return _fulfilledSubscriptions[subId];
   }
 
   @override
-  Future<void> unsubscribe(String subId) async {
+  List<SubscriptionId> getFulfilledSubscriptions() {
+    return _fulfilledSubscriptions.keys.toList();
+  }
+
+  @override
+  DuplicatingSubRes? getDuplicatingSubscription(
+    List<ClientShapeDefinition> shapes,
+  ) {
+    final subId = _shapeRequestHashmap[computeClientDefsHash(shapes)];
+    if (subId != null) {
+      if (_inFlight[subId] != null) {
+        return DuplicatingSubInFlight(subId);
+      } else {
+        return DuplicatingSubFulfilled(subId);
+      }
+    } else {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> unsubscribe(SubscriptionId subId) async {
     final shapes = shapesForActiveSubscription(subId);
     if (shapes != null) {
       if (_gcHandler != null) {
@@ -76,13 +112,14 @@ class InMemorySubscriptionsManager extends EventEmitter
       }
 
       _inFlight.remove(subId);
-      _subToShapes.remove(subId);
+      _fulfilledSubscriptions.remove(subId);
+      removeSubscriptionFromHash(subId);
     }
   }
 
   @override
   Future<List<String>> unsubscribeAll() async {
-    final ids = _subToShapes.keys.toList();
+    final ids = _fulfilledSubscriptions.keys.toList();
     for (final subId in ids) {
       await unsubscribe(subId);
     }
@@ -91,19 +128,39 @@ class InMemorySubscriptionsManager extends EventEmitter
 
   @override
   String serialize() {
-    return json.encode(_subcriptionShapeDefinitionsToJson(_subToShapes));
+    return json
+        .encode(_subcriptionShapeDefinitionsToJson(_fulfilledSubscriptions));
   }
 
   // TODO: input validation
   @override
   void setState(String serialized) {
     _inFlight = {};
-    _subToShapes = _subcriptionShapeDefinitionsFromJson(json.decode(serialized) as Map<String, Object?>);
+    _fulfilledSubscriptions = _subcriptionShapeDefinitionsFromJson(
+      json.decode(serialized) as Map<String, Object?>,
+    );
+
+    _shapeRequestHashmap.clear();
+    for (final entry in _fulfilledSubscriptions.entries) {
+      _shapeRequestHashmap[computeRequestsHash(entry.value)] = entry.key;
+    }
+  }
+
+  void removeSubscriptionFromHash(SubscriptionId subId) {
+    // Rare enough that we can spare inefficiency of not having a reverse map
+    for (final MapEntry(key: hash, value: subscription)
+        in _shapeRequestHashmap.entries) {
+      if (subscription == subId) {
+        _shapeRequestHashmap.remove(hash);
+        break;
+      }
+    }
   }
 }
 
 Map<String, Object?> _subcriptionShapeDefinitionsToJson(
-    SubcriptionShapeDefinitions defs,) {
+  SubcriptionShapeDefinitions defs,
+) {
   final out = <String, Object?>{};
   for (final entry in defs.entries) {
     final subId = entry.key;
@@ -130,3 +187,28 @@ SubcriptionShapeDefinitions _subcriptionShapeDefinitionsFromJson(
 
   return out;
 }
+
+String computeRequestsHash(List<ShapeRequestOrDefinition> requests) {
+  return computeClientDefsHash(requests.map((x) => x.definition).toList());
+}
+
+String computeClientDefsHash(List<ClientShapeDefinition> requests) {
+  // Mimics ohash from NPM
+  final StringBuffer buf = StringBuffer();
+  buf.write("list:${requests.length}:");
+  for (final req in requests) {
+    buf.write(_mapPropsToString(req.runtimeType, req.props));
+    buf.write(",");
+  }
+
+  final strBytes = utf8.encode(buf.toString());
+  final sha256bytes = sha256.convert(strBytes).bytes;
+  final hash = base64.encode(sha256bytes);
+  final substr = hash.substring(0, min(10, hash.length));
+  
+  // print("HASH: $buf $hash");
+  return substr;
+}
+
+String _mapPropsToString(Type runtimeType, List<Object?> props) =>
+    '$runtimeType(${props.map((prop) => prop.toString()).join(', ')})';

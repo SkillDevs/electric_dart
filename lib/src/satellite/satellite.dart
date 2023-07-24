@@ -10,7 +10,7 @@ import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 import 'package:fpdart/fpdart.dart';
 
-export 'package:electric_client/src/satellite/process.dart' show Sub;
+export 'package:electric_client/src/satellite/process.dart' show ShapeSubscription;
 
 abstract class Registry {
   Future<Satellite> ensureStarted({
@@ -30,7 +30,7 @@ abstract class Registry {
 }
 
 class ConnectionWrapper {
-  final Future<Either<SatelliteException, void>> connectionFuture;
+  final Future<void> connectionFuture;
 
   ConnectionWrapper({
     required this.connectionFuture,
@@ -54,29 +54,30 @@ abstract class Satellite {
     SatelliteReplicationOptions? opts,
   });
   Future<void> stop();
-  Future<Sub> subscribe(List<ClientShapeDefinition> shapeDefinitions);
+  Future<ShapeSubscription> subscribe(List<ClientShapeDefinition> shapeDefinitions);
   Future<void> unsubscribe(String shapeUuid);
 }
 
 abstract class Client {
-  Future<Either<SatelliteException, void>> connect({
+  Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   });
-  Future<Either<SatelliteException, void>> close();
-  Future<Either<SatelliteException, AuthResponse>> authenticate(
+  Future<void> close();
+  Future<AuthResponse> authenticate(
     AuthState authState,
   );
   bool isClosed();
-  Future<Either<SatelliteException, void>> startReplication(
+  Future<void> startReplication(
     LSN? lsn,
+    String? schemaVersion,
     List<String>? subscriptionIds,
   );
-  Future<Either<SatelliteException, void>> stopReplication();
+  Future<void> stopReplication();
   void subscribeToRelations(void Function(Relation relation) callback);
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   );
-  Either<SatelliteException, void> enqueueTransaction(
+   void enqueueTransaction(
     DataTransaction transaction,
   );
   EventListener<AckLsnEvent> subscribeToAck(AckCallback callback);

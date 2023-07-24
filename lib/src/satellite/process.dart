@@ -20,15 +20,14 @@ import 'package:electric_client/src/util/sets.dart';
 import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
 import 'package:electric_client/src/util/types.dart' as types;
-import 'package:fpdart/fpdart.dart';
 import 'package:meta/meta.dart';
 
 typedef ChangeAccumulator = Map<String, Change>;
 
-class Sub {
-  final Future<void> dataReceived;
+class ShapeSubscription {
+  final Future<void> synced;
 
-  Sub({required this.dataReceived});
+  ShapeSubscription({required this.synced});
 }
 
 typedef SubscriptionNotifier = ({
@@ -69,10 +68,13 @@ class SatelliteProcess implements Satellite {
   int lastSentRowId = 0;
   LSN? _lsn;
 
+  @visibleForTesting
+  LSN? get debugLsn => _lsn;
+
   RelationsCache relations = {};
 
   late SubscriptionsManager subscriptions;
-  final Map<String, SubscriptionNotifier> subscriptionNotifiers = {};
+  final Map<String, Completer<void>> subscriptionNotifiers = {};
   late String Function() subscriptionIdGenerator;
   late String Function() shapeRequestIdGenerator;
 
@@ -170,10 +172,10 @@ class SatelliteProcess implements Satellite {
       numberToBytes(lastSentRowId),
     );
 
-    final lsnBase64 = (await getMeta('lsn'))!;
-    if (lsnBase64.isNotEmpty) {
-      logger.info("retrieved lsn $_lsn");
+    final lsnBase64 = await getMeta('lsn');
+    if (lsnBase64 != null && lsnBase64.isNotEmpty) {
       _lsn = base64.decode(lsnBase64);
+      logger.info("retrieved lsn $_lsn");
     } else {
       logger.info("no lsn retrieved from store");
     }
@@ -202,7 +204,11 @@ class SatelliteProcess implements Satellite {
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
     shapeDefs
         .expand((ShapeDefinition def) => def.definition.selects)
-        .map((ShapeSelect select) => select.tablename)
+        .map(
+          (ShapeSelect select) =>
+              // We need "fully qualified" table names in the next calls
+              "main." + select.tablename,
+        )
         .fold(stmts, (List<Statement> stmts, String tablename) {
       stmts.addAll([
         ..._disableTriggers([tablename]),
@@ -254,7 +260,25 @@ class SatelliteProcess implements Satellite {
   }
 
   @override
-  Future<Sub> subscribe(List<ClientShapeDefinition> shapeDefinitions) async {
+  Future<ShapeSubscription> subscribe(
+    List<ClientShapeDefinition> shapeDefinitions,
+  ) async {
+    // First, we want to check if we already have either fulfilled or fulfilling subscriptions with exactly the same definitions
+    final existingSubscription =
+        subscriptions.getDuplicatingSubscription(shapeDefinitions);
+    if (existingSubscription != null &&
+        existingSubscription is DuplicatingSubInFlight) {
+      return ShapeSubscription(
+        synced: subscriptionNotifiers[existingSubscription.inFlight]!.future,
+      );
+    } else if (existingSubscription != null &&
+        existingSubscription is DuplicatingSubFulfilled) {
+      return ShapeSubscription(
+        synced: Future.value(),
+      );
+    }
+
+    // If no exact match found, we try to establish the subscription
     final List<ShapeRequest> shapeReqs = shapeDefinitions
         .map(
           (definition) => ShapeRequest(
@@ -265,24 +289,17 @@ class SatelliteProcess implements Satellite {
         .toList();
 
     final subId = subscriptionIdGenerator();
-    final fut = Future(() async {
-      final completer = Completer<void>();
-      // store the resolve and reject
-      // such that we can resolve/reject
-      // the promise later when the shape
-      // is fulfilled or when an error arrives
-      // we store it before making the actual request
-      // to avoid that the answer would arrive too fast
-      // and this resolver and rejecter would not yet be stored
-      // this could especially happen in unit tests
-      final notifier = (
-        success: () => completer.complete(),
-        failure: (Object error) => completer.completeError(error)
-      );
-      subscriptionNotifiers[subId] = notifier;
 
-      await completer.future;
-    });
+    final completer = Completer<void>();
+    // store the resolve and reject
+    // such that we can resolve/reject
+    // the promise later when the shape
+    // is fulfilled or when an error arrives
+    // we store it before making the actual request
+    // to avoid that the answer would arrive too fast
+    // and this resolver and rejecter would not yet be stored
+    // this could especially happen in unit tests
+    subscriptionNotifiers[subId] = completer;
 
     final SubscribeResponse(:subscriptionId, :error) =
         await client.subscribe(subId, shapeReqs);
@@ -298,8 +315,8 @@ class SatelliteProcess implements Satellite {
     } else {
       subscriptions.subscriptionRequested(subscriptionId, shapeReqs);
 
-      return Sub(
-        dataReceived: fut,
+      return ShapeSubscription(
+        synced: subscriptionNotifiers[subId]!.future,
       );
     }
   }
@@ -316,21 +333,21 @@ class SatelliteProcess implements Satellite {
   Future<void> _handleSubscriptionData(SubscriptionData subsData) async {
     subscriptions.subscriptionDelivered(subsData);
     if (subsData.data.isNotEmpty) {
-      await _applySubscriptionData(subsData.data);
+      await _applySubscriptionData(subsData.data, subsData.lsn);
     }
 
     // Call the `onSuccess` callback for this subscription
-    final (success: onSuccess, failure: _) =
-        subscriptionNotifiers[subsData.subscriptionId]!;
+    final completer = subscriptionNotifiers[subsData.subscriptionId]!;
     // GC the notifiers for this subscription ID
     subscriptionNotifiers.remove(subsData.subscriptionId);
-    onSuccess();
+    completer.complete();
   }
 
   // Applies initial data for a shape subscription. Current implementation
   // assumes there are no conflicts INSERTing new rows and only expects
   // subscriptions for entire tables.
-  Future<void> _applySubscriptionData(List<InitialDataChange> changes) async {
+  Future<void> _applySubscriptionData(
+      List<InitialDataChange> changes, LSN lsn) async {
     final stmts = <Statement>[];
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
 
@@ -362,7 +379,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
       final upsertShadowStmt = '''
         INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES (?,?,?,?)''';
       final upsertShadowArgs = [
-        relation.schema,
+        "main",
         relation.table,
         primaryKeyToStr(primaryKeyCols),
         encodeTags(tags),
@@ -376,6 +393,9 @@ INSERT INTO $tablenameStr (${columnNames.join(
 
     // persist subscriptions state
     stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
+    // persist LSN
+    stmts.add(updateLsnStmt(lsn));
+
     try {
       await adapter.runInTransaction(stmts);
     } catch (e) {
@@ -403,6 +423,9 @@ INSERT INTO $tablenameStr (${columnNames.join(
     // that it does not update meta transactionally
     final ids = await subscriptions.unsubscribeAll();
 
+    logger
+        .severe('Encountered a subscription error: ${satelliteError.message}');
+
     _lsn = null;
     await adapter.runInTransaction([
       _setMetaStatement('lsn', null),
@@ -413,17 +436,16 @@ INSERT INTO $tablenameStr (${columnNames.join(
 
     // Call the `onSuccess` callback for this subscription
     if (subscriptionId != null) {
-      final (success: _, failure: onFailure) =
-          subscriptionNotifiers[subscriptionId]!;
+      final completer = subscriptionNotifiers[subscriptionId]!;
 
       // GC the notifiers for this subscription ID
       subscriptionNotifiers.remove(subscriptionId);
-      onFailure(satelliteError);
+      completer.completeError(satelliteError);
     }
   }
 
   @visibleForTesting
-  Future<Either<SatelliteException, void>> connectivityStateChange(
+  Future<void> connectivityStateChange(
     ConnectivityState status,
   ) async {
     // TODO: no op if state is the same
@@ -440,7 +462,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
         }
       case ConnectivityState.connected:
         {
-          return const Right(null);
+          return;
         }
       default:
         {
@@ -449,7 +471,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
     }
   }
 
-  Future<Either<SatelliteException, void>> _connectAndStartReplication(
+  Future<void> _connectAndStartReplication(
     SatelliteReplicationOptions? opts,
   ) async {
     logger.info("connecting and starting replication");
@@ -459,33 +481,39 @@ INSERT INTO $tablenameStr (${columnNames.join(
       throw Exception("trying to connect before authentication");
     }
 
-    return client
-        .connect()
-        .then((_) => client.authenticate(_authState))
-        .then((_) => client.startReplication(_lsn, null))
-        .onError(
-      (error, st) {
-        if (error is SatelliteException) {
-          if (error.code == SatelliteErrorCode.behindWindow &&
-              opts?.clearOnBehindWindow == true) {
-            return _handleSubscriptionError(
-              SubscriptionErrorData(
-                error: error,
-                subscriptionId: null,
-              ),
-            ).then(
-              (_) => _connectAndStartReplication(opts),
-            );
-          }
+    try {
+      await client.connect();
+      await client.authenticate(_authState);
 
-          if (throwErrors.contains(error.code)) {
-            throw error;
-          }
+      final schemaVersion = await migrator.querySchemaVersion();
+
+      // Fetch the subscription IDs that were fulfilled
+      // such that we can resume and inform Electric
+      // about fulfilled subscriptions
+      final subscriptionIds = subscriptions.getFulfilledSubscriptions();
+
+      await client.startReplication(_lsn, schemaVersion, subscriptionIds);
+    } catch (error) {
+      if (error is SatelliteException) {
+        if (error.code == SatelliteErrorCode.behindWindow &&
+            opts?.clearOnBehindWindow == true) {
+          return _handleSubscriptionError(
+            SubscriptionErrorData(
+              error: error,
+              subscriptionId: null,
+            ),
+          ).then(
+            (_) => _connectAndStartReplication(opts),
+          );
         }
-        logger.warning("couldn't start replication: $error");
-        return const Right(null);
-      },
-    );
+
+        if (throwErrors.contains(error.code)) {
+          rethrow;
+        }
+      }
+      logger.warning("couldn't start replication: $error");
+      return;
+    }
   }
 
   Future<bool> _verifyTableStructure() async {
@@ -664,12 +692,12 @@ INSERT INTO $tablenameStr (${columnNames.join(
     notifier.actuallyChanged(dbName, changes);
   }
 
-  Future<Either<SatelliteException, void>> _replicateSnapshotChanges(
+  Future<void> _replicateSnapshotChanges(
     List<OplogEntry> results,
   ) async {
     // TODO: Don't try replicating when outbound is inactive
     if (client.isClosed()) {
-      return const Right(null);
+      return;
     }
 
     final transactions = toTransactions(results, relations);
@@ -677,7 +705,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
       return client.enqueueTransaction(txn);
     }
 
-    return const Right(null);
+    return;
   }
 
   // Apply a set of incoming transactions against pending local operations,
@@ -988,14 +1016,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
     // switches off on transaction commit/abort
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
     // update lsn.
-    _lsn = lsn;
-    final lsn_base64 = base64.encode(lsn);
-    stmts.add(
-      Statement(
-        "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
-        [lsn_base64, 'lsn'],
-      ),
-    );
+    stmts.add(updateLsnStmt(lsn));
 
     final processDML = (List<DataChange> changes) async {
       final tx = DataTransaction(
@@ -1009,7 +1030,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
       // This only needs to be done once, even if there are several DML chunks
       // because all those chunks are part of the same transaction.
       if (firstDMLChunk) {
-        logger.info("apply incoming changes for LSN: $lsn");
+        logger.info("apply incoming changes for LSN: ${base64.encode(lsn)}");
         // assign timestamp to pending operations before apply
         await performSnapshot();
         firstDMLChunk = false;
@@ -1114,7 +1135,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
     // Now run the DML and DDL statements in-order in a transaction
     final tablenames = tablenamesSet.toList();
     final notNewTableNames =
-        tablenames.filter((t) => !newTables.contains(t)).toList();
+        tablenames.where((t) => !newTables.contains(t)).toList();
 
     final allStatements = [
       ..._disableTriggers(notNewTableNames),
@@ -1324,6 +1345,19 @@ INSERT INTO $tablenameStr (${columnNames.join(
       WHERE timestamp = ?;
     ''';
     await adapter.run(Statement(stmt, <Object?>[isoString]));
+  }
+
+  /// Update `this._lsn` to the new value and generate a statement to persist this change
+  ///
+  /// @param lsn new LSN value
+  /// @returns statement to be executed to save the new LSN value in the database
+  Statement updateLsnStmt(LSN lsn) {
+    _lsn = lsn;
+    final lsn_base64 = base64.encode(lsn);
+    return Statement(
+      "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
+      [lsn_base64, 'lsn'],
+    );
   }
 }
 

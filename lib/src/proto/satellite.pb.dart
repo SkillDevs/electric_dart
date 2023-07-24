@@ -502,6 +502,11 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'subscriptionIds')
+    ..aOS(
+        5,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'schemaVersion')
     ..hasRequiredFields = false;
 
   SatInStartReplicationReq._() : super();
@@ -510,6 +515,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     $core.Iterable<SatInStartReplicationReq_Option>? options,
     $core.int? syncBatchSize,
     $core.Iterable<$core.String>? subscriptionIds,
+    $core.String? schemaVersion,
   }) {
     final _result = create();
     if (lsn != null) {
@@ -523,6 +529,9 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     }
     if (subscriptionIds != null) {
       _result.subscriptionIds.addAll(subscriptionIds);
+    }
+    if (schemaVersion != null) {
+      _result.schemaVersion = schemaVersion;
     }
     return _result;
   }
@@ -584,6 +593,18 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(4)
   $core.List<$core.String> get subscriptionIds => $_getList(3);
+
+  @$pb.TagNumber(5)
+  $core.String get schemaVersion => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set schemaVersion($core.String v) {
+    $_setString(4, v);
+  }
+
+  @$pb.TagNumber(5)
+  $core.bool hasSchemaVersion() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSchemaVersion() => clearField(5);
 }
 
 class SatInStartReplicationResp_ReplicationError extends $pb.GeneratedMessage {
@@ -3108,21 +3129,21 @@ class SatSubsResp extends $pb.GeneratedMessage {
         2,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
-            : 'error',
+            : 'err',
         subBuilder: SatSubsResp_SatSubsError.create)
     ..hasRequiredFields = false;
 
   SatSubsResp._() : super();
   factory SatSubsResp({
     $core.String? subscriptionId,
-    SatSubsResp_SatSubsError? error,
+    SatSubsResp_SatSubsError? err,
   }) {
     final _result = create();
     if (subscriptionId != null) {
       _result.subscriptionId = subscriptionId;
     }
-    if (error != null) {
-      _result.error = error;
+    if (err != null) {
+      _result.err = err;
     }
     return _result;
   }
@@ -3165,18 +3186,18 @@ class SatSubsResp extends $pb.GeneratedMessage {
   void clearSubscriptionId() => clearField(1);
 
   @$pb.TagNumber(2)
-  SatSubsResp_SatSubsError get error => $_getN(1);
+  SatSubsResp_SatSubsError get err => $_getN(1);
   @$pb.TagNumber(2)
-  set error(SatSubsResp_SatSubsError v) {
+  set err(SatSubsResp_SatSubsError v) {
     setField(2, v);
   }
 
   @$pb.TagNumber(2)
-  $core.bool hasError() => $_has(1);
+  $core.bool hasErr() => $_has(1);
   @$pb.TagNumber(2)
-  void clearError() => clearField(2);
+  void clearErr() => clearField(2);
   @$pb.TagNumber(2)
-  SatSubsResp_SatSubsError ensureError() => $_ensure(1);
+  SatSubsResp_SatSubsError ensureErr() => $_ensure(1);
 }
 
 class SatUnsubsReq extends $pb.GeneratedMessage {
@@ -3755,15 +3776,25 @@ class SatSubsDataBegin extends $pb.GeneratedMessage {
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
             ? ''
             : 'subscriptionId')
+    ..a<$core.List<$core.int>>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'lsn',
+        $pb.PbFieldType.OY)
     ..hasRequiredFields = false;
 
   SatSubsDataBegin._() : super();
   factory SatSubsDataBegin({
     $core.String? subscriptionId,
+    $core.List<$core.int>? lsn,
   }) {
     final _result = create();
     if (subscriptionId != null) {
       _result.subscriptionId = subscriptionId;
+    }
+    if (lsn != null) {
+      _result.lsn = lsn;
     }
     return _result;
   }
@@ -3805,6 +3836,18 @@ class SatSubsDataBegin extends $pb.GeneratedMessage {
   $core.bool hasSubscriptionId() => $_has(0);
   @$pb.TagNumber(1)
   void clearSubscriptionId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get lsn => $_getN(1);
+  @$pb.TagNumber(2)
+  set lsn($core.List<$core.int> v) {
+    $_setBytes(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasLsn() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLsn() => clearField(2);
 }
 
 class SatSubsDataEnd extends $pb.GeneratedMessage {

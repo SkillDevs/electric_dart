@@ -39,7 +39,7 @@ class BundleMigrator implements Migrator {
     return unapplied.length;
   }
 
-  Future<List<MigrationRecord>> queryApplied() async {
+  Future<bool> migrationsTableExists() async {
     // If this is the first time we're running migrations, then the
     // migrations table won't exist.
     const tableExists = '''
@@ -53,12 +53,15 @@ class BundleMigrator implements Migrator {
         [tableName],
       ),
     );
-    if (resTables.isEmpty) {
+
+    return resTables.isNotEmpty;
+  }
+
+  Future<List<MigrationRecord>> queryApplied() async {
+    if (!(await migrationsTableExists())) {
       return [];
     }
 
-    // The migrations table exists, so let's query the name and hash of
-    // the previously applied migrations.
     final existingRecords = '''
       SELECT version FROM $tableName
         ORDER BY id ASC
@@ -71,6 +74,29 @@ class BundleMigrator implements Migrator {
           ),
         )
         .toList();
+  }
+
+  // Returns the version of the most recently applied migration
+  @override
+  Future<String?> querySchemaVersion() async {
+    if (!(await migrationsTableExists())) {
+      return null;
+    }
+
+    // The hard-coded version '0' below corresponds to the version of the internal migration defined in `schema.ts`.
+    // We're ignoring it because this function is supposed to return the application schema version.
+    final schemaVersion = '''
+      SELECT version FROM $tableName
+        WHERE version != '0'
+        ORDER BY version DESC
+        LIMIT 1
+    ''';
+    final rows = await adapter.query(Statement(schemaVersion));
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return rows.first["version"]! as String;
   }
 
   Future<List<StmtMigration>> validateApplied(
