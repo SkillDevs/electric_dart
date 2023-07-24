@@ -4,11 +4,13 @@ import 'package:equatable/equatable.dart';
 const SUBSCRIPTION_DELIVERED = 'subscription_delivered';
 const SUBSCRIPTION_ERROR = 'subscription_error';
 
+typedef SubscriptionId = String;
+
 typedef SubscriptionDeliveredCallback = void Function(SubscriptionData data);
 typedef SubscriptionErrorCallback = void Function(SubscriptionErrorData error);
 
 class SubscriptionErrorData {
-  final String? subscriptionId;
+  final SubscriptionId? subscriptionId;
   final SatelliteException error;
 
   SubscriptionErrorData({
@@ -18,7 +20,7 @@ class SubscriptionErrorData {
 }
 
 class SubscribeResponse {
-  final String subscriptionId;
+  final SubscriptionId subscriptionId;
   final SatelliteException? error;
 
   SubscribeResponse({
@@ -134,12 +136,14 @@ class ShapeSelect with EquatableMixin {
 }
 
 class SubscriptionData {
-  final String subscriptionId;
+  final SubscriptionId subscriptionId;
+  final List<int> lsn;
   final List<InitialDataChange> data;
   final Map<String, String> shapeReqToUuid;
 
   SubscriptionData({
     required this.subscriptionId,
+    required this.lsn,
     required this.data,
     required this.shapeReqToUuid,
   });

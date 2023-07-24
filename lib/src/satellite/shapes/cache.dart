@@ -1,5 +1,3 @@
-
-
 import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/client.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
@@ -7,86 +5,79 @@ import 'package:electric_client/src/util/proto.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 
+typedef SubscriptionId = String;
+typedef RequestId = String;
+
 class SubscriptionDataInternal {
-  final String subscriptionId;
+  final SubscriptionId subscriptionId;
+  final List<int> lsn;
   final List<SatTransOp> transaction;
   final Map<String, String> shapeReqToUuid;
 
   SubscriptionDataInternal({
     required this.subscriptionId,
+    required this.lsn,
     required this.transaction,
     required this.shapeReqToUuid,
   });
 }
 
- class SubscriptionsDataCache extends EventEmitter {
-  String? requestedSubscription = null;
-  Set<String> remainingShapes = {};
-  String? currentShapeRequestId;
-  SubscriptionDataInternal? inDelivery; 
+class SubscriptionsDataCache extends EventEmitter {
+  Map<String, Set<RequestId>> requestedSubscriptions = {};
+  Set<RequestId> remainingShapes = {};
+  RequestId? currentShapeRequestId;
+  SubscriptionDataInternal? inDelivery;
 
   SubscriptionsDataCache();
-  
+
   bool isDelivering() {
     return inDelivery != null;
   }
 
   void subscriptionRequest(SatSubsReq subsRequest) {
     final SatSubsReq(:subscriptionId, :shapeRequests) = subsRequest;
-    if (remainingShapes.isNotEmpty) {
-      internalError(
-        SatelliteErrorCode.unexpectedSubscriptionState,
-        "received subscription request but a subscription is already being delivered",
-      );
-    }
-    shapeRequests.forEach((rid) => remainingShapes.add(rid.requestId));
-    requestedSubscription = subscriptionId;
+    final requestedShapes = Set.of(
+      shapeRequests.map((shape) => shape.requestId),
+    );
+    requestedSubscriptions[subscriptionId] = requestedShapes;
   }
 
-  void subscriptionResponse( SatSubsResp resp) {
-    if (remainingShapes.isEmpty) {
-      internalError(
-        SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received subscribe response but no subscription has been requested",
-      );
-    }
-
+  void subscriptionResponse(SatSubsResp resp) {
     final subscriptionId = resp.subscriptionId;
-
-    if (subscriptionId != requestedSubscription) {
+    if (!requestedSubscriptions.containsKey(subscriptionId)) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received subscribe response but the subscription id does not match the expected",
+        "Received subscribe response for unknown subscription $subscriptionId",
+        subId: subscriptionId,
       );
     }
   }
 
   void subscriptionDataBegin(SatSubsDataBegin dataBegin) {
-    if (requestedSubscription == null) {
-      internalError(
-        SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatSubsDataBegin but no subscription is being delivered",
-      );
-    }
-
     final subscriptionId = dataBegin.subscriptionId;
+    final lsn = dataBegin.lsn;
 
-    if (requestedSubscription != subscriptionId) {
+    if (!requestedSubscriptions.containsKey(subscriptionId)) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "subscription identifier in SatSubsDataBegin does not match the expected",
+        "Received SatSubsDataBegin but for unknown subscription $subscriptionId",
+        subId: subscriptionId,
       );
     }
 
-    if (inDelivery != null) {
+    final _inDelivery = inDelivery;
+    if (_inDelivery != null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "received SatSubsDataStart for subscription $subscriptionId but a subscription is already being delivered",
+        "received SatSubsDataStart for subscription $subscriptionId but a subscription (${_inDelivery.subscriptionId}) is already being delivered",
+        subId: subscriptionId,
       );
     }
 
+    remainingShapes = requestedSubscriptions[subscriptionId]!;
     inDelivery = SubscriptionDataInternal(
       subscriptionId: subscriptionId,
+      lsn: lsn,
       transaction: [],
       shapeReqToUuid: {},
     );
@@ -113,13 +104,16 @@ class SubscriptionDataInternal {
     final delivered = _inDelivery;
     final subscriptionData = SubscriptionData(
       subscriptionId: delivered.subscriptionId,
-      data: delivered.transaction.map((t) =>
-        proccessShapeDataOperations(t, relations),
-      ).toList(),
+      lsn: delivered.lsn,
+      data: delivered.transaction
+          .map(
+            (t) => proccessShapeDataOperations(t, relations),
+          )
+          .toList(),
       shapeReqToUuid: delivered.shapeReqToUuid,
     );
 
-    reset();
+    reset(subscriptionData.subscriptionId);
     emit(SUBSCRIPTION_DELIVERED, subscriptionData);
     return delivered;
   }
@@ -178,13 +172,11 @@ class SubscriptionDataInternal {
     currentShapeRequestId = null;
   }
 
-  void transaction(List< SatTransOp> ops) {
+  void transaction(List<SatTransOp> ops) {
     final _inDelivery = inDelivery;
-    if (
-      remainingShapes.isEmpty ||
-      _inDelivery == null ||
-      currentShapeRequestId == null
-    ) {
+    if (remainingShapes.isEmpty ||
+        _inDelivery == null ||
+        currentShapeRequestId == null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
         "Received SatOpLog but no shape is being delivered",
@@ -198,33 +190,40 @@ class SubscriptionDataInternal {
         );
       }
 
-     _inDelivery.transaction.add(op);
+      _inDelivery.transaction.add(op);
     }
   }
 
-  Never internalError( SatelliteErrorCode code, String msg) {
-    reset();
+  Never internalError(
+    SatelliteErrorCode code,
+    String msg, {
+    SubscriptionId? subId,
+  }) {
+    subId = subId ?? inDelivery?.subscriptionId;
+    reset(subId);
     final error = SatelliteException(code, msg);
-    emit(SUBSCRIPTION_ERROR, SubscriptionErrorData(subscriptionId: null, error: error));
+    emit(SUBSCRIPTION_ERROR,
+        SubscriptionErrorData(subscriptionId: null, error: error));
 
     throw error;
   }
 
   // It is safe to reset the cache state without throwing.
   // However, if message is unexpected, we emit the error
-  void subscriptionError() {
-    if (remainingShapes.isEmpty || requestedSubscription == null) {
+  void subscriptionError(SubscriptionId subId) {
+    if (!requestedSubscriptions.containsKey(subId)) {
       internalError(
-        SatelliteErrorCode.unexpectedSubscriptionState,
-        "received subscription error, but no subscription is being requested",
+        SatelliteErrorCode.subscriptionNotFound,
+        "received subscription error for unknown subscription $subId",
+        subId: subId,
       );
     }
 
-    reset();
+    reset(subId);
   }
 
-  Never subscriptionDataError(SatSubsDataError msg) {
-    reset();
+  Never subscriptionDataError(SubscriptionId subId, SatSubsDataError msg) {
+    reset(subId);
     var error = subsDataErrorToSatelliteError(msg);
 
     if (inDelivery == null) {
@@ -234,15 +233,29 @@ class SubscriptionDataInternal {
       );
     }
 
-    emit(SUBSCRIPTION_ERROR, SubscriptionErrorData(subscriptionId: null, error: error));
+    emit(
+      SUBSCRIPTION_ERROR,
+      SubscriptionErrorData(subscriptionId: null, error: error),
+    );
     throw error;
   }
 
-  void reset() {
-    requestedSubscription = null;
-    remainingShapes = {};
-    currentShapeRequestId = null;
-    inDelivery = null;
+  void reset(SubscriptionId? subscriptionId) {
+    if (subscriptionId != null) {
+      requestedSubscriptions.remove(subscriptionId);
+    }
+    if (subscriptionId == inDelivery?.subscriptionId) {
+      // Only reset the delivery information
+      // if the reset is meant for the subscription
+      // that is currently being delivered.
+      // This ensures we do not reset delivery information
+      // if there is an error for another subscription
+      // that is not the one being delivered.
+
+      remainingShapes = {};
+      currentShapeRequestId = null;
+      inDelivery = null;
+    }
   }
 
   InitialDataChange proccessShapeDataOperations(
@@ -256,7 +269,7 @@ class SubscriptionDataInternal {
       );
     }
 
-    final SatOpInsert(:relationId, :rowData, :tags ) = op.insert;
+    final SatOpInsert(:relationId, :rowData, :tags) = op.insert;
 
     final relation = relations[relationId];
     if (relation == null) {

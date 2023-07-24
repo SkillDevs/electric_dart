@@ -42,6 +42,7 @@ abstract class Migrator {
   Future<int> up();
   Future<void> apply(StmtMigration migration);
   Future<bool> applyIfNotAlready(StmtMigration migration);
+  Future<String?> querySchemaVersion();
 }
 
 class MigratorOptions {

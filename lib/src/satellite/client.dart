@@ -14,7 +14,6 @@ import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/extension.dart';
-import 'package:electric_client/src/util/hex.dart';
 import 'package:electric_client/src/util/proto.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
@@ -40,6 +39,7 @@ class SatelliteClient extends EventEmitter implements Client {
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
   final Notifier notifier;
+  Completer? initializing;
 
   Socket? socket;
 
@@ -208,6 +208,8 @@ class SatelliteClient extends EventEmitter implements Client {
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
     Future<void> _attemptBody() {
+      initializing = Completer();
+
       final Completer<void> connectCompleter = Completer();
 
       // TODO: ensure any previous socket is closed, or reject
@@ -264,21 +266,28 @@ class SatelliteClient extends EventEmitter implements Client {
     }
 
     int retryAttempt = 0;
-    await retry_lib.retry(
-      () {
-        retryAttempt++;
-        return _attemptBody();
-      },
-      maxAttempts: 10,
-      maxDelay: const Duration(milliseconds: 100),
-      delayFactor: const Duration(milliseconds: 100),
-      retryIf: (e) {
-        if (retryHandler != null) {
-          return retryHandler(e, retryAttempt);
-        }
-        return true;
-      },
-    );
+    try {
+      await retry_lib.retry(
+        () {
+          retryAttempt++;
+          return _attemptBody();
+        },
+        maxAttempts: 10,
+        maxDelay: const Duration(milliseconds: 100),
+        delayFactor: const Duration(milliseconds: 100),
+        retryIf: (e) {
+          if (retryHandler != null) {
+            return retryHandler(e, retryAttempt);
+          }
+          return true;
+        },
+      );
+    } catch (e) {
+      // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      initializing!.completeError(e);
+      rethrow;
+    }
 
     return const Right(null);
   }
@@ -296,6 +305,13 @@ class SatelliteClient extends EventEmitter implements Client {
 
     socketHandler = null;
     removeAllListeners();
+    initializing?.completeError(
+      SatelliteException(
+        SatelliteErrorCode.internal,
+        'Socket is closed by the client while initializing',
+      ),
+    );
+    initializing = null;
 
     if (socket != null) {
       socket!.closeAndRemoveListeners();
@@ -345,9 +361,9 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, AuthResponse>> authenticate(
+  Future<AuthResponse> authenticate(
     AuthState authState,
-  ) async {
+  ) {
     final headers = [
       SatAuthHeaderPair(
         key: SatAuthHeader.PROTO_VERSION,
@@ -359,7 +375,10 @@ class SatelliteClient extends EventEmitter implements Client {
       token: authState.token,
       headers: headers,
     );
-    return Right(await rpc<AuthResponse>(request));
+    return rpc<AuthResponse>(request).catchError((Object e) {
+      initializing?.completeError(e);
+      throw e;
+    });
   }
 
   @override
@@ -402,10 +421,11 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> startReplication(
+  Future<void> startReplication(
     LSN? lsn,
+    String? schemaVersion,
     List<String>? subscriptionIds,
-  ) async {
+  ) {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(
         SatelliteErrorCode.replicationAlreadyStarted,
@@ -413,24 +433,39 @@ class SatelliteClient extends EventEmitter implements Client {
       );
     }
 
-    inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
+    // Perform validations and prepare the request
 
     late final SatInStartReplicationReq request;
     if (lsn == null || lsn.isEmpty) {
-      logger.info("no previous LSN, start replication with option FIRST_LSN");
+      logger.info("no previous LSN, start replication from scratch");
 
-      request = SatInStartReplicationReq(
-        options: [SatInStartReplicationReq_Option.FIRST_LSN],
-        subscriptionIds: subscriptionIds,
-      );
+      if (subscriptionIds != null && subscriptionIds.isNotEmpty) {
+        return Future.error(
+          SatelliteException(
+            SatelliteErrorCode.unexpectedSubscriptionState,
+            "Cannot start replication with subscription IDs but without previous LSN.",
+          ),
+        );
+      }
+      request = SatInStartReplicationReq(schemaVersion: schemaVersion);
     } else {
       logger.info("starting replication with lsn: ${base64.encode(lsn)}");
-      request = SatInStartReplicationReq(lsn: lsn);
+      request = SatInStartReplicationReq(
+        lsn: lsn,
+        subscriptionIds: subscriptionIds,
+      );
     }
 
-    await rpc<void>(request);
+    // Then set the replication state
+    final future = rpc<void>(request)
+        .then((_) => initializing?.complete())
+        .catchError((Object e) {
+      initializing?.completeError(e);
+      throw e;
+    });
+    inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
 
-    return const Right(null);
+    return future;
   }
 
   @override
@@ -452,7 +487,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMessage(Object request) {
-    logger.info("Sending message ${request.runtimeType}($request)");
+    logger.fine("Sending message ${request.runtimeType}($request)");
     final _socket = socket;
     if (_socket == null) {
       throw SatelliteException(
@@ -564,21 +599,8 @@ class SatelliteClient extends EventEmitter implements Client {
     logger.info("received replication request $message");
     if (outbound.isReplicating == ReplicationStatus.stopped) {
       final replication = outbound.clone();
-      if (message.options.firstWhereOrNull(
-            (o) => o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED,
-          ) ==
-          null) {
-        final lsnList = Uint8List.fromList(message.lsn);
-        replication.ackLsn = lsnList;
-        replication.enqueuedLsn = lsnList;
-      }
-      if (message.options.firstWhereOrNull(
-            (o) => o == SatInStartReplicationReq_Option.FIRST_LSN,
-          ) ==
-          null) {
-        replication.ackLsn = kDefaultLogPos;
-        replication.enqueuedLsn = kDefaultLogPos;
-      }
+      replication.ackLsn = kDefaultLogPos;
+      replication.enqueuedLsn = kDefaultLogPos;
 
       outbound = resetReplication(
         replication.enqueuedLsn,
@@ -680,7 +702,11 @@ class SatelliteClient extends EventEmitter implements Client {
   Future<SubscribeResponse> subscribe(
     String subscriptionId,
     List<ShapeRequest> shapes,
-  ) {
+  ) async {
+    if (initializing != null) {
+      await initializing!.future;
+    }
+
     if (inbound.isReplicating != ReplicationStatus.active) {
       return Future.error(
         SatelliteException(
@@ -787,7 +813,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
   void handlePingReq() {
     logger.info(
-      "respond to ping with last ack ${toHexString(inbound.ackLsn ?? [])}",
+      "respond to ping with last ack ${inbound.ackLsn != null ? base64.encode(inbound.ackLsn!) : 'NULL'}",
     );
     final pong = SatPingResp(lsn: inbound.ackLsn);
     sendMessage(pong);
@@ -856,9 +882,9 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   SubscribeResponse handleSubscription(SatSubsResp msg) {
-    if (msg.hasError()) {
-      final error = subsErrorToSatelliteError(msg.error);
-      _subscriptionsDataCache.subscriptionError();
+    if (msg.hasErr()) {
+      final error = subsErrorToSatelliteError(msg.err);
+      _subscriptionsDataCache.subscriptionError(msg.subscriptionId);
       return SubscribeResponse(
         subscriptionId: msg.subscriptionId,
         error: error,
@@ -870,7 +896,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleSubscriptionError(SatSubsDataError msg) {
-    _subscriptionsDataCache.subscriptionDataError(msg);
+    _subscriptionsDataCache.subscriptionDataError(msg.subscriptionId, msg);
   }
 
   void handleSubscriptionDataBegin(SatSubsDataBegin msg) {

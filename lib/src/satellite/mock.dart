@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:electric_client/src/auth/auth.dart';
 import 'package:electric_client/src/config/config.dart';
@@ -45,8 +46,9 @@ class MockSatelliteProcess implements Satellite {
   });
 
   @override
-  Future<Sub> subscribe(List<ClientShapeDefinition> shapeDefinitions) async {
-    return Sub(dataReceived: Future.value());
+  Future<ShapeSubscription> subscribe(
+      List<ClientShapeDefinition> shapeDefinitions) async {
+    return ShapeSubscription(synced: Future.value());
   }
 
   @override
@@ -178,6 +180,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
           SUBSCRIPTION_DELIVERED,
           SubscriptionData(
             subscriptionId: subscriptionId,
+            lsn: base64.decode('MTIz'), // base64.encode("123")
             data: data,
             shapeReqToUuid: shapeReqToUuid,
           ),
@@ -233,37 +236,35 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> connect({
+  Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
     closed = false;
-    return right(null);
   }
 
   @override
-  Future<Either<SatelliteException, void>> close() async {
+  Future<void> close() {
     closed = true;
     for (var t in timeouts) {
       t.cancel();
     }
-    return right(Future.value(null));
+    return Future.value(null);
   }
 
   @override
-  Future<Either<SatelliteException, AuthResponse>> authenticate(
+  Future<AuthResponse> authenticate(
     AuthState _authState,
   ) async {
-    return right(
-      AuthResponse(
-        null,
-        null,
-      ),
+    return AuthResponse(
+      null,
+      null,
     );
   }
 
   @override
-  Future<Either<SatelliteException, void>> startReplication(
+  Future<void> startReplication(
     LSN? lsn,
+    String? schemaVersion,
     List<String>? subscriptionIds,
     //_resume?: boolean | undefined
   ) {
@@ -294,13 +295,13 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
     }
 
-    return Future<Right<SatelliteException, void>>.value(const Right(null));
+    return Future<void>.value();
   }
 
   @override
-  Future<Either<SatelliteException, void>> stopReplication() {
+  Future<void> stopReplication() {
     replicating = false;
-    return Future<Right<SatelliteException, void>>.value(const Right(null));
+    return Future<void>.value();
   }
 
   @override
@@ -312,7 +313,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
   ) {}
 
   @override
-  Either<SatelliteException, void> enqueueTransaction(
+  void enqueueTransaction(
     DataTransaction transaction,
   ) {
     outboundSent = transaction.lsn;
@@ -325,8 +326,6 @@ class MockSatelliteClient extends EventEmitter implements Client {
       emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.remoteCommit));
     });
     timeouts.add(t);
-
-    return const Right(null);
   }
 
   @override
@@ -370,7 +369,10 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
 
       final satError = subsDataErrorToSatelliteError(satSubsError);
-      emit(SUBSCRIPTION_ERROR, SubscriptionErrorData(subscriptionId: subscriptionId, error: satError));
+      emit(
+          SUBSCRIPTION_ERROR,
+          SubscriptionErrorData(
+              subscriptionId: subscriptionId, error: satError));
     });
   }
 }

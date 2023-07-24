@@ -1277,7 +1277,7 @@ void main() {
 
     satellite.relations = kTestRelations;
 
-    final Sub(:dataReceived) = await satellite.subscribe([shapeDef]);
+    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef]);
     await dataReceived;
 
     try {
@@ -1324,7 +1324,7 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    final Sub(:dataReceived) = await satellite.subscribe([shapeDef1]);
+    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef1]);
     await dataReceived; // wait for subscription to be fulfilled
 
     try {
@@ -1363,7 +1363,7 @@ void main() {
 
     satellite.relations = kTestRelations;
     await satellite.subscribe([shapeDef1]);
-    final Sub(:dataReceived) = await satellite.subscribe([shapeDef2]);
+    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef2]);
     await dataReceived;
 
     try {
@@ -1462,10 +1462,10 @@ void main() {
 
     satellite.relations = kTestRelations;
 
-    final Sub(dataReceived: dataReceived1) =
+    final ShapeSubscription(synced: dataReceived1) =
         await satellite.subscribe([shapeDef1]);
     await dataReceived1;
-    final Sub(:dataReceived) = await satellite.subscribe([shapeDef2]);
+    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef2]);
 
     try {
       await dataReceived;
@@ -1519,7 +1519,7 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    final Sub(:dataReceived) = await satellite.subscribe([shapeDef1]);
+    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef1]);
     await dataReceived;
 
     try {
