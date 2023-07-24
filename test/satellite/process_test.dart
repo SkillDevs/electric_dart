@@ -1310,58 +1310,56 @@ void main() {
     }
   });
 
-  // TODO(update):
-  /*  test('applied shape data will be acted upon correctly', async (t) => {
-  const { client, satellite, adapter } = t.context
-  const { runMigrations, authState } = t.context
-  await runMigrations()
+  test('applied shape data will be acted upon correctly', () async {
+    await runMigrations();
 
-  const namespace = 'main'
-  const tablename = 'parent'
-  const qualified = new QualifiedTablename(namespace, tablename).toString()
+    const namespace = 'main';
+    const tablename = 'parent';
+    final qualified = const QualifiedTablename(namespace, tablename).toString();
 
-  // relations must be present at subscription delivery
-  client.setRelations(relations)
-  client.setRelationData(tablename, parentRecord)
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
 
-  const conn = await satellite.start(authState)
-  await conn.connectionPromise
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
 
-  const shapeDef: ClientShapeDefinition = {
-    selects: [{ tablename }],
-  }
+    final shapeDef = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
 
-  satellite!.relations = relations
-  const { synced } = await satellite.subscribe([shapeDef])
-  await synced
+    satellite.relations = kTestRelations;
+    final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
+    await synced;
 
-  // wait for process to apply shape data
-  try {
-    const row = await adapter.query({
-      sql: `SELECT id FROM ${qualified}`,
-    })
-    t.is(row.length, 1)
+    // wait for process to apply shape data
+    try {
+      final row = await adapter.query(
+        Statement(
+          "SELECT id FROM $qualified",
+        ),
+      );
+      expect(row.length, 1);
 
-    const shadowRows = await adapter.query({
-      sql: `SELECT * FROM _electric_shadow`,
-    })
-    t.is(shadowRows.length, 1)
-    t.like(shadowRows[0], {
-      namespace: 'main',
-      tablename: 'parent',
-    })
+      final shadowRows = await adapter.query(
+        Statement(
+          "SELECT * FROM _electric_shadow",
+        ),
+      );
+      expect(shadowRows.length, 1);
+      expect(shadowRows[0]["namespace"], "main");
+      expect(shadowRows[0]["tablename"], "parent");
 
-    await adapter.run({ sql: `DELETE FROM ${qualified} WHERE id = 1` })
-    await satellite._performSnapshot()
+      await adapter.run(Statement("DELETE FROM $qualified WHERE id = 1"));
+      await satellite.performSnapshot();
 
-    const oplogs = await adapter.query({
-      sql: `SELECT * FROM _electric_oplog`,
-    })
-    t.not(oplogs[0].clearTags, '[]')
-  } catch (e) {
-    t.fail(JSON.stringify(e))
-  }
-}) */
+      final oplogs =
+          await adapter.query(Statement("SELECT * FROM _electric_oplog"));
+      expect(oplogs[0]["clearTags"], isNot('[]'));
+    } catch (e, st) {
+      fail("Reason: $e\n$st");
+    }
+  });
 
   test(
       'a subscription that failed to apply because of FK constraint triggers GC',
@@ -1607,23 +1605,29 @@ void main() {
     }
   });
 
-  // TODO(update):
-  /*  test("Garbage collecting the subscription doesn't generate oplog entries", async (t) => {
-  const { adapter, runMigrations, satellite, authState } = t.context
-  await satellite.start(authState)
-  await runMigrations()
-  await adapter.run({ sql: `INSERT INTO parent(id) VALUES ('1'),('2')` })
-  const ts = await satellite._performSnapshot()
-  await satellite._garbageCollectOplog(ts)
-  t.is((await satellite._getEntries(0)).length, 0)
+  test("Garbage collecting the subscription doesn't generate oplog entries",
+      () async {
+    await satellite.start(authConfig);
+    await runMigrations();
+    await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
+    final ts = await satellite.performSnapshot();
+    await satellite.garbageCollectOplog(ts);
+    expect((await satellite.getEntries(since: 0)).length, 0);
 
-  satellite._garbageCollectShapeHandler([
-    { uuid: '', definition: { selects: [{ tablename: 'parent' }] } },
-  ])
+    unawaited(
+      satellite.garbageCollectShapeHandler([
+        ShapeDefinition(
+          uuid: '',
+          definition: ClientShapeDefinition(
+            selects: [ShapeSelect(tablename: 'parent')],
+          ),
+        ),
+      ]),
+    );
 
-  await satellite._performSnapshot()
-  t.deepEqual(await satellite._getEntries(0), [])
-}) */
+    await satellite.performSnapshot();
+    expect(await satellite.getEntries(since: 0), <OplogEntry>[]);
+  });
 }
 
 // TODO: implement reconnect protocol

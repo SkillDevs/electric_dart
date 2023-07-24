@@ -109,7 +109,7 @@ class SatelliteProcess implements Satellite {
     );
 
     subscriptions = InMemorySubscriptionsManager(
-      _garbageCollectShapeHandler,
+      garbageCollectShapeHandler,
     );
 
     subscriptionIdGenerator = () => uuid();
@@ -206,7 +206,8 @@ class SatelliteProcess implements Satellite {
     authState = newAuthState;
   }
 
-  Future<void> _garbageCollectShapeHandler(
+  @visibleForTesting
+  Future<void> garbageCollectShapeHandler(
     List<ShapeDefinition> shapeDefs,
   ) async {
     final stmts = <Statement>[];
@@ -1222,7 +1223,7 @@ class SatelliteProcess implements Satellite {
        * entries that correspond to such transaction can be safely removed as
        * they are no longer necessary for conflict resolution.
        */
-      await _garbageCollectOplog(commitTimestamp);
+      await garbageCollectOplog(commitTimestamp);
     }
   }
 
@@ -1380,7 +1381,8 @@ class SatelliteProcess implements Satellite {
     return generateTag(instanceId, timestamp);
   }
 
-  Future<void> _garbageCollectOplog(DateTime commitTimestamp) async {
+  @visibleForTesting
+  Future<void> garbageCollectOplog(DateTime commitTimestamp) async {
     final isoString = commitTimestamp.toISOStringUTC();
     final String oplog = opts.oplogTable.tablename;
     final stmt = '''
