@@ -1,4 +1,3 @@
-import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart';
 
 abstract class DatabaseAdapter {
@@ -18,20 +17,7 @@ abstract class DatabaseAdapter {
   Future<T> transaction<T>(
     void Function(Transaction tx, void Function(T res)) setResult,
   );
-
-  // Get the tables potentially used by the query (so that we
-  // can re-query if the data in them changes).
-  List<QualifiedTablename> tableNames(Statement statement);
 }
-
- class TableNameImpl {
-  List<QualifiedTablename> tableNames(Statement statement) {
-    // TODO(dart): implement tableNames
-    throw UnimplementedError();
-    //return parseTableNames(sql);
-  }
-}
-
 
 abstract class Transaction {
   void run(

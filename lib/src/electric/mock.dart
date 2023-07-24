@@ -1,5 +1,4 @@
 import 'package:electric_client/src/electric/adapter.dart';
-import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Transaction;
 
 class MockDatabaseAdapter implements DatabaseAdapter {
@@ -16,11 +15,6 @@ class MockDatabaseAdapter implements DatabaseAdapter {
   @override
   Future<RunResult> runInTransaction(List<Statement> statements) async {
     return RunResult(rowsAffected: 0);
-  }
-
-  @override
-  List<QualifiedTablename> tableNames(Statement statement) {
-    return [];
   }
 
   @override

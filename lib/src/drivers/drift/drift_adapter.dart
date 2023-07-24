@@ -6,7 +6,7 @@ import 'package:electric_client/src/notifiers/notifiers.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/types.dart';
 
-class DriftAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
+class DriftAdapter implements adp.DatabaseAdapter {
   final DatabaseConnectionUser db;
 
   DriftAdapter(this.db);

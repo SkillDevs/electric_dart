@@ -5,7 +5,7 @@ import 'package:electric_client/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:synchronized/synchronized.dart';
 
-class SqliteAdapter extends adp.TableNameImpl implements adp.DatabaseAdapter {
+class SqliteAdapter implements adp.DatabaseAdapter {
   final sqlite.Database db;
   final Lock txLock = Lock();
 
