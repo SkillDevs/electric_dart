@@ -19,7 +19,7 @@ class InMemorySubscriptionsManager extends EventEmitter
     implements SubscriptionsManager {
   SubcriptionShapeRequests _inFlight = {};
   SubcriptionShapeDefinitions _fulfilledSubscriptions = {};
-  Map<String, SubscriptionId> _shapeRequestHashmap = {};
+  final Map<String, SubscriptionId> _shapeRequestHashmap = {};
 
   final GarbageCollectShapeHandler? _gcHandler;
 
@@ -28,7 +28,9 @@ class InMemorySubscriptionsManager extends EventEmitter
 
   @override
   void subscriptionRequested(
-      SubscriptionId subId, List<ShapeRequest> shapeRequests) {
+    SubscriptionId subId,
+    List<ShapeRequest> shapeRequests,
+  ) {
     if (_inFlight[subId] != null || _fulfilledSubscriptions[subId] != null) {
       throw SatelliteException(
         SatelliteErrorCode.subscriptionAlreadyExists,
@@ -205,7 +207,7 @@ String computeClientDefsHash(List<ClientShapeDefinition> requests) {
   final sha256bytes = sha256.convert(strBytes).bytes;
   final hash = base64.encode(sha256bytes);
   final substr = hash.substring(0, min(10, hash.length));
-  
+
   // print("HASH: $buf $hash");
   return substr;
 }

@@ -739,6 +739,45 @@ void main() {
     expect(res.subscriptionId, subscriptionId);
   });
 
+  test('RPC correctly handles interleaved subscribe responses', () async {
+    await connectAndAuth();
+
+    final startResp = SatInStartReplicationResp();
+    server.nextResponses([startResp]);
+    await client.startReplication(null, null, null);
+
+    final shapeReq1 = ShapeRequest(
+      requestId: 'fake1',
+      definition: ClientShapeDefinition(
+        selects: [ShapeSelect(tablename: 'fake1')],
+      ),
+    );
+
+    final shapeReq2 = ShapeRequest(
+      requestId: 'fake2',
+      definition: ClientShapeDefinition(
+        selects: [ShapeSelect(tablename: 'fake2')],
+      ),
+    );
+
+    const subscriptionId1 = 'subscription id 1';
+    const subscriptionId2 = 'subscription id 2';
+    final subsResp1 = SatSubsResp(
+      subscriptionId: subscriptionId1,
+    );
+    final subsResp2 = SatSubsResp(
+      subscriptionId: subscriptionId2,
+    );
+    server.nextResponses([subsResp1, subsResp2]);
+
+    final p1 = client.subscribe(subscriptionId1, [shapeReq1]);
+    final p2 = client.subscribe(subscriptionId2, [shapeReq2]);
+    final [resp1, resp2] = await Future.wait([p1, p2]);
+
+    expect(resp1.subscriptionId, subscriptionId1);
+    expect(resp2.subscriptionId, subscriptionId2);
+  });
+
   test('listen to subscription events: error', () async {
     await connectAndAuth();
 
@@ -862,7 +901,8 @@ void main() {
       final completer = Completer<void>();
       final success = (_) {
         completer.completeError(
-            "expected the client to fail on an invalid message sequence");
+          "expected the client to fail on an invalid message sequence",
+        );
       };
 
       late SubscriptionEventListeners subListeners;

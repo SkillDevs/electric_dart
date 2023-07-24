@@ -8,7 +8,6 @@ import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
-import 'package:fpdart/fpdart.dart';
 
 export 'package:electric_client/src/satellite/process.dart' show ShapeSubscription;
 

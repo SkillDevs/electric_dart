@@ -511,7 +511,10 @@ class SatelliteClient extends EventEmitter implements Client {
     _socket.write(buffer);
   }
 
-  Future<T> rpc<T>(Object request) async {
+  Future<T> rpc<T>(
+    Object request, {
+    Object Function(Object msg)? distinguishOn,
+  }) async {
     Timer? timer;
     EventListener? rpcRespListener;
     EventListener? errorListener;
@@ -533,11 +536,36 @@ class SatelliteClient extends EventEmitter implements Client {
         completer.completeError(error as Object);
       });
 
-      rpcRespListener = on('rpc_response', (resp) {
-        rpcRespListener?.cancel();
-        rpcRespListener = null;
-        completer.complete(resp as T);
-      });
+      if (distinguishOn != null) {
+        dynamic handleRpcResp(T resp) {
+          // TODO: remove this comment when RPC types are fixed
+          // @ts-ignore this comparison is valid because we expect the same field to be present on both request and response, but it's too much work at the moment to rewrite typings for it
+          final respValue = distinguishOn(resp as Object);
+          final reqValue = distinguishOn(request);
+          if (respValue == reqValue) {
+            return completer.complete(resp);
+          } else {
+            // This WAS an RPC response, but not the one we were expecting, waiting more
+            rpcRespListener = on('rpc_response', (resp) {
+              rpcRespListener?.cancel();
+              rpcRespListener = null;
+              handleRpcResp(resp as T);
+            });
+          }
+        }
+
+        rpcRespListener = on('rpc_response', (resp) {
+          rpcRespListener?.cancel();
+          rpcRespListener = null;
+          handleRpcResp(resp as T);
+        });
+      } else {
+        rpcRespListener = on('rpc_response', (resp) {
+          rpcRespListener?.cancel();
+          rpcRespListener = null;
+          completer.complete(resp as T);
+        });
+      }
 
       sendMessage(request);
 
@@ -726,7 +754,18 @@ class SatelliteClient extends EventEmitter implements Client {
     );
 
     _subscriptionsDataCache.subscriptionRequest(request);
-    return rpc<SubscribeResponse>(request);
+    return rpc<SubscribeResponse>(
+      request,
+      distinguishOn: (Object o) {
+        if (o is SatSubsReq) {
+          return o.subscriptionId;
+        } else if (o is SubscribeResponse) {
+          return o.subscriptionId;
+        } else {
+          throw StateError("Unexpected SatSubs");
+        }
+      },
+    );
   }
 
   @override

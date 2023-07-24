@@ -17,6 +17,7 @@ import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/sets.dart';
+import 'package:electric_client/src/util/statements.dart';
 import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
 import 'package:electric_client/src/util/types.dart' as types;
@@ -78,6 +79,14 @@ class SatelliteProcess implements Satellite {
   late String Function() subscriptionIdGenerator;
   late String Function() shapeRequestIdGenerator;
 
+  /*
+  To optimize inserting a lot of data when the subscription data comes, we need to do
+  less `INSERT` queries, but SQLite supports only a limited amount of `?` positional
+  arguments. Precisely, its either 999 for versions prior to 3.32.0 and 32766 for
+  versions after.
+  */
+  int maxSqlParameters = 999; // : 999 | 32766
+
   SatelliteProcess({
     required this.dbName,
     required this.client,
@@ -100,7 +109,7 @@ class SatelliteProcess implements Satellite {
     );
 
     subscriptions = InMemorySubscriptionsManager(
-      _garbageCollectShapeHandler,
+      garbageCollectShapeHandler,
     );
 
     subscriptionIdGenerator = () => uuid();
@@ -162,6 +171,7 @@ class SatelliteProcess implements Satellite {
 
     // Need to reload primary keys after schema migration
     relations = await getLocalRelations();
+    await checkMaxSqlParameters();
 
     _lastAckdRowId = int.parse((await getMeta('lastAckdRowId'))!);
     lastSentRowId = int.parse((await getMeta('lastSentRowId'))!);
@@ -196,7 +206,8 @@ class SatelliteProcess implements Satellite {
     authState = newAuthState;
   }
 
-  Future<void> _garbageCollectShapeHandler(
+  @visibleForTesting
+  Future<void> garbageCollectShapeHandler(
     List<ShapeDefinition> shapeDefs,
   ) async {
     final stmts = <Statement>[];
@@ -289,6 +300,7 @@ class SatelliteProcess implements Satellite {
         .toList();
 
     final subId = subscriptionIdGenerator();
+    subscriptions.subscriptionRequested(subId, shapeReqs);
 
     final completer = Completer<void>();
     // store the resolve and reject
@@ -304,17 +316,18 @@ class SatelliteProcess implements Satellite {
     final SubscribeResponse(:subscriptionId, :error) =
         await client.subscribe(subId, shapeReqs);
     if (subId != subscriptionId) {
+      subscriptionNotifiers.remove(subId);
+      subscriptions.subscriptionCancelled(subId);
       throw Exception(
         "Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId",
       );
     }
+
     if (error != null) {
       subscriptionNotifiers.remove(subId);
       subscriptions.subscriptionCancelled(subscriptionId);
       throw error;
     } else {
-      subscriptions.subscriptionRequested(subscriptionId, shapeReqs);
-
       return ShapeSubscription(
         synced: subscriptionNotifiers[subId]!.future,
       );
@@ -347,57 +360,101 @@ class SatelliteProcess implements Satellite {
   // assumes there are no conflicts INSERTing new rows and only expects
   // subscriptions for entire tables.
   Future<void> _applySubscriptionData(
-      List<InitialDataChange> changes, LSN lsn) async {
+    List<InitialDataChange> changes,
+    LSN lsn,
+  ) async {
     final stmts = <Statement>[];
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
 
+    // It's much faster[1] to do less statements to insert the data instead of doing an insert statement for each row
+    // so we're going to do just that, but with a caveat: SQLite has a max number of parameters in prepared statements,
+    // so this is less of "insert all at once" and more of "insert in batches". This should be even more noticeable with
+    // WASM builds, since we'll be crossing the JS-WASM boundary less.
+    //
+    // [1]: https://medium.com/@JasonWyatt/squeezing-performance-from-sqlite-insertions-971aff98eef2
+
+    final groupedChanges =
+        <String, ({List<String> columns, List<Record> records})>{};
+
+    final allArgsForShadowInsert = <Record>[];
+
+    // Group all changes by table name to be able to insert them all together
     for (final op in changes) {
-      final InitialDataChange(:relation, :record, :tags) = op;
+      final tableName = QualifiedTablename('main', op.relation.table);
+      if (groupedChanges.containsKey(tableName.toString())) {
+        groupedChanges[tableName.toString()]?.records.add(op.record);
+      } else {
+        groupedChanges[tableName.toString()] = (
+          columns: op.relation.columns.map((x) => x.name).toList(),
+          records: [op.record]
+        );
+      }
 
-      final qualifiedTablename = QualifiedTablename('main', relation.table);
-      final tablenameStr = qualifiedTablename.toString();
+      // Since we're already iterating changes, we can also prepare data for shadow table
+      final primaryKeyCols =
+          op.relation.columns.fold(<String, Object>{}, (agg, col) {
+        if (col.primaryKey != null && col.primaryKey!) {
+          agg[col.name] = op.record[col.name]!;
+        }
+        return agg;
+      });
 
-      final columnNames = record!.keys.toList();
-      final columnValues = record.values.toList();
-
-      final insertStmt = '''
-INSERT INTO $tablenameStr (${columnNames.join(
-        ', ',
-      )}) VALUES (${columnValues.map((_) => '?').join(', ')})''';
-      final insertArgs = [...columnValues];
-
-      final primaryKeyCols = relation.columns.fold(
-        <String, Object>{},
-        (prev, RelationColumn curr) {
-          if (curr.primaryKey == true) {
-            prev[curr.name] = record[curr.name]!;
-          }
-          return prev;
-        },
-      );
-
-      final upsertShadowStmt = '''
-        INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES (?,?,?,?)''';
-      final upsertShadowArgs = [
-        "main",
-        relation.table,
-        primaryKeyToStr(primaryKeyCols),
-        encodeTags(tags),
-      ];
-
-      stmts.addAll(_disableTriggers([tablenameStr]));
-      stmts.add(Statement(insertStmt, insertArgs));
-      stmts.add(Statement(upsertShadowStmt, upsertShadowArgs));
-      stmts.addAll(_enableTriggers([tablenameStr]));
+      allArgsForShadowInsert.add({
+        "namespace": 'main',
+        "tablename": op.relation.table,
+        "primaryKey": primaryKeyToStr(primaryKeyCols),
+        "tags": encodeTags(op.tags),
+      });
     }
 
-    // persist subscriptions state
+    // Disable trigger for all affected tables
+    stmts.addAll([..._disableTriggers(groupedChanges.keys.toList())]);
+
+    // For each table, do a batched insert
+    for (final entry in groupedChanges.entries) {
+      final table = entry.key;
+      final (:columns, :records) = entry.value;
+      final sqlBase = "INSERT INTO $table (${columns.join(', ')}) VALUES ";
+
+      stmts.addAll([
+        ...prepareBatchedStatements(sqlBase, columns, records, maxSqlParameters)
+      ]);
+    }
+
+    // And re-enable the triggers for all of them
+    stmts.addAll([..._enableTriggers(groupedChanges.keys.toList())]);
+
+    // Then do a batched insert for the shadow table
+    final upsertShadowStmt =
+        "INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES ";
+    stmts.addAll(
+      prepareBatchedStatements(
+        upsertShadowStmt,
+        ['namespace', 'tablename', 'primaryKey', 'tags'],
+        allArgsForShadowInsert,
+        maxSqlParameters,
+      ),
+    );
+
+    // Then update subscription state and LSN
     stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
-    // persist LSN
     stmts.add(updateLsnStmt(lsn));
 
     try {
       await adapter.runInTransaction(stmts);
+
+      // We're explicitly not specifying rowids in these changes for now,
+      // because nobody uses them and we don't have the machinery to to a
+      // `RETURNING` clause in the middle of `runInTransaction`.
+      final notificationChanges = changes
+          .map(
+            (x) => Change(
+              qualifiedTablename: QualifiedTablename('main', x.relation.table),
+              rowids: [],
+            ),
+          )
+          .toList();
+      notifier.actuallyChanged(dbName, notificationChanges);
     } catch (e) {
       unawaited(
         _handleSubscriptionError(
@@ -1179,7 +1236,7 @@ INSERT INTO $tablenameStr (${columnNames.join(
        * entries that correspond to such transaction can be safely removed as
        * they are no longer necessary for conflict resolution.
        */
-      await _garbageCollectOplog(commitTimestamp);
+      await garbageCollectOplog(commitTimestamp);
     }
   }
 
@@ -1193,15 +1250,17 @@ INSERT INTO $tablenameStr (${columnNames.join(
 
   List<Statement> _updateTriggerSettings(List<String> tablenames, bool flag) {
     final triggers = opts.triggersTable.toString();
-    final stmts = tablenames
-        .map(
-          (tablenameStr) => Statement(
-            "UPDATE $triggers SET flag = ? WHERE tablename = ?",
-            [if (flag) 1 else 0, tablenameStr],
-          ),
+    if (tablenames.isNotEmpty) {
+      final tablesOr = tablenames.map((_) => 'tablename = ?').join(' OR ');
+      return [
+        Statement(
+          "UPDATE $triggers SET flag = ? WHERE $tablesOr",
+          [if (flag) 1 else 0, ...tablenames],
         )
-        .toList();
-    return stmts;
+      ];
+    } else {
+      return [];
+    }
   }
 
   @visibleForTesting
@@ -1337,7 +1396,8 @@ INSERT INTO $tablenameStr (${columnNames.join(
     return generateTag(instanceId, timestamp);
   }
 
-  Future<void> _garbageCollectOplog(DateTime commitTimestamp) async {
+  @visibleForTesting
+  Future<void> garbageCollectOplog(DateTime commitTimestamp) async {
     final isoString = commitTimestamp.toISOStringUTC();
     final String oplog = opts.oplogTable.tablename;
     final stmt = '''
@@ -1358,6 +1418,23 @@ INSERT INTO $tablenameStr (${columnNames.join(
       "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
       [lsn_base64, 'lsn'],
     );
+  }
+
+  Future<void> checkMaxSqlParameters() async {
+    final version = (await adapter.query(
+      Statement(
+        'SELECT sqlite_version() AS version',
+      ),
+    ))
+        .first['version']! as String;
+    final [major, minor, ...] =
+        version.split('.').map((x) => int.parse(x)).toList();
+
+    if (major == 3 && minor >= 32) {
+      maxSqlParameters = 32766;
+    } else {
+      maxSqlParameters = 999;
+    }
   }
 }
 
