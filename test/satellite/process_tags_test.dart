@@ -41,7 +41,7 @@ void main() {
     await context.runMigrations();
 
     await satellite.setAuthState(context.authState);
-    final clientId = satellite.authState!.clientId;
+    final clientId = satellite.authState?.clientId ?? 'test_client';
 
     await adapter.run(
       Statement(
@@ -87,7 +87,6 @@ void main() {
     expect(shadow.length, 0);
 
     final entries = await satellite.getEntries();
-    //console.log(entries)
     expect(entries[0].clearTags, encodeTags([]));
     expect(entries[1].clearTags, genEncodedTags(clientId, [txDate1]));
     expect(entries[2].clearTags, genEncodedTags(clientId, [txDate2]));
@@ -102,7 +101,7 @@ void main() {
     await context.runMigrations();
     await satellite.setAuthState(context.authState);
 
-    final clientId = satellite.authState!.clientId;
+    final clientId = satellite.authState?.clientId ?? 'test_id';
 
     // Local INSERT
     final stmts1 = Statement(
@@ -445,7 +444,7 @@ void main() {
       () async {
     await context.runMigrations();
     await satellite.setAuthState(context.authState);
-    final clientId = satellite.authState!.clientId;
+    final clientId = satellite.authState?.clientId ?? 'test_id';
     final stmts = <Statement>[];
 
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
@@ -584,7 +583,7 @@ void main() {
     //
     await context.runMigrations();
     await satellite.setAuthState(context.authState);
-    final clientId = satellite.authState!.clientId;
+    final clientId = satellite.authState?.clientId ?? "test_id";
 
     var stmts = <Statement>[];
 
@@ -613,6 +612,8 @@ void main() {
 
     final entries = await satellite.getEntries();
     //console.log(entries)
+    expect(entries[0].newRow, isNotNull);
+    expect(entries[1].newRow, isNotNull);
 
     // For this key we receive transaction which was older
     final electricEntrySameTs =
@@ -686,7 +687,7 @@ void main() {
   test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', () async {
     await context.runMigrations();
     await satellite.setAuthState(context.authState);
-    final clientId = satellite.authState!.clientId;
+    final clientId = satellite.authState?.clientId ?? 'test_id';
     final txDate1 = DateTime.now();
 
     final insertEntry = generateRemoteOplogEntry(

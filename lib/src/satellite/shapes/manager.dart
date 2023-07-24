@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:electric_client/src/satellite/shapes/shapes.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/types.dart';
@@ -192,15 +193,21 @@ String computeRequestsHash(List<ShapeRequestOrDefinition> requests) {
 }
 
 String computeClientDefsHash(List<ClientShapeDefinition> requests) {
-  // TODO(update): Review
+  // Mimics ohash from NPM
   final StringBuffer buf = StringBuffer();
   buf.write("list:${requests.length}:");
   for (final req in requests) {
     buf.write(_mapPropsToString(req.runtimeType, req.props));
     buf.write(",");
   }
-  final hash = base64.encode(utf8.encode(buf.toString()));
-  return hash.substring(0, min(10, hash.length));
+
+  final strBytes = utf8.encode(buf.toString());
+  final sha256bytes = sha256.convert(strBytes).bytes;
+  final hash = base64.encode(sha256bytes);
+  final substr = hash.substring(0, min(10, hash.length));
+  
+  // print("HASH: $buf $hash");
+  return substr;
 }
 
 String _mapPropsToString(Type runtimeType, List<Object?> props) =>

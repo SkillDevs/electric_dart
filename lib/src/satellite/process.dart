@@ -68,6 +68,9 @@ class SatelliteProcess implements Satellite {
   int lastSentRowId = 0;
   LSN? _lsn;
 
+  @visibleForTesting
+  LSN? get debugLsn => _lsn;
+
   RelationsCache relations = {};
 
   late SubscriptionsManager subscriptions;

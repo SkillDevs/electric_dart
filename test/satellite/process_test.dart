@@ -1013,7 +1013,7 @@ void main() {
     ];
 
     // Should not throw
-    await satellite.apply(incoming, "");
+    await satellite.apply(incoming, "remote");
   });
 
   test('get oplogEntries from transaction', () async {
@@ -1277,7 +1277,8 @@ void main() {
 
     satellite.relations = kTestRelations;
 
-    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef]);
+    final ShapeSubscription(synced: dataReceived) =
+        await satellite.subscribe([shapeDef]);
     await dataReceived;
 
     try {
@@ -1298,10 +1299,66 @@ void main() {
       final subsMeta = (await satellite.getMeta('subscriptions'))!;
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
       expect(subsObj.length, 1);
+
+      // Check that we save the LSN sent by the mock
+      expect(satellite.debugLsn, base64.decode('MTIz'));
     } catch (e, st) {
       fail("Reason: $e\n$st");
     }
   });
+
+  // TODO(update):
+  /*  test('applied shape data will be acted upon correctly', async (t) => {
+  const { client, satellite, adapter } = t.context
+  const { runMigrations, authState } = t.context
+  await runMigrations()
+
+  const namespace = 'main'
+  const tablename = 'parent'
+  const qualified = new QualifiedTablename(namespace, tablename).toString()
+
+  // relations must be present at subscription delivery
+  client.setRelations(relations)
+  client.setRelationData(tablename, parentRecord)
+
+  const conn = await satellite.start(authState)
+  await conn.connectionPromise
+
+  const shapeDef: ClientShapeDefinition = {
+    selects: [{ tablename }],
+  }
+
+  satellite!.relations = relations
+  const { synced } = await satellite.subscribe([shapeDef])
+  await synced
+
+  // wait for process to apply shape data
+  try {
+    const row = await adapter.query({
+      sql: `SELECT id FROM ${qualified}`,
+    })
+    t.is(row.length, 1)
+
+    const shadowRows = await adapter.query({
+      sql: `SELECT * FROM _electric_shadow`,
+    })
+    t.is(shadowRows.length, 1)
+    t.like(shadowRows[0], {
+      namespace: 'main',
+      tablename: 'parent',
+    })
+
+    await adapter.run({ sql: `DELETE FROM ${qualified} WHERE id = 1` })
+    await satellite._performSnapshot()
+
+    const oplogs = await adapter.query({
+      sql: `SELECT * FROM _electric_oplog`,
+    })
+    t.not(oplogs[0].clearTags, '[]')
+  } catch (e) {
+    t.fail(JSON.stringify(e))
+  }
+}) */
 
   test(
       'a subscription that failed to apply because of FK constraint triggers GC',
@@ -1324,7 +1381,8 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef1]);
+    final ShapeSubscription(synced: dataReceived) =
+        await satellite.subscribe([shapeDef1]);
     await dataReceived; // wait for subscription to be fulfilled
 
     try {
@@ -1363,8 +1421,9 @@ void main() {
 
     satellite.relations = kTestRelations;
     await satellite.subscribe([shapeDef1]);
-    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef2]);
-    await dataReceived;
+    final ShapeSubscription(synced: synced) =
+        await satellite.subscribe([shapeDef2]);
+    await synced;
 
     try {
       final row = await adapter.query(
@@ -1462,13 +1521,14 @@ void main() {
 
     satellite.relations = kTestRelations;
 
-    final ShapeSubscription(synced: dataReceived1) =
+    final ShapeSubscription(synced: synced1) =
         await satellite.subscribe([shapeDef1]);
-    await dataReceived1;
-    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef2]);
+    await synced1;
+    final ShapeSubscription(synced: synced) =
+        await satellite.subscribe([shapeDef2]);
 
     try {
-      await dataReceived;
+      await synced;
       fail("Expected a subscription error");
     } catch (expected) {
       try {
@@ -1519,7 +1579,8 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    final ShapeSubscription(synced:dataReceived) = await satellite.subscribe([shapeDef1]);
+    final ShapeSubscription(synced: dataReceived) =
+        await satellite.subscribe([shapeDef1]);
     await dataReceived;
 
     try {
@@ -1542,6 +1603,24 @@ void main() {
       );
     }
   });
+
+  // TODO(update):
+ /*  test("Garbage collecting the subscription doesn't generate oplog entries", async (t) => {
+  const { adapter, runMigrations, satellite, authState } = t.context
+  await satellite.start(authState)
+  await runMigrations()
+  await adapter.run({ sql: `INSERT INTO parent(id) VALUES ('1'),('2')` })
+  const ts = await satellite._performSnapshot()
+  await satellite._garbageCollectOplog(ts)
+  t.is((await satellite._getEntries(0)).length, 0)
+
+  satellite._garbageCollectShapeHandler([
+    { uuid: '', definition: { selects: [{ tablename: 'parent' }] } },
+  ])
+
+  await satellite._performSnapshot()
+  t.deepEqual(await satellite._getEntries(0), [])
+}) */
 }
 
 // TODO: implement reconnect protocol

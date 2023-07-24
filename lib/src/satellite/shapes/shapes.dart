@@ -23,15 +23,11 @@ abstract class SubscriptionsManager {
   /// @param subId the identifier of the subscription
   List<ShapeDefinition>? shapesForActiveSubscription(String subId);
 
-  /**
-   * @returns An array of fulfilled subscriptions that are active.
-   */
+  /// @returns An array of fulfilled subscriptions that are active.
   List<SubscriptionId> getFulfilledSubscriptions();
 
-  /**
-   * Check if a subscription with exactly the same shape requests has already been issued
-   * @param shapes Shapes for a potential request
-   */
+  /// Check if a subscription with exactly the same shape requests has already been issued
+  /// @param shapes Shapes for a potential request
   DuplicatingSubRes? getDuplicatingSubscription(
     List<ClientShapeDefinition> shapes,
   );
