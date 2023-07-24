@@ -1265,7 +1265,7 @@ void main() {
 
     const namespace = 'main';
     const tablename = 'parent';
-    final qualified = const QualifiedTablename(namespace, tablename).toString();
+    const qualified = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1283,6 +1283,17 @@ void main() {
     final ShapeSubscription(synced: synced) =
         await satellite.subscribe([shapeDef]);
     await synced;
+
+    expect(notifier.notifications.length, 1);
+    final changeNotification = notifier.notifications[0] as ChangeNotification;
+    expect(changeNotification.changes.length, 1);
+    expect(
+      changeNotification.changes[0],
+      Change(
+        qualifiedTablename: qualified,
+        rowids: [],
+      ),
+    );
 
     try {
       final row = await adapter.query(
@@ -1308,6 +1319,43 @@ void main() {
     } catch (e, st) {
       fail("Reason: $e\n$st");
     }
+  });
+
+  test('multiple subscriptions for the same shape are deduplicated', () async {
+    await runMigrations();
+
+    const tablename = 'parent';
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
+
+    satellite.relations = kTestRelations;
+
+    // None of the following cases should throw
+
+    // We should dedupe subscriptions that are done at the same time
+    final [sub1, sub2] = await Future.wait([
+      satellite.subscribe([shapeDef]),
+      satellite.subscribe([shapeDef]),
+    ]);
+    // That are done after first await but before the data
+    final sub3 = await satellite.subscribe([shapeDef]);
+    // And that are done after previous data is resolved
+    await Future.wait([sub1.synced, sub2.synced, sub3.synced]);
+    final sub4 = await satellite.subscribe([shapeDef]);
+
+    await sub4.synced;
+
+    // And be "merged" into one subscription
+    expect(satellite.subscriptions.getFulfilledSubscriptions().length, 1);
   });
 
   test('applied shape data will be acted upon correctly', () async {

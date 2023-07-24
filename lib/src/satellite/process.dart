@@ -442,6 +442,19 @@ class SatelliteProcess implements Satellite {
 
     try {
       await adapter.runInTransaction(stmts);
+
+      // We're explicitly not specifying rowids in these changes for now,
+      // because nobody uses them and we don't have the machinery to to a
+      // `RETURNING` clause in the middle of `runInTransaction`.
+      final notificationChanges = changes
+          .map(
+            (x) => Change(
+              qualifiedTablename: QualifiedTablename('main', x.relation.table),
+              rowids: [],
+            ),
+          )
+          .toList();
+      notifier.actuallyChanged(dbName, notificationChanges);
     } catch (e) {
       unawaited(
         _handleSubscriptionError(
@@ -1237,15 +1250,17 @@ class SatelliteProcess implements Satellite {
 
   List<Statement> _updateTriggerSettings(List<String> tablenames, bool flag) {
     final triggers = opts.triggersTable.toString();
-    final stmts = tablenames
-        .map(
-          (tablenameStr) => Statement(
-            "UPDATE $triggers SET flag = ? WHERE tablename = ?",
-            [if (flag) 1 else 0, tablenameStr],
-          ),
+    if (tablenames.isNotEmpty) {
+      final tablesOr = tablenames.map((_) => 'tablename = ?').join(' OR ');
+      return [
+        Statement(
+          "UPDATE $triggers SET flag = ? WHERE $tablesOr",
+          [if (flag) 1 else 0, ...tablenames],
         )
-        .toList();
-    return stmts;
+      ];
+    } else {
+      return [];
+    }
   }
 
   @visibleForTesting

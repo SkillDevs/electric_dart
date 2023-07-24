@@ -9,7 +9,7 @@ typedef DbName = String;
 typedef SqlValue = Object?;
 typedef RowId = int;
 
-class Statement {
+class Statement with EquatableMixin {
   final String sql;
   final List<Object?>? args;
 
@@ -19,6 +19,9 @@ class Statement {
   String toString() {
     return "Statement($sql, $args)";
   }
+  
+  @override
+  List<Object?> get props => [sql, args];
 }
 
 typedef Row = Map<String, Object?>;

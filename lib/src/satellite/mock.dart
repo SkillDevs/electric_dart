@@ -107,7 +107,7 @@ class MockRegistry extends BaseRegistry {
 class MockSatelliteClient extends EventEmitter implements Client {
   bool replicating = false;
   bool closed = true;
-  List<int> inboundAck = kDefaultLogPos;
+  List<int>? inboundAck = kDefaultLogPos;
 
   List<int> outboundSent = kDefaultLogPos;
   List<int> outboundAck = kDefaultLogPos;
@@ -269,7 +269,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
     //_resume?: boolean | undefined
   ) {
     replicating = true;
-    inboundAck = lsn!;
+    inboundAck = lsn;
 
     final t = Timer(
       const Duration(milliseconds: 100),
@@ -277,7 +277,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
     );
     timeouts.add(t);
 
-    if (bytesToNumber(lsn) == MOCK_BEHIND_WINDOW_LSN) {
+    if (lsn != null && bytesToNumber(lsn) == MOCK_BEHIND_WINDOW_LSN) {
       return Future.error(
         SatelliteException(
           SatelliteErrorCode.behindWindow,
@@ -286,7 +286,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
     }
 
-    if (bytesToNumber(lsn) == MOCK_INVALID_POSITION_LSN) {
+    if (lsn != null && bytesToNumber(lsn) == MOCK_INVALID_POSITION_LSN) {
       return Future.error(
         SatelliteException(
           SatelliteErrorCode.invalidPosition,
