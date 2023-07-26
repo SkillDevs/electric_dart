@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:electric_client/src/auth/auth.dart';
+import 'package:electric_client/src/drivers/sqlite3/sqlite3_adapter.dart'
+    show SqliteAdapter;
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
@@ -147,6 +149,57 @@ void main() {
     );
 
     expect(changes, [expectedChange]);
+  });
+
+  test('(regression) performSnapshot cant be called concurrently', () async {
+    await runMigrations();
+    await satellite.setAuthState(authState);
+
+    satellite.updateDatabaseAdapter(
+      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+    );
+
+    await expectLater(
+      () async {
+        final p1 = satellite.performSnapshot();
+        final p2 = satellite.performSnapshot();
+        await Future.wait([p1, p2]);
+      }(),
+      throwsA(
+        isA<SatelliteException>()
+            .having(
+              (e) => e.code,
+              "code",
+              SatelliteErrorCode.internal,
+            )
+            .having((e) => e.message, "message", "already performing snapshot"),
+      ),
+    );
+  });
+
+  test('(regression) throttle with mutex prevents race when snapshot is slow',
+      () async {
+    await runMigrations();
+    await satellite.setAuthState(authState);
+
+    // delay termination of _performSnapshot
+    satellite.updateDatabaseAdapter(
+      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+    );
+
+    final p1 = satellite.throttledSnapshot();
+
+    final completer = Completer<void>();
+    Timer(const Duration(milliseconds: 50), () async {
+      // call snapshot after throttle time has expired
+      await satellite.throttledSnapshot();
+      completer.complete();
+    });
+    final p2 = completer.future;
+
+    // They don't throw
+    await p1;
+    await p2;
   });
 
   test('starting and stopping the process works', () async {
@@ -1139,7 +1192,7 @@ void main() {
     final lsn1 = numberToBytes(1);
     client.emit('ack_lsn', AckLsnEvent(lsn1, AckType.localSend));
 
-    final lsn = await satellite.getMeta('lastSentRowId');
+    final lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '1');
   });
 
@@ -1156,19 +1209,14 @@ void main() {
 
     await satellite.performSnapshot();
 
-    final lsn = await satellite.getMeta('lastSentRowId');
-    expect(lsn, '1');
+    final sentLsn = await satellite.getMeta<String>('lastSentRowId');
+    expect(sentLsn, '1');
+    await client.once<AckLsnEvent>('ack_lsn');
 
-    final completer = Completer<void>();
-    Timer(const Duration(milliseconds: 100), () async {
-      final lsn = await satellite.getMeta('lastAckdRowId');
-      expect(lsn, '1');
-      completer.complete();
-    });
+    final acknowledgedLsn = await satellite.getMeta<String>('lastAckdRowId');
+    expect(acknowledgedLsn, '1');
 
-    await completer.future;
-
-    await satellite.connectivityStateChange(ConnectivityState.disconnected);
+    await satellite.connectivityStateChanged(ConnectivityState.disconnected);
 
     await adapter.run(
       Statement(
@@ -1178,13 +1226,13 @@ void main() {
 
     await satellite.performSnapshot();
 
-    final lsn1 = await satellite.getMeta('lastSentRowId');
+    final lsn1 = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn1, '1');
 
-    await satellite.connectivityStateChange(ConnectivityState.available);
+    await satellite.connectivityStateChanged(ConnectivityState.available);
 
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    final lsn2 = await satellite.getMeta('lastSentRowId');
+    final lsn2 = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn2, '2');
   });
 
@@ -1205,14 +1253,14 @@ void main() {
       ),
     );
 
-    var lsn = await satellite.getMeta('lastSentRowId');
+    var lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '0');
 
     await satellite.performSnapshot();
 
-    lsn = await satellite.getMeta('lastSentRowId');
+    lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '2');
-    lsn = await satellite.getMeta('lastAckdRowId');
+    lsn = await satellite.getMeta<String>('lastAckdRowId');
 
     final old_oplog = await satellite.getEntries();
     final transactions = toTransactions(old_oplog, kTestRelations);
@@ -1237,7 +1285,7 @@ void main() {
         opts: SatelliteReplicationOptions(clearOnBehindWindow: true),
       );
       await conn.connectionFuture;
-      final lsnAfter = await satellite.getMeta('lsn');
+      final lsnAfter = await satellite.getMeta<String?>('lsn');
       expect(lsnAfter, isNot(base64lsn));
     } catch (e) {
       fail('start should not throw');
@@ -1310,7 +1358,7 @@ void main() {
       );
       expect(shadowRows.length, 1);
 
-      final subsMeta = (await satellite.getMeta('subscriptions'))!;
+      final subsMeta = await satellite.getMeta<String>('subscriptions');
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
       expect(subsObj.length, 1);
 
@@ -1489,7 +1537,7 @@ void main() {
       );
       expect(shadowRows.length, 2);
 
-      final subsMeta = (await satellite.getMeta('subscriptions'))!;
+      final subsMeta = await satellite.getMeta<String>('subscriptions');
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
       expect(subsObj.length, 2);
     } catch (e, st) {
@@ -1593,7 +1641,7 @@ void main() {
         );
         expect(shadowRows.length, 1);
 
-        final subsMeta = (await satellite.getMeta('subscriptions'))!;
+        final subsMeta = await satellite.getMeta<String>('subscriptions');
         final subsObj = json.decode(subsMeta) as Map<String, Object?>;
         expect(subsObj, <String, Object?>{});
         expect(
@@ -1687,3 +1735,18 @@ void main() {
 // test('process restart loads previous subscriptions', async (t) => {})
 
 // test('oplog messages allowed between SatSubsRep and SatSubsDataBegin', async (t) => {})
+
+class SlowDatabaseAdapter extends SqliteAdapter {
+  SlowDatabaseAdapter(
+    super.db, {
+    this.delay = const Duration(milliseconds: 100),
+  });
+
+  final Duration delay;
+
+  @override
+  Future<RunResult> run(Statement statement) async {
+    await Future<void>.delayed(delay);
+    return super.run(statement);
+  }
+}

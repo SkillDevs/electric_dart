@@ -116,11 +116,11 @@ abstract class Notifier {
   // 'connected': connection to Electric established
   // 'disconnected': Electric is unreachable, or network is unavailable
   // 'error': disconnected with an error (TODO: add error info)
-  void connectivityStateChange(String dbName, ConnectivityState state);
-  String subscribeToConnectivityStateChange(
+  void connectivityStateChanged(String dbName, ConnectivityState state);
+  String subscribeToConnectivityStateChanges(
     ConnectivityStateChangeCallback callback,
   );
-  void unsubscribeFromConnectivityStateChange(String key);
+  void unsubscribeFromConnectivityStateChanges(String key);
 }
 
 class AttachedDbIndex {

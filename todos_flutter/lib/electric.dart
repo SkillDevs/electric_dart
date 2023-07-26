@@ -67,13 +67,13 @@ class ConnectivityStateController with ChangeNotifier {
     }
 
     _connectivityChangeSubscriptionId =
-        electric.notifier.subscribeToConnectivityStateChange(handler);
+        electric.notifier.subscribeToConnectivityStateChanges(handler);
   }
 
   @override
   void dispose() {
     if (_connectivityChangeSubscriptionId != null) {
-      electric.notifier.unsubscribeFromConnectivityStateChange(
+      electric.notifier.unsubscribeFromConnectivityStateChanges(
         _connectivityChangeSubscriptionId!,
       );
     }
@@ -86,7 +86,7 @@ class ConnectivityStateController with ChangeNotifier {
             ? ConnectivityState.disconnected
             : ConnectivityState.available;
     final dbName = electric.notifier.dbName;
-    electric.notifier.connectivityStateChange(dbName, nextState);
+    electric.notifier.connectivityStateChanged(dbName, nextState);
 
     setConnectivityState(nextState);
   }
