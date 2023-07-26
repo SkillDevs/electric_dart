@@ -47,8 +47,11 @@ const throwErrors = [
 class SatelliteProcess implements Satellite {
   @override
   final DbName dbName;
+  
   @override
-  final DatabaseAdapter adapter;
+  DatabaseAdapter get adapter => _adapter;
+  DatabaseAdapter _adapter;
+  
   @override
   final Migrator migrator;
   @override
@@ -96,15 +99,13 @@ class SatelliteProcess implements Satellite {
     required this.dbName,
     required this.client,
     required this.opts,
-    required this.adapter,
+    required DatabaseAdapter adapter,
     required this.migrator,
     required this.notifier,
-  }) {
+  }) : _adapter = adapter {
     subscriptions = InMemorySubscriptionsManager(
       garbageCollectShapeHandler,
     );
-    // TODO(dart): Maybe it would better to instantiate the throttle in the start function and cancel it in stop
-    // Instead of creating it in the constructor and never cancelling it
     throttledSnapshot = Throttle(
       _mutexSnapshot,
       opts.minSnapshotWindow,
@@ -119,6 +120,11 @@ class SatelliteProcess implements Satellite {
     return _snapshotLock.synchronized(() {
       return performSnapshot();
     });
+  }
+
+  @visibleForTesting
+  void updateDatabaseAdapter(DatabaseAdapter newAdapter) {
+    _adapter = newAdapter;
   }
 
   @override

@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:electric_client/src/auth/auth.dart';
+import 'package:electric_client/src/drivers/sqlite3/sqlite3_adapter.dart'
+    show SqliteAdapter;
 import 'package:electric_client/src/electric/adapter.dart' hide Transaction;
 import 'package:electric_client/src/migrators/migrators.dart';
 import 'package:electric_client/src/notifiers/mock.dart';
@@ -147,6 +149,57 @@ void main() {
     );
 
     expect(changes, [expectedChange]);
+  });
+
+  test('(regression) performSnapshot cant be called concurrently', () async {
+    await runMigrations();
+    await satellite.setAuthState(authState);
+
+    satellite.updateDatabaseAdapter(
+      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+    );
+
+    await expectLater(
+      () async {
+        final p1 = satellite.performSnapshot();
+        final p2 = satellite.performSnapshot();
+        await Future.wait([p1, p2]);
+      }(),
+      throwsA(
+        isA<SatelliteException>()
+            .having(
+              (e) => e.code,
+              "code",
+              SatelliteErrorCode.internal,
+            )
+            .having((e) => e.message, "message", "already performing snapshot"),
+      ),
+    );
+  });
+
+  test('(regression) throttle with mutex prevents race when snapshot is slow',
+      () async {
+    await runMigrations();
+    await satellite.setAuthState(authState);
+
+    // delay termination of _performSnapshot
+    satellite.updateDatabaseAdapter(
+      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+    );
+
+    final p1 = satellite.throttledSnapshot();
+
+    final completer = Completer<void>();
+    Timer(const Duration(milliseconds: 50), () async {
+      // call snapshot after throttle time has expired
+      await satellite.throttledSnapshot();
+      completer.complete();
+    });
+    final p2 = completer.future;
+
+    // They don't throw
+    await p1;
+    await p2;
   });
 
   test('starting and stopping the process works', () async {
@@ -1682,3 +1735,18 @@ void main() {
 // test('process restart loads previous subscriptions', async (t) => {})
 
 // test('oplog messages allowed between SatSubsRep and SatSubsDataBegin', async (t) => {})
+
+class SlowDatabaseAdapter extends SqliteAdapter {
+  SlowDatabaseAdapter(
+    super.db, {
+    this.delay = const Duration(milliseconds: 100),
+  });
+
+  final Duration delay;
+
+  @override
+  Future<RunResult> run(Statement statement) async {
+    await Future<void>.delayed(delay);
+    return super.run(statement);
+  }
+}
