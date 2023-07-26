@@ -41,6 +41,7 @@ void main() {
         port: 30002,
         timeout: 10000,
         ssl: false,
+        pushPeriod: 100,
       ),
     );
     clientId = '91eba0c8-28ba-4a86-a6e8-42731c2c6694';
@@ -445,6 +446,17 @@ void main() {
         timestamp: '1970-01-01T00:00:02.000Z',
         clearTags: '["origin@1231232347"]',
       ),
+      OplogEntry(
+        namespace: 'main',
+        tablename: 'parent',
+        optype: OpType.insert,
+        newRow: '{"id":2}',
+        oldRow: null,
+        primaryKey: '{"id":2}',
+        rowid: 3,
+        timestamp: '1970-01-01T00:00:03.000Z',
+        clearTags: '[]',
+      ),
     ];
 
     final transaction = toTransactions(opLogEntries, kTestRelations);
@@ -453,9 +465,11 @@ void main() {
     server.nextResponses([startResp]);
     server.nextResponses([]);
 
+    int expectedCount = 4;
     // first message is a relation
     server.nextResponses([
       (Uint8List data) {
+        expectedCount -= 1;
         final code = data[0];
         final msgType = getMsgFromCode(code);
 
@@ -469,37 +483,62 @@ void main() {
     // second message is a transaction
     server.nextResponses([
       (Uint8List data) {
+        expectedCount -= 1;
         final code = data[0];
         final msgType = getMsgFromCode(code);
 
-        if (msgType == SatMsgType.opLog) {
-          final satOpLog = (decode(data).msg as SatOpLog).ops;
+        expect(msgType, SatMsgType.opLog);
 
-          final lsn = satOpLog[0].begin.lsn;
-          expect(bytesToNumber(lsn), 1);
-          expect(satOpLog[0].begin.commitTimestamp, Int64(1000));
-          // TODO: check values
-        }
+        final satOpLog = (decode(data).msg as SatOpLog).ops;
+
+        final lsn = satOpLog[0].begin.lsn;
+        expect(bytesToNumber(lsn), 1);
+        expect(satOpLog[0].begin.commitTimestamp, Int64(1000));
       },
     ]);
 
     // third message after new enqueue does not send relation
     server.nextResponses([
       (Uint8List data) {
+        expectedCount -= 1;
+
         final code = data[0];
         final msgType = getMsgFromCode(code);
+        expect(msgType, SatMsgType.opLog);
 
-        if (msgType == SatMsgType.opLog) {
-          final satOpLog = (decode(data).msg as SatOpLog).ops;
+        final satOpLog = (decode(data).msg as SatOpLog).ops;
 
-          final lsn = satOpLog[0].begin.lsn;
-          expect(bytesToNumber(lsn), 2);
-          expect(satOpLog[0].begin.commitTimestamp, Int64(2000));
-          // TODO: check values
-        }
+        final lsn = satOpLog[0].begin.lsn;
+        expect(bytesToNumber(lsn), 2);
+        expect(satOpLog[0].begin.commitTimestamp, Int64(2000));
+      },
+    ]);
+
+    // fourth message is also an insert
+    server.nextResponses([
+      (Uint8List data) {
+        expectedCount -= 1;
+
+        final code = data[0];
+        final msgType = getMsgFromCode(code);
+        expect(msgType, SatMsgType.opLog);
+
+        final satOpLog = (decode(data).msg as SatOpLog).ops;
+
+        final lsn = satOpLog[0].begin.lsn;
+        expect(bytesToNumber(lsn), 3);
+        expect(satOpLog[0].begin.commitTimestamp, Int64(3000));
         completer.complete();
       },
     ]);
+
+    final timeoutTimer = Timer(const Duration(milliseconds: 300), () {
+      print("FAIL");
+      fail(
+        "Timed out while waiting for server to get all expected requests. Missing $expectedCount",
+      );
+    });
+    addTearDown(() => timeoutTimer.cancel());
 
     await client.startReplication(null, null, null);
 
@@ -509,8 +548,12 @@ void main() {
       () {
         client.enqueueTransaction(transaction[0]);
         client.enqueueTransaction(transaction[1]);
+        client.enqueueTransaction(transaction[2]);
       },
     );
+
+    await completer.future;
+    expect(expectedCount, 0);
   });
 
   test('ack on send and pong', () async {
