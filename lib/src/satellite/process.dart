@@ -92,7 +92,7 @@ class SatelliteProcess implements Satellite {
   versions after.
   */
   int maxSqlParameters = 999; // : 999 | 32766
-  Lock _snapshotLock = Lock();
+  final Lock _snapshotLock = Lock();
   bool _performingSnapshot = false;
 
   SatelliteProcess({
