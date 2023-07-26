@@ -10,7 +10,7 @@ class ElectricNamespace {
     required this.adapter,
     required this.notifier,
   }) {
-    notifier.subscribeToConnectivityStateChange((notification) {
+    notifier.subscribeToConnectivityStateChanges((notification) {
       isConnected =
           notification.connectivityState == ConnectivityState.connected;
     });

@@ -233,13 +233,13 @@ class SatelliteClient extends EventEmitter implements Client {
           );
         }
         socketHandler = (Uint8List message) => handleIncoming(message);
-        notifier.connectivityStateChange(dbName, ConnectivityState.connected);
+        notifier.connectivityStateChanged(dbName, ConnectivityState.connected);
         socket.onMessage(socketHandler!);
         socket.onError((error) {
-          notifier.connectivityStateChange(dbName, ConnectivityState.error);
+          notifier.connectivityStateChanged(dbName, ConnectivityState.error);
         });
         socket.onClose(() {
-          notifier.connectivityStateChange(
+          notifier.connectivityStateChanged(
             dbName,
             ConnectivityState.disconnected,
           );
@@ -250,7 +250,7 @@ class SatelliteClient extends EventEmitter implements Client {
       socket.onceError((error) {
         // print("Once Error $error");
         this.socket = null;
-        notifier.connectivityStateChange(
+        notifier.connectivityStateChanged(
           dbName,
           ConnectivityState.disconnected,
         );

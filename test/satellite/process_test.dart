@@ -1139,7 +1139,7 @@ void main() {
     final lsn1 = numberToBytes(1);
     client.emit('ack_lsn', AckLsnEvent(lsn1, AckType.localSend));
 
-    final lsn = await satellite.getMeta('lastSentRowId');
+    final lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '1');
   });
 
@@ -1156,19 +1156,14 @@ void main() {
 
     await satellite.performSnapshot();
 
-    final lsn = await satellite.getMeta('lastSentRowId');
-    expect(lsn, '1');
+    final sentLsn = await satellite.getMeta<String>('lastSentRowId');
+    expect(sentLsn, '1');
+    await client.once<AckLsnEvent>('ack_lsn');
 
-    final completer = Completer<void>();
-    Timer(const Duration(milliseconds: 100), () async {
-      final lsn = await satellite.getMeta('lastAckdRowId');
-      expect(lsn, '1');
-      completer.complete();
-    });
+    final acknowledgedLsn = await satellite.getMeta<String>('lastAckdRowId');
+    expect(acknowledgedLsn, '1');
 
-    await completer.future;
-
-    await satellite.connectivityStateChange(ConnectivityState.disconnected);
+    await satellite.connectivityStateChanged(ConnectivityState.disconnected);
 
     await adapter.run(
       Statement(
@@ -1178,13 +1173,13 @@ void main() {
 
     await satellite.performSnapshot();
 
-    final lsn1 = await satellite.getMeta('lastSentRowId');
+    final lsn1 = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn1, '1');
 
-    await satellite.connectivityStateChange(ConnectivityState.available);
+    await satellite.connectivityStateChanged(ConnectivityState.available);
 
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    final lsn2 = await satellite.getMeta('lastSentRowId');
+    final lsn2 = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn2, '2');
   });
 
@@ -1205,14 +1200,14 @@ void main() {
       ),
     );
 
-    var lsn = await satellite.getMeta('lastSentRowId');
+    var lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '0');
 
     await satellite.performSnapshot();
 
-    lsn = await satellite.getMeta('lastSentRowId');
+    lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '2');
-    lsn = await satellite.getMeta('lastAckdRowId');
+    lsn = await satellite.getMeta<String>('lastAckdRowId');
 
     final old_oplog = await satellite.getEntries();
     final transactions = toTransactions(old_oplog, kTestRelations);
@@ -1237,7 +1232,7 @@ void main() {
         opts: SatelliteReplicationOptions(clearOnBehindWindow: true),
       );
       await conn.connectionFuture;
-      final lsnAfter = await satellite.getMeta('lsn');
+      final lsnAfter = await satellite.getMeta<String?>('lsn');
       expect(lsnAfter, isNot(base64lsn));
     } catch (e) {
       fail('start should not throw');
@@ -1310,7 +1305,7 @@ void main() {
       );
       expect(shadowRows.length, 1);
 
-      final subsMeta = (await satellite.getMeta('subscriptions'))!;
+      final subsMeta = await satellite.getMeta<String>('subscriptions');
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
       expect(subsObj.length, 1);
 
@@ -1489,7 +1484,7 @@ void main() {
       );
       expect(shadowRows.length, 2);
 
-      final subsMeta = (await satellite.getMeta('subscriptions'))!;
+      final subsMeta = await satellite.getMeta<String>('subscriptions');
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
       expect(subsObj.length, 2);
     } catch (e, st) {
@@ -1593,7 +1588,7 @@ void main() {
         );
         expect(shadowRows.length, 1);
 
-        final subsMeta = (await satellite.getMeta('subscriptions'))!;
+        final subsMeta = await satellite.getMeta<String>('subscriptions');
         final subsObj = json.decode(subsMeta) as Map<String, Object?>;
         expect(subsObj, <String, Object?>{});
         expect(

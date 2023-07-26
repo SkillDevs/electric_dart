@@ -93,13 +93,13 @@ void main() {
 
     final notifications = <ConnectivityStateChangeNotification>[];
 
-    target.subscribeToConnectivityStateChange((x) => notifications.add(x));
+    target.subscribeToConnectivityStateChanges((x) => notifications.add(x));
 
-    source.connectivityStateChange('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged('test.db', ConnectivityState.connected);
 
     expect(notifications.length, 1);
 
-    source.connectivityStateChange(
+    source.connectivityStateChanged(
       'non-existing-db',
       ConnectivityState.connected,
     );
@@ -113,15 +113,15 @@ void main() {
 
     final List<ConnectivityStateChangeNotification> notifications = [];
 
-    final key = target.subscribeToConnectivityStateChange((x) {
+    final key = target.subscribeToConnectivityStateChanges((x) {
       notifications.add(x);
     });
 
-    source.connectivityStateChange('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged('test.db', ConnectivityState.connected);
 
-    target.unsubscribeFromConnectivityStateChange(key);
+    target.unsubscribeFromConnectivityStateChanges(key);
 
-    source.connectivityStateChange('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged('test.db', ConnectivityState.connected);
 
     expect(notifications.length, 1);
   });

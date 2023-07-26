@@ -245,10 +245,18 @@ class MockSatelliteClient extends EventEmitter implements Client {
   @override
   Future<void> close() {
     closed = true;
+    _removeAllListeners();
     for (var t in timeouts) {
       t.cancel();
     }
     return Future.value(null);
+  }
+
+  void _removeAllListeners() {
+    // Prevent concurrent modification
+    for (final listener in [...listeners]) {
+      removeEventListener(listener);
+    }
   }
 
   @override
@@ -321,7 +329,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
     emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.localSend));
 
     // simulate ping message effect
-    final t = Timer(const Duration(milliseconds: 100), () {
+    final t = Timer(const Duration(milliseconds: 500), () {
       outboundAck = transaction.lsn;
       emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.remoteCommit));
     });

@@ -69,11 +69,11 @@ void main() {
     clientId = satellite.authState!.clientId; // store clientId in the context
     await populateDB(context);
     txDate = await satellite.performSnapshot();
-    // Mimick Electric sending our own operations back
+    // Mimic Electric sending our own operations back
     // which serves as an acknowledgement (even though there is a separate ack also)
     // and leads to GC of the oplog
     final ackTx = Transaction(
-      origin: satellite.authState?.clientId,
+      origin: satellite.authState!.clientId,
       commitTimestamp: Int64(txDate.millisecondsSinceEpoch),
       changes: [], // doesn't matter, only the origin and timestamp matter for GC of the oplog
       lsn: [],

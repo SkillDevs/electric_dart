@@ -22,6 +22,9 @@ import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
 import 'package:electric_client/src/util/types.dart' as types;
 import 'package:meta/meta.dart';
+import 'package:synchronized/synchronized.dart';
+
+typedef Uuid = String;
 
 typedef ChangeAccumulator = Map<String, Change>;
 
@@ -86,6 +89,8 @@ class SatelliteProcess implements Satellite {
   versions after.
   */
   int maxSqlParameters = 999; // : 999 | 32766
+  Lock _snapshotLock = Lock();
+  bool _performingSnapshot = false;
 
   SatelliteProcess({
     required this.dbName,
@@ -95,25 +100,25 @@ class SatelliteProcess implements Satellite {
     required this.migrator,
     required this.notifier,
   }) {
-    // Create a throttled function that performs a snapshot at most every
-    // `minSnapshotWindow` ms. This function runs immediately when you
-    // first call it and then every `minSnapshotWindow` ms as long as
-    // you keep calling it within the window. If you don't call it within
-    // the window, it will then run immediately the next time you call it.
-
+    subscriptions = InMemorySubscriptionsManager(
+      garbageCollectShapeHandler,
+    );
     // TODO(dart): Maybe it would better to instantiate the throttle in the start function and cancel it in stop
     // Instead of creating it in the constructor and never cancelling it
     throttledSnapshot = Throttle(
-      performSnapshot,
+      _mutexSnapshot,
       opts.minSnapshotWindow,
-    );
-
-    subscriptions = InMemorySubscriptionsManager(
-      garbageCollectShapeHandler,
     );
 
     subscriptionIdGenerator = () => uuid();
     shapeRequestIdGenerator = subscriptionIdGenerator;
+  }
+
+  /// Perform a snapshot while taking out a mutex to avoid concurrent calls.
+  Future<DateTime> _mutexSnapshot() async {
+    return _snapshotLock.synchronized(() {
+      return performSnapshot();
+    });
   }
 
   @override
@@ -137,28 +142,38 @@ class SatelliteProcess implements Satellite {
         : await _getClientId();
     await setAuthState(AuthState(clientId: clientId, token: authConfig.token));
 
-    _authStateSubscription ??=
+    final notifierSubscriptions = {
+      "_authStateSubscription": _authStateSubscription,
+      "_connectivityChangeSubscription": _connectivityChangeSubscription,
+      "_potentialDataChangeSubscription": _potentialDataChangeSubscription,
+    };
+    notifierSubscriptions.forEach((name, value) {
+      if (value != null) {
+        throw Exception('''
+Starting satellite process with an existing `$name`.
+This means there is a notifier subscription leak.`''');
+      }
+    });
+
+    // Monitor auth state changes.
+    _authStateSubscription =
         notifier.subscribeToAuthStateChanges(_updateAuthState);
 
-    // XXX establish replication connection,
-    // validate auth state, etc here.
-
-    // Request a snapshot whenever the data in our database potentially changes.
-    _potentialDataChangeSubscription =
-        notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
-
-    // TODO(dart): Should the subscription be removed here, before assigning a new one?
-
+    // Monitor connectivity state changes.
     _connectivityChangeSubscription =
-        notifier.subscribeToConnectivityStateChange(
+        notifier.subscribeToConnectivityStateChanges(
       (ConnectivityStateChangeNotification notification) async {
         // Wait for the next event loop to ensure that other listeners get a
         // chance to handle the change before actually handling it internally in the process
         await Future<void>.delayed(Duration.zero);
 
-        await connectivityStateChange(notification.connectivityState);
+        await connectivityStateChanged(notification.connectivityState);
       },
     );
+
+    // Request a snapshot whenever the data in our database potentially changes.
+    _potentialDataChangeSubscription =
+        notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
@@ -182,7 +197,7 @@ class SatelliteProcess implements Satellite {
       numberToBytes(lastSentRowId),
     );
 
-    final lsnBase64 = await getMeta('lsn');
+    final lsnBase64 = await getMeta<String?>('lsn');
     if (lsnBase64 != null && lsnBase64.isNotEmpty) {
       _lsn = base64.decode(lsnBase64);
       logger.info("retrieved lsn $_lsn");
@@ -190,7 +205,7 @@ class SatelliteProcess implements Satellite {
       logger.info("no lsn retrieved from store");
     }
 
-    final subscriptionsState = (await getMeta('subscriptions'))!;
+    final subscriptionsState = await getMeta<String>('subscriptions');
     if (subscriptionsState.isNotEmpty) {
       subscriptions.setState(subscriptionsState);
     }
@@ -254,10 +269,24 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<void> stop() async {
-    logger.info('stop polling');
+    // Stop snapshotting and polling for changes.
+    throttledSnapshot.cancel();
+
     if (_pollingInterval != null) {
       _pollingInterval!.cancel();
       _pollingInterval = null;
+    }
+
+    if (_authStateSubscription != null) {
+      notifier.unsubscribeFromAuthStateChanges(_authStateSubscription!);
+      _authStateSubscription = null;
+    }
+
+    if (_connectivityChangeSubscription != null) {
+      notifier.unsubscribeFromConnectivityStateChanges(
+        _connectivityChangeSubscription!,
+      );
+      _connectivityChangeSubscription = null;
     }
 
     if (_potentialDataChangeSubscription != null) {
@@ -502,7 +531,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @visibleForTesting
-  Future<void> connectivityStateChange(
+  Future<void> connectivityStateChanged(
     ConnectivityState status,
   ) async {
     // TODO: no op if state is the same
@@ -605,82 +634,91 @@ class SatelliteProcess implements Satellite {
     authState = notification.authState;
   }
 
-  bool _runningSnapshot = false;
-
   // Perform a snapshot and notify which data actually changed.
+  // It is not safe to call this function concurrently. Consider
+  // using a wrapped version
   @visibleForTesting
   Future<DateTime> performSnapshot() async {
+    // assert a single call at a time
+    if (_performingSnapshot) {
+      throw SatelliteException(
+        SatelliteErrorCode.internal,
+        'already performing snapshot',
+      );
+    } else {
+      _performingSnapshot = true;
+    }
+
     final timestamp = DateTime.now();
-    if (_runningSnapshot) {
-      // TODO(dart): https://github.com/electric-sql/electric/issues/258
-      logger.info("Perform snapshot already running. Skipping.");
-      return timestamp;
+
+    await _updateOplogTimestamp(timestamp);
+    final oplogEntries = await _getUpdatedEntries(timestamp);
+
+    if (oplogEntries.isNotEmpty) {
+      final stmts = await _handleShadowOperations(timestamp, oplogEntries);
+      await adapter.runInTransaction(stmts);
+      unawaited(_notifyChanges(oplogEntries));
     }
-    try {
-      _runningSnapshot = true;
 
-      await _updateOplogTimestamp(timestamp);
-      final oplogEntries = await _getUpdatedEntries(timestamp);
+    if (!client.isClosed()) {
+      final LogPositions(:enqueued) = client.getOutboundLogPositions();
+      final enqueuedLogPos = bytesToNumber(enqueued);
 
-      final List<Future> promises = [];
-
-      if (oplogEntries.isNotEmpty) {
-        promises.add(_notifyChanges(oplogEntries));
-
-        final shadowEntries = <String, ShadowEntry>{};
-
-        for (final oplogEntry in oplogEntries) {
-          final shadowEntryLookup =
-              await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
-          final cached = shadowEntryLookup.cached;
-          final shadowEntry = shadowEntryLookup.entry;
-
-          // Clear should not contain the tag for this timestamp, so if
-          // the entry was previously in cache - it means, that we already
-          // read it within the same snapshot
-          if (cached) {
-            oplogEntry.clearTags = encodeTags(
-              difference(decodeTags(shadowEntry.tags), [
-                _generateTag(timestamp),
-              ]),
-            );
-          } else {
-            oplogEntry.clearTags = shadowEntry.tags;
-          }
-
-          if (oplogEntry.optype == OpType.delete) {
-            shadowEntry.tags = shadowTagsDefault;
-          } else {
-            final newTag = _generateTag(timestamp);
-            shadowEntry.tags = encodeTags([newTag]);
-          }
-
-          promises.add(_updateOplogEntryTags(oplogEntry));
-          _updateCachedShadowEntry(oplogEntry, shadowEntry, shadowEntries);
-        }
-
-        shadowEntries.forEach((String _key, ShadowEntry value) {
-          if (value.tags == shadowTagsDefault) {
-            promises.add(adapter.run(_deleteShadowTagsQuery(value)));
-          } else {
-            promises.add(_updateShadowTags(value));
-          }
-        });
-      }
-      await Future.wait(promises);
-
-      if (!client.isClosed()) {
-        final enqueued = client.getOutboundLogPositions().enqueued;
-        final enqueuedLogPos = bytesToNumber(enqueued);
-
-        // TODO: take next N transactions instead of all
-        await getEntries(since: enqueuedLogPos)
-            .then((missing) => _replicateSnapshotChanges(missing));
-      }
-      return timestamp;
-    } finally {
-      _runningSnapshot = false;
+      // TODO: handle case where pending oplog is large
+      await getEntries(since: enqueuedLogPos).then(
+        (missing) => _replicateSnapshotChanges(missing),
+      );
     }
+    _performingSnapshot = false;
+    return timestamp;
+  }
+
+  Future<List<Statement>> _handleShadowOperations(
+    DateTime timestamp,
+    List<OplogEntry> oplogEntries,
+  ) async {
+    final stmts = <Statement>[];
+    final shadowEntries = <String, ShadowEntry>{};
+
+    for (final oplogEntry in oplogEntries) {
+      // should get shadow entries at once to prevent querying in a loop
+      final shadowEntryLookup =
+          await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
+      final cached = shadowEntryLookup.cached;
+      final shadowEntry = shadowEntryLookup.entry;
+
+      // Clear should not contain the tag for this timestamp, so if
+      // the entry was previously in cache - it means, that we already
+      // read it within the same snapshot
+      if (cached) {
+        oplogEntry.clearTags = encodeTags(
+          difference(decodeTags(shadowEntry.tags), [
+            _generateTag(timestamp),
+          ]),
+        );
+      } else {
+        oplogEntry.clearTags = shadowEntry.tags;
+      }
+
+      if (oplogEntry.optype == OpType.delete) {
+        shadowEntry.tags = shadowTagsDefault;
+      } else {
+        final newTag = _generateTag(timestamp);
+        shadowEntry.tags = encodeTags([newTag]);
+      }
+
+      stmts.add(_updateOplogEntryTagsStatement(oplogEntry));
+      _updateCachedShadowEntry(oplogEntry, shadowEntry, shadowEntries);
+    }
+
+    shadowEntries.forEach((String _key, ShadowEntry value) {
+      if (value.tags == shadowTagsDefault) {
+        stmts.add(_deleteShadowTagsStatement(value));
+      } else {
+        stmts.add(_updateShadowTagsStatement(value));
+      }
+    });
+    return stmts;
   }
 
   void _updateCachedShadowEntry(
@@ -796,11 +834,11 @@ class SatelliteProcess implements Satellite {
         switch (entryChanges.optype) {
           case ChangesOpType.delete:
             stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
-            stmts.add(_deleteShadowTagsQuery(shadowEntry));
+            stmts.add(_deleteShadowTagsStatement(shadowEntry));
 
           default:
             stmts.add(_applyNonDeleteOperation(entryChanges, tablenameStr));
-            stmts.add(_updateShadowTagsQuery(shadowEntry));
+            stmts.add(_updateShadowTagsStatement(shadowEntry));
         }
       }
     }
@@ -852,7 +890,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @visibleForTesting
-  Future<List<ShadowEntry>> getOplogShadowEntry({OplogEntry? oplog}) async {
+  Statement getOplogShadowEntryStatement({OplogEntry? oplog}) {
     final shadow = opts.shadowTable.toString();
     Statement query;
     var selectTags = "SELECT * FROM $shadow";
@@ -873,7 +911,14 @@ class SatelliteProcess implements Satellite {
       query = Statement(selectTags);
     }
 
-    final shadowTags = await adapter.query(query);
+    return query;
+  }
+
+  @visibleForTesting
+  Future<List<ShadowEntry>> getOplogShadowEntry({OplogEntry? oplog}) async {
+    final stmt = getOplogShadowEntryStatement(oplog: oplog);
+
+    final shadowTags = await adapter.query(stmt);
     return shadowTags.map((e) {
       return ShadowEntry(
         namespace: e['namespace']! as String,
@@ -884,11 +929,7 @@ class SatelliteProcess implements Satellite {
     }).toList();
   }
 
-  Future<RunResult> _updateShadowTags(ShadowEntry shadow) async {
-    return await adapter.run(_updateShadowTagsQuery(shadow));
-  }
-
-  Statement _deleteShadowTagsQuery(ShadowEntry shadow) {
+  Statement _deleteShadowTagsStatement(ShadowEntry shadow) {
     final shadowTable = opts.shadowTable.toString();
     final deleteRow = '''
       DELETE FROM $shadowTable
@@ -902,7 +943,7 @@ class SatelliteProcess implements Satellite {
     );
   }
 
-  Statement _updateShadowTagsQuery(ShadowEntry shadow) {
+  Statement _updateShadowTagsStatement(ShadowEntry shadow) {
     final shadowTable = opts.shadowTable.toString();
     final updateTags = '''
       INSERT or REPLACE INTO $shadowTable (namespace, tablename, primaryKey, tags) VALUES
@@ -919,21 +960,19 @@ class SatelliteProcess implements Satellite {
     );
   }
 
-  Future<RunResult> _updateOplogEntryTags(OplogEntry oplog) async {
+  Statement _updateOplogEntryTagsStatement(OplogEntry oplog) {
     final oplogTable = opts.oplogTable.toString();
     final updateTags = '''
       UPDATE $oplogTable set clearTags = ?
         WHERE rowid = ?
     ''';
-    return await adapter.run(
-      Statement(
-        updateTags,
-        <Object?>[oplog.clearTags, oplog.rowid],
-      ),
+    return Statement(
+      updateTags,
+      <Object?>[oplog.clearTags, oplog.rowid],
     );
   }
 
-  Future<void> _updateOplogTimestamp(DateTime timestamp) async {
+  Future<RunResult> _updateOplogTimestamp(DateTime timestamp) async {
     final oplog = opts.oplogTable.toString();
 
     final updateTimestamps = '''
@@ -950,7 +989,7 @@ class SatelliteProcess implements Satellite {
       timestamp.toISOStringUTC(),
       _lastAckdRowId.toString()
     ];
-    await adapter.run(Statement(updateTimestamps, updateArgs));
+    return await adapter.run(Statement(updateTimestamps, updateArgs));
   }
 
   // Merge changes, with last-write-wins and add-wins semantics.
@@ -1089,7 +1128,7 @@ class SatelliteProcess implements Satellite {
       if (firstDMLChunk) {
         logger.info("apply incoming changes for LSN: ${base64.encode(lsn)}");
         // assign timestamp to pending operations before apply
-        await performSnapshot();
+        await _mutexSnapshot();
         firstDMLChunk = false;
       }
 
@@ -1304,7 +1343,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @visibleForTesting
-  Future<String?> getMeta(String key) async {
+  Future<T> getMeta<T>(String key) async {
     final meta = opts.metaTable.toString();
 
     final sql = "SELECT value from $meta WHERE key = ?";
@@ -1315,13 +1354,13 @@ class SatelliteProcess implements Satellite {
       throw "Invalid metadata table: missing $key";
     }
 
-    return rows.first["value"] as String?;
+    return rows.first["value"] as T;
   }
 
-  Future<String> _getClientId() async {
+  Future<Uuid> _getClientId() async {
     const clientIdKey = 'clientId';
 
-    String clientId = (await getMeta(clientIdKey))!;
+    String clientId = await getMeta<Uuid>(clientIdKey);
 
     if (clientId.isEmpty) {
       clientId = uuid();
