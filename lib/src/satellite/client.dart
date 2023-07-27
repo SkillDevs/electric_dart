@@ -86,7 +86,7 @@ class SatelliteClient extends EventEmitter implements Client {
       return Left(
         SatelliteException(
           SatelliteErrorCode.unexpectedMessageType,
-          "$code",
+          '$code',
         ),
       );
     }
@@ -339,12 +339,12 @@ class SatelliteClient extends EventEmitter implements Client {
   void handleIncoming(Uint8List data) {
     final messageOrError = _toMessage(data);
     logger.info(
-      "Received message ${messageOrError.match((error) => error.toString(), (a) => a.msgType.name)}",
+      'Received message ${messageOrError.match((error) => error.toString(), (a) => a.msgType.name)}',
     );
 
     messageOrError.match(
       (error) {
-        emit("error", error);
+        emit('error', error);
       },
       (messageInfo) {
         final handler = getIncomingHandlerForMessage(messageInfo.msgType);
@@ -352,11 +352,11 @@ class SatelliteClient extends EventEmitter implements Client {
           final response = handler.handle(messageInfo.msg);
 
           if (handler.isRpc) {
-            emit("rpc_response", response);
+            emit('rpc_response', response);
           }
         } catch (error) {
           logger.warning(
-            "uncaught errors while processing incoming message: $error",
+            'uncaught errors while processing incoming message: $error',
           );
         }
       },
@@ -433,7 +433,7 @@ class SatelliteClient extends EventEmitter implements Client {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(
         SatelliteErrorCode.replicationAlreadyStarted,
-        "replication already started",
+        'replication already started',
       );
     }
 
@@ -441,19 +441,19 @@ class SatelliteClient extends EventEmitter implements Client {
 
     late final SatInStartReplicationReq request;
     if (lsn == null || lsn.isEmpty) {
-      logger.info("no previous LSN, start replication from scratch");
+      logger.info('no previous LSN, start replication from scratch');
 
       if (subscriptionIds != null && subscriptionIds.isNotEmpty) {
         return Future.error(
           SatelliteException(
             SatelliteErrorCode.unexpectedSubscriptionState,
-            "Cannot start replication with subscription IDs but without previous LSN.",
+            'Cannot start replication with subscription IDs but without previous LSN.',
           ),
         );
       }
       request = SatInStartReplicationReq(schemaVersion: schemaVersion);
     } else {
-      logger.info("starting replication with lsn: ${base64.encode(lsn)}");
+      logger.info('starting replication with lsn: ${base64.encode(lsn)}');
       request = SatInStartReplicationReq(
         lsn: lsn,
         subscriptionIds: subscriptionIds,
@@ -480,7 +480,7 @@ class SatelliteClient extends EventEmitter implements Client {
       return Future.error(
         SatelliteException(
           SatelliteErrorCode.replicationNotStarted,
-          "replication not active",
+          'replication not active',
         ),
       );
     }
@@ -491,7 +491,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMessage(Object request) {
-    logger.fine("Sending message ${request.runtimeType}($request)");
+    logger.fine('Sending message ${request.runtimeType}($request)');
     final _socket = socket;
     if (_socket == null) {
       throw SatelliteException(
@@ -503,7 +503,7 @@ class SatelliteClient extends EventEmitter implements Client {
     if (msgType == null) {
       throw SatelliteException(
         SatelliteErrorCode.unexpectedMessageType,
-        "${request.runtimeType}",
+        '${request.runtimeType}',
       );
     }
 
@@ -524,7 +524,7 @@ class SatelliteClient extends EventEmitter implements Client {
       timer = Timer(Duration(milliseconds: opts.timeout), () {
         final error = SatelliteException(
           SatelliteErrorCode.timeout,
-          "${request.runtimeType}",
+          '${request.runtimeType}',
         );
         completer.completeError(error);
       });
@@ -599,10 +599,10 @@ class SatelliteClient extends EventEmitter implements Client {
     } else if (message is SatErrorResp) {
       error = SatelliteException(
         SatelliteErrorCode.authError,
-        "${message.errorType}",
+        '${message.errorType}',
       );
     } else {
-      throw StateError("Unexpected message $message");
+      throw StateError('Unexpected message $message');
     }
 
     return AuthResponse(serverId, error);
@@ -618,7 +618,7 @@ class SatelliteClient extends EventEmitter implements Client {
       }
     } else {
       emit(
-        "error",
+        'error',
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'start' response",
@@ -628,7 +628,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleInStartReplicationReq(SatInStartReplicationReq message) {
-    logger.info("received replication request $message");
+    logger.info('received replication request $message');
     if (outbound.isReplicating == ReplicationStatus.stopped) {
       final replication = outbound.clone();
       replication.ackLsn = kDefaultLogPos;
@@ -743,7 +743,7 @@ class SatelliteClient extends EventEmitter implements Client {
       return Future.error(
         SatelliteException(
           SatelliteErrorCode.replicationNotStarted,
-          "replication not active",
+          'replication not active',
         ),
       );
     }
@@ -762,7 +762,7 @@ class SatelliteClient extends EventEmitter implements Client {
         } else if (o is SubscribeResponse) {
           return o.subscriptionId;
         } else {
-          throw StateError("Unexpected SatSubs");
+          throw StateError('Unexpected SatSubs');
         }
       },
     );
@@ -774,7 +774,7 @@ class SatelliteClient extends EventEmitter implements Client {
       return Future.error(
         SatelliteException(
           SatelliteErrorCode.replicationNotStarted,
-          "replication not active",
+          'replication not active',
         ),
       );
     }
@@ -869,7 +869,7 @@ class SatelliteClient extends EventEmitter implements Client {
         emit('ack_lsn', AckLsnEvent(message.lsn, AckType.remoteCommit));
       }
     } else {
-      throw StateError("Unexpected ping resp message");
+      throw StateError('Unexpected ping resp message');
     }
   }
 
@@ -912,7 +912,7 @@ class SatelliteClient extends EventEmitter implements Client {
       try {
         _subscriptionsDataCache.transaction(message.ops);
       } catch (e) {
-        logger.info("Error applying transaction message for subs $e");
+        logger.info('Error applying transaction message for subs $e');
       }
     }
   }
@@ -920,7 +920,7 @@ class SatelliteClient extends EventEmitter implements Client {
   void handleErrorResp(SatErrorResp error) {
     emit(
       'error',
-      Exception("server replied with error code: ${error.errorType}"),
+      Exception('server replied with error code: ${error.errorType}'),
     );
   }
 
@@ -1004,7 +1004,7 @@ class SatelliteClient extends EventEmitter implements Client {
         if (rel == null) {
           throw SatelliteException(
             SatelliteErrorCode.protocolViolation,
-            "missing relation ${op.insert.relationId} for incoming operation",
+            'missing relation ${op.insert.relationId} for incoming operation',
           );
         }
 

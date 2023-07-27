@@ -7,7 +7,7 @@ void setLogLevel(Level logLevel) {
 }
 
 Logger _createLogger() {
-  final logger = Logger("electric");
+  final logger = Logger('electric');
 
   hierarchicalLoggingEnabled = true;
 
@@ -17,13 +17,13 @@ Logger _createLogger() {
   logger.onRecord.listen((event) {
     final error = event.error;
 
-    String extra = "";
+    String extra = '';
     if (error != null) {
-      extra = "\n\t$error";
+      extra = '\n\t$error';
     }
 
     if (event.stackTrace != null) {
-      extra += "\n\tStackTrace: ${event.stackTrace}";
+      extra += '\n\tStackTrace: ${event.stackTrace}';
     }
 
     // ignore: avoid_print

@@ -34,7 +34,7 @@ class InMemorySubscriptionsManager extends EventEmitter
     if (_inFlight[subId] != null || _fulfilledSubscriptions[subId] != null) {
       throw SatelliteException(
         SatelliteErrorCode.subscriptionAlreadyExists,
-        "a subscription with id $subId already exists",
+        'a subscription with id $subId already exists',
       );
     }
 
@@ -197,10 +197,10 @@ String computeRequestsHash(List<ShapeRequestOrDefinition> requests) {
 String computeClientDefsHash(List<ClientShapeDefinition> requests) {
   // Mimics ohash from NPM
   final StringBuffer buf = StringBuffer();
-  buf.write("list:${requests.length}:");
+  buf.write('list:${requests.length}:');
   for (final req in requests) {
     buf.write(_mapPropsToString(req.runtimeType, req.props));
-    buf.write(",");
+    buf.write(',');
   }
 
   final strBytes = utf8.encode(buf.toString());

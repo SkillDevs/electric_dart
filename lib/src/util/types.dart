@@ -17,7 +17,7 @@ class Statement with EquatableMixin {
 
   @override
   String toString() {
-    return "Statement($sql, $args)";
+    return 'Statement($sql, $args)';
   }
   
   @override
@@ -39,7 +39,7 @@ class SatelliteException implements Exception {
   SatelliteException(this.code, this.message);
 
   @override
-  String toString() => "Satellite Exception ($code) $message";
+  String toString() => 'Satellite Exception ($code) $message';
 }
 
 enum SatelliteErrorCode {

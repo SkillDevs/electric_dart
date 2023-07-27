@@ -142,12 +142,12 @@ List<Statement> generateCompensationTriggers(
     final childKey = foreignKey.childKey;
     final fkTable = tables[foreignKey.table];
     if (fkTable == null) {
-      throw Exception("Table ${foreignKey.table} for foreign key not found.");
+      throw Exception('Table ${foreignKey.table} for foreign key not found.');
     }
     final joinedFkPKs = joinColsForJSON(fkTable.primary, null);
     final joinedFkCols = joinColsForJSON(fkTable.columns, null);
     return <String>[
-      "DROP TRIGGER IF EXISTS compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog;",
+      'DROP TRIGGER IF EXISTS compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog;',
       '''
       CREATE TRIGGER compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog
         AFTER INSERT ON $tableFullName
@@ -159,7 +159,7 @@ List<Statement> generateCompensationTriggers(
         FROM ${fkTable.namespace}.${fkTable.tableName} WHERE ${foreignKey.parentKey} = new.${foreignKey.childKey};
       END;
       ''',
-      "DROP TRIGGER IF EXISTS compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog;",
+      'DROP TRIGGER IF EXISTS compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog;',
       '''
       CREATE TRIGGER compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog
          AFTER UPDATE ON $namespace.$tableName
@@ -190,7 +190,7 @@ List<Statement> generateTableTriggers(
   final table = tables[tableFullName];
   if (table == null) {
     throw Exception(
-      "Could not generate triggers for $tableFullName. Table not found.",
+      'Could not generate triggers for $tableFullName. Table not found.',
     );
   }
   final oplogTriggers = generateOplogTriggers(tableFullName, table);

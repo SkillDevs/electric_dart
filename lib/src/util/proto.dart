@@ -4,7 +4,7 @@ import 'package:electric_client/src/proto/satellite.pb.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/types.dart';
 
-const kProtobufPackage = "Electric.Satellite.v1_4";
+const kProtobufPackage = 'Electric.Satellite.v1_4';
 
 enum SatMsgType {
   errorResp(code: 0),
@@ -271,7 +271,7 @@ SatelliteException subsErrorToSatelliteError(
         .map((e) => e.message)
         .join('; ');
     final composed =
-        "subscription error message: $message; shape error messages: $shapeErrorMsgs";
+        'subscription error message: $message; shape error messages: $shapeErrorMsgs';
     return SatelliteException(
       subsErrorToSatError[code] ?? SatelliteErrorCode.internal,
       composed,
@@ -303,7 +303,7 @@ SatelliteException subsDataErrorToSatelliteError(SatSubsDataError satError) {
         .map((e) => e.message)
         .join('; ');
     final composed =
-        "subscription data error message: $message; shape error messages: $shapeErrorMsgs";
+        'subscription data error message: $message; shape error messages: $shapeErrorMsgs';
     return SatelliteException(
       subsDataErrorToSatError[code] ?? SatelliteErrorCode.internal,
       composed,

@@ -14,7 +14,7 @@ Future<void> main() async {
     db = sqlite3.openInMemory();
     adapter = SqliteAdapter(db);
 
-    await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await initDb(adapter);
   });
 

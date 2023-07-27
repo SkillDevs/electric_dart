@@ -79,7 +79,7 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
   final debug = config.debug ?? false;
 
   final url = config.url ?? 'electric://127.0.0.1:5133';
-  final match = RegExp(r"(?:electric:\/\/)(.+):([0-9]*)").firstMatch(url);
+  final match = RegExp(r'(?:electric:\/\/)(.+):([0-9]*)').firstMatch(url);
   if (match == null) {
     throw Exception(
       "Invalid Electric URL. Must be of the form: 'electric://<host>:<port>'",

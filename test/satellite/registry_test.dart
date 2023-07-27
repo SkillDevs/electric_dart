@@ -36,7 +36,7 @@ void main() {
   test('starting multiple satellite processes works', () async {
     final mockRegistry = MockRegistry();
     final s1 = await mockRegistry.startProcess(
-      dbName: "a.db",
+      dbName: 'a.db',
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -44,7 +44,7 @@ void main() {
       config: config,
     );
     final s2 = await mockRegistry.startProcess(
-      dbName: "b.db",
+      dbName: 'b.db',
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -52,7 +52,7 @@ void main() {
       config: config,
     );
     final s3 = await mockRegistry.startProcess(
-      dbName: "c.db",
+      dbName: 'c.db',
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -75,7 +75,7 @@ void main() {
   test('ensure starting multiple satellite processes works', () async {
     final mockRegistry = MockRegistry();
     final s1 = await mockRegistry.ensureStarted(
-      dbName: "a.db",
+      dbName: 'a.db',
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -83,7 +83,7 @@ void main() {
       config: config,
     );
     final s2 = await mockRegistry.ensureStarted(
-      dbName: "b.db",
+      dbName: 'b.db',
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -91,7 +91,7 @@ void main() {
       config: config,
     );
     final s3 = await mockRegistry.ensureStarted(
-      dbName: "c.db",
+      dbName: 'c.db',
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -129,8 +129,8 @@ void main() {
       throwsA(
         isA<Exception>().having(
           (Exception e) => e.toString(),
-          "message",
-          "Exception: Satellite not running for db: $dbName",
+          'message',
+          'Exception: Satellite not running for db: $dbName',
         ),
       ),
     );
@@ -181,9 +181,9 @@ void main() {
   test('stopAll works', () async {
     final mockRegistry = MockRegistry();
     await Future.wait([
-      _callEnsureStarted(mockRegistry, name: "a.db"),
-      _callEnsureStarted(mockRegistry, name: "b.db"),
-      _callEnsureStarted(mockRegistry, name: "c.db"),
+      _callEnsureStarted(mockRegistry, name: 'a.db'),
+      _callEnsureStarted(mockRegistry, name: 'b.db'),
+      _callEnsureStarted(mockRegistry, name: 'c.db'),
     ]);
     await mockRegistry.stopAll();
 
@@ -193,9 +193,9 @@ void main() {
   test('stopAll works even when starting', () async {
     final mockRegistry = MockRegistry();
     final startPromises = [
-      _callEnsureStarted(mockRegistry, name: "a.db"),
-      _callEnsureStarted(mockRegistry, name: "b.db"),
-      _callEnsureStarted(mockRegistry, name: "c.db"),
+      _callEnsureStarted(mockRegistry, name: 'a.db'),
+      _callEnsureStarted(mockRegistry, name: 'b.db'),
+      _callEnsureStarted(mockRegistry, name: 'c.db'),
     ];
 
     await mockRegistry.stopAll();
@@ -207,10 +207,10 @@ void main() {
 
   test('stopAll works across running, stopping and starting', () async {
     final mockRegistry = MockRegistry();
-    await _callEnsureStarted(mockRegistry, name: "a.db");
-    await _callEnsureStarted(mockRegistry, name: "b.db");
-    final p1 = _callEnsureStarted(mockRegistry, name: "c.db");
-    final p2 = _callEnsureStarted(mockRegistry, name: "d.db");
+    await _callEnsureStarted(mockRegistry, name: 'a.db');
+    await _callEnsureStarted(mockRegistry, name: 'b.db');
+    final p1 = _callEnsureStarted(mockRegistry, name: 'c.db');
+    final p2 = _callEnsureStarted(mockRegistry, name: 'd.db');
 
     final p3 = mockRegistry.stop('a.db');
     final p4 = mockRegistry.stop('c.db');

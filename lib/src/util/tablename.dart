@@ -7,7 +7,7 @@ class QualifiedTablename with EquatableMixin {
   const QualifiedTablename(this.namespace, this.tablename);
 
   @override
-  String toString() => "$namespace.$tablename";
+  String toString() => '$namespace.$tablename';
 
   @override
   List<Object?> get props => [namespace, tablename];

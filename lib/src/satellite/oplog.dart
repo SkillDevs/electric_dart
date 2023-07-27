@@ -69,7 +69,7 @@ class OplogEntry with EquatableMixin {
 
   @override
   String toString() {
-    return "$optype $namespace.$tablename $primaryKey - $newRow";
+    return '$optype $namespace.$tablename $primaryKey - $newRow';
   }
 
   @override
@@ -112,15 +112,15 @@ const shadowTagsDefault = '[]';
 
 OpType opTypeStrToOpType(String str) {
   switch (str.toLowerCase()) {
-    case "delete":
+    case 'delete':
       return OpType.delete;
-    case "update":
+    case 'update':
       return OpType.update;
-    case "insert":
+    case 'insert':
       return OpType.insert;
   }
 
-  assert(false, "OpType $str not handled");
+  assert(false, 'OpType $str not handled');
   return OpType.insert;
 }
 
@@ -142,7 +142,7 @@ List<OplogEntry> fromTransaction(
     );
 
     return OplogEntry(
-      namespace: "main", // TODO: how?
+      namespace: 'main', // TODO: how?
       tablename: t.relation.table,
       primaryKey: pk,
       rowid: -1, // Not required
@@ -446,7 +446,7 @@ class ShadowEntryChanges with EquatableMixin {
 String primaryKeyToStr(Map<String, Object> primaryKeyJson) {
   final sortedValues = primaryKeyJson.values.map((e) => e.toString()).toList()
     ..sort();
-  return sortedValues.join("_");
+  return sortedValues.join('_');
 }
 
 ShadowKey getShadowPrimaryKey(
@@ -462,7 +462,7 @@ ShadowKey getShadowPrimaryKey(
   } else if (oplogEntry is ShadowEntryChanges) {
     return primaryKeyToStr(oplogEntry.primaryKeyCols);
   } else {
-    throw StateError("Unknown class");
+    throw StateError('Unknown class');
   }
 }
 
@@ -493,7 +493,7 @@ DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
   final relation = relations[entry.tablename];
 
   if (relation == null) {
-    throw Exception("Could not find relation for ${entry.tablename}");
+    throw Exception('Could not find relation for ${entry.tablename}');
   }
 
   return DataChange(

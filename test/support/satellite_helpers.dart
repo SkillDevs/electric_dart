@@ -37,11 +37,11 @@ Future<Row> loadSatelliteMetaTable(
 }) async {
   final rows = await db.query(
     Statement(
-      "SELECT key, value FROM $metaTableName",
+      'SELECT key, value FROM $metaTableName',
     ),
   );
   final entries = rows
-      .map((x) => MapEntry<String, Object?>(x["key"]! as String, x["value"]));
+      .map((x) => MapEntry<String, Object?>(x['key']! as String, x['value']));
 
   return Map.fromEntries(entries);
 }

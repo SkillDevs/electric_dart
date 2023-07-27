@@ -78,7 +78,7 @@ void main() {
 
     await adapter.run(
       Statement(
-        "DELETE FROM parent WHERE id = 1",
+        'DELETE FROM parent WHERE id = 1',
       ),
     );
 
@@ -105,7 +105,7 @@ void main() {
 
     // Local INSERT
     final stmts1 = Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?)",
+      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?)',
       <Object?>['1', 'local', null],
     );
     await adapter.runInTransaction([stmts1]);
@@ -125,7 +125,7 @@ void main() {
 
     // Local DELETE
     final stmts2 = Statement(
-      "DELETE FROM parent WHERE id=?",
+      'DELETE FROM parent WHERE id=?',
       ['1'],
     );
     await adapter.runInTransaction([stmts2]);
@@ -145,7 +145,7 @@ void main() {
 
     // Local INSERT
     final stmts3 = Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?)",
+      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?)',
       <Object?>['1', 'local', null],
     );
     await adapter.runInTransaction([stmts3]);
@@ -174,9 +174,9 @@ void main() {
       txDate1.millisecondsSinceEpoch,
       tag1,
       newValues: {
-        "id": 1,
-        "value": 'local',
-        "other": null,
+        'id': 1,
+        'value': 'local',
+        'other': null,
       },
       oldValues: {},
     );
@@ -214,19 +214,19 @@ void main() {
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['1', 'local', null],
       ),
     );
-    stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
+    stmts.add(Statement('DELETE FROM parent WHERE id = 1'));
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['2', 'local', null],
       ),
     );
-    stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
+    stmts.add(Statement('DELETE FROM parent WHERE id = 2'));
     await adapter.runInTransaction(stmts);
 
     final txDate1 = await satellite.performSnapshot();
@@ -242,9 +242,9 @@ void main() {
       prevTs,
       genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(prevTs)]),
       newValues: {
-        "id": 1,
-        "value": 'remote',
-        "other": 1,
+        'id': 1,
+        'value': 'remote',
+        'other': 1,
       },
       oldValues: {},
     );
@@ -256,9 +256,9 @@ void main() {
       nextTs,
       genEncodedTags('remote', [DateTime.fromMillisecondsSinceEpoch(nextTs)]),
       newValues: {
-        "id": 2,
-        "value": 'remote',
-        "other": 2,
+        'id': 2,
+        'value': 'remote',
+        'other': 2,
       },
       oldValues: {},
     );
@@ -289,7 +289,7 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "1",
+        primaryKey: '1',
         tags: genEncodedTags(
           'remote',
           [DateTime.fromMillisecondsSinceEpoch(prevTs)],
@@ -298,7 +298,7 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "2",
+        primaryKey: '2',
         tags: genEncodedTags(
           'remote',
           [DateTime.fromMillisecondsSinceEpoch(nextTs)],
@@ -309,15 +309,15 @@ void main() {
 
     //let entries= await satellite._getEntries()
     //console.log(entries)
-    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+    final userTable = await adapter.query(Statement('SELECT * FROM parent;'));
     //console.log(table)
 
     // In both cases insert wins over delete, but
     // for id = 1 CR picks local data before delete, while
     // for id = 2 CR picks remote data
     final List<Map<String, Object?>> expectedUserTable = [
-      {"id": 1, "value": 'local', "other": null},
-      {"id": 2, "value": 'remote', "other": 2},
+      {'id': 1, 'value': 'local', 'other': null},
+      {'id': 2, 'value': 'remote', 'other': 2},
     ];
 
     expect(userTable, expectedUserTable);
@@ -333,13 +333,13 @@ void main() {
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['1', 'local', null],
       ),
     );
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['2', 'local', null],
       ),
     );
@@ -348,8 +348,8 @@ void main() {
 
     stmts = [];
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
-    stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
-    stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
+    stmts.add(Statement('DELETE FROM parent WHERE id = 1'));
+    stmts.add(Statement('DELETE FROM parent WHERE id = 2'));
     await adapter.runInTransaction(stmts);
     await satellite.performSnapshot();
 
@@ -366,9 +366,9 @@ void main() {
       prevTs.millisecondsSinceEpoch,
       genEncodedTags('remote', [prevTs]),
       newValues: {
-        "id": 1,
-        "value": 'remote',
-        "other": 1,
+        'id': 1,
+        'value': 'remote',
+        'other': 1,
       },
       oldValues: {},
     );
@@ -380,9 +380,9 @@ void main() {
       nextTs.millisecondsSinceEpoch,
       genEncodedTags('remote', [nextTs]),
       newValues: {
-        "id": 2,
-        "value": 'remote',
-        "other": 2,
+        'id': 2,
+        'value': 'remote',
+        'other': 2,
       },
       oldValues: {},
     );
@@ -413,13 +413,13 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "1",
+        primaryKey: '1',
         tags: genEncodedTags('remote', [prevTs]),
       ),
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "2",
+        primaryKey: '2',
         tags: genEncodedTags('remote', [nextTs]),
       ),
     ];
@@ -427,15 +427,15 @@ void main() {
 
     //let entries= await satellite._getEntries()
     //console.log(entries)
-    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+    final userTable = await adapter.query(Statement('SELECT * FROM parent;'));
     //console.log(table)
 
     // In both cases insert wins over delete, but
     // for id = 1 CR picks local data before delete, while
     // for id = 2 CR picks remote data
     final expectedUserTable = [
-      {"id": 1, "value": 'local', "other": null},
-      {"id": 2, "value": 'remote', "other": 2},
+      {'id': 1, 'value': 'local', 'other': null},
+      {'id': 2, 'value': 'remote', 'other': 2},
     ];
     expect(expectedUserTable, userTable);
   });
@@ -450,26 +450,26 @@ void main() {
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['1', 'local', null],
       ),
     );
     stmts.add(
       Statement(
-        "UPDATE parent SET value = ?, other = ? WHERE id = 1",
+        'UPDATE parent SET value = ?, other = ? WHERE id = 1',
         ['local', 'not_null'],
       ),
     );
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['2', 'local', null],
       ),
     );
     stmts.add(
       Statement(
-        "UPDATE parent SET value = ?, other = ? WHERE id = 1",
+        'UPDATE parent SET value = ?, other = ? WHERE id = 1',
         ['local', 'not_null'],
       ),
     );
@@ -490,9 +490,9 @@ void main() {
       prevTs.millisecondsSinceEpoch,
       genEncodedTags('remote', [prevTs]),
       newValues: {
-        "id": 1,
-        "value": 'remote',
-        "other": 1,
+        'id': 1,
+        'value': 'remote',
+        'other': 1,
       },
       oldValues: {},
     );
@@ -505,9 +505,9 @@ void main() {
       nextTs.millisecondsSinceEpoch,
       genEncodedTags('remote', [nextTs]),
       newValues: {
-        "id": 2,
-        "value": 'remote',
-        "other": 2,
+        'id': 2,
+        'value': 'remote',
+        'other': 2,
       },
       oldValues: {},
     );
@@ -538,7 +538,7 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "1",
+        primaryKey: '1',
         tags: encodeTags([
           generateTag(clientId, txDate1),
           generateTag('remote', prevTs),
@@ -547,7 +547,7 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "2",
+        primaryKey: '2',
         tags: encodeTags([
           generateTag(clientId, txDate1),
           generateTag('remote', nextTs),
@@ -566,14 +566,14 @@ void main() {
     expect(entries[2].clearTags, encodeTags([]));
     expect(entries[3].clearTags, encodeTags([]));
 
-    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+    final userTable = await adapter.query(Statement('SELECT * FROM parent;'));
 
     // In both cases insert wins over delete, but
     // for id = 1 CR picks local data before delete, while
     // for id = 2 CR picks remote data
     final expectedUserTable = [
-      {"id": 1, "value": 'local', "other": 'not_null'},
-      {"id": 2, "value": 'remote', "other": 2},
+      {'id': 1, 'value': 'local', 'other': 'not_null'},
+      {'id': 2, 'value': 'remote', 'other': 2},
     ];
     expect(expectedUserTable, userTable);
   });
@@ -583,20 +583,20 @@ void main() {
     //
     await context.runMigrations();
     await satellite.setAuthState(context.authState);
-    final clientId = satellite.authState?.clientId ?? "test_id";
+    final clientId = satellite.authState?.clientId ?? 'test_id';
 
     var stmts = <Statement>[];
 
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['1', 'local', null],
       ),
     );
     stmts.add(
       Statement(
-        "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
         ['2', 'local', null],
       ),
     );
@@ -605,8 +605,8 @@ void main() {
 
     stmts = [];
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
-    stmts.add(Statement("DELETE FROM parent WHERE id = 1"));
-    stmts.add(Statement("DELETE FROM parent WHERE id = 2"));
+    stmts.add(Statement('DELETE FROM parent WHERE id = 1'));
+    stmts.add(Statement('DELETE FROM parent WHERE id = 2'));
     await adapter.runInTransaction(stmts);
     await satellite.performSnapshot();
 
@@ -671,15 +671,15 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "2",
+        primaryKey: '2',
         tags: genEncodedTags('remote', [txDate1]),
       ),
     ];
     expect(shadow, expectedShadow);
 
-    final userTable = await adapter.query(Statement("SELECT * FROM parent;"));
+    final userTable = await adapter.query(Statement('SELECT * FROM parent;'));
     final expectedUserTable = [
-      {"id": 2, "value": 'local', "other": null}
+      {'id': 2, 'value': 'local', 'other': null}
     ];
     expect(expectedUserTable, userTable);
   });
@@ -698,8 +698,8 @@ void main() {
       txDate1.millisecondsSinceEpoch,
       genEncodedTags('remote', [txDate1]),
       newValues: {
-        "id": 1,
-        "value": 'local',
+        'id': 1,
+        'value': 'local',
       },
       oldValues: {},
     );
@@ -713,8 +713,8 @@ void main() {
       deleteDate,
       genEncodedTags('remote', []),
       newValues: {
-        "id": 1,
-        "value": 'local',
+        'id': 1,
+        'value': 'local',
       },
       oldValues: {},
     );
@@ -736,7 +736,7 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: "1",
+        primaryKey: '1',
         tags: genEncodedTags('remote', [txDate1]),
       ),
     ];

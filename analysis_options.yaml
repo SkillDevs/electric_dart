@@ -14,6 +14,7 @@ analyzer:
 
 linter:
   rules:
+    prefer_single_quotes: true
     unawaited_futures: true
     avoid_init_to_null: false
     parameter_assignments: false

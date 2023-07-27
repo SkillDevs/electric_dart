@@ -9,6 +9,7 @@ import 'package:test/test.dart';
 
 import '../support/migrations.dart';
 import '../util/io.dart';
+import '../util/sqlite.dart';
 import '../util/sqlite_errors.dart';
 
 void main() {
@@ -16,15 +17,17 @@ void main() {
   late String dbName;
   late DatabaseAdapter adapter;
 
+  setupSqliteOpen();
+
   setUp(() {
-    dbName = "schema-migrations-${randomValue()}.db";
+    dbName = 'schema-migrations-${randomValue()}.db';
     db = sqlite3.open(dbName);
     adapter = SqliteAdapter(db);
   });
 
   tearDown(() async {
     await removeFile(dbName);
-    await removeFile("$dbName-journal");
+    await removeFile('$dbName-journal');
   });
 
   test('check schema keys are unique', () async {
@@ -43,7 +46,7 @@ void main() {
           "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
         ),
       );
-      fail("should not occur");
+      fail('should not occur');
     } catch (err) {
       final errSqlite = err as SqliteException;
       expect(
