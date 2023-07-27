@@ -11,7 +11,7 @@ final kBaseMigrations = [
   Migration(
     statements: [
       //"-- The ops log table\n",
-      '''CREATE TABLE IF NOT EXISTS $oplogTable (\n  rowid INTEGER PRIMARY KEY AUTOINCREMENT,\n  namespace TEXT NOT NULL,\n  tablename TEXT NOT NULL,\n  optype TEXT NOT NULL,\n  primaryKey TEXT NOT NULL,\n  newRow TEXT,\n  oldRow TEXT,\n  timestamp TEXT,  clearTags TEXT DEFAULT "[]" NOT NULL\n);''',
+      '''CREATE TABLE IF NOT EXISTS $oplogTable (\n  rowid INTEGER PRIMARY KEY AUTOINCREMENT,\n  namespace TEXT NOT NULL,\n  tablename TEXT NOT NULL,\n  optype TEXT NOT NULL,\n  primaryKey TEXT NOT NULL,\n  newRow TEXT,\n  oldRow TEXT,\n  timestamp TEXT, clearTags TEXT DEFAULT '[]' NOT NULL\n);''',
       //"-- Somewhere to keep our metadata\n",
       'CREATE TABLE IF NOT EXISTS $metaTable \n (key TEXT PRIMARY KEY,\n  value BLOB\n);',
       //"-- Somewhere to track migrations\n",
