@@ -33,3 +33,10 @@ dependencies:
   uuid: ^3.0.7
   web_socket_channel: ^2.3.0
   # web_socket_client: ^0.1.0-dev.3
+
+dependency_overrides:
+  sqlite3:
+    git:
+      url: https://github.com/davidmartos96/sqlite3.dart
+      path: sqlite3
+      ref: 8adca89b9bdbea9f880fe8092c409b173ca4f036

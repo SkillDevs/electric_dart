@@ -17,11 +17,10 @@ void main() {
   late String dbName;
   late DatabaseAdapter adapter;
 
-  setupSqliteOpen();
-
   setUp(() {
     dbName = 'schema-migrations-${randomValue()}.db';
     db = sqlite3.open(dbName);
+    setupSqliteDb(db);
     adapter = SqliteAdapter(db);
   });
 

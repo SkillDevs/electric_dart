@@ -83,12 +83,11 @@ final opts = kSatelliteDefaults.copyWith(
 Future<SatelliteTestContext> makeContext({
   SatelliteOpts? options,
 }) async {
-  setupSqliteOpen();
-
   await Directory('.tmp').create(recursive: true);
 
   final dbName = '.tmp/test-${randomValue()}.db';
   final db = sqlite3.open(dbName);
+  setupSqliteDb(db);
   final adapter = SqliteAdapter(db);
   final migrator =
       BundleMigrator(adapter: adapter, migrations: kTestMigrations);

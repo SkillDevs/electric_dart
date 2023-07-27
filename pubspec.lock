@@ -396,10 +396,11 @@ packages:
   sqlite3:
     dependency: "direct main"
     description:
-      name: sqlite3
-      sha256: f7511ddd6a2dda8ded9d849f8a925bb6020e0faa59db2443debc18d484e59401
-      url: "https://pub.dev"
-    source: hosted
+      path: sqlite3
+      ref: "8adca89b9bdbea9f880fe8092c409b173ca4f036"
+      resolved-ref: "8adca89b9bdbea9f880fe8092c409b173ca4f036"
+      url: "https://github.com/davidmartos96/sqlite3.dart"
+    source: git
     version: "2.0.0"
   stack_trace:
     dependency: transitive
