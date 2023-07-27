@@ -17,7 +17,7 @@ import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 
 Map<String, Relation> kTestRelations = {
-  "child": Relation(
+  'child': Relation(
     id: 0,
     schema: 'public',
     table: 'child',
@@ -35,7 +35,7 @@ Map<String, Relation> kTestRelations = {
       ),
     ],
   ),
-  "parent": Relation(
+  'parent': Relation(
     id: 1,
     schema: 'public',
     table: 'parent',
@@ -58,7 +58,7 @@ Map<String, Relation> kTestRelations = {
       ),
     ],
   ),
-  "another": Relation(
+  'another': Relation(
     id: 2,
     schema: 'public',
     table: 'another',
@@ -82,7 +82,7 @@ final opts = kSatelliteDefaults.copyWith(
 Future<SatelliteTestContext> makeContext({
   SatelliteOpts? options,
 }) async {
-  await Directory(".tmp").create(recursive: true);
+  await Directory('.tmp').create(recursive: true);
 
   final dbName = '.tmp/test-${randomValue()}.db';
   final db = sqlite3.open(dbName);
@@ -153,7 +153,7 @@ class SatelliteTestContext {
 
   Future<void> clean() async {
     await removeFile(dbName);
-    await removeFile("$dbName-journal");
+    await removeFile('$dbName-journal');
   }
 
   Future<void> cleanAndStopSatellite() async {

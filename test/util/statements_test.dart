@@ -5,9 +5,9 @@ import 'package:test/test.dart';
 void main() {
   test('prepareBatchedStatements correctly splits up data in batches', () {
     const data = [
-      {"a": 1, "b": 2},
-      {"a": 3, "b": 4},
-      {"a": 5, "b": 6},
+      {'a': 1, 'b': 2},
+      {'a': 3, 'b': 4},
+      {'a': 5, 'b': 6},
     ];
     final stmts = prepareBatchedStatements(
       'INSERT INTO test (a, b) VALUES',
@@ -27,9 +27,9 @@ void main() {
 
   test('prepareBatchedStatements respects column order', () {
     const data = [
-      {"a": 1, "b": 2},
-      {"a": 3, "b": 4},
-      {"a": 5, "b": 6},
+      {'a': 1, 'b': 2},
+      {'a': 3, 'b': 4},
+      {'a': 5, 'b': 6},
     ];
     final stmts = prepareBatchedStatements(
       'INSERT INTO test (a, b) VALUES',

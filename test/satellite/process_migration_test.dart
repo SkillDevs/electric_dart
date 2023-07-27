@@ -90,19 +90,19 @@ void main() {
     final rows = await adapter.query(Statement(sql));
     expect(rows, [
       {
-        "id": 1,
-        "value": 'local',
-        "other": null,
+        'id': 1,
+        'value': 'local',
+        'other': null,
       },
       {
-        "id": 2,
-        "value": 'local',
-        "other": null,
+        'id': 2,
+        'value': 'local',
+        'other': null,
       },
     ]);
   });
 
-  test("apply migration containing only DDL", () async {
+  test('apply migration containing only DDL', () async {
     // const { satellite, adapter, txDate } = t.context
     final timestamp = txDate.millisecondsSinceEpoch;
 
@@ -116,7 +116,7 @@ void main() {
       // starts at 3, because the app already defines 2 migrations
       // (see test/support/migrations/migrations.js)
       // which are loaded when Satellite is started
-      migrationVersion: "3",
+      migrationVersion: '3',
     );
 
     // Apply the migration transaction
@@ -130,7 +130,7 @@ void main() {
     final expectedRowsAfterMigration = rowsBeforeMigration.map((Row row) {
       return {
         ...row,
-        "baz": null,
+        'baz': null,
       };
     }).toList();
 
@@ -170,23 +170,23 @@ void main() {
     }
 
     final insertRow = {
-      "id": 3,
-      "value": 'remote',
-      "other": 1,
+      'id': 3,
+      'value': 'remote',
+      'other': 1,
     };
 
     final insertChange = mkInsertChange(insertRow);
 
     final oldUpdateRow = {
-      "id": 1,
-      "value": 'local',
-      "other": null,
+      'id': 1,
+      'value': 'local',
+      'other': null,
     };
 
     final updateRow = {
-      "id": 1,
-      "value": 'remote',
-      "other": 5,
+      'id': 1,
+      'value': 'remote',
+      'other': 5,
     };
 
     final updateChange = DataChange(
@@ -211,9 +211,9 @@ void main() {
             .cast<String>();
 
     final deleteRow = {
-      "id": 2,
-      "value": 'local',
-      "other": null,
+      'id': 2,
+      'value': 'local',
+      'other': null,
     };
 
     final deleteChange = DataChange(
@@ -224,10 +224,10 @@ void main() {
     );
 
     final insertExtendedRow = {
-      "id": 4,
-      "value": 'remote',
-      "other": 6,
-      "baz": 'foo',
+      'id': 4,
+      'value': 'remote',
+      'other': 6,
+      'baz': 'foo',
     };
     final insertExtendedChange = DataChange(
       type: DataChangeType.insert,
@@ -238,9 +238,9 @@ void main() {
     );
 
     final insertExtendedWithoutValueRow = {
-      "id": 5,
-      "value": 'remote',
-      "other": 7,
+      'id': 5,
+      'value': 'remote',
+      'other': 7,
     };
     final insertExtendedWithoutValueChange = DataChange(
       type: DataChangeType.insert,
@@ -251,9 +251,9 @@ void main() {
     );
 
     final insertInNewTableRow = {
-      "id": '1',
-      "foo": 1,
-      "bar": '2',
+      'id': '1',
+      'foo': 1,
+      'bar': '2',
     };
     final insertInNewTableChange = DataChange(
       type: DataChangeType.insert,
@@ -276,7 +276,7 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [...dml1, ...ddl1, ...dml2],
       lsn: [],
-      migrationVersion: "4",
+      migrationVersion: '4',
     );
 
     final rowsBeforeMigration = await fetchParentRows(adapter);
@@ -300,7 +300,7 @@ void main() {
       ...[
         ...rowsBeforeMigration.where(
           (Row r) =>
-              r["id"] != deleteRow["id"] && r["id"] != oldUpdateRow["id"],
+              r['id'] != deleteRow['id'] && r['id'] != oldUpdateRow['id'],
         ),
         insertRow,
         updateRow,
@@ -308,7 +308,7 @@ void main() {
       ].map((Row row) {
         return {
           ...row,
-          "baz": null,
+          'baz': null,
         };
       }),
       insertExtendedRow
@@ -344,7 +344,7 @@ void main() {
     await adapter.runInTransaction(
       [
         Statement(
-          "UPDATE parent SET value = ?, other = ? WHERE id = ?;",
+          'UPDATE parent SET value = ?, other = ? WHERE id = ?;',
           ['still local', 5, 1],
         )
       ],
@@ -358,9 +358,9 @@ void main() {
     //const txTags = [ generateTag('remote', txDate) ]
 
     final deleteRow = {
-      "id": 1,
-      "value": 'local',
-      "other": null,
+      'id': 1,
+      'value': 'local',
+      'other': null,
     };
 
     final deleteChange = DataChange(
@@ -379,12 +379,12 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [...ddl, ...dml],
       lsn: [],
-      migrationVersion: "5",
+      migrationVersion: '5',
     );
 
     final rowsBeforeMigration = await fetchParentRows(adapter);
     final rowsBeforeMigrationExceptConflictingRow = rowsBeforeMigration.where(
-      (r) => r["id"] != deleteRow["id"],
+      (r) => r['id'] != deleteRow['id'],
     );
 
     // For each schema change, Electric sends a `SatRelation` message
@@ -405,14 +405,14 @@ void main() {
     // Check that the update wins
     final rowsAfterMigration = await fetchParentRows(adapter);
     final newRowsExceptConflictingRow =
-        rowsAfterMigration.where((r) => r["id"] != deleteRow["id"]);
+        rowsAfterMigration.where((r) => r['id'] != deleteRow['id']);
     final conflictingRow =
-        rowsAfterMigration.firstWhere((r) => r["id"] == deleteRow["id"]);
+        rowsAfterMigration.firstWhere((r) => r['id'] == deleteRow['id']);
 
     expect(
       rowsBeforeMigrationExceptConflictingRow.map((r) {
         return {
-          "baz": null,
+          'baz': null,
           ...r,
         };
       }).toSet(),
@@ -420,10 +420,10 @@ void main() {
     );
 
     expect(conflictingRow, {
-      "id": 1,
-      "value": 'still local',
-      "other": 5,
-      "baz": null,
+      'id': 1,
+      'value': 'still local',
+      'other': 5,
+      'baz': null,
     });
   });
 
@@ -445,15 +445,15 @@ void main() {
     }
 
     final insertRowA = {
-      "id": 3,
-      "value": 'remote A',
-      "other": 8,
+      'id': 3,
+      'value': 'remote A',
+      'other': 8,
     };
 
     final insertRowB = {
-      "id": 3,
-      "value": 'remote B',
-      "other": 9,
+      'id': 3,
+      'value': 'remote B',
+      'other': 9,
     };
 
     // Make 2 concurrent insert changes.
@@ -476,7 +476,7 @@ void main() {
       commitTimestamp: Int64(timestamp),
       changes: [...ddl, insertChangeB],
       lsn: [],
-      migrationVersion: "6",
+      migrationVersion: '6',
     );
 
     final rowsBeforeMigration = await fetchParentRows(adapter);
@@ -501,19 +501,19 @@ void main() {
     final extendRow = (Row r) {
       return {
         ...r,
-        "baz": null,
+        'baz': null,
       };
     };
     final extendedRows = rowsBeforeMigration.map(extendRow);
 
     // Check that all rows now have an additional column
     expect(
-      rowsAfterMigration.where((r) => r["id"] != insertRowA["id"]),
+      rowsAfterMigration.where((r) => r['id'] != insertRowA['id']),
       extendedRows,
     );
 
     final conflictingRow =
-        rowsAfterMigration.firstWhere((r) => r["id"] == insertRowA["id"]);
+        rowsAfterMigration.firstWhere((r) => r['id'] == insertRowA['id']);
 
     const mapEq = MapEquality<String, Object?>();
     // Now also check the row that was concurrently inserted
@@ -532,13 +532,13 @@ Future<void> populateDB(SatelliteTestContext context) async {
 
   stmts.add(
     Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
       [1, 'local', null],
     ),
   );
   stmts.add(
     Statement(
-      "INSERT INTO parent (id, value, other) VALUES (?, ?, ?);",
+      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
       [2, 'local', null],
     ),
   );
@@ -563,18 +563,18 @@ Future<void> assertDbHasTables(List<String> tables) async {
 Future<List<ColumnInfo>> getTableInfo(String table) async {
   final rows = await adapter.query(
     Statement(
-      "pragma table_info($table);",
+      'pragma table_info($table);',
     ),
   );
 
   return rows.map((r) {
     return ColumnInfo(
-      cid: r["cid"]! as int,
+      cid: r['cid']! as int,
       name: r['name']! as String,
-      type: r["type"]! as String,
-      notnull: r["notnull"]! as int,
-      dflt_value: r["dflt_value"] as String?,
-      pk: r["pk"]! as int,
+      type: r['type']! as String,
+      notnull: r['notnull']! as int,
+      dflt_value: r['dflt_value'] as String?,
+      pk: r['pk']! as int,
     );
   }).toList();
 }

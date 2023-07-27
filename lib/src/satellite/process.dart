@@ -133,7 +133,7 @@ class SatelliteProcess implements Satellite {
     SatelliteReplicationOptions? opts,
   }) async {
     // TODO(dart): Explicitly enable foreign keys, which is used by Electric
-    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
 
     await migrator.up();
 
@@ -149,9 +149,9 @@ class SatelliteProcess implements Satellite {
     await setAuthState(AuthState(clientId: clientId, token: authConfig.token));
 
     final notifierSubscriptions = {
-      "_authStateSubscription": _authStateSubscription,
-      "_connectivityChangeSubscription": _connectivityChangeSubscription,
-      "_potentialDataChangeSubscription": _potentialDataChangeSubscription,
+      '_authStateSubscription': _authStateSubscription,
+      '_connectivityChangeSubscription': _connectivityChangeSubscription,
+      '_potentialDataChangeSubscription': _potentialDataChangeSubscription,
     };
     notifierSubscriptions.forEach((name, value) {
       if (value != null) {
@@ -206,9 +206,9 @@ This means there is a notifier subscription leak.`''');
     final lsnBase64 = await getMeta<String?>('lsn');
     if (lsnBase64 != null && lsnBase64.isNotEmpty) {
       _lsn = base64.decode(lsnBase64);
-      logger.info("retrieved lsn $_lsn");
+      logger.info('retrieved lsn $_lsn');
     } else {
-      logger.info("no lsn retrieved from store");
+      logger.info('no lsn retrieved from store');
     }
 
     final subscriptionsState = await getMeta<String>('subscriptions');
@@ -239,13 +239,13 @@ This means there is a notifier subscription leak.`''');
         .map(
           (ShapeSelect select) =>
               // We need "fully qualified" table names in the next calls
-              "main." + select.tablename,
+              'main.' + select.tablename,
         )
         .fold(stmts, (List<Statement> stmts, String tablename) {
       stmts.addAll([
         ..._disableTriggers([tablename]),
         Statement(
-          "DELETE FROM $tablename",
+          'DELETE FROM $tablename',
         ),
         ..._enableTriggers([tablename])
       ]);
@@ -354,7 +354,7 @@ This means there is a notifier subscription leak.`''');
       subscriptionNotifiers.remove(subId);
       subscriptions.subscriptionCancelled(subId);
       throw Exception(
-        "Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId",
+        'Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId',
       );
     }
 
@@ -435,10 +435,10 @@ This means there is a notifier subscription leak.`''');
       });
 
       allArgsForShadowInsert.add({
-        "namespace": 'main',
-        "tablename": op.relation.table,
-        "primaryKey": primaryKeyToStr(primaryKeyCols),
-        "tags": encodeTags(op.tags),
+        'namespace': 'main',
+        'tablename': op.relation.table,
+        'primaryKey': primaryKeyToStr(primaryKeyCols),
+        'tags': encodeTags(op.tags),
       });
     }
 
@@ -461,7 +461,7 @@ This means there is a notifier subscription leak.`''');
 
     // Then do a batched insert for the shadow table
     final upsertShadowStmt =
-        "INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES ";
+        'INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES ';
     stmts.addAll(
       prepareBatchedStatements(
         upsertShadowStmt,
@@ -496,7 +496,7 @@ This means there is a notifier subscription leak.`''');
           SubscriptionErrorData(
             error: SatelliteException(
               SatelliteErrorCode.internal,
-              "Error applying subscription data: $e",
+              'Error applying subscription data: $e',
             ),
             subscriptionId: null,
           ),
@@ -558,7 +558,7 @@ This means there is a notifier subscription leak.`''');
         }
       default:
         {
-          throw Exception("unexpected connectivity state: $status");
+          throw Exception('unexpected connectivity state: $status');
         }
     }
   }
@@ -566,11 +566,11 @@ This means there is a notifier subscription leak.`''');
   Future<void> _connectAndStartReplication(
     SatelliteReplicationOptions? opts,
   ) async {
-    logger.info("connecting and starting replication");
+    logger.info('connecting and starting replication');
 
     final _authState = authState;
     if (_authState == null) {
-      throw Exception("trying to connect before authentication");
+      throw Exception('trying to connect before authentication');
     }
 
     try {
@@ -625,7 +625,7 @@ This means there is a notifier subscription leak.`''');
         [meta, oplog, shadow],
       ),
     );
-    final numTables = res.first["numTables"]! as int;
+    final numTables = res.first['numTables']! as int;
     return numTables == 3;
   }
 
@@ -899,7 +899,7 @@ This means there is a notifier subscription leak.`''');
   Statement getOplogShadowEntryStatement({OplogEntry? oplog}) {
     final shadow = opts.shadowTable.toString();
     Statement query;
-    var selectTags = "SELECT * FROM $shadow";
+    var selectTags = 'SELECT * FROM $shadow';
     if (oplog != null) {
       selectTags = '''
         $selectTags WHERE
@@ -1132,7 +1132,7 @@ This means there is a notifier subscription leak.`''');
       // This only needs to be done once, even if there are several DML chunks
       // because all those chunks are part of the same transaction.
       if (firstDMLChunk) {
-        logger.info("apply incoming changes for LSN: ${base64.encode(lsn)}");
+        logger.info('apply incoming changes for LSN: ${base64.encode(lsn)}');
         // assign timestamp to pending operations before apply
         await _mutexSnapshot();
         firstDMLChunk = false;
@@ -1299,7 +1299,7 @@ This means there is a notifier subscription leak.`''');
       final tablesOr = tablenames.map((_) => 'tablename = ?').join(' OR ');
       return [
         Statement(
-          "UPDATE $triggers SET flag = ? WHERE $tablesOr",
+          'UPDATE $triggers SET flag = ? WHERE $tablesOr',
           [if (flag) 1 else 0, ...tablenames],
         )
       ];
@@ -1316,7 +1316,7 @@ This means there is a notifier subscription leak.`''');
 
     final meta = opts.metaTable.toString();
 
-    final sql = " UPDATE $meta SET value = ? WHERE key = ?";
+    final sql = ' UPDATE $meta SET value = ? WHERE key = ?';
     final args = <Object?>[
       lsn.toString(),
       if (isAck) 'lastAckdRowId' else 'lastSentRowId',
@@ -1336,7 +1336,7 @@ This means there is a notifier subscription leak.`''');
   Statement _setMetaStatement(String key, Object? value) {
     final meta = opts.metaTable.toString();
 
-    final sql = "UPDATE $meta SET value = ? WHERE key = ?";
+    final sql = 'UPDATE $meta SET value = ? WHERE key = ?';
     final args = <Object?>[value, key];
 
     return Statement(sql, args);
@@ -1352,15 +1352,15 @@ This means there is a notifier subscription leak.`''');
   Future<T> getMeta<T>(String key) async {
     final meta = opts.metaTable.toString();
 
-    final sql = "SELECT value from $meta WHERE key = ?";
+    final sql = 'SELECT value from $meta WHERE key = ?';
     final args = [key];
     final rows = await adapter.query(Statement(sql, args));
 
     if (rows.length != 1) {
-      throw "Invalid metadata table: missing $key";
+      throw 'Invalid metadata table: missing $key';
     }
 
-    return rows.first["value"] as T;
+    return rows.first['value'] as T;
   }
 
   Future<Uuid> _getClientId() async {
@@ -1406,7 +1406,7 @@ This means there is a notifier subscription leak.`''');
     int id = 0;
     const schema = 'public'; // TODO
     for (final table in tableNames) {
-      final tableName = table["name"]! as String;
+      final tableName = table['name']! as String;
       const sql = 'SELECT * FROM pragma_table_info(?)';
       final args = [tableName];
       final columnsForTable = await adapter.query(Statement(sql, args));
@@ -1423,9 +1423,9 @@ This means there is a notifier subscription leak.`''');
       for (final c in columnsForTable) {
         relation.columns.add(
           RelationColumn(
-            name: c["name"]! as String,
-            type: c["type"]! as String,
-            primaryKey: (c["pk"]! as int) > 0,
+            name: c['name']! as String,
+            type: c['type']! as String,
+            primaryKey: (c['pk']! as int) > 0,
           ),
         );
       }
@@ -1460,7 +1460,7 @@ This means there is a notifier subscription leak.`''');
     _lsn = lsn;
     final lsn_base64 = base64.encode(lsn);
     return Statement(
-      "UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?",
+      'UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?',
       [lsn_base64, 'lsn'],
     );
   }
@@ -1498,7 +1498,7 @@ Statement _applyDeleteOperation(
     (acc, entry) {
       final column = entry.key;
       final value = entry.value;
-      acc.where.add("$column = ?");
+      acc.where.add('$column = ?');
       acc.values.add(value);
       return acc;
     },
@@ -1526,7 +1526,7 @@ Statement _applyNonDeleteOperation(
       columnNames.where((c) => !primaryKeyCols.containsKey(c)).fold(
     _WhereAndValues([], []),
     (acc, c) {
-      acc.where.add("$c = ?");
+      acc.where.add('$c = ?');
       acc.values.add(fullRow[c]);
       return acc;
     },
@@ -1540,7 +1540,7 @@ Statement _applyNonDeleteOperation(
     columnValues.addAll(updateColumnStmts.values);
   } else {
     // no changes, can ignore statement if exists
-    insertStmt = "INSERT OR IGNORE $insertStmt";
+    insertStmt = 'INSERT OR IGNORE $insertStmt';
   }
 
   return Statement(insertStmt, columnValues);

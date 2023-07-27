@@ -92,7 +92,7 @@ void main() {
 
     try {
       await client.connect(retryHandler: retry);
-      fail("Should have failed");
+      fail('Should have failed');
     } catch (e) {
       // Should pass
     }
@@ -116,12 +116,12 @@ void main() {
     server.nextResponses([]);
     try {
       await client.startReplication(null, null, null);
-      fail("start replication should throw");
+      fail('start replication should throw');
     } catch (error) {
       expect(
         error,
         isA<SatelliteException>()
-            .having((e) => e.code, "code", SatelliteErrorCode.timeout),
+            .having((e) => e.code, 'code', SatelliteErrorCode.timeout),
       );
     }
   });
@@ -139,7 +139,7 @@ void main() {
 
     try {
       await client.startReplication(null, null, null);
-      fail("Should have failed");
+      fail('Should have failed');
     } catch (e) {
       expect((e as SatelliteException).code, SatelliteErrorCode.behindWindow);
     }
@@ -230,7 +230,7 @@ void main() {
         error,
         isA<SatelliteException>().having(
           (e) => e.code,
-          "code",
+          'code',
           SatelliteErrorCode.replicationAlreadyStarted,
         ),
       );
@@ -257,13 +257,13 @@ void main() {
 
     try {
       await client.stopReplication();
-      fail("stop replication should throw");
+      fail('stop replication should throw');
     } catch (error) {
       expect(
         error,
         isA<SatelliteException>().having(
           (e) => e.code,
-          "code",
+          'code',
           SatelliteErrorCode.replicationNotStarted,
         ),
       );
@@ -323,17 +323,17 @@ void main() {
 
     final insertOp = SatOpInsert(
       relationId: 1,
-      rowData: serializeRow({"name1": 'Foo', "name2": 'Bar'}, rel),
+      rowData: serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel),
     );
 
     final updateOp = SatOpUpdate(
       relationId: 1,
-      rowData: serializeRow({"name1": 'Hello', "name2": 'World!'}, rel),
-      oldRowData: serializeRow({"name1": '', "name2": ''}, rel),
+      rowData: serializeRow({'name1': 'Hello', 'name2': 'World!'}, rel),
+      oldRowData: serializeRow({'name1': '', 'name2': ''}, rel),
     );
     final deleteOp = SatOpDelete(
       relationId: 1,
-      oldRowData: serializeRow({"name1": 'Hello', "name2": 'World!'}, rel),
+      oldRowData: serializeRow({'name1': 'Hello', 'name2': 'World!'}, rel),
     );
 
     final firstOpLogMessage = SatOpLog(
@@ -533,9 +533,9 @@ void main() {
     ]);
 
     final timeoutTimer = Timer(const Duration(milliseconds: 300), () {
-      print("FAIL");
+      print('FAIL');
       fail(
-        "Timed out while waiting for server to get all expected requests. Missing $expectedCount",
+        'Timed out while waiting for server to get all expected requests. Missing $expectedCount',
       );
     });
     addTearDown(() => timeoutTimer.cancel());
@@ -575,9 +575,9 @@ void main() {
       commitTimestamp: Int64.ZERO,
       changes: [
         DataChange(
-          relation: kTestRelations["parent"]!,
+          relation: kTestRelations['parent']!,
           type: DataChangeType.insert,
-          record: {"id": 0},
+          record: {'id': 0},
           tags: [], // actual value is not relevent here
         ),
       ],
@@ -658,12 +658,12 @@ void main() {
       relationId: 1,
       rowData: serializeRow(
         {
-          "id": 'f989b58b-980d-4d3c-b178-adb6ae8222f1',
-          "content": 'hello from pg_1',
-          "text_null": null,
-          "text_null_default": '',
-          "intvalue_null": null,
-          "intvalue_null_default": '10',
+          'id': 'f989b58b-980d-4d3c-b178-adb6ae8222f1',
+          'content': 'hello from pg_1',
+          'text_null': null,
+          'text_null_default': '',
+          'intvalue_null': null,
+          'intvalue_null_default': '10',
         },
         rel,
       ),
@@ -845,7 +845,7 @@ void main() {
     );
     server.nextResponses([subsResp, subsError]);
 
-    final success = (_) => fail("Should have failed");
+    final success = (_) => fail('Should have failed');
     final error = (_) {};
 
     client.subscribeToSubscriptionEvents(success, error);
@@ -944,7 +944,7 @@ void main() {
       final completer = Completer<void>();
       final success = (_) {
         completer.completeError(
-          "expected the client to fail on an invalid message sequence",
+          'expected the client to fail on an invalid message sequence',
         );
       };
 
@@ -1033,7 +1033,7 @@ void main() {
     final insertOp = SatOpInsert(
       relationId: 0,
       rowData: serializeRow(
-        {"name1": 'Foo', "name2": 'Bar'},
+        {'name1': 'Foo', 'name2': 'Bar'},
         rel,
       ),
     );

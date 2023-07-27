@@ -4,16 +4,16 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 void runTests(DatabaseAdapter Function() getAdapter) {
-  test("run+query", () async {
+  test('run+query', () async {
     final adapter = getAdapter();
     await adapter.run(Statement("INSERT INTO items VALUES ('foo');"));
-    final result = await adapter.query(Statement("SELECT * FROM items;"));
+    final result = await adapter.query(Statement('SELECT * FROM items;'));
     expect(result, [
-      {"value": "foo"}
+      {'value': 'foo'}
     ]);
   });
 
-  group("transaction", () {
+  group('transaction', () {
     test('successful', () async {
       final adapter = getAdapter();
 
@@ -24,19 +24,19 @@ void runTests(DatabaseAdapter Function() getAdapter) {
             setResult(true);
           },
           (_) {
-            fail("should not fail");
+            fail('should not fail');
           },
         );
       });
       expect(res, true);
 
-      final result = await adapter.query(Statement("SELECT * FROM items;"));
+      final result = await adapter.query(Statement('SELECT * FROM items;'));
       expect(result, [
-        {"value": "foo"},
+        {'value': 'foo'},
       ]);
 
       // Can open a new transaction
-      await adapter.runInTransaction([Statement("SELECT 1")]);
+      await adapter.runInTransaction([Statement('SELECT 1')]);
     });
 
     test('rollback', () async {
@@ -44,30 +44,30 @@ void runTests(DatabaseAdapter Function() getAdapter) {
       try {
         await adapter.transaction<bool>((tx, setResult) async {
           tx.run(
-            Statement("wrong sql;"),
+            Statement('wrong sql;'),
             (tx, res) {
-              fail("should fail");
+              fail('should fail');
             },
             (e) {},
           );
         });
-        fail("should fail");
+        fail('should fail');
       } catch (e) {
         expect(
           e,
-          isA<SqliteException>().having((p0) => p0.resultCode, "code", 1),
+          isA<SqliteException>().having((p0) => p0.resultCode, 'code', 1),
         );
       }
 
-      final result = await adapter.query(Statement("SELECT * FROM items;"));
+      final result = await adapter.query(Statement('SELECT * FROM items;'));
       expect(result, isEmpty);
 
       // Can open a new transaction
-      await adapter.runInTransaction([Statement("SELECT 1")]);
+      await adapter.runInTransaction([Statement('SELECT 1')]);
     });
   });
 
-  group("runInTransaction", () {
+  group('runInTransaction', () {
     test('successful', () async {
       final adapter = getAdapter();
       final transRes = await adapter.runInTransaction([
@@ -76,14 +76,14 @@ void runTests(DatabaseAdapter Function() getAdapter) {
       ]);
       expect(transRes.rowsAffected, 2);
 
-      final result = await adapter.query(Statement("SELECT * FROM items;"));
+      final result = await adapter.query(Statement('SELECT * FROM items;'));
       expect(result, [
-        {"value": "bar"},
-        {"value": "foo"},
+        {'value': 'bar'},
+        {'value': 'foo'},
       ]);
 
       // Can open a new transaction
-      await adapter.runInTransaction([Statement("SELECT 1")]);
+      await adapter.runInTransaction([Statement('SELECT 1')]);
     });
 
     test('rollback', () async {
@@ -91,49 +91,49 @@ void runTests(DatabaseAdapter Function() getAdapter) {
       try {
         await adapter.runInTransaction([
           Statement("INSERT INTO items VALUES ('foo');"),
-          Statement("wrong"),
+          Statement('wrong'),
         ]);
 
-        fail("should fail");
+        fail('should fail');
       } catch (e) {
         expect(
           e,
-          isA<SqliteException>().having((p0) => p0.resultCode, "code", 1),
+          isA<SqliteException>().having((p0) => p0.resultCode, 'code', 1),
         );
       }
 
-      final result = await adapter.query(Statement("SELECT * FROM items;"));
+      final result = await adapter.query(Statement('SELECT * FROM items;'));
       expect(result, isEmpty);
 
       // Can open a new transaction
-      await adapter.runInTransaction([Statement("SELECT 1")]);
+      await adapter.runInTransaction([Statement('SELECT 1')]);
     });
 
     test('rollback on COMMIT', () async {
       // To trigger an error at COMMIT time
       final adapter = getAdapter();
-      await adapter.run(Statement("PRAGMA defer_foreign_keys = ON;"));
+      await adapter.run(Statement('PRAGMA defer_foreign_keys = ON;'));
 
       try {
         await adapter.runInTransaction([
-          Statement("INSERT INTO child(id, parent) VALUES (1, 2);"),
+          Statement('INSERT INTO child(id, parent) VALUES (1, 2);'),
         ]);
 
-        fail("should fail");
+        fail('should fail');
       } catch (e) {
         expect(
           e,
           // FOREIGN KEY constraint failed, constraint failed
           isA<SqliteException>()
-              .having((p0) => p0.extendedResultCode, "code", 787),
+              .having((p0) => p0.extendedResultCode, 'code', 787),
         );
       }
 
-      final result = await adapter.query(Statement("SELECT * FROM items;"));
+      final result = await adapter.query(Statement('SELECT * FROM items;'));
       expect(result, isEmpty);
 
       // Can open a new transaction
-      await adapter.runInTransaction([Statement("SELECT 1")]);
+      await adapter.runInTransaction([Statement('SELECT 1')]);
     });
   });
 }

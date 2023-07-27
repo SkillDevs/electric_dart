@@ -55,6 +55,6 @@ final kTestMigrations = [
       'DROP TRIGGER IF EXISTS delete_main_parent_into_oplog;',
       "CREATE TRIGGER delete_main_parent_into_oplog\n   AFTER DELETE ON main.parent\n   WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == 'main.parent')\nBEGIN\n  INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)\n  VALUES ('main', 'parent', 'DELETE', json_object('id', old.id), NULL, json_object('id', old.id, 'value', old.value, 'other', old.other), NULL);\nEND;",
     ],
-    version: "2",
+    version: '2',
   ),
 ];

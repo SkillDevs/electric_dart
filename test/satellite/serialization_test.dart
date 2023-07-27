@@ -22,13 +22,13 @@ void main() {
     );
 
     final record = <String, Object?>{
-      "name1": 'Hello',
-      "name2": 'World!',
-      "name3": null,
-      "int1": 1,
-      "int2": -30,
-      "float1": 1.1,
-      "float2": -30.3,
+      'name1': 'Hello',
+      'name2': 'World!',
+      'name3': null,
+      'int1': 1,
+      'int2': -30,
+      'float1': 1.1,
+      'float2': -30.3,
     };
     final sRow = serializeRow(record, rel);
     final dRow = deserializeRow(sRow, rel);
@@ -56,15 +56,15 @@ void main() {
     );
 
     final record = {
-      "bit0": null,
-      "bit1": null,
-      "bit2": 'Filled',
-      "bit3": null,
-      "bit4": 'Filled',
-      "bit5": 'Filled',
-      "bit6": 'Filled',
-      "bit7": 'Filled',
-      "bit8": null,
+      'bit0': null,
+      'bit1': null,
+      'bit2': 'Filled',
+      'bit3': null,
+      'bit4': 'Filled',
+      'bit5': 'Filled',
+      'bit6': 'Filled',
+      'bit7': 'Filled',
+      'bit8': null,
     };
     final sRow = serializeRow(record, rel);
 

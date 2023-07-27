@@ -17,14 +17,14 @@ void main() {
   late DatabaseAdapter adapter;
 
   setUp(() {
-    dbName = "schema-migrations-${randomValue()}.db";
+    dbName = 'schema-migrations-${randomValue()}.db';
     db = sqlite3.open(dbName);
     adapter = SqliteAdapter(db);
   });
 
   tearDown(() async {
     await removeFile(dbName);
-    await removeFile("$dbName-journal");
+    await removeFile('$dbName-journal');
   });
 
   test('check schema keys are unique', () async {
@@ -43,7 +43,7 @@ void main() {
           "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
         ),
       );
-      fail("should not occur");
+      fail('should not occur');
     } catch (err) {
       final errSqlite = err as SqliteException;
       expect(

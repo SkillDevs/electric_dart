@@ -8,9 +8,9 @@ Future<String> authToken({String? iss, String? key}) async {
 
   final jwt = JWT(
     {
-      "type": "access",
-      "user_id": "test-user",
-      "iat": iat,
+      'type': 'access',
+      'user_id': 'test-user',
+      'iat': iat,
     },
     issuer: mockIss,
   );

@@ -13,7 +13,7 @@ import 'package:test/test.dart';
 
 void main() {
   final MetaData metaData = MetaData(
-    format: "SatOpMigrate",
+    format: 'SatOpMigrate',
     ops: [
       SatOpMigrate(
         version: '20230613112725_814',
@@ -78,8 +78,8 @@ void main() {
         ),
       ),
     ],
-    protocolVersion: "Electric.Satellite.v1_4",
-    version: "20230613112725_814",
+    protocolVersion: 'Electric.Satellite.v1_4',
+    version: '20230613112725_814',
   );
 
   test('generate migration from meta data', () {
@@ -96,7 +96,7 @@ void main() {
   });
 
   test('load migration from meta data', () async {
-    const dbName = "memory";
+    const dbName = 'memory';
     final db = sqlite3.openInMemory();
     final migration = makeMigration(metaData);
     final electric = await electrify(
@@ -117,16 +117,16 @@ void main() {
       ),
     );
 
-    final starIdx = tables.indexWhere((tbl) => tbl["name"] == 'stars');
+    final starIdx = tables.indexWhere((tbl) => tbl['name'] == 'stars');
     expect(starIdx, greaterThanOrEqualTo(0)); // must exist
 
     final columns = await electric.adapter
         .query(
           Statement(
-            "PRAGMA table_info(stars);",
+            'PRAGMA table_info(stars);',
           ),
         )
-        .then((columns) => columns.map((column) => column["name"]! as String));
+        .then((columns) => columns.map((column) => column['name']! as String));
 
     expect(columns, ['id', 'avatar_url', 'name', 'starred_at', 'username']);
   });

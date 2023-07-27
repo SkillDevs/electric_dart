@@ -18,7 +18,7 @@ Future<void> main() async {
     db = await GenericDb.open(NativeDatabase.memory());
     adapter = DriftAdapter(db);
 
-    await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await initDb(adapter);
   });
 
@@ -58,7 +58,7 @@ class GenericDb extends GeneratedDatabase {
       // with no tables inside. We prefer to detect early if it is not valid, as it is very common to open an
       // already created database.
       // It also provides a chance for Drift to open the database on the first query that is run
-      await db.customSelect("PRAGMA schema_version").get();
+      await db.customSelect('PRAGMA schema_version').get();
     } catch (e) {
       await db.close();
       rethrow;

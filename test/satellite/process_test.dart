@@ -46,14 +46,14 @@ AuthState get authState => context.authState;
 AuthConfig get authConfig => context.authConfig;
 
 const parentRecord = <String, Object?>{
-  "id": 1,
-  "value": 'incoming',
-  "other": 1,
+  'id': 1,
+  'value': 'incoming',
+  'other': 1,
 };
 
 const childRecord = <String, Object?>{
-  "id": 1,
-  "parent": 1,
+  'id': 1,
+  'parent': 1,
 };
 
 void main() {
@@ -80,12 +80,12 @@ void main() {
 
     final meta = await loadSatelliteMetaTable(adapter);
     expect(meta, {
-      "compensations": 0,
-      "lastAckdRowId": '0',
-      "lastSentRowId": '0',
-      "lsn": '',
-      "clientId": '',
-      "subscriptions": '',
+      'compensations': 0,
+      'lastAckdRowId': '0',
+      'lastSentRowId': '0',
+      'lsn': '',
+      'clientId': '',
+      'subscriptions': '',
     });
   });
 
@@ -114,7 +114,7 @@ void main() {
       throwsA(
         isA<SqliteException>().having(
           (SqliteException e) => e.extendedResultCode,
-          "code",
+          'code',
           SqliteErrors.SQLITE_CONSTRAINT_TRIGGER,
         ),
       ),
@@ -133,7 +133,7 @@ void main() {
     final shadowTags = encodeTags([generateTag(clientId, snapshotTimestamp)]);
 
     final shadowRows = await adapter.query(
-      Statement("SELECT tags FROM _electric_shadow"),
+      Statement('SELECT tags FROM _electric_shadow'),
     );
     expect(shadowRows.length, 2);
     for (final row in shadowRows) {
@@ -169,10 +169,10 @@ void main() {
         isA<SatelliteException>()
             .having(
               (e) => e.code,
-              "code",
+              'code',
               SatelliteErrorCode.internal,
             )
-            .having((e) => e.message, "message", "already performing snapshot"),
+            .having((e) => e.message, 'message', 'already performing snapshot'),
       ),
     );
   });
@@ -253,8 +253,8 @@ void main() {
         "INSERT INTO parent(id, value) VALUES (1,'val1')",
       ),
     );
-    await adapter.run(Statement("DELETE FROM parent WHERE id=1"));
-    await adapter.run(Statement("INSERT INTO parent(id) VALUES (1)"));
+    await adapter.run(Statement('DELETE FROM parent WHERE id=1'));
+    await adapter.run(Statement('INSERT INTO parent(id) VALUES (1)'));
 
     await satellite.setAuthState(authState);
     await satellite.performSnapshot();
@@ -266,7 +266,7 @@ void main() {
     });
     final opLogTableChange = merged['main.parent']!['1']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
-    final resultingValue = keyChanges.changes["value"]!.value;
+    final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, null);
   });
 
@@ -284,8 +284,8 @@ void main() {
         generateTag('remote', DateTime.fromMillisecondsSinceEpoch(incomingTs))
       ]),
       newValues: {
-        "id": 1,
-        "value": 'incoming',
+        'id': 1,
+        'value': 'incoming',
       },
       oldValues: {},
     );
@@ -312,17 +312,17 @@ void main() {
       ShadowEntryChanges(
         namespace: 'main',
         tablename: 'parent',
-        primaryKeyCols: {"id": 1},
+        primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
         changes: {
-          "id": OplogColumnChange(1, localTimestamp),
-          "value": OplogColumnChange('local', localTimestamp),
-          "other": OplogColumnChange(1, localTimestamp),
+          'id': OplogColumnChange(1, localTimestamp),
+          'value': OplogColumnChange('local', localTimestamp),
+          'other': OplogColumnChange(1, localTimestamp),
         },
         fullRow: {
-          "id": 1,
-          "value": 'local',
-          "other": 1,
+          'id': 1,
+          'value': 'local',
+          'other': 1,
         },
         tags: [
           generateTag(clientId, localTime),
@@ -361,10 +361,10 @@ void main() {
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
-      genEncodedTags("remote", [incomingTs]),
+      genEncodedTags('remote', [incomingTs]),
       newValues: {
-        "id": 1,
-        "value": 'incoming',
+        'id': 1,
+        'value': 'incoming',
       },
       oldValues: {},
     );
@@ -379,18 +379,18 @@ void main() {
       ShadowEntryChanges(
         namespace: 'main',
         tablename: 'parent',
-        primaryKeyCols: {"id": 1},
+        primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
         changes: {
-          "id": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
-          "value":
+          'id': OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+          'value':
               OplogColumnChange('incoming', incomingTs.millisecondsSinceEpoch),
-          "other": OplogColumnChange(1, localTimestamp.millisecondsSinceEpoch),
+          'other': OplogColumnChange(1, localTimestamp.millisecondsSinceEpoch),
         },
         fullRow: {
-          "id": 1,
-          "value": 'incoming',
-          "other": 1,
+          'id': 1,
+          'value': 'incoming',
+          'other': 1,
         },
         tags: [
           generateTag(clientId, localTimestamp),
@@ -422,9 +422,9 @@ void main() {
       incomingTs.millisecondsSinceEpoch,
       genEncodedTags('remote', [incomingTs]),
       newValues: {
-        "id": 1,
-        "value": 'incoming',
-        "other": 1,
+        'id': 1,
+        'value': 'incoming',
+        'other': 1,
       },
       oldValues: {},
     );
@@ -477,9 +477,9 @@ void main() {
       incomingTs.millisecondsSinceEpoch,
       genEncodedTags('remote', []),
       newValues: {
-        "id": 1,
-        "value": 'incoming',
-        "otherValue": 1,
+        'id': 1,
+        'value': 'incoming',
+        'otherValue': 1,
       },
       oldValues: {},
     );
@@ -499,7 +499,7 @@ void main() {
 
     await satellite.setAuthState(authState);
 
-    await satellite.apply([], "external");
+    await satellite.apply([], 'external');
   });
 
   test('apply incoming with null on column with default', () async {
@@ -514,9 +514,9 @@ void main() {
       incomingTs.millisecondsSinceEpoch,
       genEncodedTags('remote', [incomingTs]),
       newValues: {
-        "id": 1234,
-        "value": 'incoming',
-        "other": null,
+        'id': 1234,
+        'value': 'incoming',
+        'other': null,
       },
       oldValues: {},
     );
@@ -538,7 +538,7 @@ void main() {
     const sql = "SELECT * from main.parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
 
-    expect(rows[0]["other"], null);
+    expect(rows[0]['other'], null);
   });
 
   test('apply incoming with undefined on column with default', () async {
@@ -553,8 +553,8 @@ void main() {
       incomingTs.millisecondsSinceEpoch,
       genEncodedTags('remote', [incomingTs]),
       newValues: {
-        "id": 1234,
-        "value": 'incoming',
+        'id': 1234,
+        'value': 'incoming',
       },
       oldValues: {},
     );
@@ -576,7 +576,7 @@ void main() {
     const sql = "SELECT * from main.parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
 
-    expect(rows[0]["other"], 0);
+    expect(rows[0]['other'], 0);
   });
 
   test('INSERT wins over DELETE and restored deleted values', () async {
@@ -596,8 +596,8 @@ void main() {
         incomingTs.millisecondsSinceEpoch,
         genEncodedTags('remote', [incomingTs]),
         newValues: {
-          "id": 1,
-          "other": 1,
+          'id': 1,
+          'other': 1,
         },
         oldValues: {},
       ),
@@ -609,7 +609,7 @@ void main() {
         incomingTs.millisecondsSinceEpoch,
         genEncodedTags('remote', []),
         newValues: {
-          "id": 1,
+          'id': 1,
         },
         oldValues: {},
       ),
@@ -624,9 +624,9 @@ void main() {
         localTs.millisecondsSinceEpoch,
         genEncodedTags(clientId, [localTs]),
         newValues: {
-          "id": 1,
-          "value": 'local',
-          "other": null,
+          'id': 1,
+          'value': 'local',
+          'other': null,
         },
       ),
     ];
@@ -639,17 +639,17 @@ void main() {
       ShadowEntryChanges(
         namespace: 'main',
         tablename: 'parent',
-        primaryKeyCols: {"id": 1},
+        primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
         changes: {
-          "id": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
-          "value": OplogColumnChange('local', localTs.millisecondsSinceEpoch),
-          "other": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+          'id': OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+          'value': OplogColumnChange('local', localTs.millisecondsSinceEpoch),
+          'other': OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
         },
         fullRow: {
-          "id": 1,
-          "value": 'local',
-          "other": 1,
+          'id': 1,
+          'value': 'local',
+          'other': 1,
         },
         tags: [
           generateTag(clientId, localTs),
@@ -679,14 +679,14 @@ void main() {
           [DateTime.fromMillisecondsSinceEpoch(incomingTs)],
         ),
         newValues: {
-          "id": 1,
-          "value": 'remote', // the only modified column
-          "other": 0,
+          'id': 1,
+          'value': 'remote', // the only modified column
+          'other': 0,
         },
         oldValues: {
-          "id": 1,
-          "value": 'local',
-          "other": 0,
+          'id': 1,
+          'value': 'local',
+          'other': 0,
         },
       ),
     ];
@@ -703,14 +703,14 @@ void main() {
           [DateTime.fromMillisecondsSinceEpoch(localTs)],
         ),
         newValues: {
-          "id": 1,
-          "value": 'local',
-          "other": 1, // the only modified column
+          'id': 1,
+          'value': 'local',
+          'other': 1, // the only modified column
         },
         oldValues: {
-          "id": 1,
-          "value": 'local',
-          "other": 0,
+          'id': 1,
+          'value': 'local',
+          'other': 0,
         },
       ),
     ];
@@ -726,16 +726,16 @@ void main() {
       ShadowEntryChanges(
         namespace: 'main',
         tablename: 'parent',
-        primaryKeyCols: {"id": 1},
+        primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
         changes: {
-          "value": OplogColumnChange('remote', incomingTs),
-          "other": OplogColumnChange(1, localTs),
+          'value': OplogColumnChange('remote', incomingTs),
+          'other': OplogColumnChange(1, localTs),
         },
         fullRow: {
-          "id": 1,
-          "value": 'remote',
-          "other": 1,
+          'id': 1,
+          'value': 'remote',
+          'other': 1,
         },
         tags: [
           generateTag(clientId, DateTime.fromMillisecondsSinceEpoch(localTs)),
@@ -765,7 +765,7 @@ void main() {
         incomingTs.millisecondsSinceEpoch,
         genEncodedTags('remote', [incomingTs]),
         newValues: {
-          "id": 1,
+          'id': 1,
         },
         oldValues: {},
       ),
@@ -780,13 +780,13 @@ void main() {
       ShadowEntryChanges(
         namespace: 'main',
         tablename: 'parent',
-        primaryKeyCols: {"id": 1},
+        primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
         changes: {
-          "id": OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
+          'id': OplogColumnChange(1, incomingTs.millisecondsSinceEpoch),
         },
         fullRow: {
-          "id": 1,
+          'id': 1,
         },
         tags: [generateTag('remote', incomingTs)],
       ),
@@ -810,10 +810,10 @@ void main() {
     // We have two rows in the oplog.
     var rows = await adapter.query(
       Statement(
-        "SELECT count(rowid) as num_rows FROM $oplogTablename",
+        'SELECT count(rowid) as num_rows FROM $oplogTablename',
       ),
     );
-    expect(rows[0]["num_rows"], 2);
+    expect(rows[0]['num_rows'], 2);
 
     // Ack.
     await satellite.ack(2, true);
@@ -823,10 +823,10 @@ void main() {
     // first place.
     rows = await adapter.query(
       Statement(
-        "SELECT count(rowid) as num_rows FROM $oplogTablename",
+        'SELECT count(rowid) as num_rows FROM $oplogTablename',
       ),
     );
-    expect(rows[0]["num_rows"], 2);
+    expect(rows[0]['num_rows'], 2);
 
     // Verify the meta.
     rows = await adapter.query(
@@ -834,13 +834,13 @@ void main() {
         "SELECT value FROM $metaTablename WHERE key = 'lastAckdRowId'",
       ),
     );
-    expect(rows[0]["value"], '2');
+    expect(rows[0]['value'], '2');
   });
 
   test('compensations: referential integrity is enforced', () async {
     await runMigrations();
 
-    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
     await satellite.setMeta('compensations', 0);
     await adapter.run(
       Statement(
@@ -850,11 +850,11 @@ void main() {
 
     await expectLater(
       adapter
-          .run(Statement("INSERT INTO main.child(id, parent) VALUES (1, 2)")),
+          .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 2)')),
       throwsA(
         isA<SqliteException>().having(
           (SqliteException e) => e.extendedResultCode,
-          "code",
+          'code',
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
         ),
       ),
@@ -865,7 +865,7 @@ void main() {
       () async {
     await runMigrations();
 
-    await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await satellite.setMeta('compensations', 0);
     await satellite.setAuthState(authState);
 
@@ -877,8 +877,8 @@ void main() {
       timestamp.millisecondsSinceEpoch,
       genEncodedTags('remote', [timestamp]),
       newValues: {
-        "id": 1,
-        "parent": 1,
+        'id': 1,
+        'parent': 1,
       },
     );
 
@@ -900,7 +900,7 @@ void main() {
       throwsA(
         isA<SqliteException>().having(
           (SqliteException e) => e.extendedResultCode,
-          "code",
+          'code',
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
         ),
       ),
@@ -912,7 +912,7 @@ void main() {
       () async {
     await runMigrations();
 
-    await adapter.run(Statement("PRAGMA foreign_keys = ON;"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await satellite.setMeta('compensations', 0);
     await satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
@@ -925,8 +925,8 @@ void main() {
       timestamp.millisecondsSinceEpoch,
       genEncodedTags(clientId, [timestamp]),
       newValues: {
-        "id": 1,
-        "parent": 1,
+        'id': 1,
+        'parent': 1,
       },
     );
 
@@ -938,7 +938,7 @@ void main() {
       timestamp.millisecondsSinceEpoch,
       genEncodedTags(clientId, [timestamp]),
       newValues: {
-        "id": 1,
+        'id': 1,
       },
     );
 
@@ -947,7 +947,7 @@ void main() {
         "INSERT INTO main.parent(id, value) VALUES (1, '1')",
       ),
     );
-    await adapter.run(Statement("DELETE FROM main.parent WHERE id=1"));
+    await adapter.run(Statement('DELETE FROM main.parent WHERE id=1'));
 
     await satellite.performSnapshot();
 
@@ -970,7 +970,7 @@ void main() {
 
     final rows = await adapter.query(
       Statement(
-        "SELECT * from main.parent WHERE id=1",
+        'SELECT * from main.parent WHERE id=1',
       ),
     );
 
@@ -978,13 +978,13 @@ void main() {
     expect(rows.length, 1);
 
     // But it's also recreated with deleted values.
-    expect(rows[0]["value"], '1');
+    expect(rows[0]['value'], '1');
   });
 
   test('compensations: using triggers with flag 0', () async {
     await runMigrations();
 
-    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
     await satellite.setMeta('compensations', 0);
     satellite.lastSentRowId = 1;
 
@@ -996,7 +996,7 @@ void main() {
     await satellite.ack(1, true);
 
     await adapter
-        .run(Statement("INSERT INTO main.child(id, parent) VALUES (1, 1)"));
+        .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
     await satellite.performSnapshot();
 
     final timestamp = DateTime.now();
@@ -1008,7 +1008,7 @@ void main() {
       timestamp.millisecondsSinceEpoch,
       genEncodedTags('remote', []),
       newValues: {
-        "id": 1,
+        'id': 1,
       },
     );
 
@@ -1028,7 +1028,7 @@ void main() {
       throwsA(
         isA<SqliteException>().having(
           (SqliteException e) => e.extendedResultCode,
-          "code",
+          'code',
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
         ),
       ),
@@ -1038,7 +1038,7 @@ void main() {
   test('compensations: using triggers with flag 1', () async {
     await runMigrations();
 
-    await adapter.run(Statement("PRAGMA foreign_keys = ON"));
+    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
     await satellite.setMeta('compensations', 1);
     satellite.lastSentRowId = 1;
 
@@ -1050,7 +1050,7 @@ void main() {
     await satellite.ack(1, true);
 
     await adapter
-        .run(Statement("INSERT INTO main.child(id, parent) VALUES (1, 1)"));
+        .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
     await satellite.performSnapshot();
 
     final timestamp = DateTime.now();
@@ -1063,13 +1063,13 @@ void main() {
         timestamp.millisecondsSinceEpoch,
         genEncodedTags('remote', []),
         newValues: {
-          "id": 1,
+          'id': 1,
         },
       ),
     ];
 
     // Should not throw
-    await satellite.apply(incoming, "remote");
+    await satellite.apply(incoming, 'remote');
   });
 
   test('get oplogEntries from transaction', () async {
@@ -1082,9 +1082,9 @@ void main() {
       commitTimestamp: Int64.ZERO,
       changes: [
         t.DataChange(
-          relation: relations["parent"]!,
+          relation: relations['parent']!,
           type: DataChangeType.insert,
-          record: {"id": 0},
+          record: {'id': 0},
           tags: [], // proper values are not relevent here
         ),
       ],
@@ -1151,17 +1151,17 @@ void main() {
         commitTimestamp: Int64.ZERO,
         changes: [
           t.DataChange(
-            relation: kTestRelations["parent"]!,
+            relation: kTestRelations['parent']!,
             type: DataChangeType.insert,
-            record: {"id": 0},
+            record: {'id': 0},
             oldRecord: null,
             tags: [],
           ),
           t.DataChange(
-            relation: kTestRelations["parent"]!,
+            relation: kTestRelations['parent']!,
             type: DataChangeType.update,
-            record: {"id": 1},
-            oldRecord: {"id": 1},
+            record: {'id': 1},
+            oldRecord: {'id': 1},
             tags: [],
           ),
         ],
@@ -1171,9 +1171,9 @@ void main() {
         commitTimestamp: Int64(1000),
         changes: [
           t.DataChange(
-            relation: kTestRelations["parent"]!,
+            relation: kTestRelations['parent']!,
             type: DataChangeType.insert,
-            record: {"id": 2},
+            record: {'id': 2},
             oldRecord: null,
             tags: [],
           ),
@@ -1346,14 +1346,14 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          "SELECT id FROM $qualified",
+          'SELECT id FROM $qualified',
         ),
       );
       expect(row.length, 1);
 
       final shadowRows = await adapter.query(
         Statement(
-          "SELECT tags FROM _electric_shadow",
+          'SELECT tags FROM _electric_shadow',
         ),
       );
       expect(shadowRows.length, 1);
@@ -1365,7 +1365,7 @@ void main() {
       // Check that we save the LSN sent by the mock
       expect(satellite.debugLsn, base64.decode('MTIz'));
     } catch (e, st) {
-      fail("Reason: $e\n$st");
+      fail('Reason: $e\n$st');
     }
   });
 
@@ -1432,28 +1432,28 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          "SELECT id FROM $qualified",
+          'SELECT id FROM $qualified',
         ),
       );
       expect(row.length, 1);
 
       final shadowRows = await adapter.query(
         Statement(
-          "SELECT * FROM _electric_shadow",
+          'SELECT * FROM _electric_shadow',
         ),
       );
       expect(shadowRows.length, 1);
-      expect(shadowRows[0]["namespace"], "main");
-      expect(shadowRows[0]["tablename"], "parent");
+      expect(shadowRows[0]['namespace'], 'main');
+      expect(shadowRows[0]['tablename'], 'parent');
 
-      await adapter.run(Statement("DELETE FROM $qualified WHERE id = 1"));
+      await adapter.run(Statement('DELETE FROM $qualified WHERE id = 1'));
       await satellite.performSnapshot();
 
       final oplogs =
-          await adapter.query(Statement("SELECT * FROM _electric_oplog"));
-      expect(oplogs[0]["clearTags"], isNot('[]'));
+          await adapter.query(Statement('SELECT * FROM _electric_oplog'));
+      expect(oplogs[0]['clearTags'], isNot('[]'));
     } catch (e, st) {
-      fail("Reason: $e\n$st");
+      fail('Reason: $e\n$st');
     }
   });
 
@@ -1485,13 +1485,13 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          "SELECT id FROM $qualified",
+          'SELECT id FROM $qualified',
         ),
       );
 
       expect(row.length, 0);
     } catch (e, st) {
-      fail("Reason: $e\n$st");
+      fail('Reason: $e\n$st');
     }
   });
 
@@ -1525,14 +1525,14 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          "SELECT id FROM $qualified",
+          'SELECT id FROM $qualified',
         ),
       );
       expect(row.length, 1);
 
       final shadowRows = await adapter.query(
         Statement(
-          "SELECT tags FROM _electric_shadow",
+          'SELECT tags FROM _electric_shadow',
         ),
       );
       expect(shadowRows.length, 2);
@@ -1541,7 +1541,7 @@ void main() {
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
       expect(subsObj.length, 2);
     } catch (e, st) {
-      fail("Reason: $e\n$st");
+      fail('Reason: $e\n$st');
     }
   });
 
@@ -1579,7 +1579,7 @@ void main() {
           try {
             final row = await adapter.query(
               Statement(
-                "SELECT id FROM $qualifiedChild",
+                'SELECT id FROM $qualifiedChild',
               ),
             );
             expect(row.length, 1);
@@ -1626,18 +1626,18 @@ void main() {
 
     try {
       await synced;
-      fail("Expected a subscription error");
+      fail('Expected a subscription error');
     } catch (expected) {
       try {
         final row = await adapter.query(
           Statement(
-            "SELECT id FROM $qualified",
+            'SELECT id FROM $qualified',
           ),
         );
         expect(row.length, 0);
 
         final shadowRows = await adapter.query(
-          Statement("SELECT tags FROM _electric_shadow"),
+          Statement('SELECT tags FROM _electric_shadow'),
         );
         expect(shadowRows.length, 1);
 
@@ -1649,7 +1649,7 @@ void main() {
           greaterThanOrEqualTo(0),
         );
       } catch (e, st) {
-        fail("Reason: $e\n$st");
+        fail('Reason: $e\n$st');
       }
     }
   });
@@ -1683,12 +1683,12 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          "SELECT id FROM $qualified",
+          'SELECT id FROM $qualified',
         ),
       );
       expect(row.length, 1);
     } catch (e, st) {
-      fail("Reason: $e\n$st");
+      fail('Reason: $e\n$st');
     }
 
     try {

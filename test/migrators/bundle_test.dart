@@ -15,14 +15,14 @@ void main() {
   late DatabaseAdapter adapter;
 
   setUp(() {
-    dbName = "bundle-migrator-${randomValue()}.db";
+    dbName = 'bundle-migrator-${randomValue()}.db';
     db = sqlite3.open(dbName);
     adapter = SqliteAdapter(db);
   });
 
   tearDown(() async {
     await removeFile(dbName);
-    await removeFile("$dbName-journal");
+    await removeFile('$dbName-journal');
   });
 
   test('run the bundle migrator', () async {

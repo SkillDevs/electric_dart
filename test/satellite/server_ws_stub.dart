@@ -20,7 +20,7 @@ class SatelliteWSServerStub {
       // print("Request ${request.uri.path}");
       if (request.uri.path == '/ws') {
         if (_socketClient != null) {
-          throw StateError("A client is already connected");
+          throw StateError('A client is already connected');
         }
         // Upgrade an HttpRequest to a WebSocket connection
         final socketClient = await WebSocketTransformer.upgrade(request);

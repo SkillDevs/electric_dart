@@ -47,7 +47,7 @@ class SubscriptionsDataCache extends EventEmitter {
     if (!requestedSubscriptions.containsKey(subscriptionId)) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received subscribe response for unknown subscription $subscriptionId",
+        'Received subscribe response for unknown subscription $subscriptionId',
         subId: subscriptionId,
       );
     }
@@ -60,7 +60,7 @@ class SubscriptionsDataCache extends EventEmitter {
     if (!requestedSubscriptions.containsKey(subscriptionId)) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatSubsDataBegin but for unknown subscription $subscriptionId",
+        'Received SatSubsDataBegin but for unknown subscription $subscriptionId',
         subId: subscriptionId,
       );
     }
@@ -69,7 +69,7 @@ class SubscriptionsDataCache extends EventEmitter {
     if (_inDelivery != null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "received SatSubsDataStart for subscription $subscriptionId but a subscription (${_inDelivery.subscriptionId}) is already being delivered",
+        'received SatSubsDataStart for subscription $subscriptionId but a subscription (${_inDelivery.subscriptionId}) is already being delivered',
         subId: subscriptionId,
       );
     }
@@ -90,14 +90,14 @@ class SubscriptionsDataCache extends EventEmitter {
     if (_inDelivery == null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatSubDataEnd but no subscription is being delivered",
+        'Received SatSubDataEnd but no subscription is being delivered',
       );
     }
 
     if (remainingShapes.isNotEmpty) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatSubDataEnd but not all shapes have been delivered",
+        'Received SatSubDataEnd but not all shapes have been delivered',
       );
     }
 
@@ -123,28 +123,28 @@ class SubscriptionsDataCache extends EventEmitter {
     if (_inDelivery == null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatShapeDataBegin but no subscription is being delivered",
+        'Received SatShapeDataBegin but no subscription is being delivered',
       );
     }
 
     if (remainingShapes.isEmpty) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatShapeDataBegin but all shapes have been delivered for this subscription",
+        'Received SatShapeDataBegin but all shapes have been delivered for this subscription',
       );
     }
 
     if (currentShapeRequestId != null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatShapeDataBegin for shape with uuid ${shape.uuid} but a shape is already being delivered",
+        'Received SatShapeDataBegin for shape with uuid ${shape.uuid} but a shape is already being delivered',
       );
     }
 
     if (_inDelivery.shapeReqToUuid[shape.requestId] != null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatShapeDataBegin for shape with uuid ${shape.uuid} but shape has already been delivered",
+        'Received SatShapeDataBegin for shape with uuid ${shape.uuid} but shape has already been delivered',
       );
     }
 
@@ -157,14 +157,14 @@ class SubscriptionsDataCache extends EventEmitter {
     if (_inDelivery == null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatShapeDataEnd but no subscription is being delivered",
+        'Received SatShapeDataEnd but no subscription is being delivered',
       );
     }
 
     if (currentShapeRequestId == null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatShapeDataEnd but no shape is being delivered",
+        'Received SatShapeDataEnd but no shape is being delivered',
       );
     }
 
@@ -179,14 +179,14 @@ class SubscriptionsDataCache extends EventEmitter {
         currentShapeRequestId == null) {
       internalError(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "Received SatOpLog but no shape is being delivered",
+        'Received SatOpLog but no shape is being delivered',
       );
     }
     for (final op in ops) {
       if (op.hasBegin() || op.hasCommit() || op.hasUpdate() || op.hasDelete()) {
         internalError(
           SatelliteErrorCode.unexpectedMessageType,
-          "Received begin, commit, update or delete message, but these messages are not valid in subscriptions",
+          'Received begin, commit, update or delete message, but these messages are not valid in subscriptions',
         );
       }
 
@@ -216,7 +216,7 @@ class SubscriptionsDataCache extends EventEmitter {
     if (!requestedSubscriptions.containsKey(subId)) {
       internalError(
         SatelliteErrorCode.subscriptionNotFound,
-        "received subscription error for unknown subscription $subId",
+        'received subscription error for unknown subscription $subId',
         subId: subId,
       );
     }
@@ -231,7 +231,7 @@ class SubscriptionsDataCache extends EventEmitter {
     if (inDelivery == null) {
       error = SatelliteException(
         SatelliteErrorCode.unexpectedSubscriptionState,
-        "received subscription data error, but no subscription is being delivered: ${error.message}",
+        'received subscription data error, but no subscription is being delivered: ${error.message}',
       );
     }
 
@@ -277,7 +277,7 @@ class SubscriptionsDataCache extends EventEmitter {
     if (relation == null) {
       internalError(
         SatelliteErrorCode.protocolViolation,
-        "missing relation $relationId for incoming operation",
+        'missing relation $relationId for incoming operation',
       );
     }
 

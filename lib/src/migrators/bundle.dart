@@ -4,9 +4,9 @@ import 'package:electric_client/src/migrators/schema.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
 import 'package:electric_client/src/util/types.dart';
 
-const kElectricMigrationsTable = "_electric_migrations";
+const kElectricMigrationsTable = '_electric_migrations';
 
-final VALID_VERSION_EXP = RegExp(r"^[0-9_]+$");
+final VALID_VERSION_EXP = RegExp(r'^[0-9_]+$');
 
 class BundleMigrator implements Migrator {
   final DatabaseAdapter adapter;
@@ -32,7 +32,7 @@ class BundleMigrator implements Migrator {
 
     for (int i = 0; i < unapplied.length; i++) {
       final migration = unapplied[i];
-      logger.info("applying migration: ${migration.version}");
+      logger.info('applying migration: ${migration.version}');
       await apply(migration);
     }
 
@@ -70,7 +70,7 @@ class BundleMigrator implements Migrator {
     return rows
         .map(
           (r) => MigrationRecord(
-            version: r["version"]! as String,
+            version: r['version']! as String,
           ),
         )
         .toList();
@@ -96,7 +96,7 @@ class BundleMigrator implements Migrator {
       return null;
     }
 
-    return rows.first["version"]! as String;
+    return rows.first['version']! as String;
   }
 
   Future<List<StmtMigration>> validateApplied(
@@ -112,7 +112,7 @@ class BundleMigrator implements Migrator {
 
       if (migration.version != version) {
         throw Exception(
-          "Migrations cannot be altered once applied: expecting $version at index $i.",
+          'Migrations cannot be altered once applied: expecting $version at index $i.',
         );
       }
     }
@@ -130,7 +130,7 @@ class BundleMigrator implements Migrator {
 
     if (!VALID_VERSION_EXP.hasMatch(version)) {
       throw Exception(
-        "Invalid migration version, must match $VALID_VERSION_EXP",
+        'Invalid migration version, must match $VALID_VERSION_EXP',
       );
     }
 

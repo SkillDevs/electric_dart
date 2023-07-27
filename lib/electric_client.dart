@@ -10,7 +10,7 @@ export 'src/electric/adapter.dart' show DatabaseAdapter;
 export 'src/electric/electric.dart' show ElectrifyOptions;
 export 'src/migrators/builder.dart' show MetaData, makeMigration, parseMetadata;
 export 'src/migrators/bundle.dart' show BundleMigrator;
-export "src/migrators/migrators.dart" show Migration;
+export 'src/migrators/migrators.dart' show Migration;
 export 'src/notifiers/event.dart' show EventNotifier;
 export 'src/notifiers/notifiers.dart'
     show
@@ -23,7 +23,7 @@ export 'src/notifiers/notifiers.dart'
         PotentialChangeCallback,
         PotentialChangeNotification;
 export 'src/satellite/registry.dart' show globalRegistry;
-export "src/satellite/satellite.dart" show Satellite;
+export 'src/satellite/satellite.dart' show Satellite;
 export 'src/sockets/sockets.dart' show SocketFactory;
 export 'src/util/debug/debug.dart' show setLogLevel;
-export "src/util/types.dart" show ConnectivityState;
+export 'src/util/types.dart' show ConnectivityState;

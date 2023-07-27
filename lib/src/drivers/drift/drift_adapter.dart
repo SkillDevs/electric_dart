@@ -79,14 +79,14 @@ class DriftAdapter implements adp.DatabaseAdapter {
         }).toSet();
 
         final tableUpdates = tablesChanged.map((e) => TableUpdate(e)).toSet();
-        logger.info("Notifying table changes to drift: $tablesChanged");
+        logger.info('Notifying table changes to drift: $tablesChanged');
         db.notifyUpdates(tableUpdates);
       },
     );
 
     final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
       logger.info(
-        "Drift tables have been updated $updatedTables. Notifying Electric.",
+        'Drift tables have been updated $updatedTables. Notifying Electric.',
       );
       notifier.potentiallyChanged();
     });
@@ -173,7 +173,7 @@ List<Variable> _dynamicArgsToVariables(List<Object?>? args) {
         } else if (arg is Variable) {
           return arg;
         } else {
-          assert(false, "unknown type $arg");
+          assert(false, 'unknown type $arg');
           return Variable<Object>(arg);
         }
       })

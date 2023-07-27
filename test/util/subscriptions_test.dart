@@ -43,9 +43,9 @@ void main() {
     );
 
     const parentRecord = {
-      "id": 1,
-      "value": 'incoming',
-      "other": 1,
+      'id': 1,
+      'value': 'incoming',
+      'other': 1,
     };
 
     final dataChange = InitialDataChange(

@@ -106,7 +106,7 @@ abstract class BaseRegistry implements Registry {
       return satellite;
     }
 
-    throw Exception("Satellite not running for db: $dbName");
+    throw Exception('Satellite not running for db: $dbName');
   }
 
   @override
