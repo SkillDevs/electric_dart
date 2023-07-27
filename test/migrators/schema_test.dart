@@ -9,15 +9,12 @@ import 'package:test/test.dart';
 
 import '../support/migrations.dart';
 import '../util/io.dart';
-import '../util/sqlite.dart';
 import '../util/sqlite_errors.dart';
 
 void main() {
   late Database db;
   late String dbName;
   late DatabaseAdapter adapter;
-
-  setupSqliteOpen();
 
   setUp(() {
     dbName = 'schema-migrations-${randomValue()}.db';
