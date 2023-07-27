@@ -15,6 +15,7 @@ import 'package:sqlite3/sqlite3.dart';
 import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
+import '../util/sqlite.dart';
 
 Map<String, Relation> kTestRelations = {
   'child': Relation(
@@ -82,6 +83,8 @@ final opts = kSatelliteDefaults.copyWith(
 Future<SatelliteTestContext> makeContext({
   SatelliteOpts? options,
 }) async {
+  setupSqliteOpen();
+
   await Directory('.tmp').create(recursive: true);
 
   final dbName = '.tmp/test-${randomValue()}.db';
