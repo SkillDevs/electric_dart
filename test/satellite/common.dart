@@ -15,6 +15,7 @@ import 'package:sqlite3/sqlite3.dart';
 import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
+import '../util/sqlite.dart';
 
 Map<String, Relation> kTestRelations = {
   'child': Relation(
@@ -85,7 +86,7 @@ Future<SatelliteTestContext> makeContext({
   await Directory('.tmp').create(recursive: true);
 
   final dbName = '.tmp/test-${randomValue()}.db';
-  final db = sqlite3.open(dbName);
+  final db = openSqliteDb(dbName);
   final adapter = SqliteAdapter(db);
   final migrator =
       BundleMigrator(adapter: adapter, migrations: kTestMigrations);

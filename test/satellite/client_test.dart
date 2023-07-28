@@ -533,7 +533,6 @@ void main() {
     ]);
 
     final timeoutTimer = Timer(const Duration(milliseconds: 300), () {
-      print('FAIL');
       fail(
         'Timed out while waiting for server to get all expected requests. Missing $expectedCount',
       );

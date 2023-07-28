@@ -8,6 +8,7 @@ import 'package:test/test.dart';
 
 import '../support/migrations.dart';
 import '../util/io.dart';
+import '../util/sqlite.dart';
 
 void main() {
   late Database db;
@@ -16,7 +17,7 @@ void main() {
 
   setUp(() {
     dbName = 'bundle-migrator-${randomValue()}.db';
-    db = sqlite3.open(dbName);
+    db = openSqliteDb(dbName);
     adapter = SqliteAdapter(db);
   });
 
