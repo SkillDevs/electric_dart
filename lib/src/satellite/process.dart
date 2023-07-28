@@ -68,7 +68,7 @@ class SatelliteProcess implements Satellite {
   String? _potentialDataChangeSubscription;
   String? _connectivityChangeSubscription;
 
-  late Throttle<DateTime> throttledSnapshot;
+  late final Throttle<DateTime> throttledSnapshot;
 
   int _lastAckdRowId = 0;
   @visibleForTesting

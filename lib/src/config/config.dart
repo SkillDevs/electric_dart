@@ -6,11 +6,19 @@ typedef EnvName = String;
 class ElectricConfig {
   final AuthConfig auth;
 
-  /// Optional path to the Electric sync service.
+  /// Optional URL string to connect to the Electric sync service.
+  ///
   /// Should have the following format:
-  /// `electric://<host>:<port>`
+  /// `protocol://<host>:<port>[?ssl=true]`
+  ///
+  /// If the protocol is `https` or `wss` then `ssl`
+  /// defaults to true. Otherwise it defaults to false.
+  ///
+  /// If port is not provided, defaults to 443 when
+  /// ssl is enabled or 80 when it isn't.
+  ///
   /// Defaults to:
-  /// `electric://127.0.0.1:5133`
+  /// `http://127.0.0.1:5133`
   final String? url;
 
   ///  Optional flag to activate debug mode
@@ -78,21 +86,18 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
 
   final debug = config.debug ?? false;
 
-  final url = config.url ?? 'electric://127.0.0.1:5133';
-  final match = RegExp(r'(?:electric:\/\/)(.+):([0-9]*)').firstMatch(url);
-  if (match == null) {
-    throw Exception(
-      "Invalid Electric URL. Must be of the form: 'electric://<host>:<port>'",
-    );
-  }
+  final url = Uri.parse(config.url ?? 'http://127.0.0.1:5133');
 
-  final host = match.group(1)!;
-  final portStr = match.group(2)!;
+  final isSecureProtocol = url.scheme == 'https' || url.scheme == 'wss';
+  final sslEnabled = isSecureProtocol || url.queryParameters['ssl'] == 'true';
+
+  final defaultPort = sslEnabled ? 443 : 80;
+  final port = url.hasPort ? url.port : defaultPort;
 
   final replication = ReplicationConfig(
-    host: host,
-    port: int.parse(portStr),
-    ssl: false,
+    host: url.host,
+    port: port,
+    ssl: sslEnabled,
   );
 
   return HydratedConfig(
