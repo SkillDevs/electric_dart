@@ -33,6 +33,40 @@ Future<ElectricClient> startElectricDrift(
   return namespace;
 }
 
+const ({
+  ConnectivityState available,
+  ConnectivityState connected,
+  ConnectivityState disconnected,
+}) _kStates = (
+  available: ConnectivityState.available,
+  connected: ConnectivityState.connected,
+  disconnected: ConnectivityState.disconnected,
+);
+
+const _kValidStates = <ConnectivityState>{
+  ConnectivityState.available,
+  ConnectivityState.connected,
+  ConnectivityState.disconnected,
+};
+
+ConnectivityState _getElectricState(ElectricClient? electric) {
+  if (electric == null) {
+    return _kStates.disconnected;
+  }
+
+  return electric.isConnected ? _kStates.connected : _kStates.disconnected;
+}
+
+ConnectivityState getNextState(ConnectivityState currentState) =>
+    currentState == _kStates.connected
+        ? _kStates.disconnected
+        : _kStates.available;
+
+ConnectivityState getValidState(ConnectivityState candidateState) =>
+    _kValidStates.contains(candidateState)
+        ? candidateState
+        : _kStates.disconnected;
+
 class ConnectivityStateController with ChangeNotifier {
   final ElectricClient electric;
 
@@ -40,30 +74,19 @@ class ConnectivityStateController with ChangeNotifier {
   ConnectivityState get connectivityState => _connectivityState;
 
   String? _connectivityChangeSubscriptionId;
+  bool _shouldStop = false;
 
   ConnectivityStateController(this.electric);
 
   void init() {
-    setConnectivityState(electric.isConnected
-        ? ConnectivityState.connected
-        : ConnectivityState.disconnected);
+    setConnectivityState(_getElectricState(electric));
 
     void handler(ConnectivityStateChangeNotification notification) {
+      if (_shouldStop) return;
+
       final state = notification.connectivityState;
 
-      // externally map states to disconnected/connected
-      final found = <ConnectivityState?>[
-        ConnectivityState.available,
-        ConnectivityState.error,
-        ConnectivityState.disconnected
-      ].firstWhere(
-        (x) => x == state,
-        orElse: () => null,
-      );
-      final nextState = found != null
-          ? ConnectivityState.disconnected
-          : ConnectivityState.connected;
-      setConnectivityState(nextState);
+      setConnectivityState(getValidState(state));
     }
 
     _connectivityChangeSubscriptionId =
@@ -72,6 +95,7 @@ class ConnectivityStateController with ChangeNotifier {
 
   @override
   void dispose() {
+    _shouldStop = true;
     if (_connectivityChangeSubscriptionId != null) {
       electric.notifier.unsubscribeFromConnectivityStateChanges(
         _connectivityChangeSubscriptionId!,
@@ -81,10 +105,7 @@ class ConnectivityStateController with ChangeNotifier {
   }
 
   void toggleConnectivityState() {
-    final ConnectivityState nextState =
-        _connectivityState == ConnectivityState.connected
-            ? ConnectivityState.disconnected
-            : ConnectivityState.available;
+    final nextState = getNextState(connectivityState);
     final dbName = electric.notifier.dbName;
     electric.notifier.connectivityStateChanged(dbName, nextState);
 
