@@ -3,13 +3,13 @@ import 'package:electric_client/src/util/types.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('prepareBatchedStatements correctly splits up data in batches', () {
+  test('prepareInsertBatchedStatements correctly splits up data in batches', () {
     const data = [
       {'a': 1, 'b': 2},
       {'a': 3, 'b': 4},
       {'a': 5, 'b': 6},
     ];
-    final stmts = prepareBatchedStatements(
+    final stmts = prepareInsertBatchedStatements(
       'INSERT INTO test (a, b) VALUES',
       ['a', 'b'],
       data,
@@ -25,13 +25,13 @@ void main() {
     ]);
   });
 
-  test('prepareBatchedStatements respects column order', () {
+  test('prepareInsertBatchedStatements respects column order', () {
     const data = [
       {'a': 1, 'b': 2},
       {'a': 3, 'b': 4},
       {'a': 5, 'b': 6},
     ];
-    final stmts = prepareBatchedStatements(
+    final stmts = prepareInsertBatchedStatements(
       'INSERT INTO test (a, b) VALUES',
       ['b', 'a'],
       data,

@@ -221,8 +221,8 @@ List<Statement> generateTriggers(Tables tables) {
 
 String joinColsForJSON(List<String> cols, String? target) {
   if (target == null) {
-    return cols.map((col) => "'$col', $col").join(', ');
+    return (cols..sort()).map((col) => "'$col', $col").join(', ');
   } else {
-    return cols.map((col) => "'$col', $target.$col").join(', ');
+    return (cols..sort()).map((col) => "'$col', $target.$col").join(', ');
   }
 }

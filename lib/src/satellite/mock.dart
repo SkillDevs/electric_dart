@@ -35,6 +35,9 @@ class MockSatelliteProcess implements Satellite {
   final SocketFactory socketFactory;
   final SatelliteOpts opts;
 
+  @override
+  ConnectivityState? connectivityState;
+
   MockSatelliteProcess({
     required this.dbName,
     required this.adapter,

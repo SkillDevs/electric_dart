@@ -16,7 +16,6 @@ import 'package:electric_client/src/satellite/shapes/shapes.dart';
 import 'package:electric_client/src/satellite/shapes/types.dart';
 import 'package:electric_client/src/util/common.dart';
 import 'package:electric_client/src/util/debug/debug.dart';
-import 'package:electric_client/src/util/sets.dart';
 import 'package:electric_client/src/util/statements.dart';
 import 'package:electric_client/src/util/tablename.dart';
 import 'package:electric_client/src/util/types.dart' hide Change;
@@ -47,11 +46,11 @@ const throwErrors = [
 class SatelliteProcess implements Satellite {
   @override
   final DbName dbName;
-  
+
   @override
   DatabaseAdapter get adapter => _adapter;
   DatabaseAdapter _adapter;
-  
+
   @override
   final Migrator migrator;
   @override
@@ -64,9 +63,12 @@ class SatelliteProcess implements Satellite {
   AuthState? authState;
   String? _authStateSubscription;
 
+  @override
+  ConnectivityState? connectivityState;
+  String? _connectivityChangeSubscription;
+
   Timer? _pollingInterval;
   String? _potentialDataChangeSubscription;
-  String? _connectivityChangeSubscription;
 
   late final Throttle<DateTime> throttledSnapshot;
 
@@ -452,7 +454,12 @@ This means there is a notifier subscription leak.`''');
       final sqlBase = "INSERT INTO $table (${columns.join(', ')}) VALUES ";
 
       stmts.addAll([
-        ...prepareBatchedStatements(sqlBase, columns, records, maxSqlParameters)
+        ...prepareInsertBatchedStatements(
+          sqlBase,
+          columns,
+          records,
+          maxSqlParameters,
+        )
       ]);
     }
 
@@ -463,7 +470,7 @@ This means there is a notifier subscription leak.`''');
     final upsertShadowStmt =
         'INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES ';
     stmts.addAll(
-      prepareBatchedStatements(
+      prepareInsertBatchedStatements(
         upsertShadowStmt,
         ['namespace', 'tablename', 'primaryKey', 'tags'],
         allArgsForShadowInsert,
@@ -540,6 +547,8 @@ This means there is a notifier subscription leak.`''');
   Future<void> connectivityStateChanged(
     ConnectivityState status,
   ) async {
+    connectivityState = status;
+
     // TODO: no op if state is the same
     switch (status) {
       case ConnectivityState.available:
@@ -655,14 +664,116 @@ This means there is a notifier subscription leak.`''');
       _performingSnapshot = true;
     }
 
+    final oplog = opts.oplogTable;
+    final shadow = opts.shadowTable;
     final timestamp = DateTime.now();
+    final newTag = _generateTag(timestamp);
 
-    await _updateOplogTimestamp(timestamp);
-    final oplogEntries = await _getUpdatedEntries(timestamp);
+    /*
+     * IMPORTANT!
+     *
+     * The following queries make use of a documented but rare SQLite behaviour that allows selecting bare column
+     * on aggregate queries: https://sqlite.org/lang_select.html#bare_columns_in_an_aggregate_query
+     *
+     * In short, when a query has a `GROUP BY` clause with a single `min()` or `max()` present in SELECT/HAVING,
+     * then the "bare" columns (i.e. those not mentioned in a `GROUP BY` clause) are definitely the ones from the
+     * row that satisfied that `min`/`max` function. We make use of it here to find first/last operations in the
+     * oplog that touch a particular row.
+     */
+
+    // Update the timestamps on all "new" entries - they have been added but timestamp is still `NULL`
+    final q1 = Statement(
+      '''
+      UPDATE $oplog SET timestamp = ?
+      WHERE rowid in (
+        SELECT rowid FROM $oplog
+            WHERE timestamp is NULL
+            AND rowid > ?
+        ORDER BY rowid ASC
+        )
+      RETURNING *
+    ''',
+      [timestamp.toISOStringUTC(), _lastAckdRowId],
+    );
+
+    // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
+    final q2 = Statement(
+      '''
+      UPDATE $oplog
+      SET clearTags = updates.tags
+      FROM (
+        SELECT shadow.tags as tags, min(op.rowid) as op_rowid
+        FROM $shadow AS shadow
+        JOIN $oplog as op
+          ON op.namespace = shadow.namespace
+            AND op.tablename = shadow.tablename
+            AND op.primaryKey = shadow.primaryKey
+        WHERE op.timestamp = ?
+              AND op.rowid > ?
+        GROUP BY op.namespace, op.tablename, op.primaryKey
+      ) AS updates
+      WHERE updates.op_rowid = $oplog.rowid
+    ''',
+      [timestamp.toISOStringUTC(), _lastAckdRowId],
+    );
+
+    // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
+    final q3 = Statement(
+      '''
+      INSERT OR REPLACE INTO $shadow (namespace, tablename, primaryKey, tags)
+      SELECT namespace, tablename, primaryKey, ?
+        FROM $oplog AS op
+        WHERE timestamp = ?
+              AND rowid > ?
+        GROUP BY namespace, tablename, primaryKey
+        HAVING rowid = max(rowid) AND optype != 'DELETE'
+    ''',
+      [
+        encodeTags([newTag]),
+        timestamp.toISOStringUTC(),
+        _lastAckdRowId,
+      ],
+    );
+
+    // And finally delete any shadow rows where the last oplog operation was a `DELETE`
+    final q4 = Statement(
+      '''
+      DELETE FROM $shadow
+      WHERE EXISTS (
+        SELECT 1
+        FROM $oplog AS op
+        WHERE timestamp = ?
+              AND rowid > ?
+        GROUP BY namespace, tablename, primaryKey
+        HAVING rowid = max(rowid) AND optype = 'DELETE'
+      )
+    ''',
+      [timestamp.toISOStringUTC(), _lastAckdRowId],
+    );
+
+    // Execute the four queries above in a transaction, returning the results from the first query
+    // We're dropping down to this transaction interface because `runInTransaction` doesn't allow queries
+    final oplogEntries =
+        await adapter.transaction<List<OplogEntry>>((tx, setResult) {
+      tx.query(q1, (tx, res) {
+        if (res.isNotEmpty) {
+          tx.run(
+            q2,
+            (tx, _) => tx.run(
+              q3,
+              (tx, _) => tx.run(
+                q4,
+                (_, __) => setResult(res.map(_opLogEntryFromRow).toList()),
+              ),
+            ),
+          );
+        } else {
+          setResult([]);
+        }
+      });
+    });
 
     if (oplogEntries.isNotEmpty) {
-      final stmts = await _handleShadowOperations(timestamp, oplogEntries);
-      await adapter.runInTransaction(stmts);
       unawaited(_notifyChanges(oplogEntries));
     }
 
@@ -677,89 +788,6 @@ This means there is a notifier subscription leak.`''');
     }
     _performingSnapshot = false;
     return timestamp;
-  }
-
-  Future<List<Statement>> _handleShadowOperations(
-    DateTime timestamp,
-    List<OplogEntry> oplogEntries,
-  ) async {
-    final stmts = <Statement>[];
-    final shadowEntries = <String, ShadowEntry>{};
-
-    for (final oplogEntry in oplogEntries) {
-      // should get shadow entries at once to prevent querying in a loop
-      final shadowEntryLookup =
-          await _lookupCachedShadowEntry(oplogEntry, shadowEntries);
-      final cached = shadowEntryLookup.cached;
-      final shadowEntry = shadowEntryLookup.entry;
-
-      // Clear should not contain the tag for this timestamp, so if
-      // the entry was previously in cache - it means, that we already
-      // read it within the same snapshot
-      if (cached) {
-        oplogEntry.clearTags = encodeTags(
-          difference(decodeTags(shadowEntry.tags), [
-            _generateTag(timestamp),
-          ]),
-        );
-      } else {
-        oplogEntry.clearTags = shadowEntry.tags;
-      }
-
-      if (oplogEntry.optype == OpType.delete) {
-        shadowEntry.tags = shadowTagsDefault;
-      } else {
-        final newTag = _generateTag(timestamp);
-        shadowEntry.tags = encodeTags([newTag]);
-      }
-
-      stmts.add(_updateOplogEntryTagsStatement(oplogEntry));
-      _updateCachedShadowEntry(oplogEntry, shadowEntry, shadowEntries);
-    }
-
-    shadowEntries.forEach((String _key, ShadowEntry value) {
-      if (value.tags == shadowTagsDefault) {
-        stmts.add(_deleteShadowTagsStatement(value));
-      } else {
-        stmts.add(_updateShadowTagsStatement(value));
-      }
-    });
-    return stmts;
-  }
-
-  void _updateCachedShadowEntry(
-    OplogEntry oplogEntry,
-    ShadowEntry shadowEntry,
-    Map<String, ShadowEntry> shadowEntries,
-  ) {
-    final pk = getShadowPrimaryKey(oplogEntry);
-    final key = [oplogEntry.namespace, oplogEntry.tablename, pk].join('.');
-
-    shadowEntries[key] = shadowEntry;
-  }
-
-  // Promise<[boolean, ShadowEntry]
-  Future<ShadowEntryLookup> _lookupCachedShadowEntry(
-    OplogEntry oplogEntry,
-    Map<String, ShadowEntry> shadowEntries,
-  ) async {
-    final pk = getShadowPrimaryKey(oplogEntry);
-    final String key =
-        [oplogEntry.namespace, oplogEntry.tablename, pk].join('.');
-
-    if (shadowEntries.containsKey(key)) {
-      return ShadowEntryLookup(cached: true, entry: shadowEntries[key]!);
-    } else {
-      late final ShadowEntry shadowEntry;
-      final shadowEntriesList = await getOplogShadowEntry(oplog: oplogEntry);
-      if (shadowEntriesList.isEmpty) {
-        shadowEntry = newShadowEntry(oplogEntry);
-      } else {
-        shadowEntry = shadowEntriesList[0];
-      }
-      shadowEntries[key] = shadowEntry;
-      return ShadowEntryLookup(cached: false, entry: shadowEntry);
-    }
   }
 
   Future<void> _notifyChanges(List<OplogEntry> results) async {
@@ -872,69 +900,6 @@ This means there is a notifier subscription leak.`''');
     return rows.map(_opLogEntryFromRow).toList();
   }
 
-  Future<List<OplogEntry>> _getUpdatedEntries(
-    DateTime timestamp, {
-    int? since,
-  }) async {
-    since ??= _lastAckdRowId;
-    final oplog = opts.oplogTable.toString();
-
-    final selectChanges = '''
-      SELECT * FROM $oplog
-      WHERE timestamp = ? AND
-            rowid > ?
-      ORDER BY rowid ASC
-    ''';
-
-    final rows = await adapter.query(
-      Statement(
-        selectChanges,
-        [timestamp.toISOStringUTC(), since],
-      ),
-    );
-    return rows.map(_opLogEntryFromRow).toList();
-  }
-
-  @visibleForTesting
-  Statement getOplogShadowEntryStatement({OplogEntry? oplog}) {
-    final shadow = opts.shadowTable.toString();
-    Statement query;
-    var selectTags = 'SELECT * FROM $shadow';
-    if (oplog != null) {
-      selectTags = '''
-        $selectTags WHERE
-         namespace = ? AND
-         tablename = ? AND
-         primaryKey = ?
-      ''';
-      final args = [
-        oplog.namespace,
-        oplog.tablename,
-        getShadowPrimaryKey(oplog),
-      ];
-      query = Statement(selectTags, args);
-    } else {
-      query = Statement(selectTags);
-    }
-
-    return query;
-  }
-
-  @visibleForTesting
-  Future<List<ShadowEntry>> getOplogShadowEntry({OplogEntry? oplog}) async {
-    final stmt = getOplogShadowEntryStatement(oplog: oplog);
-
-    final shadowTags = await adapter.query(stmt);
-    return shadowTags.map((e) {
-      return ShadowEntry(
-        namespace: e['namespace']! as String,
-        tablename: e['tablename']! as String,
-        primaryKey: e['primaryKey']! as String,
-        tags: e['tags']! as String,
-      );
-    }).toList();
-  }
-
   Statement _deleteShadowTagsStatement(ShadowEntry shadow) {
     final shadowTable = opts.shadowTable.toString();
     final deleteRow = '''
@@ -964,38 +929,6 @@ This means there is a notifier subscription leak.`''');
         shadow.tags,
       ],
     );
-  }
-
-  Statement _updateOplogEntryTagsStatement(OplogEntry oplog) {
-    final oplogTable = opts.oplogTable.toString();
-    final updateTags = '''
-      UPDATE $oplogTable set clearTags = ?
-        WHERE rowid = ?
-    ''';
-    return Statement(
-      updateTags,
-      <Object?>[oplog.clearTags, oplog.rowid],
-    );
-  }
-
-  Future<RunResult> _updateOplogTimestamp(DateTime timestamp) async {
-    final oplog = opts.oplogTable.toString();
-
-    final updateTimestamps = '''
-      UPDATE $oplog set timestamp = ?
-        WHERE rowid in (
-          SELECT rowid FROM $oplog
-              WHERE timestamp is NULL
-              AND rowid > ?
-          ORDER BY rowid ASC
-          )
-    ''';
-
-    final updateArgs = <Object?>[
-      timestamp.toISOStringUTC(),
-      _lastAckdRowId.toString()
-    ];
-    return await adapter.run(Statement(updateTimestamps, updateArgs));
   }
 
   // Merge changes, with last-write-wins and add-wins semantics.

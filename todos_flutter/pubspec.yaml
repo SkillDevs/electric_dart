@@ -14,7 +14,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  electric_client: ^0.1.0
+  electric_flutter: ^0.1.0
   cupertino_icons: ^1.0.2
   sqlite3: ^2.0.0
   sqlite3_flutter_libs: ^0.5.15
@@ -47,6 +47,8 @@ dependency_overrides:
     path: ../electric_cli
   electric_client:
     path: ..
+  electric_flutter:
+    path: ../electric_flutter
 
 
 flutter:

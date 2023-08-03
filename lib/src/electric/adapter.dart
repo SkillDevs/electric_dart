@@ -22,13 +22,13 @@ abstract class DatabaseAdapter {
 abstract class Transaction {
   void run(
     Statement statement,
-    void Function(Transaction tx, RunResult result)? successCallback,
+    void Function(Transaction tx, RunResult result)? successCallback, [
     void Function(Object error)? errorCallback,
-  );
+  ]);
 
   void query(
     Statement statement,
-    void Function(Transaction tx, List<Row> res) successCallback,
+    void Function(Transaction tx, List<Row> res) successCallback, [
     void Function(Object error)? errorCallback,
-  );
+  ]);
 }

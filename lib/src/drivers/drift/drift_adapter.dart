@@ -54,18 +54,15 @@ class DriftAdapter implements adp.DatabaseAdapter {
   ) async {
     final completer = Completer<T>();
 
-    unawaited(
-      db.transaction(() async {
-        final tx = Transaction(this, (e) => completer.completeError(e));
-        f(tx, (T res) {
-          completer.complete(res);
-        });
-      }).catchError((Object e) {
+    return db.transaction(() async {
+      final tx = Transaction(this, (e) {
         completer.completeError(e);
-      }),
-    );
-
-    return await completer.future;
+      });
+      f(tx, (T res) {
+        completer.complete(res);
+      });
+      return await completer.future;
+    });
   }
 
   void Function() hookToNotifier(
@@ -107,32 +104,32 @@ class Transaction implements adp.Transaction {
   @override
   void query(
     Statement statement,
-    void Function(adp.Transaction tx, List<Row> res) successCallback,
+    void Function(adp.Transaction tx, List<Row> res) successCallback, [
     void Function(Object error)? errorCallback,
-  ) {
+  ]) {
     adapter.db
         .customSelect(
           statement.sql,
           variables: _dynamicArgsToVariables(statement.args),
         )
         .get()
-        .catchError((Object e) {
-      errorCallback?.call(e);
-      return <QueryRow>[];
-    }).then((rows) {
+        .then((rows) {
       successCallback(
         this,
         rows.map((e) => e.data).toList(),
       );
+    }).catchError((Object e) {
+      errorCallback?.call(e);
+      signalFailure(e);
     });
   }
 
   @override
   void run(
     Statement statement,
-    void Function(adp.Transaction tx, RunResult result)? successCallback,
+    void Function(adp.Transaction tx, RunResult result)? successCallback, [
     void Function(Object error)? errorCallback,
-  ) {
+  ]) {
     adapter.db
         .customUpdate(
       statement.sql,

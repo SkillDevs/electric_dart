@@ -201,11 +201,11 @@ void main() {
     // Delete overwrites the insert for row with id 2
     // Thus, it overwrites the shadow tag for that row
     final localEntries = await satellite.getEntries();
-    final shadowEntryForRow2 = await satellite.getOplogShadowEntry(
-
-        //TODO(dart): localEntries should have elements. buggy in upstream
-        // oplog: localEntries[1],
-        ); // shadow entry for insert of row with id 2
+    final shadowEntryForRow2 = await getMatchingShadowEntries(
+      adapter,
+      //TODO(dart): localEntries should have elements. buggy in upstream
+      // oplog: localEntries[1],
+    ); // shadow entry for insert of row with id 2
     final shadowTagsRow2 =
         (json.decode(shadowEntryForRow2[0].tags) as List<dynamic>)
             .cast<String>();
@@ -332,10 +332,11 @@ void main() {
 
     // Fetch the shadow tag for row 1 such that delete will overwrite it
     final localEntries = await satellite.getEntries();
-    final shadowEntryForRow1 = await satellite.getOplogShadowEntry(
-        // TODO(dart): Buggy in upstream
-        //localEntries[0]
-        ); // shadow entry for insert of row with id 1
+    final shadowEntryForRow1 = await getMatchingShadowEntries(
+      adapter,
+      // TODO(dart): Buggy in upstream
+      //oplog: localEntries[0]
+    ); // shadow entry for insert of row with id 1
     final shadowTagsRow1 =
         (json.decode(shadowEntryForRow1[0].tags) as List<dynamic>)
             .cast<String>();

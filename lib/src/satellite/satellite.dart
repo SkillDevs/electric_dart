@@ -48,6 +48,8 @@ abstract class Satellite {
   Migrator get migrator;
   Notifier get notifier;
 
+  ConnectivityState? connectivityState;
+
   Future<ConnectionWrapper> start(
     AuthConfig authConfig, {
     SatelliteReplicationOptions? opts,

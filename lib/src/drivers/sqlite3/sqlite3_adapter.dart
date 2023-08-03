@@ -127,9 +127,9 @@ class Transaction implements adp.Transaction {
   @override
   void run(
     Statement statement,
-    void Function(Transaction tx, RunResult result)? successCallback,
+    void Function(Transaction tx, RunResult result)? successCallback, [
     void Function(Object error)? errorCallback,
-  ) {
+  ]) {
     // uses _runUncoordinated because we're in a transaction that already acquired the lock
     final prom = adapter._runUncoordinated(statement);
     invokeCallback(prom, successCallback, errorCallback);
@@ -138,9 +138,9 @@ class Transaction implements adp.Transaction {
   @override
   void query(
     Statement statement,
-    void Function(Transaction tx, List<Row> res) successCallback,
+    void Function(Transaction tx, List<Row> res) successCallback, [
     void Function(Object error)? errorCallback,
-  ) {
+  ]) {
     // uses _queryUncoordinated because we're in a transaction that already acquired the lock
     final prom = adapter._queryUncoordinated(statement);
     invokeCallback(prom, successCallback, errorCallback);

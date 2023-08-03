@@ -65,6 +65,73 @@ void runTests(DatabaseAdapter Function() getAdapter) {
       // Can open a new transaction
       await adapter.runInTransaction([Statement('SELECT 1')]);
     });
+
+    test('chain', () async {
+      final adapter = getAdapter();
+
+      final selectQ = Statement('SELECT * FROM items;');
+      final buildInsertQ =
+          (int i) => Statement("INSERT INTO items VALUES ('foo$i');");
+      final result = await adapter.transaction<List<String>>((tx, setResult) {
+        tx.run(
+          buildInsertQ(1),
+          (tx, _) => tx.run(
+            buildInsertQ(2),
+            (tx, _) => tx.run(
+              buildInsertQ(3),
+              (tx, __) => tx.query(
+                selectQ,
+                (tx, res) => setResult(
+                  res.map((row) => row['value']! as String).toList(),
+                ),
+              ),
+            ),
+          ),
+        );
+      });
+
+      expect(result, ['foo1', 'foo2', 'foo3']);
+    });
+
+    test('chain with error', () async {
+      final adapter = getAdapter();
+
+      final wrongStatementQ = Statement('WRONG QUERY');
+      final buildInsertQ =
+          (int i) => Statement("INSERT INTO items VALUES ('foo$i');");
+
+      bool captured = false;
+      await expectLater(
+        () => adapter.transaction<List<String>>((tx, setResult) {
+          tx.run(
+            buildInsertQ(1),
+            (tx, _) => tx.run(
+              buildInsertQ(2),
+              (tx, _) => tx.run(
+                buildInsertQ(3),
+                (tx, __) => tx.query(
+                  wrongStatementQ,
+                  (tx, res) => fail('should fail'),
+                  (e) {
+                    // Error callback
+                    captured = true;
+                  },
+                ),
+              ),
+            ),
+          );
+        }),
+        throwsException,
+      );
+
+      expect(captured, true);
+
+      final result = await adapter.query(Statement('SELECT * FROM items;'));
+      expect(result, isEmpty);
+
+      // Can open a new transaction
+      await adapter.runInTransaction([Statement('SELECT 1')]);
+    });
   });
 
   group('runInTransaction', () {
