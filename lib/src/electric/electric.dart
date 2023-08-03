@@ -60,6 +60,10 @@ Future<ElectricClient> electrify({
     config: configWithDefaults,
   );
 
+   if (satellite.connectivityState != null) {
+    electric.setIsConnected(satellite.connectivityState!);
+  }
+
   // initialize the shape manager
   shapeManager.init(satellite);
 

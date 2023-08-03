@@ -264,7 +264,7 @@ void main() {
     final merged = localOperationsToTableChanges(entries, (DateTime timestamp) {
       return generateTag(clientId, timestamp);
     });
-    final opLogTableChange = merged['main.parent']!['1']!;
+    final opLogTableChange = merged['main.parent']!['{"id":1}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, null);
@@ -305,7 +305,7 @@ void main() {
     final merged = satellite.mergeEntries(clientId, local, 'remote', [
       incomingEntry,
     ]);
-    final item = merged['main.parent']!['1'];
+    final item = merged['main.parent']!['{"id":1}'];
 
     expect(
       item,
@@ -372,7 +372,7 @@ void main() {
     final merged = satellite.mergeEntries(clientId, local, 'remote', [
       incomingEntry,
     ]);
-    final item = merged['main.parent']!['1'];
+    final item = merged['main.parent']!['{"id":1}'];
 
     expect(
       item,
@@ -451,7 +451,7 @@ void main() {
 
     final localEntries = await satellite.getEntries();
     final shadowEntry =
-        await satellite.getOplogShadowEntry(oplog: localEntries[0]);
+        await getMatchingShadowEntries(adapter, oplog: localEntries[0]);
 
     expect(
       encodeTags([
@@ -488,7 +488,7 @@ void main() {
 
     const sql = 'SELECT * from parent WHERE id=1';
     final rows = await adapter.query(Statement(sql));
-    final shadowEntries = await satellite.getOplogShadowEntry();
+    final shadowEntries = await getMatchingShadowEntries(adapter);
 
     expect(shadowEntries, isEmpty);
     expect(rows, isEmpty);
@@ -632,7 +632,7 @@ void main() {
     ];
 
     final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
-    final item = merged['main.parent']!['1'];
+    final item = merged['main.parent']!['{"id":1}'];
 
     expect(
       item,
@@ -716,7 +716,7 @@ void main() {
     ];
 
     final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
-    final item = merged['main.parent']!['1']!;
+    final item = merged['main.parent']!['{"id":1}']!;
 
     // The incoming entry modified the value of the `value` column to `'remote'`
     // The local entry concurrently modified the value of the `other` column to 1.
@@ -773,7 +773,7 @@ void main() {
 
     final local = <OplogEntry>[];
     final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
-    final item = merged['main.parent']!['1'];
+    final item = merged['main.parent']!['{"id":1}'];
 
     expect(
       item,
@@ -1723,6 +1723,82 @@ void main() {
 
     await satellite.performSnapshot();
     expect(await satellite.getEntries(since: 0), <OplogEntry>[]);
+  });
+
+  test('snapshots: generated oplog entries have the correct tags', () async {
+    await runMigrations();
+
+    const namespace = 'main';
+    const tablename = 'parent';
+    final qualified = const QualifiedTablename(namespace, tablename).toString();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef = ClientShapeDefinition(
+      selects: [
+        ShapeSelect(tablename: tablename),
+      ],
+    );
+
+    satellite.relations = kTestRelations;
+    final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
+    await synced;
+
+    final expectedTs = DateTime.now();
+    final incoming = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.insert,
+      expectedTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [expectedTs]),
+      newValues: {
+        'id': 2,
+      },
+      oldValues: {},
+    );
+    final incomingChange = opLogEntryToChange(incoming, kTestRelations);
+
+    await satellite.applyTransaction(
+      Transaction(
+        origin: 'remote',
+        commitTimestamp: Int64(expectedTs.millisecondsSinceEpoch),
+        changes: [incomingChange],
+        lsn: [],
+      ),
+    );
+
+    final row = await adapter.query(
+      Statement(
+        'SELECT id FROM $qualified',
+      ),
+    );
+    expect(row.length, 2);
+
+    final shadowRows = await adapter.query(
+      Statement(
+        'SELECT * FROM _electric_shadow',
+      ),
+    );
+    expect(shadowRows.length, 2);
+
+    expect(shadowRows[0]['namespace'], 'main');
+    expect(shadowRows[0]['tablename'], 'parent');
+
+    await adapter.run(Statement('DELETE FROM $qualified WHERE id = 2'));
+    await satellite.performSnapshot();
+
+    final oplogs = await adapter.query(
+      Statement(
+        'SELECT * FROM _electric_oplog',
+      ),
+    );
+    expect(oplogs[0]['clearTags'], genEncodedTags('remote', [expectedTs]));
   });
 }
 

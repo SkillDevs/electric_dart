@@ -107,9 +107,9 @@ class Transaction implements adp.Transaction {
   @override
   void query(
     Statement statement,
-    void Function(adp.Transaction tx, List<Row> res) successCallback,
+    void Function(adp.Transaction tx, List<Row> res) successCallback, [
     void Function(Object error)? errorCallback,
-  ) {
+  ]) {
     adapter.db
         .customSelect(
           statement.sql,
@@ -130,9 +130,9 @@ class Transaction implements adp.Transaction {
   @override
   void run(
     Statement statement,
-    void Function(adp.Transaction tx, RunResult result)? successCallback,
+    void Function(adp.Transaction tx, RunResult result)? successCallback, [
     void Function(Object error)? errorCallback,
-  ) {
+  ]) {
     adapter.db
         .customUpdate(
       statement.sql,

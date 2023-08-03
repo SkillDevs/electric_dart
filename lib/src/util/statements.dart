@@ -26,7 +26,7 @@ import 'package:electric_client/src/util/types.dart';
  * @returns array of statements ready to be executed by the adapter
  */
 
-List<Statement> prepareBatchedStatements(
+List<Statement> prepareInsertBatchedStatements(
   String baseSql,
   List<String> columns,
   List<Map<String, SqlValue>> records,

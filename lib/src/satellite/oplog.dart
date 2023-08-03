@@ -129,15 +129,13 @@ List<OplogEntry> fromTransaction(
   RelationsCache relations,
 ) {
   return transaction.changes.map((t) {
-    final columnValues = t.record ?? t.oldRecord;
-    final pk = json.encode(
+    final columnValues = t.record ?? t.oldRecord!;
+    final pk = primaryKeyToStr(
       Map.fromEntries(
-        relations[t.relation.table]
-                ?.columns
-                .where((c) => c.primaryKey ?? false)
-                .map((col) => MapEntry(col.name, columnValues![col.name]))
-                .toList() ??
-            [],
+        relations[t.relation.table]!
+            .columns
+            .where((c) => c.primaryKey ?? false)
+            .map((col) => MapEntry(col.name, columnValues[col.name]!)),
       ),
     );
 
@@ -443,20 +441,38 @@ class ShadowEntryChanges with EquatableMixin {
       [namespace, tablename, primaryKeyCols, optype, changes, fullRow, tags];
 }
 
-String primaryKeyToStr(Map<String, Object> primaryKeyJson) {
-  final sortedValues = primaryKeyJson.values.map((e) => e.toString()).toList()
-    ..sort();
-  return sortedValues.join('_');
+/// Convert a primary key to a string the same way our triggers do when generating oplog entries.
+///
+/// Takes the object that contains the primary key and serializes it to JSON in a non-prettified
+/// way with column sorting.
+///
+/// @param primaryKeyObj object representing all columns of a primary key
+/// @returns a stringified JSON with stable sorting on column names
+String primaryKeyToStr(Map<String, Object> primaryKeyObj) {
+  final keys = primaryKeyObj.keys.toList()..sort();
+  if (keys.isEmpty) return '{}';
+
+  final jsonStr = StringBuffer('{');
+  for (var i = 0; i < keys.length; i++) {
+    final key = keys[i];
+    jsonStr.write(json.encode(key));
+    jsonStr.write(':');
+    jsonStr.write(json.encode(primaryKeyObj[key]));
+
+    if (i < keys.length - 1) {
+      jsonStr.write(',');
+    }
+  }
+
+  jsonStr.write('}');
+  return jsonStr.toString();
 }
 
 ShadowKey getShadowPrimaryKey(
   Object oplogEntry,
 ) {
   if (oplogEntry is OplogEntry) {
-    return primaryKeyToStr(
-      (json.decode(oplogEntry.primaryKey) as Map<String, dynamic>)
-          .cast<String, Object>(),
-    );
+    return oplogEntry.primaryKey;
   } else if (oplogEntry is OplogEntryChanges) {
     return primaryKeyToStr(oplogEntry.primaryKeyCols);
   } else if (oplogEntry is ShadowEntryChanges) {

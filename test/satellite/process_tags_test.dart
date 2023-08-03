@@ -50,7 +50,7 @@ void main() {
     );
 
     final txDate1 = await satellite.performSnapshot();
-    var shadow = await satellite.getOplogShadowEntry();
+    var shadow = await getMatchingShadowEntries(adapter);
     expect(shadow.length, 1);
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate1]));
 
@@ -61,7 +61,7 @@ void main() {
     );
 
     final txDate2 = await satellite.performSnapshot();
-    shadow = await satellite.getOplogShadowEntry();
+    shadow = await getMatchingShadowEntries(adapter);
     expect(shadow.length, 1);
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate2]));
 
@@ -72,7 +72,7 @@ void main() {
     );
 
     final txDate3 = await satellite.performSnapshot();
-    shadow = await satellite.getOplogShadowEntry();
+    shadow = await getMatchingShadowEntries(adapter);
     expect(shadow.length, 1);
     expect(shadow[0].tags, genEncodedTags(clientId, [txDate3]));
 
@@ -83,7 +83,7 @@ void main() {
     );
 
     final txDate4 = await satellite.performSnapshot();
-    shadow = await satellite.getOplogShadowEntry();
+    shadow = await getMatchingShadowEntries(adapter);
     expect(shadow.length, 0);
 
     final entries = await satellite.getEntries();
@@ -113,7 +113,7 @@ void main() {
 
     final localEntries1 = await satellite.getEntries();
     final shadowEntry1 =
-        await satellite.getOplogShadowEntry(oplog: localEntries1[0]);
+        await getMatchingShadowEntries(adapter, oplog: localEntries1[0]);
 
     // shadow tag is time of snapshot
     final tag1 = genEncodedTags(clientId, [txDate1]);
@@ -133,7 +133,7 @@ void main() {
 
     final localEntries2 = await satellite.getEntries();
     final shadowEntry2 =
-        await satellite.getOplogShadowEntry(oplog: localEntries2[1]);
+        await getMatchingShadowEntries(adapter, oplog: localEntries2[1]);
 
     // shadowTag is empty
     expect(0, shadowEntry2.length);
@@ -153,7 +153,7 @@ void main() {
 
     final localEntries3 = await satellite.getEntries();
     final shadowEntry3 =
-        await satellite.getOplogShadowEntry(oplog: localEntries3[1]);
+        await getMatchingShadowEntries(adapter, oplog: localEntries3[1]);
 
     final tag3 = genEncodedTags(clientId, [txDate3]);
     // shadow tag is tag3
@@ -196,7 +196,7 @@ void main() {
     // validate that garbage collection has been triggered
     expect(2, (await satellite.getEntries()).length);
 
-    final shadow = await satellite.getOplogShadowEntry();
+    final shadow = await getMatchingShadowEntries(adapter);
     expect(
       shadow[0].tags,
       genEncodedTags(clientId, [txDate3]),
@@ -284,12 +284,12 @@ void main() {
     );
     await satellite.applyTransaction(nextTx);
 
-    final shadow = await satellite.getOplogShadowEntry();
+    final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '1',
+        primaryKey: '{"id":1}',
         tags: genEncodedTags(
           'remote',
           [DateTime.fromMillisecondsSinceEpoch(prevTs)],
@@ -298,7 +298,7 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '2',
+        primaryKey: '{"id":2}',
         tags: genEncodedTags(
           'remote',
           [DateTime.fromMillisecondsSinceEpoch(nextTs)],
@@ -408,18 +408,18 @@ void main() {
     );
     await satellite.applyTransaction(nextTx);
 
-    final shadow = await satellite.getOplogShadowEntry();
+    final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '1',
+        primaryKey: '{"id":1}',
         tags: genEncodedTags('remote', [prevTs]),
       ),
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '2',
+        primaryKey: '{"id":2}',
         tags: genEncodedTags('remote', [nextTs]),
       ),
     ];
@@ -533,12 +533,12 @@ void main() {
     );
     await satellite.applyTransaction(nextTx);
 
-    final shadow = await satellite.getOplogShadowEntry();
+    final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '1',
+        primaryKey: '{"id":1}',
         tags: encodeTags([
           generateTag(clientId, txDate1),
           generateTag('remote', prevTs),
@@ -547,7 +547,7 @@ void main() {
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '2',
+        primaryKey: '{"id":2}',
         tags: encodeTags([
           generateTag(clientId, txDate1),
           generateTag('remote', nextTs),
@@ -666,12 +666,12 @@ void main() {
     );
     await satellite.applyTransaction(tx);
 
-    final shadow = await satellite.getOplogShadowEntry();
+    final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '2',
+        primaryKey: '{"id":2}',
         tags: genEncodedTags('remote', [txDate1]),
       ),
     ];
@@ -731,12 +731,12 @@ void main() {
     );
     await satellite.applyTransaction(insertTx);
 
-    var shadow = await satellite.getOplogShadowEntry();
+    var shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
         namespace: 'main',
         tablename: 'parent',
-        primaryKey: '1',
+        primaryKey: '{"id":1}',
         tags: genEncodedTags('remote', [txDate1]),
       ),
     ];
@@ -751,7 +751,7 @@ void main() {
     );
     await satellite.applyTransaction(deleteTx);
 
-    shadow = await satellite.getOplogShadowEntry();
+    shadow = await getMatchingShadowEntries(adapter);
     expect(<ShadowEntry>[], shadow);
 
     final entries = await satellite.getEntries(since: 0);

@@ -2,7 +2,7 @@
 
 # Electric Dart ⚡🎯
 
-Dart client implementation for [Electric](https://electric-sql.com/) based on commit `f78d3cb5fc9194062a8d5f6f058d2dd37d2b9c3a` of the [electric git repository](https://github.com/electric-sql/electric)
+Dart client implementation for [Electric](https://electric-sql.com/) based on commit `cd77e4a67f5367e1376cab752bd16177801d20b5` of the [electric git repository](https://github.com/electric-sql/electric)
 
 - Client based on the typescript client from the `clients/typescript` subfolder.
 

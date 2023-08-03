@@ -169,3 +169,41 @@ String genEncodedTags(
   }).toList();
   return encodeTags(tags);
 }
+
+/// List all shadow entires, or get just one if an `oplog` parameter is provided
+Future<List<ShadowEntry>> getMatchingShadowEntries(
+  DatabaseAdapter adapter, {
+  OplogEntry? oplog,
+  String shadowTable = 'main._electric_shadow',
+}) async {
+  final Statement query;
+  String selectTags = 'SELECT * FROM $shadowTable';
+  if (oplog != null) {
+    selectTags = selectTags +
+        '''
+ WHERE
+namespace = ? AND
+tablename = ? AND
+primaryKey = ?
+''';
+    final args = <Object?>[
+      oplog.namespace,
+      oplog.tablename,
+      getShadowPrimaryKey(oplog)
+    ];
+    query = Statement(selectTags, args);
+  } else {
+    query = Statement(selectTags);
+  }
+
+  final rows = await adapter.query(query);
+
+  return rows.map((e) {
+    return ShadowEntry(
+      namespace: e['namespace']! as String,
+      tablename: e['tablename']! as String,
+      primaryKey: e['primaryKey']! as String,
+      tags: e['tags']! as String,
+    );
+  }).toList();
+}
