@@ -273,9 +273,16 @@ packages:
     source: path
     version: "0.1.0"
   electric_client:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       path: ".."
+      relative: true
+    source: path
+    version: "0.1.0"
+  electric_flutter:
+    dependency: "direct main"
+    description:
+      path: "../electric_flutter"
       relative: true
     source: path
     version: "0.1.0"

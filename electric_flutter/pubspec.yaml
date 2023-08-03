@@ -1,0 +1,24 @@
+name: electric_flutter
+description: A new Flutter package project.
+version: 0.1.0
+homepage:
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  electric_client: ^0.1.0
+  
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  lint: ^2.1.2
+
+dependency_overrides:
+  electric_client:
+    path: ..
