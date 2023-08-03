@@ -53,7 +53,7 @@ class ClientShapeDefinition with EquatableMixin {
   factory ClientShapeDefinition.fromMap(Map<String, dynamic> map) {
     return ClientShapeDefinition(
       selects: List<ShapeSelect>.from(
-        (map['selects'] as List<int>).map<ShapeSelect>(
+        (map['selects'] as List<dynamic>).map<ShapeSelect>(
           (x) => ShapeSelect.fromMap(x as Map<String, dynamic>),
         ),
       ),
