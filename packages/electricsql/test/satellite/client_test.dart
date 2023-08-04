@@ -1027,6 +1027,7 @@ void main() {
     void error(Object e) {
       completer.completeError((e as SatelliteException).message!);
     }
+
     client.subscribeToSubscriptionEvents(success, error);
 
     final insertOp = SatOpInsert(

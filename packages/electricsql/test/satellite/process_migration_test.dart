@@ -507,6 +507,7 @@ void main() {
         'baz': null,
       };
     }
+
     final extendedRows = rowsBeforeMigration.map(extendRow);
 
     // Check that all rows now have an additional column

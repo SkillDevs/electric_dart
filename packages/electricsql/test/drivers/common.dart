@@ -70,8 +70,9 @@ void runTests(DatabaseAdapter Function() getAdapter) {
       final adapter = getAdapter();
 
       final selectQ = Statement('SELECT * FROM items;');
-      Statement buildInsertQ(int i) => Statement("INSERT INTO items VALUES ('foo$i');");
-      
+      Statement buildInsertQ(int i) =>
+          Statement("INSERT INTO items VALUES ('foo$i');");
+
       final result = await adapter.transaction<List<String>>((tx, setResult) {
         tx.run(
           buildInsertQ(1),
@@ -97,7 +98,8 @@ void runTests(DatabaseAdapter Function() getAdapter) {
       final adapter = getAdapter();
 
       final wrongStatementQ = Statement('WRONG QUERY');
-      Statement buildInsertQ(int i) => Statement("INSERT INTO items VALUES ('foo$i');");
+      Statement buildInsertQ(int i) =>
+          Statement("INSERT INTO items VALUES ('foo$i');");
 
       bool captured = false;
       await expectLater(

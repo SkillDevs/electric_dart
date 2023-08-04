@@ -1147,6 +1147,7 @@ This means there is a notifier subscription leak.`''');
           ddlChunk.add(change as SchemaChange);
         }
       }
+
       Future<void> processChunk(ChangeType type) async {
         if (type == ChangeType.dml) {
           await processDML(dmlChunk);
