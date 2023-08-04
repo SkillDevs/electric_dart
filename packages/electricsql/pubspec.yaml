@@ -1,7 +1,7 @@
 name: electricsql
-description: A Dart implementation for Electric (electric-sql.com).
+description: A Dart implementation for ElectricSQL (electric-sql.com).
 version: 0.1.0
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/SkillDevs/electric_dart
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

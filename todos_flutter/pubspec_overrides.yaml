@@ -1,8 +1,0 @@
-# melos_managed_dependency_overrides: electricsql_cli,electricsql,electricsql_flutter
-dependency_overrides:
-  electricsql_cli:
-    path: ../packages/electricsql_cli
-  electricsql:
-    path: ../packages/electricsql
-  electricsql_flutter:
-    path: ../packages/electricsql_flutter

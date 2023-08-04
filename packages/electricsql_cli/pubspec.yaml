@@ -1,7 +1,7 @@
 name: electricsql_cli
-description: A Very Good Project created by Very Good CLI.
+description: CLI to interact with the ElectricSQL service
+repository: https://github.com/SkillDevs/electric_dart
 version: 0.1.0
-publish_to: none
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

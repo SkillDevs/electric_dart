@@ -6,3 +6,4 @@ pubspec.lock
 .idea/
 *.iml
 .vscode/settings.json
+pubspec_overrides.yaml

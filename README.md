@@ -2,7 +2,13 @@
 
 # Electric Dart ⚡🎯
 
-Dart client implementation for [Electric](https://electric-sql.com/) based on commit `cd77e4a67f5367e1376cab752bd16177801d20b5` of the [electric git repository](https://github.com/electric-sql/electric)
+#### 🛠️ WORK IN PROGRESS 🛠️
+
+For development updates make sure to check out the official [ElectricSQL Discord](https://discord.gg/B7kHGwDcbj) server, as well as the official [Javascript client](https://www.npmjs.com/package/electric-sql)  
+
+---
+
+Non official Dart client implementation for [Electric](https://electric-sql.com/) based on commit `cd77e4a67f5367e1376cab752bd16177801d20b5` of the [electric git repository](https://github.com/electric-sql/electric)
 
 - Client based on the typescript client from the `clients/typescript` subfolder.
 
