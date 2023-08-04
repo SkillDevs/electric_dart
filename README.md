@@ -26,7 +26,7 @@ This demo is compatible with the `todoMVC` official example [Link](https://githu
 
 1. Run the Electric backend ([Instructions](https://electric-sql.com/docs/overview/examples))
 
-2. Apply the migrations in Postgres following the Migrations section [here](./todos_flutter/README.md)
+2. Apply the migrations in Postgres following the Migrations section [here](https://github.com/SkillDevs/electric_dart/blob/master/todos_flutter/README.md)
 
 3. From inside the todos_flutter directory: `flutter run` with the platform of your choice.
 
