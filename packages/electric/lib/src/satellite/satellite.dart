@@ -57,7 +57,8 @@ abstract class Satellite {
   });
   Future<void> stop();
   Future<ShapeSubscription> subscribe(
-      List<ClientShapeDefinition> shapeDefinitions);
+    List<ClientShapeDefinition> shapeDefinitions,
+  );
   Future<void> unsubscribe(String shapeUuid);
 }
 
