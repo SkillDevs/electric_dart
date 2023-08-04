@@ -60,7 +60,7 @@ Future<ElectricClient> electrify({
     config: configWithDefaults,
   );
 
-   if (satellite.connectivityState != null) {
+  if (satellite.connectivityState != null) {
     electric.setIsConnected(satellite.connectivityState!);
   }
 

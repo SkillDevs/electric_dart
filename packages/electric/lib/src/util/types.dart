@@ -19,7 +19,7 @@ class Statement with EquatableMixin {
   String toString() {
     return 'Statement($sql, $args)';
   }
-  
+
   @override
   List<Object?> get props => [sql, args];
 }

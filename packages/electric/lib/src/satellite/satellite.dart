@@ -9,7 +9,8 @@ import 'package:electric_client/src/sockets/sockets.dart';
 import 'package:electric_client/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 
-export 'package:electric_client/src/satellite/process.dart' show ShapeSubscription;
+export 'package:electric_client/src/satellite/process.dart'
+    show ShapeSubscription;
 
 abstract class Registry {
   Future<Satellite> ensureStarted({
@@ -55,7 +56,8 @@ abstract class Satellite {
     SatelliteReplicationOptions? opts,
   });
   Future<void> stop();
-  Future<ShapeSubscription> subscribe(List<ClientShapeDefinition> shapeDefinitions);
+  Future<ShapeSubscription> subscribe(
+      List<ClientShapeDefinition> shapeDefinitions);
   Future<void> unsubscribe(String shapeUuid);
 }
 
@@ -78,7 +80,7 @@ abstract class Client {
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   );
-   void enqueueTransaction(
+  void enqueueTransaction(
     DataTransaction transaction,
   );
   EventListener<AckLsnEvent> subscribeToAck(AckCallback callback);

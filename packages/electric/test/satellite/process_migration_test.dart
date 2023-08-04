@@ -200,6 +200,7 @@ void main() {
 
     // Delete overwrites the insert for row with id 2
     // Thus, it overwrites the shadow tag for that row
+    // ignore: unused_local_variable
     final localEntries = await satellite.getEntries();
     final shadowEntryForRow2 = await getMatchingShadowEntries(
       adapter,
@@ -331,6 +332,7 @@ void main() {
     // Same as previous test but DML contains some conflicting operations
 
     // Fetch the shadow tag for row 1 such that delete will overwrite it
+    // ignore: unused_local_variable
     final localEntries = await satellite.getEntries();
     final shadowEntryForRow1 = await getMatchingShadowEntries(
       adapter,

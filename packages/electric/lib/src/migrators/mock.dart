@@ -15,7 +15,7 @@ class MockMigrator implements Migrator {
   Future<bool> applyIfNotAlready(StmtMigration migration) async {
     return true;
   }
-  
+
   @override
   Future<String?> querySchemaVersion() async {
     return null;

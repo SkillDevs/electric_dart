@@ -3,7 +3,8 @@ import 'package:electric_client/src/util/types.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('prepareInsertBatchedStatements correctly splits up data in batches', () {
+  test('prepareInsertBatchedStatements correctly splits up data in batches',
+      () {
     const data = [
       {'a': 1, 'b': 2},
       {'a': 3, 'b': 4},
