@@ -10,24 +10,29 @@ on:
   pull_request:
 
 jobs:
-  build:
+  tests:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
-      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
 
-      - name: Install dependencies
-        run: dart pub get
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Boostrap
+        run: melos bs
 
       # Uncomment this step to verify the use of 'dart format' on each commit.
       # - name: Verify formatting
       #   run: dart format --output=none --set-exit-if-changed .
 
-      # Uncomment when some todos are fixed
-      # - name: Analyze project source
-      #   run: dart analyze
+      - name: Analyze project source
+        run: melos analyze
 
       - name: Run tests
-        run: dart test
+        run: melos test:all
