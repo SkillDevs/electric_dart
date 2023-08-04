@@ -37,3 +37,10 @@ scripts:
     packageFilters:
       dirExists:
         - test
+
+  generate_proto:
+    run: |
+      melos exec -- \
+        "protoc --dart_out=lib/src proto/satellite.proto && dart format lib/src/proto"
+    packageFilters:
+      scope: 'electricsql'

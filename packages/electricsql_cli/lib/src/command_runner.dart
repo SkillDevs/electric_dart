@@ -1,20 +1,20 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
-import 'package:electric_cli/src/commands/commands.dart';
-import 'package:electric_cli/src/commands/generate_migrations_command.dart';
-import 'package:electric_cli/src/version.dart';
+import 'package:electricsql_cli/src/commands/commands.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations_command.dart';
+import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 
-const executableName = 'electric_cli';
-const packageName = 'electric_cli';
+const executableName = 'electricsql_cli';
+const packageName = 'electricsql_cli';
 const description = 'A Very Good Project created by Very Good CLI.';
 
 /// {@template electric_cli_command_runner}
 /// A [CommandRunner] for the CLI.
 ///
 /// ```
-/// $ electric_cli --version
+/// $ electricsql_cli --version
 /// ```
 /// {@endtemplate}
 class ElectricCliCommandRunner extends CompletionCommandRunner<int> {

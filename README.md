@@ -29,13 +29,15 @@ Note:
 
 ## Development
 
+Dart 3.x and Melos required
 
-Dart 3.x required
-
-### Fetch the dependencies
+`dart pub global activate melos`
 
 
-`dart pub get`
+### Bootstrap the workspace
+
+`melos bs`
+
 
 ### Generate the Protobuf code
 
@@ -45,8 +47,9 @@ Install the `protoc_plugin` Dart package. Version used: `^20.0.1`
 
 To generate the code
 
-`protoc --dart_out=lib/src proto/satellite.proto && dart format lib/src/proto`
+`melos generate_proto`
+
 
 ### Run the tests
 
-`dart test`
+`melos test:all`

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:electric_cli/src/command_runner.dart';
+import 'package:electricsql_cli/src/command_runner.dart';
 
 Future<void> main(List<String> args) async {
   await _flushThenExit(await ElectricCliCommandRunner().run(args));

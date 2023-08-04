@@ -1,10 +1,10 @@
-/// electric_cli, A Very Good Project created by Very Good CLI.
+/// electricsql_cli, A Very Good Project created by Very Good CLI.
 ///
 /// ```sh
-/// # activate electric_cli
-/// dart pub global activate electric_cli
+/// # activate electricsql_cli
+/// dart pub global activate electricsql_cli
 ///
 /// # see usage
-/// electric_cli --help
+/// electricsql_cli --help
 /// ```
-library electric_cli;
+library electricsql_cli;

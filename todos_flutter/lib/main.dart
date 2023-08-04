@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:electric_flutter/electric_flutter.dart';
+import 'package:electricsql_flutter/electricsql_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';

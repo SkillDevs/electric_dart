@@ -1,6 +1,6 @@
-## electric_flutter
+## electricsql_flutter
 
-Extra set of utilities when using Electric in a Flutter application to complement `electric_dart`.
+Extra set of utilities when using Electric in a Flutter application to complement `electricsql`.
 
 ### Features
 

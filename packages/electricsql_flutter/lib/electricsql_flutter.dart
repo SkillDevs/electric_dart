@@ -1,5 +1,5 @@
 /// Flutter specific utilities for Electric SQL
-library electric_flutter;
+library electricsql_flutter;
 
 export 'package:electricsql/electricsql.dart';
 

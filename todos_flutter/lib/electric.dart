@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart';
-import 'package:electric_flutter/electric_flutter.dart';
+import 'package:electricsql_flutter/electricsql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:todos_electrified/generated/electric_migrations.dart';
 
-import 'package:electric_flutter/drivers/drift.dart';
+import 'package:electricsql_flutter/drivers/drift.dart';
 
 final Provider<ElectricClient> electricClientProvider =
     Provider((ref) => throw UnimplementedError());

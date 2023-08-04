@@ -14,7 +14,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  electric_flutter: ^0.1.0
+  electricsql_flutter: ^0.1.0
   cupertino_icons: ^1.0.2
   sqlite3: ^2.0.0
   sqlite3_flutter_libs: ^0.5.15
@@ -35,7 +35,7 @@ dependencies:
 dev_dependencies:
   drift_dev: ^2.8.2
   build_runner: ^2.4.4
-  electric_cli: ^0.1.0
+  electricsql_cli: ^0.1.0
   flutter_test:
     sdk: flutter
 

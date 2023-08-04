@@ -10,7 +10,7 @@ import 'package:path/path.dart' as path;
 
 /// {@template sample_command}
 ///
-/// `electric_cli generate_migrations`
+/// `electricsql_cli generate_migrations`
 /// A [Command] to exemplify a sub command
 /// {@endtemplate}
 class GenerateMigrationsCommand extends Command<int> {

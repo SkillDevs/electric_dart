@@ -30,9 +30,9 @@ Every time the schema changes in Postgres, we need to update the client bundling
 ### Generate the client migrations file
 
 We can automatically generate the necessary migrations that the client app needs to bundle using the CLI tool.
-With `electric_cli` as a dev dependency in your app, you can then run: 
+With `electricsql_cli` as a dev dependency in your app, you can then run: 
 
-`dart run electric_cli generate_migrations`
+`dart run electricsql_cli generate_migrations`
 
 It will connect to the Electric service and generate the migrations file automatically. You can configure the service url
 as well as the output file. Check out the options with `--help`.

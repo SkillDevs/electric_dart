@@ -265,24 +265,24 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
-  electric_cli:
+  electricsql:
+    dependency: "direct overridden"
+    description:
+      path: "../packages/electricsql"
+      relative: true
+    source: path
+    version: "0.1.0"
+  electricsql_cli:
     dependency: "direct dev"
     description:
       path: "../packages/electricsql_cli"
       relative: true
     source: path
     version: "0.1.0"
-  electric_flutter:
+  electricsql_flutter:
     dependency: "direct main"
     description:
       path: "../packages/electricsql_flutter"
-      relative: true
-    source: path
-    version: "0.1.0"
-  electricsql:
-    dependency: "direct overridden"
-    description:
-      path: "../packages/electricsql"
       relative: true
     source: path
     version: "0.1.0"
