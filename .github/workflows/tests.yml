@@ -10,7 +10,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,7 +19,7 @@ jobs:
       - uses: dart-lang/setup-dart@v1
 
       - name: Install Melos
-        run: pub global activate melos
+        run: dart pub global activate melos
 
       - name: Boostrap
         run: melos bs
