@@ -1,0 +1,5 @@
+name: electric
+
+packages:
+  - packages/*
+  - todos_flutter

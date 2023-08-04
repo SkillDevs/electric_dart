@@ -23,9 +23,5 @@ dev_dependencies:
   mocktail: ^0.3.0
   test: ^1.24.2
 
-dependency_overrides:
-  electric_client:
-    path: ..
-
 executables:
   electric_cli:

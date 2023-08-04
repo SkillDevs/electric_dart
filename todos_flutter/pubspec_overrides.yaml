@@ -1,0 +1,8 @@
+# melos_managed_dependency_overrides: electric_cli,electric_client,electric_flutter
+dependency_overrides:
+  electric_cli:
+    path: ../packages/electric_cli
+  electric_client:
+    path: ../packages/electric
+  electric_flutter:
+    path: ../packages/electric_flutter

@@ -9,7 +9,7 @@ environment:
 
 dependencies:
   electric_client: ^0.1.0
-  
+
   flutter:
     sdk: flutter
 
@@ -18,7 +18,3 @@ dev_dependencies:
     sdk: flutter
 
   lint: ^2.1.2
-
-dependency_overrides:
-  electric_client:
-    path: ..

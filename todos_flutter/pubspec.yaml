@@ -35,20 +35,11 @@ dependencies:
 dev_dependencies:
   drift_dev: ^2.8.2
   build_runner: ^2.4.4
-  electric_cli:
-    path: ../electric_cli
+  electric_cli: ^0.1.0
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^2.0.0
-
-dependency_overrides:
-  electric_cli:
-    path: ../electric_cli
-  electric_client:
-    path: ..
-  electric_flutter:
-    path: ../electric_flutter
 
 
 flutter:

@@ -1,0 +1,4 @@
+# melos_managed_dependency_overrides: electric_client
+dependency_overrides:
+  electric_client:
+    path: ../electric

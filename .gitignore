@@ -3,3 +3,6 @@
 .dart_tool/
 pubspec.lock
 .DS_Store
+.idea/
+*.iml
+.vscode/settings.json
