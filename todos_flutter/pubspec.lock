@@ -268,21 +268,21 @@ packages:
   electric_cli:
     dependency: "direct dev"
     description:
-      path: "../packages/electric_cli"
-      relative: true
-    source: path
-    version: "0.1.0"
-  electric_client:
-    dependency: "direct overridden"
-    description:
-      path: "../packages/electric"
+      path: "../packages/electricsql_cli"
       relative: true
     source: path
     version: "0.1.0"
   electric_flutter:
     dependency: "direct main"
     description:
-      path: "../packages/electric_flutter"
+      path: "../packages/electricsql_flutter"
+      relative: true
+    source: path
+    version: "0.1.0"
+  electricsql:
+    dependency: "direct overridden"
+    description:
+      path: "../packages/electricsql"
       relative: true
     source: path
     version: "0.1.0"

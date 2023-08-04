@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: prefer_single_quotes, lines_longer_than_80_chars, avoid_escaping_inner_quotes, depend_on_referenced_packages
-import 'package:electric_client/electric_client.dart';
+import 'package:electricsql/electricsql.dart';
 
 final kElectricMigrations = [
   Migration(
