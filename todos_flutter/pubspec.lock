@@ -285,7 +285,7 @@ packages:
       path: "../packages/electricsql_flutter"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.0+1"
   equatable:
     dependency: transitive
     description:
