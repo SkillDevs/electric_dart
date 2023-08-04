@@ -501,12 +501,12 @@ void main() {
 
     // Check that one of the two insertions won
     final rowsAfterMigration = await fetchParentRows(adapter);
-    final extendRow = (Row r) {
+    Row extendRow(Row r) {
       return {
         ...r,
         'baz': null,
       };
-    };
+    }
     final extendedRows = rowsBeforeMigration.map(extendRow);
 
     // Check that all rows now have an additional column
@@ -558,9 +558,9 @@ Future<void> assertDbHasTables(List<String> tables) async {
   final tableNames = Set<String>.from(
     schemaRows.map((r) => r['tbl_name']! as String),
   );
-  tables.forEach((tbl) {
+  for (final tbl in tables) {
     expect(tableNames, contains(tbl));
-  });
+  }
 }
 
 Future<List<ColumnInfo>> getTableInfo(String table) async {

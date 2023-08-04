@@ -20,8 +20,8 @@ import 'package:events_emitter/events_emitter.dart';
 
 typedef DataRecord = Record;
 
-const MOCK_BEHIND_WINDOW_LSN = 42;
-const MOCK_INVALID_POSITION_LSN = 27;
+const kMockBehindWindowLsn = 42;
+const kMockInvalidPositionLsn = 27;
 
 class MockSatelliteProcess implements Satellite {
   @override
@@ -180,7 +180,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
     return Future(() {
       Timer(const Duration(milliseconds: 1), () {
         emit(
-          SUBSCRIPTION_DELIVERED,
+          kSubscriptionDelivered,
           SubscriptionData(
             subscriptionId: subscriptionId,
             lsn: base64.decode('MTIz'), // base64.encode("123")
@@ -207,8 +207,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   ) {
-    final successListener = on(SUBSCRIPTION_DELIVERED, successCallback);
-    final errorListener = on(SUBSCRIPTION_ERROR, errorCallback);
+    final successListener = on(kSubscriptionDelivered, successCallback);
+    final errorListener = on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
       successEventListener: successListener,
@@ -249,7 +249,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
   Future<void> close() {
     closed = true;
     _removeAllListeners();
-    for (var t in timeouts) {
+    for (final t in timeouts) {
       t.cancel();
     }
     return Future.value(null);
@@ -288,7 +288,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
     );
     timeouts.add(t);
 
-    if (lsn != null && bytesToNumber(lsn) == MOCK_BEHIND_WINDOW_LSN) {
+    if (lsn != null && bytesToNumber(lsn) == kMockBehindWindowLsn) {
       return Future.error(
         SatelliteException(
           SatelliteErrorCode.behindWindow,
@@ -297,7 +297,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
     }
 
-    if (lsn != null && bytesToNumber(lsn) == MOCK_INVALID_POSITION_LSN) {
+    if (lsn != null && bytesToNumber(lsn) == kMockInvalidPositionLsn) {
       return Future.error(
         SatelliteException(
           SatelliteErrorCode.invalidPosition,
@@ -381,7 +381,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
       final satError = subsDataErrorToSatelliteError(satSubsError);
       emit(
-        SUBSCRIPTION_ERROR,
+        kSubscriptionError,
         SubscriptionErrorData(subscriptionId: subscriptionId, error: satError),
       );
     });

@@ -31,10 +31,7 @@ MetaData parseMetadata(Map<String, Object?> data) {
 
     if (dataProtocol != protocolVersion) {
       throw Exception(
-        'Protocol version mismatch for migration. Expected: ' +
-            protocolVersion +
-            '. Got: ' +
-            dataProtocol,
+        'Protocol version mismatch for migration. Expected: $protocolVersion. Got: $dataProtocol',
       );
     }
 
@@ -53,7 +50,7 @@ MetaData parseMetadata(Map<String, Object?> data) {
 
     return decoded;
   } catch (e) {
-    throw Exception('Failed to parse migration data, due to:\n' + e.toString());
+    throw Exception('Failed to parse migration data, due to:\n$e');
   }
 }
 

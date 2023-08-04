@@ -708,9 +708,9 @@ class SatelliteClient extends EventEmitter implements Client {
     SubscriptionErrorCallback errorCallback,
   ) {
     final successListener =
-        _subscriptionsDataCache.on(SUBSCRIPTION_DELIVERED, successCallback);
+        _subscriptionsDataCache.on(kSubscriptionDelivered, successCallback);
     final errorListener =
-        _subscriptionsDataCache.on(SUBSCRIPTION_ERROR, errorCallback);
+        _subscriptionsDataCache.on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
       successEventListener: successListener,
@@ -790,7 +790,7 @@ class SatelliteClient extends EventEmitter implements Client {
     DataTransaction transaction,
     OutgoingReplication replication,
   ) {
-    for (var change in transaction.changes) {
+    for (final change in transaction.changes) {
       final relation = change.relation;
       if (
           // this is a new relation
@@ -968,7 +968,7 @@ class SatelliteClient extends EventEmitter implements Client {
     final replication = inbound;
 
     //print("PROCESS! ${opLogMessage.ops.length}");
-    for (var op in opLogMessage.ops) {
+    for (final op in opLogMessage.ops) {
       if (op.hasBegin()) {
         final transaction = Transaction(
           commitTimestamp: op.begin.commitTimestamp,
@@ -1097,7 +1097,7 @@ class SatelliteClient extends EventEmitter implements Client {
       ),
     ];
 
-    for (var change in transaction.changes) {
+    for (final change in transaction.changes) {
       //let txOp, oldRecord, record;
       final relation = outbound.relations[change.relation.id]!;
       final tags = change.tags;

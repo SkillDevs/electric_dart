@@ -6,6 +6,6 @@ class ElectricClient extends ElectricNamespace {
   ElectricClient({required super.adapter, required super.notifier}) : super();
 
   Future<ShapeSubscription> syncTables(List<String> tables) async {
-    return await shapeManager.sync(Shape(tables: tables));
+    return shapeManager.sync(Shape(tables: tables));
   }
 }

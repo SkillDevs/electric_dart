@@ -1,8 +1,8 @@
 import 'package:electricsql/src/util/types.dart';
 import 'package:equatable/equatable.dart';
 
-const SUBSCRIPTION_DELIVERED = 'subscription_delivered';
-const SUBSCRIPTION_ERROR = 'subscription_error';
+const kSubscriptionDelivered = 'subscription_delivered';
+const kSubscriptionError = 'subscription_error';
 
 typedef SubscriptionId = String;
 

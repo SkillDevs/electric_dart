@@ -1277,7 +1277,7 @@ void main() {
   test('clear database on BEHIND_WINDOW', () async {
     await runMigrations();
 
-    final base64lsn = base64.encode(numberToBytes(MOCK_BEHIND_WINDOW_LSN));
+    final base64lsn = base64.encode(numberToBytes(kMockBehindWindowLsn));
     await satellite.setMeta('lsn', base64lsn);
     try {
       final conn = await satellite.start(
@@ -1297,7 +1297,7 @@ void main() {
   test('throw other replication errors', () async {
     await runMigrations();
 
-    final base64lsn = base64.encode(numberToBytes(MOCK_INVALID_POSITION_LSN));
+    final base64lsn = base64.encode(numberToBytes(kMockInvalidPositionLsn));
     await satellite.setMeta('lsn', base64lsn);
     try {
       final conn = await satellite.start(authConfig);

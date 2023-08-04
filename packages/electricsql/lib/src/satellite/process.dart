@@ -241,7 +241,7 @@ This means there is a notifier subscription leak.`''');
         .map(
           (ShapeSelect select) =>
               // We need "fully qualified" table names in the next calls
-              'main.' + select.tablename,
+              'main.${select.tablename}',
         )
         .fold(stmts, (List<Statement> stmts, String tablename) {
       stmts.addAll([
@@ -1053,7 +1053,7 @@ This means there is a notifier subscription leak.`''');
     // update lsn.
     stmts.add(updateLsnStmt(lsn));
 
-    final processDML = (List<DataChange> changes) async {
+    Future<void> processDML(List<DataChange> changes) async {
       final tx = DataTransaction(
         commitTimestamp: transaction.commitTimestamp,
         lsn: transaction.lsn,
@@ -1074,15 +1074,21 @@ This means there is a notifier subscription leak.`''');
       final applyRes = await apply(entries, origin);
       final statements = applyRes.statements;
       final tablenames = applyRes.tableNames;
-      entries.forEach((e) => opLogEntries.add(e));
-      statements.forEach((s) => stmts.add(s));
-      tablenames.forEach((n) => tablenamesSet.add(n));
-    };
+      for (final e in entries) {
+        opLogEntries.add(e);
+      }
+      for (final s in statements) {
+        stmts.add(s);
+      }
+      for (final n in tablenames) {
+        tablenamesSet.add(n);
+      }
+    }
 
-    final processDDL = (List<SchemaChange> changes) async {
+    Future<void> processDDL(List<SchemaChange> changes) async {
       final createdTables = <String>{};
       final affectedTables = <String, MigrationTable>{};
-      changes.forEach((change) {
+      for (final change in changes) {
         stmts.add(Statement(change.sql));
 
         if (change.migrationType == SatOpMigrate_Type.CREATE_TABLE ||
@@ -1099,20 +1105,20 @@ This means there is a notifier subscription leak.`''');
             createdTables.add(affectedTable);
           }
         }
-      });
+      }
 
       // Also add statements to create the necessary triggers for the created/updated table
-      affectedTables.values.forEach((table) {
+      for (final table in affectedTables.values) {
         final triggers = generateTriggersForTable(table);
         stmts.addAll(triggers);
         txStmts.addAll(triggers);
-      });
+      }
 
       // Disable the newly created triggers
       // during the processing of this transaction
       stmts.addAll(_disableTriggers([...createdTables]));
       newTables = <String>{...newTables, ...createdTables};
-    };
+    }
 
     // Now process all changes per chunk.
     // We basically take a prefix of changes of the same type
@@ -1134,13 +1140,13 @@ This means there is a notifier subscription leak.`''');
             getChangeType(changes[idx]) == getChangeType(changes[idx - 1]);
       }
 
-      final addToChunk = (types.Change change) {
+      void addToChunk(types.Change change) {
         if (change is DataChange) {
           dmlChunk.add(change);
         } else {
           ddlChunk.add(change as SchemaChange);
         }
-      };
+      }
       Future<void> processChunk(ChangeType type) async {
         if (type == ChangeType.dml) {
           await processDML(dmlChunk);
@@ -1498,7 +1504,7 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
       );
     }).toList(),
   );
-  final fullTableName = table.namespace + '.' + table.tableName;
+  final fullTableName = '${table.namespace}.${table.tableName}';
   return generateOplogTriggers(fullTableName, table);
 }
 

@@ -35,7 +35,7 @@ class DriftAdapter implements adp.DatabaseAdapter {
 
   @override
   Future<RunResult> runInTransaction(List<Statement> statements) async {
-    return await db.transaction(() async {
+    return db.transaction(() async {
       int rowsAffected = 0;
       for (final statement in statements) {
         final changes = await db.customUpdate(
@@ -61,7 +61,7 @@ class DriftAdapter implements adp.DatabaseAdapter {
       f(tx, (T res) {
         completer.complete(res);
       });
-      return await completer.future;
+      return completer.future;
     });
   }
 

@@ -844,8 +844,8 @@ void main() {
     );
     server.nextResponses([subsResp, subsError]);
 
-    final success = (_) => fail('Should have failed');
-    final error = (_) {};
+    void success(_) => fail('Should have failed');
+    void error(_) {}
 
     client.subscribeToSubscriptionEvents(success, error);
     final res = await client.subscribe(subscriptionId, [shapeReq]);
@@ -941,21 +941,21 @@ void main() {
       server.nextResponses(next);
 
       final completer = Completer<void>();
-      final success = (_) {
+      void success(_) {
         completer.completeError(
           'expected the client to fail on an invalid message sequence',
         );
-      };
+      }
 
       late SubscriptionEventListeners subListeners;
-      final error = (_) {
+      void error(_) {
         // if (testCases.isEmpty) {
         //   t.pass()
         //   globalRes()
         // }
         client.unsubscribeToSubscriptionEvents(subListeners);
         completer.complete(null);
-      };
+      }
 
       subListeners = client.subscribeToSubscriptionEvents(success, error);
       unawaited(client.subscribe(subscriptionId, [shapeReq, shapeReq]));
@@ -1019,14 +1019,14 @@ void main() {
     final endSub = SatSubsDataEnd();
 
     final completer = Completer<void>();
-    final success = (_) {
+    void success(_) {
       //t.pass()
       completer.complete(null);
-    };
+    }
 
-    final error = (Object e) {
+    void error(Object e) {
       completer.completeError((e as SatelliteException).message!);
-    };
+    }
     client.subscribeToSubscriptionEvents(success, error);
 
     final insertOp = SatOpInsert(

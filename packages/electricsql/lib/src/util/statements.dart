@@ -37,7 +37,7 @@ List<Statement> prepareInsertBatchedStatements(
   final recordCount = records.length;
   int processed = 0;
   final insertPattern =
-      ' (' + List.generate(columnCount, (_) => '?').join(', ') + '),';
+      ' (${List.generate(columnCount, (_) => '?').join(', ')}),';
 
   // Largest number below maxSqlParamers that evenly divides by column count,
   // divided by columnCount, giving the amount of rows we can insert at once

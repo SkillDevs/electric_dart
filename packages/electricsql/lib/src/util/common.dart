@@ -69,7 +69,7 @@ List<int> numberToBytes(int i) {
 
 int bytesToNumber(List<int> bytes) {
   int n = 0;
-  for (var byte in bytes) {
+  for (final byte in bytes) {
     n = (n << 8) | byte;
   }
   return n;

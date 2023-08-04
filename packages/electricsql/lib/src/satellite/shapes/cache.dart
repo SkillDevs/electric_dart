@@ -114,7 +114,7 @@ class SubscriptionsDataCache extends EventEmitter {
     );
 
     reset(subscriptionData.subscriptionId);
-    emit(SUBSCRIPTION_DELIVERED, subscriptionData);
+    emit(kSubscriptionDelivered, subscriptionData);
     return delivered;
   }
 
@@ -203,7 +203,7 @@ class SubscriptionsDataCache extends EventEmitter {
     reset(subId);
     final error = SatelliteException(code, msg);
     emit(
-      SUBSCRIPTION_ERROR,
+      kSubscriptionError,
       SubscriptionErrorData(subscriptionId: null, error: error),
     );
 
@@ -236,7 +236,7 @@ class SubscriptionsDataCache extends EventEmitter {
     }
 
     emit(
-      SUBSCRIPTION_ERROR,
+      kSubscriptionError,
       SubscriptionErrorData(subscriptionId: null, error: error),
     );
     throw error;

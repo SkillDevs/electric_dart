@@ -58,7 +58,7 @@ OplogEntry generateLocalOplogEntry(
   Row newValues = const {},
   Row oldValues = const {},
 }) {
-  final schema = info[namespace + '.' + tablename];
+  final schema = info['$namespace.$tablename'];
   if (schema == null) {
     throw Exception('Schema is undefined');
   }
@@ -179,9 +179,8 @@ Future<List<ShadowEntry>> getMatchingShadowEntries(
   final Statement query;
   String selectTags = 'SELECT * FROM $shadowTable';
   if (oplog != null) {
-    selectTags = selectTags +
-        '''
- WHERE
+    selectTags = '''
+$selectTags WHERE
 namespace = ? AND
 tablename = ? AND
 primaryKey = ?

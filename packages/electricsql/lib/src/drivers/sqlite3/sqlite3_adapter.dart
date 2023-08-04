@@ -33,7 +33,7 @@ class SqliteAdapter implements adp.DatabaseAdapter {
         db.execute('BEGIN');
 
         int rowsAffected = 0;
-        for (var statement in statements) {
+        for (final statement in statements) {
           db.execute(statement.sql, statement.args ?? []);
           rowsAffected += db.getUpdatedRows();
         }
@@ -72,7 +72,7 @@ class SqliteAdapter implements adp.DatabaseAdapter {
         }
       });
 
-      return await completer.future;
+      return completer.future;
     });
   }
 

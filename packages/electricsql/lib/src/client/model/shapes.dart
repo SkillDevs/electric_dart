@@ -47,7 +47,9 @@ class ShapeManager implements IShapeManager {
     final dataReceivedProm = sub.synced.then((_) {
       // When all data is received
       // we store the fact that these tables are synced
-      shape.tables.forEach((tbl) => tablesPreviouslySubscribed.add(tbl));
+      for (final tbl in shape.tables) {
+        tablesPreviouslySubscribed.add(tbl);
+      }
     });
 
     return ShapeSubscription(
@@ -65,7 +67,9 @@ class ShapeManagerMock extends ShapeManager {
   @override
   Future<ShapeSubscription> sync(Shape shape) async {
     // Do not contact the server but directly store the synced tables
-    shape.tables.forEach((tbl) => tablesPreviouslySubscribed.add(tbl));
+    for (final tbl in shape.tables) {
+      tablesPreviouslySubscribed.add(tbl);
+    }
 
     return ShapeSubscription(
       synced: Future.value(),

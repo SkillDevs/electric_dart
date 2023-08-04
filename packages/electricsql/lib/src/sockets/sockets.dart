@@ -62,7 +62,7 @@ abstract class WebSocketBase<SocketType> implements Socket {
   }
 
   void _socketClose() {
-    for (var subscription in _subscriptions) {
+    for (final subscription in _subscriptions) {
       subscription.cancel();
     }
     _subscriptions = [];
