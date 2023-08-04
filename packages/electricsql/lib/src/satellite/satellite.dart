@@ -9,8 +9,7 @@ import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
 
-export 'package:electricsql/src/satellite/process.dart'
-    show ShapeSubscription;
+export 'package:electricsql/src/satellite/process.dart' show ShapeSubscription;
 
 abstract class Registry {
   Future<Satellite> ensureStarted({
