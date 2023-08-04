@@ -1,39 +1,6 @@
-include: package:lint/strict.yaml
+include: ../../analysis_options.yaml
 
 analyzer:
   exclude:
     - lib/src/proto/**
-      
-  language:
-    strict-casts: true
-    strict-inference: true
 
-  errors:
-    non_constant_identifier_names: ignore
-    todo: info
-
-linter:
-  rules:
-    prefer_single_quotes: true
-    unawaited_futures: true
-    avoid_init_to_null: false
-    parameter_assignments: false
-    unnecessary_await_in_return: false
-    prefer_interpolation_to_compose_strings: false
-    constant_identifier_names: false
-    avoid_positional_boolean_parameters: false
-    avoid_print: true
-    avoid_function_literals_in_foreach_calls: false
-    prefer_final_in_for_each: false
-    join_return_with_assignment: false
-    type_annotate_public_apis: false
-    use_setters_to_change_properties: false
-    void_checks: false
-    prefer_constructors_over_static_methods: false
-    avoid_redundant_argument_values: false
-    avoid_escaping_inner_quotes: false
-    avoid_bool_literals_in_conditional_expressions: false
-    prefer_function_declarations_over_variables: false
-    avoid_classes_with_only_static_members: false
-    no_leading_underscores_for_local_identifiers: false
-    unrelated_type_equality_checks: true
