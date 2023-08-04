@@ -7,6 +7,6 @@ import 'package:test/test.dart';
 void main() {
   test(
     'ensure_build',
-    () => expectBuildClean(packageRelativeDirectory: 'electric_cli'),
+    () => expectBuildClean(packageRelativeDirectory: 'packages/electric_cli'),
   );
 }
