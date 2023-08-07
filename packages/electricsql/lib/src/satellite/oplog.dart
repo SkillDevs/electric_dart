@@ -163,12 +163,12 @@ List<DataTransaction> toTransactions(
     return [];
   }
 
-  Int64 to_commit_timestamp(String timestamp) {
+  Int64 toCommitTimestamp(String timestamp) {
     return Int64(DateTime.parse(timestamp).millisecondsSinceEpoch);
   }
 
   final init = DataTransaction(
-    commitTimestamp: to_commit_timestamp(opLogEntries[0].timestamp),
+    commitTimestamp: toCommitTimestamp(opLogEntries[0].timestamp),
     lsn: numberToBytes(opLogEntries[0].rowid),
     changes: [],
   );
@@ -178,10 +178,10 @@ List<DataTransaction> toTransactions(
     (acc, txn) {
       var currTxn = acc[acc.length - 1];
 
-      final nextTs = to_commit_timestamp(txn.timestamp);
+      final nextTs = toCommitTimestamp(txn.timestamp);
       if (nextTs != currTxn.commitTimestamp) {
         final nextTxn = DataTransaction(
-          commitTimestamp: to_commit_timestamp(txn.timestamp),
+          commitTimestamp: toCommitTimestamp(txn.timestamp),
           lsn: numberToBytes(txn.rowid),
           changes: [],
         );

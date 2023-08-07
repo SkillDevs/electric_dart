@@ -1,5 +1,5 @@
 name: electricsql_cli
-description: CLI to interact with the ElectricSQL service
+description: CLI to interact with the ElectricSQL service. Offers a similar tool set as the NPM electric_sql package.
 repository: https://github.com/SkillDevs/electric_dart
 version: 0.1.0
 

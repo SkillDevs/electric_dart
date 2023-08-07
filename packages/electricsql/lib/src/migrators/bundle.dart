@@ -6,7 +6,7 @@ import 'package:electricsql/src/util/types.dart';
 
 const kElectricMigrationsTable = '_electric_migrations';
 
-final VALID_VERSION_EXP = RegExp(r'^[0-9_]+$');
+final kValidVersionExp = RegExp(r'^[0-9_]+$');
 
 class BundleMigrator implements Migrator {
   final DatabaseAdapter adapter;
@@ -128,9 +128,9 @@ class BundleMigrator implements Migrator {
     final statements = migration.statements;
     final version = migration.version;
 
-    if (!VALID_VERSION_EXP.hasMatch(version)) {
+    if (!kValidVersionExp.hasMatch(version)) {
       throw Exception(
-        'Invalid migration version, must match $VALID_VERSION_EXP',
+        'Invalid migration version, must match $kValidVersionExp',
       );
     }
 
