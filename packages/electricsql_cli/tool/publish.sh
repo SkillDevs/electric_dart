@@ -6,6 +6,8 @@ rm -rf pubspec_overrides.yaml
 
 dart pub get
 
+dart test
+
 dart pub publish
 
 # Restore the overrides
