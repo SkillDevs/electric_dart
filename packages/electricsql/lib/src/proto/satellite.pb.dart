@@ -893,6 +893,11 @@ class SatRelationColumn extends $pb.GeneratedMessage {
             ? ''
             : 'primaryKey',
         protoName: 'primaryKey')
+    ..aOB(
+        4,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'isNullable')
     ..hasRequiredFields = false;
 
   SatRelationColumn._() : super();
@@ -900,6 +905,7 @@ class SatRelationColumn extends $pb.GeneratedMessage {
     $core.String? name,
     $core.String? type,
     $core.bool? primaryKey,
+    $core.bool? isNullable,
   }) {
     final _result = create();
     if (name != null) {
@@ -910,6 +916,9 @@ class SatRelationColumn extends $pb.GeneratedMessage {
     }
     if (primaryKey != null) {
       _result.primaryKey = primaryKey;
+    }
+    if (isNullable != null) {
+      _result.isNullable = isNullable;
     }
     return _result;
   }
@@ -975,6 +984,18 @@ class SatRelationColumn extends $pb.GeneratedMessage {
   $core.bool hasPrimaryKey() => $_has(2);
   @$pb.TagNumber(3)
   void clearPrimaryKey() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get isNullable => $_getBF(3);
+  @$pb.TagNumber(4)
+  set isNullable($core.bool v) {
+    $_setBool(3, v);
+  }
+
+  @$pb.TagNumber(4)
+  $core.bool hasIsNullable() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearIsNullable() => clearField(4);
 }
 
 class SatRelation extends $pb.GeneratedMessage {

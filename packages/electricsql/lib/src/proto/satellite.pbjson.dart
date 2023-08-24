@@ -283,12 +283,13 @@ const SatRelationColumn$json = const {
     const {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
     const {'1': 'type', '3': 2, '4': 1, '5': 9, '10': 'type'},
     const {'1': 'primaryKey', '3': 3, '4': 1, '5': 8, '10': 'primaryKey'},
+    const {'1': 'is_nullable', '3': 4, '4': 1, '5': 8, '10': 'isNullable'},
   ],
 };
 
 /// Descriptor for `SatRelationColumn`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satRelationColumnDescriptor = $convert.base64Decode(
-    'ChFTYXRSZWxhdGlvbkNvbHVtbhISCgRuYW1lGAEgASgJUgRuYW1lEhIKBHR5cGUYAiABKAlSBHR5cGUSHgoKcHJpbWFyeUtleRgDIAEoCFIKcHJpbWFyeUtleQ==');
+    'ChFTYXRSZWxhdGlvbkNvbHVtbhISCgRuYW1lGAEgASgJUgRuYW1lEhIKBHR5cGUYAiABKAlSBHR5cGUSHgoKcHJpbWFyeUtleRgDIAEoCFIKcHJpbWFyeUtleRIfCgtpc19udWxsYWJsZRgEIAEoCFIKaXNOdWxsYWJsZQ==');
 @$core.Deprecated('Use satRelationDescriptor instead')
 const SatRelation$json = const {
   '1': 'SatRelation',

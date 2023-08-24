@@ -8,6 +8,7 @@ const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   shadowTable: QualifiedTablename('main', '_electric_shadow'),
   pollingInterval: Duration(milliseconds: 2000),
   minSnapshotWindow: Duration(milliseconds: 40),
+  clearOnBehindWindow: true,
 );
 
 const kDefaultSatelliteTimeout = 3000;
@@ -52,6 +53,9 @@ class SatelliteOpts {
   /// Throttle snapshotting to once per `minSnapshotWindow` milliseconds.
   final Duration minSnapshotWindow;
 
+  /// On reconnect, clear client's state if cannot catch up with Electric buffered WAL
+  final bool clearOnBehindWindow;
+
   const SatelliteOpts({
     required this.metaTable,
     required this.migrationsTable,
@@ -60,6 +64,7 @@ class SatelliteOpts {
     required this.shadowTable,
     required this.pollingInterval,
     required this.minSnapshotWindow,
+    required this.clearOnBehindWindow,
   });
 
   SatelliteOpts copyWith({
@@ -70,6 +75,7 @@ class SatelliteOpts {
     QualifiedTablename? shadowTable,
     Duration? pollingInterval,
     Duration? minSnapshotWindow,
+    bool? clearOnBehindWindow,
   }) {
     return SatelliteOpts(
       metaTable: metaTable ?? this.metaTable,
@@ -79,6 +85,7 @@ class SatelliteOpts {
       shadowTable: shadowTable ?? this.shadowTable,
       pollingInterval: pollingInterval ?? this.pollingInterval,
       minSnapshotWindow: minSnapshotWindow ?? this.minSnapshotWindow,
+      clearOnBehindWindow: clearOnBehindWindow ?? this.clearOnBehindWindow,
     );
   }
 
@@ -89,6 +96,7 @@ class SatelliteOpts {
       oplogTable: overrides.oplogTable,
       pollingInterval: overrides.pollingInterval,
       minSnapshotWindow: overrides.minSnapshotWindow,
+      clearOnBehindWindow: overrides.clearOnBehindWindow,
     );
   }
 }
@@ -99,6 +107,7 @@ class SatelliteOverrides {
   final QualifiedTablename oplogTable;
   final Duration? pollingInterval;
   final Duration? minSnapshotWindow;
+  final bool? clearOnBehindWindow;
 
   SatelliteOverrides({
     this.metaTable,
@@ -106,5 +115,6 @@ class SatelliteOverrides {
     required this.oplogTable,
     this.pollingInterval,
     this.minSnapshotWindow,
+    this.clearOnBehindWindow,
   });
 }

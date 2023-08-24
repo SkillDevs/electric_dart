@@ -9,7 +9,7 @@ void runTests(DatabaseAdapter Function() getAdapter) {
     await adapter.run(Statement("INSERT INTO items VALUES ('foo');"));
     final result = await adapter.query(Statement('SELECT * FROM items;'));
     expect(result, [
-      {'value': 'foo'}
+      {'value': 'foo'},
     ]);
   });
 

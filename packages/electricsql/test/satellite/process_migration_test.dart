@@ -305,14 +305,14 @@ void main() {
         ),
         insertRow,
         updateRow,
-        insertExtendedWithoutValueRow
+        insertExtendedWithoutValueRow,
       ].map((Row row) {
         return {
           ...row,
           'baz': null,
         };
       }),
-      insertExtendedRow
+      insertExtendedRow,
     ];
 
     expect(rowsAfterMigration.toSet(), expectedRowsAfterMigration.toSet());
@@ -349,7 +349,7 @@ void main() {
         Statement(
           'UPDATE parent SET value = ?, other = ? WHERE id = ?;',
           ['still local', 5, 1],
-        )
+        ),
       ],
     );
 
@@ -527,6 +527,68 @@ void main() {
       isTrue,
     );
   });
+
+  final migrationWithFKs = <SchemaChange>[
+    SchemaChange(
+      migrationType: SatOpMigrate_Type.CREATE_TABLE,
+      sql: '''
+    CREATE TABLE "test_items" (
+      "id" TEXT NOT NULL,
+      CONSTRAINT "test_items_pkey" PRIMARY KEY ("id")
+    ) WITHOUT ROWID;
+    ''',
+      table: SatOpMigrate_Table(
+        name: 'test_items',
+        columns: [SatOpMigrate_Column(name: 'id')],
+        fks: [],
+        pks: ['id'],
+      ),
+    ),
+    SchemaChange(
+      migrationType: SatOpMigrate_Type.CREATE_TABLE,
+      sql: '''
+    CREATE TABLE "test_other_items" (
+      "id" TEXT NOT NULL,
+      "item_id" TEXT,
+      -- CONSTRAINT "test_other_items_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "test_items" ("id"),
+      CONSTRAINT "test_other_items_pkey" PRIMARY KEY ("id")
+    ) WITHOUT ROWID;
+    ''',
+      table: SatOpMigrate_Table(
+        name: 'test_other_items',
+        columns: [
+          SatOpMigrate_Column(name: 'id'),
+          SatOpMigrate_Column(name: 'item_id'),
+        ],
+        fks: [
+          SatOpMigrate_ForeignKey(
+            fkCols: ['item_id'],
+            pkTable: 'test_items',
+            pkCols: ['id'],
+          ),
+        ],
+        pks: ['id'],
+      ),
+    ),
+  ];
+
+  test('apply another migration', () async {
+    final migrationTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(DateTime.now().millisecondsSinceEpoch),
+      changes: migrationWithFKs,
+      lsn: [],
+      // starts at 3, because the app already defines 2 migrations
+      // (see test/support/migrations/migrations.js)
+      // which are loaded when Satellite is started
+      migrationVersion: '3',
+    );
+
+    // Apply the migration transaction
+    await satellite.applyTransaction(migrationTx);
+
+    await assertDbHasTables(['test_items', 'test_other_items']);
+  });
 }
 
 Future<void> populateDB(SatelliteTestContext context) async {
@@ -629,21 +691,25 @@ final addColumnRelation = Relation(
     RelationColumn(
       name: 'id',
       type: 'INTEGER',
+      isNullable: false,
       primaryKey: true,
     ),
     RelationColumn(
       name: 'value',
       type: 'TEXT',
+      isNullable: true,
       primaryKey: false,
     ),
     RelationColumn(
       name: 'other',
       type: 'INTEGER',
+      isNullable: true,
       primaryKey: false,
     ),
     RelationColumn(
       name: 'baz',
       type: 'TEXT',
+      isNullable: true,
       primaryKey: false,
     ),
   ],
@@ -657,16 +723,19 @@ final newTableRelation = Relation(
     RelationColumn(
       name: 'id',
       type: 'TEXT',
+      isNullable: false,
       primaryKey: true,
     ),
     RelationColumn(
       name: 'foo',
       type: 'INTEGER',
+      isNullable: true,
       primaryKey: false,
     ),
     RelationColumn(
       name: 'bar',
       type: 'TEXT',
+      isNullable: true,
       primaryKey: false,
     ),
   ],

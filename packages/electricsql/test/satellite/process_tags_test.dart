@@ -679,7 +679,7 @@ void main() {
 
     final userTable = await adapter.query(Statement('SELECT * FROM parent;'));
     final expectedUserTable = [
-      {'id': 2, 'value': 'local', 'other': null}
+      {'id': 2, 'value': 'local', 'other': null},
     ];
     expect(expectedUserTable, userTable);
   });

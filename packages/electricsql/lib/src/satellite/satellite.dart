@@ -36,12 +36,6 @@ class ConnectionWrapper {
   });
 }
 
-class SatelliteReplicationOptions {
-  final bool clearOnBehindWindow;
-
-  SatelliteReplicationOptions({required this.clearOnBehindWindow});
-}
-
 abstract class Satellite {
   DbName get dbName;
   DatabaseAdapter get adapter;
@@ -50,10 +44,7 @@ abstract class Satellite {
 
   ConnectivityState? connectivityState;
 
-  Future<ConnectionWrapper> start(
-    AuthConfig authConfig, {
-    SatelliteReplicationOptions? opts,
-  });
+  Future<ConnectionWrapper> start(AuthConfig authConfig);
   Future<void> stop();
   Future<ShapeSubscription> subscribe(
     List<ClientShapeDefinition> shapeDefinitions,
@@ -65,17 +56,17 @@ abstract class Client {
   Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   });
-  Future<void> close();
+  void close();
   Future<AuthResponse> authenticate(
     AuthState authState,
   );
   bool isClosed();
-  Future<void> startReplication(
+  Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
   );
-  Future<void> stopReplication();
+  Future<StopReplicationResponse> stopReplication();
   void subscribeToRelations(void Function(Relation relation) callback);
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,

@@ -50,7 +50,7 @@ void main() {
   });
 
   tearDown(() async {
-    await client.close();
+    client.close();
     await server.close();
   });
 
@@ -138,10 +138,10 @@ void main() {
     server.nextResponses([startResp]);
 
     try {
-      await client.startReplication(null, null, null);
-      fail('Should have failed');
+      final resp = await client.startReplication(null, null, null);
+      expect(resp.error?.code, SatelliteErrorCode.behindWindow);
     } catch (e) {
-      expect((e as SatelliteException).code, SatelliteErrorCode.behindWindow);
+      fail('Should not throw. Error: $e');
     }
   });
 
@@ -305,8 +305,8 @@ void main() {
       table: 'table',
       tableType: SatRelation_RelationType.TABLE,
       columns: [
-        RelationColumn(name: 'name1', type: 'TEXT'),
-        RelationColumn(name: 'name2', type: 'TEXT'),
+        RelationColumn(name: 'name1', type: 'TEXT', isNullable: true),
+        RelationColumn(name: 'name2', type: 'TEXT', isNullable: true),
       ],
     );
 
@@ -316,8 +316,8 @@ void main() {
       tableName: 'table',
       tableType: SatRelation_RelationType.TABLE,
       columns: [
-        SatRelationColumn(name: 'name1', type: 'TEXT'),
-        SatRelationColumn(name: 'name2', type: 'TEXT'),
+        SatRelationColumn(name: 'name1', type: 'TEXT', isNullable: true),
+        SatRelationColumn(name: 'name2', type: 'TEXT', isNullable: true),
       ],
     );
 
@@ -620,12 +620,24 @@ void main() {
       table: 'Items',
       tableType: SatRelation_RelationType.TABLE,
       columns: [
-        RelationColumn(name: 'id', type: 'uuid'),
-        RelationColumn(name: 'content', type: 'text'),
-        RelationColumn(name: 'text_null', type: 'text'),
-        RelationColumn(name: 'text_null_default', type: 'text'),
-        RelationColumn(name: 'intvalue_null', type: 'integer'),
-        RelationColumn(name: 'intvalue_null_default', type: 'integer'),
+        RelationColumn(name: 'id', type: 'uuid', isNullable: false),
+        RelationColumn(name: 'content', type: 'text', isNullable: false),
+        RelationColumn(name: 'text_null', type: 'text', isNullable: true),
+        RelationColumn(
+          name: 'text_null_default',
+          type: 'text',
+          isNullable: true,
+        ),
+        RelationColumn(
+          name: 'intvalue_null',
+          type: 'integer',
+          isNullable: true,
+        ),
+        RelationColumn(
+          name: 'intvalue_null_default',
+          type: 'integer',
+          isNullable: true,
+        ),
       ],
     );
 
@@ -977,8 +989,8 @@ void main() {
       table: 'table',
       tableType: SatRelation_RelationType.TABLE,
       columns: [
-        RelationColumn(name: 'name1', type: 'TEXT'),
-        RelationColumn(name: 'name2', type: 'TEXT'),
+        RelationColumn(name: 'name1', type: 'TEXT', isNullable: true),
+        RelationColumn(name: 'name2', type: 'TEXT', isNullable: true),
       ],
     );
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:electricsql/src/util/types.dart';
 import 'package:meta/meta.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -88,7 +89,14 @@ abstract class WebSocketBase<SocketType> implements Socket {
 
   @override
   void onError(void Function(Object error) cb) {
-    _errorCallbacks.add(cb);
+    _errorCallbacks.add(
+      (_) => cb(
+        SatelliteException(
+          SatelliteErrorCode.connectionFailed,
+          'failed to establish connection',
+        ),
+      ),
+    );
   }
 
   @override

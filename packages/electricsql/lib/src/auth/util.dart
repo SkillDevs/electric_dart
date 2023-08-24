@@ -5,7 +5,9 @@ Future<String> authToken({String? iss, String? key}) async {
   final mockKey = key ?? 'integration-tests-signing-key-example';
 
   final int nowInSecs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  final iat = nowInSecs - 1; // Remove 1 second
+
+  // Subtract 1 second to account for clock precision when validating the token
+  final iat = nowInSecs - 1;
 
   final jwt = JWT(
     {

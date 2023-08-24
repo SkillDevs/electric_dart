@@ -79,6 +79,7 @@ class GenericDb extends GeneratedDatabase {
 }
 
 class NoVersionDelegatedDatabase extends DelegatedDatabase {
+  // ignore: unreachable_from_main
   final DelegatedDatabase db;
 
   NoVersionDelegatedDatabase(

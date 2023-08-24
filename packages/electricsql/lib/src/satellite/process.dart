@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
@@ -39,6 +40,7 @@ typedef SubscriptionNotifier = ({
 });
 
 const throwErrors = [
+  SatelliteErrorCode.connectionFailed,
   SatelliteErrorCode.invalidPosition,
   SatelliteErrorCode.behindWindow,
 ];
@@ -130,10 +132,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @override
-  Future<ConnectionWrapper> start(
-    AuthConfig authConfig, {
-    SatelliteReplicationOptions? opts,
-  }) async {
+  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
     // TODO(dart): Explicitly enable foreign keys, which is used by Electric
     await adapter.run(Statement('PRAGMA foreign_keys = ON'));
 
@@ -185,7 +184,7 @@ This means there is a notifier subscription leak.`''');
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
-      this.opts.pollingInterval,
+      opts.pollingInterval,
       (_) => throttledSnapshot(),
     );
 
@@ -218,7 +217,7 @@ This means there is a notifier subscription leak.`''');
       subscriptions.setState(subscriptionsState);
     }
 
-    final connectionFuture = _connectAndStartReplication(opts);
+    final connectionFuture = _connectAndStartReplication();
     return ConnectionWrapper(
       connectionFuture: connectionFuture,
     );
@@ -234,22 +233,22 @@ This means there is a notifier subscription leak.`''');
     List<ShapeDefinition> shapeDefs,
   ) async {
     final stmts = <Statement>[];
+    final tablenames = <String>[];
     // reverts to off on commit/abort
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
-    shapeDefs
-        .expand((ShapeDefinition def) => def.definition.selects)
-        .map(
-          (ShapeSelect select) =>
-              // We need "fully qualified" table names in the next calls
-              'main.${select.tablename}',
-        )
-        .fold(stmts, (List<Statement> stmts, String tablename) {
+    shapeDefs.expand((ShapeDefinition def) => def.definition.selects).map(
+      (ShapeSelect select) {
+        tablenames.add(select.tablename);
+        // We need "fully qualified" table names in the next calls
+        return 'main.${select.tablename}';
+      },
+    ).fold(stmts, (List<Statement> stmts, String tablename) {
       stmts.addAll([
         ..._disableTriggers([tablename]),
         Statement(
           'DELETE FROM $tablename',
         ),
-        ..._enableTriggers([tablename])
+        ..._enableTriggers([tablename]),
       ]);
       return stmts;
       // does not delete shadow rows but we can do that
@@ -304,7 +303,7 @@ This means there is a notifier subscription leak.`''');
       _potentialDataChangeSubscription = null;
     }
 
-    await client.close();
+    client.close();
   }
 
   @override
@@ -459,7 +458,7 @@ This means there is a notifier subscription leak.`''');
           columns,
           records,
           maxSqlParameters,
-        )
+        ),
       ]);
     }
 
@@ -512,28 +511,40 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
+  Future<void> _handleBehindWindow() async {
+    logger.warning(
+      'client cannot resume replication from server, resetting replication state',
+    );
+    final subscriptionIds = subscriptions.getFulfilledSubscriptions();
+    final List<ClientShapeDefinition> shapeDefs = subscriptionIds
+        .map((subId) => subscriptions.shapesForActiveSubscription(subId))
+        .whereNotNull()
+        .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
+        .toList();
+
+    await _resetClientState();
+
+    await _connectAndStartReplication();
+
+    logger.warning('successfully reconnected with server. re-subscribing.');
+
+    if (shapeDefs.isNotEmpty) {
+      unawaited(subscribe(shapeDefs));
+    }
+  }
+
   Future<void> _handleSubscriptionError(
     SubscriptionErrorData errorData,
   ) async {
     final subscriptionId = errorData.subscriptionId;
     final satelliteError = errorData.error;
 
-    // this is obviously too conservative and note
-    // that it does not update meta transactionally
-    final ids = await subscriptions.unsubscribeAll();
-
     logger
-        .severe('Encountered a subscription error: ${satelliteError.message}');
+        .severe('encountered a subscription error: ${satelliteError.message}');
 
-    _lsn = null;
-    await adapter.runInTransaction([
-      _setMetaStatement('lsn', null),
-      _setMetaStatement('subscriptions', subscriptions.serialize())
-    ]);
+    await _resetClientState();
 
-    await client.unsubscribe(ids);
-
-    // Call the `onSuccess` callback for this subscription
+    // Call the `onFailure` callback for this subscription
     if (subscriptionId != null) {
       final completer = subscriptionNotifiers[subscriptionId]!;
 
@@ -543,18 +554,33 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
+  Future<void> _resetClientState() async {
+    _lsn = null;
+
+    // TODO: this is obviously too conservative
+    // we should also work on updating subscriptions
+    // atomically on unsubscribe()
+    await subscriptions.unsubscribeAll();
+
+    await adapter.runInTransaction([
+      _setMetaStatement('lsn', null),
+      _setMetaStatement('subscriptions', subscriptions.serialize()),
+    ]);
+  }
+
   @visibleForTesting
   Future<void> connectivityStateChanged(
     ConnectivityState status,
   ) async {
     connectivityState = status;
+    logger.fine('connectivity state changed $status');
 
     // TODO: no op if state is the same
     switch (status) {
       case ConnectivityState.available:
         {
           setClientListeners();
-          return _connectAndStartReplication(null);
+          return _connectAndStartReplication();
         }
       case ConnectivityState.error:
       case ConnectivityState.disconnected:
@@ -572,9 +598,7 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  Future<void> _connectAndStartReplication(
-    SatelliteReplicationOptions? opts,
-  ) async {
+  Future<void> _connectAndStartReplication() async {
     logger.info('connecting and starting replication');
 
     final _authState = authState;
@@ -593,27 +617,29 @@ This means there is a notifier subscription leak.`''');
       // about fulfilled subscriptions
       final subscriptionIds = subscriptions.getFulfilledSubscriptions();
 
-      await client.startReplication(_lsn, schemaVersion, subscriptionIds);
-    } catch (error) {
-      if (error is SatelliteException) {
+      final StartReplicationResponse(:error) = await client.startReplication(
+        _lsn,
+        schemaVersion,
+        subscriptionIds.isNotEmpty ? subscriptionIds : null,
+      );
+      if (error != null) {
         if (error.code == SatelliteErrorCode.behindWindow &&
-            opts?.clearOnBehindWindow == true) {
-          return _handleSubscriptionError(
-            SubscriptionErrorData(
-              error: error,
-              subscriptionId: null,
-            ),
-          ).then(
-            (_) => _connectAndStartReplication(opts),
-          );
+            opts.clearOnBehindWindow) {
+          return await _handleBehindWindow();
         }
-
-        if (throwErrors.contains(error.code)) {
-          rethrow;
-        }
+        throw error;
       }
-      logger.warning("couldn't start replication: $error");
-      return;
+    } catch (error) {
+      if (error is! SatelliteException) {
+        rethrow;
+      }
+      if (throwErrors.contains(error.code)) {
+        rethrow;
+      }
+
+      logger.warning(
+        "couldn't start replication with reason: ${error.message}",
+      );
     }
   }
 
@@ -931,64 +957,6 @@ This means there is a notifier subscription leak.`''');
     );
   }
 
-  // Merge changes, with last-write-wins and add-wins semantics.
-  // clearTags field is used by the calling code to determine new value of
-  // the shadowTags
-  ShadowTableChanges mergeEntries(
-    String localOrigin,
-    List<OplogEntry> local,
-    String incomingOrigin,
-    List<OplogEntry> incoming,
-  ) {
-    final localTableChanges =
-        localOperationsToTableChanges(local, (DateTime timestamp) {
-      return generateTag(localOrigin, timestamp);
-    });
-    final incomingTableChanges = remoteOperationsToTableChanges(incoming);
-
-    for (final incomingTableChangeEntry in incomingTableChanges.entries) {
-      final tablename = incomingTableChangeEntry.key;
-      final incomingMapping = incomingTableChangeEntry.value;
-      final localMapping = localTableChanges[tablename];
-
-      if (localMapping == null) {
-        continue;
-      }
-
-      for (final incomingMappingEntry in incomingMapping.entries) {
-        final primaryKey = incomingMappingEntry.key;
-        final incomingChanges = incomingMappingEntry.value;
-        final localInfo = localMapping[primaryKey];
-        if (localInfo == null) {
-          continue;
-        }
-        final localChanges = localInfo.oplogEntryChanges;
-
-        final changes = mergeChangesLastWriteWins(
-          localOrigin,
-          localChanges.changes,
-          incomingOrigin,
-          incomingChanges.changes,
-          incomingChanges.fullRow,
-        );
-        late final ChangesOpType optype;
-
-        final tags = mergeOpTags(localChanges, incomingChanges);
-        if (tags.isEmpty) {
-          optype = ChangesOpType.delete;
-        } else {
-          optype = ChangesOpType.upsert;
-        }
-
-        incomingChanges.changes = changes;
-        incomingChanges.optype = optype;
-        incomingChanges.tags = tags;
-      }
-    }
-
-    return incomingTableChanges;
-  }
-
   @visibleForTesting
   Future<void> updateRelations(Relation rel) async {
     if (rel.tableType == SatRelation_RelationType.TABLE) {
@@ -1182,7 +1150,7 @@ This means there is a notifier subscription leak.`''');
     final allStatements = [
       ..._disableTriggers(notNewTableNames),
       ...stmts,
-      ..._enableTriggers(tablenames)
+      ..._enableTriggers(tablenames),
     ];
 
     if (transaction.migrationVersion != null) {
@@ -1241,7 +1209,7 @@ This means there is a notifier subscription leak.`''');
         Statement(
           'UPDATE $triggers SET flag = ? WHERE $tablesOr',
           [if (flag) 1 else 0, ...tablenames],
-        )
+        ),
       ];
     } else {
       return [];
@@ -1365,6 +1333,7 @@ This means there is a notifier subscription leak.`''');
           RelationColumn(
             name: c['name']! as String,
             type: c['type']! as String,
+            isNullable: (c['notnull']! as int) == 0,
             primaryKey: (c['pk']! as int) > 0,
           ),
         );
@@ -1506,7 +1475,7 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
     }).toList(),
   );
   final fullTableName = '${table.namespace}.${table.tableName}';
-  return generateOplogTriggers(fullTableName, table);
+  return generateTableTriggers(fullTableName, table);
 }
 
 class _WhereAndValues {

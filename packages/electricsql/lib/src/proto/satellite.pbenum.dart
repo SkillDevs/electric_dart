@@ -171,7 +171,7 @@ class SatInStartReplicationResp_ReplicationError_Code extends $pb.ProtobufEnum {
   ];
 
   static final $core
-          .Map<$core.int, SatInStartReplicationResp_ReplicationError_Code>
+      .Map<$core.int, SatInStartReplicationResp_ReplicationError_Code>
       _byValue = $pb.ProtobufEnum.initByValue(values);
   static SatInStartReplicationResp_ReplicationError_Code? valueOf(
           $core.int value) =>

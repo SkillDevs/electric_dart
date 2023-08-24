@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:electricsql/src/util/bitmask_helpers.dart';
+import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/types.dart';
 
 const kProtobufPackage = 'Electric.Satellite.v1_4';
@@ -342,4 +346,99 @@ List<SatShapeReq> shapeRequestToSatShapeReq(List<ShapeRequest> shapeRequests) {
     shapeReqs.add(req);
   }
   return shapeReqs;
+}
+
+String msgToString(Object message) {
+  if (message is SatAuthReq) {
+    return '#SatAuthReq{id: ${message.id}, token: ${message.token}}';
+  } else if (message is SatAuthResp) {
+    return '#SatAuthResp{id: ${message.id}}';
+  } else if (message is SatPingReq) {
+    return '#SatPingReq{}';
+  } else if (message is SatPingResp) {
+    return '#SatPingResp{lsn: ${message.hasLsn() ? base64.encode(message.lsn) : 'NULL'}}';
+  } else if (message is SatErrorResp) {
+    return '#SatErrorResp{type: ${message.errorType.name}}';
+  } else if (message is SatInStartReplicationResp) {
+    return '#SatInStartReplicationResp{}';
+  } else if (message is SatInStartReplicationReq) {
+    final schemaVersion =
+        message.hasSchemaVersion() ? ' schema: ${message.schemaVersion},' : '';
+    return '#SatInStartReplicationReq{lsn: ${base64.encode(message.lsn)},$schemaVersion subscriptions: [${message.subscriptionIds}]}';
+  } else if (message is SatInStopReplicationReq) {
+    return '#SatInStopReplicationReq{}';
+  } else if (message is SatInStopReplicationResp) {
+    return '#SatInStopReplicationResp{}';
+  } else if (message is SatOpLog) {
+    return '#SatOpLog{ops: [${message.ops.map(opToString).join(', ')}]}';
+  } else if (message is SatRelation) {
+    final cols = message.columns
+        .map((x) => '${x.name}: ${x.type}${x.primaryKey ? ' PK' : ''}')
+        .join(', ');
+    return '#SatRelation{for: ${message.schemaName}.${message.tableName}, as: ${message.relationId}, cols: [$cols]}';
+  } else if (message is SatMigrationNotification) {
+    return '#SatMigrationNotification{to: ${message.newSchemaVersion}, from: ${message.newSchemaVersion}}';
+  } else if (message is SatSubsReq) {
+    return '#SatSubsReq{id: ${message.subscriptionId}, shapes: ${message.shapeRequests}}';
+  } else if (message is SatSubsResp) {
+    if (message.hasErr()) {
+      final shapeErrors = message.err.shapeRequestError.map(
+        (x) => '${x.requestId}: ${x.code.name} (${x.message})',
+      );
+      return '#SatSubsReq{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: [$shapeErrors]}';
+    } else {
+      return '#SatSubsReq{id: ${message.subscriptionId}}';
+    }
+  } else if (message is SatSubsDataError) {
+    final shapeErrors = message.shapeRequestError.map(
+      (x) => '${x.requestId}: ${x.code.name} (${x.message})',
+    );
+    final code = message.code.name;
+    return '#SatSubsDataError{id: ${message.subscriptionId}, code: $code, msg: "${message.message}", errors: [$shapeErrors]}';
+  } else if (message is SatSubsDataBegin) {
+    return '#SatSubsDataBegin{id: ${message.subscriptionId}, lsn: ${base64.encode(message.lsn)}}';
+  } else if (message is SatSubsDataEnd) {
+    return '#SatSubsDataEnd{}';
+  } else if (message is SatShapeDataBegin) {
+    return '#SatShapeDataBegin{id: ${message.requestId}}';
+  } else if (message is SatShapeDataEnd) {
+    return '#SatShapeDataEnd{}';
+  } else if (message is SatUnsubsReq) {
+    return '#SatUnsubsReq{ids: ${message.subscriptionIds}}';
+  } else if (message is SatUnsubsResp) {
+    return '#SatUnsubsResp{}';
+  }
+
+  assert(false, "Can't convert ${message.runtimeType} to string");
+  return '#Unknown';
+}
+
+String opToString(SatTransOp op) {
+  if (op.hasBegin()) {
+    return '#Begin{lsn: ${base64.encode(op.begin.lsn)}, ts: ${op.begin.commitTimestamp}, isMigration: ${op.begin.isMigration}}';
+  }
+  if (op.hasCommit()) return '#Commit{lsn: ${base64.encode(op.commit.lsn)}}';
+  if (op.hasInsert()) {
+    return '#Insert{for: ${op.insert.relationId}, tags: [${op.insert.tags}], new: [${op.insert.hasRowData() ? rowToString(op.insert.rowData) : ''}]}';
+  }
+  if (op.hasUpdate()) {
+    return '#Update{for: ${op.update.relationId}, tags: [${op.update.tags}], new: [${op.update.hasRowData() ? rowToString(op.update.rowData) : ''}], old: data: [${op.update.hasOldRowData() ? rowToString(op.update.oldRowData) : ''}]}';
+  }
+  if (op.hasDelete()) {
+    return '#Delete{for: ${op.delete.relationId}, tags: [${op.delete.tags}], old: [${op.delete.hasOldRowData() ? rowToString(op.delete.oldRowData) : ''}]}';
+  }
+  if (op.hasMigrate()) {
+    return '#Migrate{vsn: ${op.migrate.version}, for: ${op.migrate.table.name}, stmts: [${op.migrate.stmts.map((x) => x.sql.replaceAll('\n', '\\n')).join('; ')}]}';
+  }
+  return '';
+}
+
+String rowToString(SatOpRow row) {
+  return row.values
+      .mapIndexed(
+        (i, x) => getMaskBit(row.nullsBitmask, i) == 0
+            ? json.encode(TypeDecoder.text(x))
+            : '∅',
+      )
+      .join(', ');
 }

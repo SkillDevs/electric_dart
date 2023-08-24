@@ -132,7 +132,6 @@ List<Statement> generateOplogTriggers(
 List<Statement> generateCompensationTriggers(
   TableFullName tableFullName,
   Table table,
-  Tables tables,
 ) {
   final tableName = table.tableName;
   final namespace = table.namespace;
@@ -140,35 +139,43 @@ List<Statement> generateCompensationTriggers(
 
   List<Statement> makeTriggers(ForeignKey foreignKey) {
     final childKey = foreignKey.childKey;
-    final fkTable = tables[foreignKey.table];
-    if (fkTable == null) {
-      throw Exception('Table ${foreignKey.table} for foreign key not found.');
-    }
-    final joinedFkPKs = joinColsForJSON(fkTable.primary, null);
-    final joinedFkCols = joinColsForJSON(fkTable.columns, null);
+
+    const fkTableNamespace =
+        'main'; // currently, Electric always uses the 'main' namespace
+    final fkTableName = foreignKey.table;
+    final fkTablePK =
+        foreignKey.parentKey; // primary key of the table pointed at by the FK.
+    final joinedFkPKs = joinColsForJSON([fkTablePK], null);
+
     return <String>[
-      'DROP TRIGGER IF EXISTS compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog;',
+      '''
+      -- Triggers for foreign key compensations
+      DROP TRIGGER IF EXISTS compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog;''',
+      // The compensation trigger inserts a row in `_electric_oplog` if the row pointed at by the FK exists
+      // The way how this works is that the values for the row are passed to the nested SELECT
+      // which will return those values for every record that matches the query
+      // which can be at most once since we filter on the foreign key which is also the primary key and thus is unique.
       '''
       CREATE TRIGGER compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog
         AFTER INSERT ON $tableFullName
-        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '${fkTable.namespace}.${fkTable.tableName}') AND
+        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$fkTableNamespace.$fkTableName') AND
              1 == (SELECT value from _electric_meta WHERE key == 'compensations')
       BEGIN
         INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-        SELECT '${fkTable.namespace}', '${fkTable.tableName}', 'UPDATE', json_object($joinedFkPKs), json_object($joinedFkCols), NULL, NULL
-        FROM ${fkTable.namespace}.${fkTable.tableName} WHERE ${foreignKey.parentKey} = new.${foreignKey.childKey};
+        SELECT '$fkTableNamespace', '$fkTableName', 'UPDATE', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
+        FROM $fkTableNamespace.$fkTableName WHERE ${foreignKey.parentKey} = new.${foreignKey.childKey};
       END;
       ''',
       'DROP TRIGGER IF EXISTS compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog;',
       '''
       CREATE TRIGGER compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog
          AFTER UPDATE ON $namespace.$tableName
-         WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '${fkTable.namespace}.${fkTable.tableName}') AND
+         WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$fkTableNamespace.$fkTableName') AND
               1 == (SELECT value from _electric_meta WHERE key == 'compensations')
       BEGIN
         INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-        SELECT '${fkTable.namespace}', '${fkTable.tableName}', 'UPDATE', json_object($joinedFkPKs), json_object($joinedFkCols), NULL, NULL
-        FROM ${fkTable.namespace}.${fkTable.tableName} WHERE ${foreignKey.parentKey} = new.${foreignKey.childKey};
+        SELECT '$fkTableNamespace', '$fkTableName', 'UPDATE', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
+        FROM $fkTableNamespace.$fkTableName WHERE ${foreignKey.parentKey} = new.${foreignKey.childKey};
       END;
       ''',
     ].map(Statement.new).toList();
@@ -185,16 +192,11 @@ List<Statement> generateCompensationTriggers(
 /// @returns An array of SQLite statements that add the necessary oplog and compensation triggers.
 List<Statement> generateTableTriggers(
   TableFullName tableFullName,
-  Tables tables,
+  Table table,
 ) {
-  final table = tables[tableFullName];
-  if (table == null) {
-    throw Exception(
-      'Could not generate triggers for $tableFullName. Table not found.',
-    );
-  }
   final oplogTriggers = generateOplogTriggers(tableFullName, table);
-  final fkTriggers = generateCompensationTriggers(tableFullName, table, tables);
+  final fkTriggers =
+      generateCompensationTriggers(tableFullName, table); //, tables)
   return [...oplogTriggers, ...fkTriggers];
 }
 
@@ -203,8 +205,8 @@ List<Statement> generateTableTriggers(
 /// @returns An array of SQLite statements that add the necessary oplog and compensation triggers for all tables.
 List<Statement> generateTriggers(Tables tables) {
   final List<Statement> tableTriggers = [];
-  tables.forEach((tableFullName, _table) {
-    final triggers = generateTableTriggers(tableFullName, tables);
+  tables.forEach((tableFullName, table) {
+    final triggers = generateTableTriggers(tableFullName, table); //, tables)
     tableTriggers.addAll(triggers);
   });
 
@@ -213,7 +215,7 @@ List<Statement> generateTriggers(Tables tables) {
     Statement(
       'CREATE TABLE _electric_trigger_settings(tablename TEXT PRIMARY KEY, flag INTEGER);',
     ),
-    ...tableTriggers
+    ...tableTriggers,
   ];
 
   return stmts;

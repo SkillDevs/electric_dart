@@ -11,13 +11,14 @@ import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/cache.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
+import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
-import 'package:fpdart/fpdart.dart';
+import 'package:logging/logging.dart';
 import 'package:retry/retry.dart' as retry_lib;
 
 class IncomingHandler {
@@ -39,7 +40,7 @@ class SatelliteClient extends EventEmitter implements Client {
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
   final Notifier notifier;
-  Completer? initializing;
+  Completer<void>? initializing;
 
   Socket? socket;
 
@@ -75,24 +76,6 @@ class SatelliteClient extends EventEmitter implements Client {
       transactions: [],
       ackLsn: ack,
       enqueuedLsn: enqueued,
-    );
-  }
-
-  Either<SatelliteException, DecodedMessage> _toMessage(Uint8List data) {
-    final code = data[0];
-    final type = getMsgFromCode(code);
-
-    if (type == null) {
-      return Left(
-        SatelliteException(
-          SatelliteErrorCode.unexpectedMessageType,
-          '$code',
-        ),
-      );
-    }
-
-    return Right(
-      DecodedMessage(decodeMessage(data.sublist(1), type), type),
     );
   }
 
@@ -204,15 +187,19 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<Either<SatelliteException, void>> connect({
+  Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
-    Future<void> _attemptBody() {
-      initializing = Completer();
-      // This is so that errors can be sent to the completer even when no one is
-      // waiting for the future
-      initializing!.future.ignore();
+    if (!isClosed()) {
+      close();
+    }
 
+    initializing = Completer();
+    // This is so that errors can be sent to the completer even when no one is
+    // waiting for the future
+    initializing!.future.ignore();
+
+    Future<void> _attemptBody() {
       final Completer<void> connectCompleter = Completer();
 
       // TODO: ensure any previous socket is closed, or reject
@@ -287,16 +274,14 @@ class SatelliteClient extends EventEmitter implements Client {
       );
     } catch (e) {
       // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
-      initializing!.completeError(e);
+      initializing?.completeError(e);
       initializing = null;
       rethrow;
     }
-
-    return const Right(null);
   }
 
   @override
-  Future<void> close() async {
+  void close() {
     logger.info('closing client');
 
     outbound = resetReplication(outbound.enqueuedLsn, outbound.ackLsn, null);
@@ -337,30 +322,34 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleIncoming(Uint8List data) {
-    final messageOrError = _toMessage(data);
-    logger.info(
-      'Received message ${messageOrError.match((error) => error.toString(), (a) => a.msgType.name)}',
-    );
+    bool handleIsRpc = false;
+    try {
+      final messageInfo = toMessage(data);
 
-    messageOrError.match(
-      (error) {
-        emit('error', error);
-      },
-      (messageInfo) {
-        final handler = getIncomingHandlerForMessage(messageInfo.msgType);
-        try {
-          final response = handler.handle(messageInfo.msg);
+      if (logger.level <= Level.FINE) {
+        logger.fine('[proto] recv: ${msgToString(messageInfo.msg)}');
+      }
 
-          if (handler.isRpc) {
-            emit('rpc_response', response);
-          }
-        } catch (error) {
-          logger.warning(
-            'uncaught errors while processing incoming message: $error',
-          );
+      final handler = getIncomingHandlerForMessage(messageInfo.msgType);
+      final response = handler.handle(messageInfo.msg);
+      handleIsRpc = handler.isRpc;
+      if (handleIsRpc) {
+        emit('rpc_response', response);
+      }
+    } catch (error) {
+      if (error is SatelliteException) {
+        if (handleIsRpc) {
+          emit('error', error);
         }
-      },
-    );
+        // no one is watching this error
+        logger.warning(
+          'unhandled satellite errors while processing incoming message: $error',
+        );
+      } else {
+        // This is an unexpected runtime error
+        rethrow;
+      }
+    }
   }
 
   @override
@@ -404,7 +393,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Either<SatelliteException, void> enqueueTransaction(
+  void enqueueTransaction(
     DataTransaction transaction,
   ) {
     if (outbound.isReplicating != ReplicationStatus.active) {
@@ -420,16 +409,14 @@ class SatelliteClient extends EventEmitter implements Client {
     if (throttledPushTransaction != null) {
       throttledPushTransaction!.call();
     }
-
-    return const Right(null);
   }
 
   @override
-  Future<void> startReplication(
+  Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
-  ) {
+  ) async {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(
         SatelliteErrorCode.replicationAlreadyStarted,
@@ -453,7 +440,9 @@ class SatelliteClient extends EventEmitter implements Client {
       }
       request = SatInStartReplicationReq(schemaVersion: schemaVersion);
     } else {
-      logger.info('starting replication with lsn: ${base64.encode(lsn)}');
+      logger.info(
+        'starting replication with lsn: ${base64.encode(lsn)} subscriptions: $subscriptionIds',
+      );
       request = SatInStartReplicationReq(
         lsn: lsn,
         subscriptionIds: subscriptionIds,
@@ -461,21 +450,32 @@ class SatelliteClient extends EventEmitter implements Client {
     }
 
     // Then set the replication state
-    final future = rpc<void>(request).then((_) {
-      initializing?.complete();
+    inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
+
+    return rpc<StartReplicationResponse>(request).then((resp) {
+      // FIXME: process handles BEHIND_WINDOW, we cant reject or resolve
+      // initializing. If process returns without triggering another
+      // RPC, initializing will never resolve.
+      // We shall improve this code to make no assumptions on how
+      // process handles errors
+      if (resp.error != null) {
+        if (resp.error!.code != SatelliteErrorCode.behindWindow) {
+          initializing?.completeError(resp.error!);
+        }
+      } else {
+        initializing?.complete();
+      }
       initializing = null;
+      return resp;
     }).catchError((Object e) {
       initializing?.completeError(e);
       initializing = null;
       throw e;
     });
-    inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
-
-    return future;
   }
 
   @override
-  Future<void> stopReplication() {
+  Future<StopReplicationResponse> stopReplication() {
     if (inbound.isReplicating != ReplicationStatus.active) {
       return Future.error(
         SatelliteException(
@@ -487,11 +487,13 @@ class SatelliteClient extends EventEmitter implements Client {
 
     inbound.isReplicating = ReplicationStatus.stopping;
     final request = SatInStopReplicationReq();
-    return rpc<void>(request);
+    return rpc<StopReplicationResponse>(request);
   }
 
   void sendMessage(Object request) {
-    logger.fine('Sending message ${request.runtimeType}($request)');
+    if (logger.level <= Level.FINE) {
+      logger.fine('[proto] send: ${msgToString(request)}');
+    }
     final _socket = socket;
     if (_socket == null) {
       throw SatelliteException(
@@ -543,6 +545,9 @@ class SatelliteClient extends EventEmitter implements Client {
           final respValue = distinguishOn(resp as Object);
           final reqValue = distinguishOn(request);
           if (respValue == reqValue) {
+            errorListener?.cancel();
+            errorListener = null;
+
             return completer.complete(resp);
           } else {
             // This WAS an RPC response, but not the one we were expecting, waiting more
@@ -563,6 +568,10 @@ class SatelliteClient extends EventEmitter implements Client {
         rpcRespListener = on('rpc_response', (resp) {
           rpcRespListener?.cancel();
           rpcRespListener = null;
+
+          errorListener?.cancel();
+          errorListener = null;
+
           completer.complete(resp as T);
         });
       }
@@ -608,23 +617,25 @@ class SatelliteClient extends EventEmitter implements Client {
     return AuthResponse(serverId, error);
   }
 
-  void handleStartResp(SatInStartReplicationResp resp) {
+  StartReplicationResponse handleStartResp(SatInStartReplicationResp resp) {
     if (inbound.isReplicating == ReplicationStatus.starting) {
       if (resp.hasErr()) {
         inbound.isReplicating = ReplicationStatus.stopped;
-        emit('error', startReplicationErrorToSatelliteError(resp.err));
+        return StartReplicationResponse(
+          error: startReplicationErrorToSatelliteError(resp.err),
+        );
       } else {
         inbound.isReplicating = ReplicationStatus.active;
       }
     } else {
-      emit(
-        'error',
-        SatelliteException(
+      return StartReplicationResponse(
+        error: SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'start' response",
         ),
       );
     }
+    return StartReplicationResponse();
   }
 
   void handleInStartReplicationReq(SatInStartReplicationReq message) {
@@ -804,8 +815,13 @@ class SatelliteClient extends EventEmitter implements Client {
           schemaName: relation.schema, // TODO
           tableName: relation.table,
           tableType: relation.tableType,
-          columns: relation.columns
-              .map((c) => SatRelationColumn(name: c.name, type: c.type)),
+          columns: relation.columns.map(
+            (c) => SatRelationColumn(
+              name: c.name,
+              type: c.type,
+              isNullable: c.isNullable,
+            ),
+          ),
         );
 
         sendMessage(satRelation);
@@ -840,13 +856,13 @@ class SatelliteClient extends EventEmitter implements Client {
     }
   }
 
-  void handleStopResp(SatInStopReplicationResp value) {
+  StopReplicationResponse handleStopResp(SatInStopReplicationResp value) {
     if (inbound.isReplicating == ReplicationStatus.stopping) {
       inbound.isReplicating = ReplicationStatus.stopped;
+      return StopReplicationResponse();
     } else {
-      emit(
-        'error',
-        SatelliteException(
+      return StopReplicationResponse(
+        error: SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'stop' response",
         ),
@@ -895,6 +911,7 @@ class SatelliteClient extends EventEmitter implements Client {
             (c) => RelationColumn(
               name: c.name,
               type: c.type,
+              isNullable: c.isNullable,
               primaryKey: c.primaryKey,
             ),
           )
@@ -918,9 +935,15 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleErrorResp(SatErrorResp error) {
+    // TODO: this causing intermittent issues in tests because
+    // no one might catch this error. We shall pass this information
+    // as part of connectivity state
     emit(
       'error',
-      Exception('server replied with error code: ${error.errorType}'),
+      SatelliteException(
+        SatelliteErrorCode.serverError,
+        'server replied with error code: ${error.errorType}',
+      ),
     );
   }
 
@@ -1193,22 +1216,6 @@ Record? deserializeRow(
   );
 }
 
-void setMaskBit(List<int> array, int indexFromStart) {
-  final byteIndex = (indexFromStart / 8).floor();
-  final bitIndex = 7 - (indexFromStart % 8);
-
-  final mask = 0x01 << bitIndex;
-  array[byteIndex] = array[byteIndex] | mask;
-}
-
-int getMaskBit(List<int> array, int indexFromStart) {
-  if (array.isEmpty) return 0;
-  final byteIndex = (indexFromStart / 8).floor();
-  final bitIndex = 7 - (indexFromStart % 8);
-
-  return (array[byteIndex] >>> bitIndex) & 0x01;
-}
-
 int calculateNumBytes(int columnNum) {
   final rem = columnNum % 8;
   if (rem == 0) {
@@ -1263,4 +1270,18 @@ Uint8List encodeSocketMessage(SatMsgType msgType, Object msg) {
   buffer.setRange(1, totalBufLen, msgEncoded);
 
   return buffer;
+}
+
+DecodedMessage toMessage(Uint8List data) {
+  final code = data[0];
+  final type = getMsgFromCode(code);
+
+  if (type == null) {
+    throw SatelliteException(
+      SatelliteErrorCode.unexpectedMessageType,
+      '$code',
+    );
+  }
+
+  return DecodedMessage(decodeMessage(data.sublist(1), type), type);
 }

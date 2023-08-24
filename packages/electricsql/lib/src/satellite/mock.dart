@@ -60,10 +60,7 @@ class MockSatelliteProcess implements Satellite {
   }
 
   @override
-  Future<ConnectionWrapper> start(
-    AuthConfig authConfig, {
-    SatelliteReplicationOptions? opts,
-  }) async {
+  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     return ConnectionWrapper(
@@ -246,13 +243,13 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<void> close() {
+  void close() {
     closed = true;
     _removeAllListeners();
     for (final t in timeouts) {
       t.cancel();
     }
-    return Future.value(null);
+    return;
   }
 
   void _removeAllListeners() {
@@ -273,7 +270,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<void> startReplication(
+  Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
@@ -289,30 +286,34 @@ class MockSatelliteClient extends EventEmitter implements Client {
     timeouts.add(t);
 
     if (lsn != null && bytesToNumber(lsn) == kMockBehindWindowLsn) {
-      return Future.error(
-        SatelliteException(
-          SatelliteErrorCode.behindWindow,
-          'MOCK BEHIND_WINDOW_LSN ERROR',
+      return Future.value(
+        StartReplicationResponse(
+          error: SatelliteException(
+            SatelliteErrorCode.behindWindow,
+            'MOCK BEHIND_WINDOW_LSN ERROR',
+          ),
         ),
       );
     }
 
     if (lsn != null && bytesToNumber(lsn) == kMockInvalidPositionLsn) {
-      return Future.error(
-        SatelliteException(
-          SatelliteErrorCode.invalidPosition,
-          'MOCK INVALID_POSITION ERROR',
+      return Future.value(
+        StartReplicationResponse(
+          error: SatelliteException(
+            SatelliteErrorCode.invalidPosition,
+            'MOCK INVALID_POSITION ERROR',
+          ),
         ),
       );
     }
 
-    return Future<void>.value();
+    return Future.value(StartReplicationResponse());
   }
 
   @override
-  Future<void> stopReplication() {
+  Future<StopReplicationResponse> stopReplication() {
     replicating = false;
-    return Future<void>.value();
+    return Future.value(StopReplicationResponse());
   }
 
   @override
