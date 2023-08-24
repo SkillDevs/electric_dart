@@ -143,7 +143,7 @@ class BundleMigrator implements Migrator {
 
     await adapter.runInTransaction([
       ...statements,
-      Statement(applied, [version, DateTime.now().millisecondsSinceEpoch])
+      Statement(applied, [version, DateTime.now().millisecondsSinceEpoch]),
     ]);
   }
 

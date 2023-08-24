@@ -14,7 +14,6 @@ import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
-import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/tablename.dart';

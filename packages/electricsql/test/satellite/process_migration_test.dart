@@ -305,14 +305,14 @@ void main() {
         ),
         insertRow,
         updateRow,
-        insertExtendedWithoutValueRow
+        insertExtendedWithoutValueRow,
       ].map((Row row) {
         return {
           ...row,
           'baz': null,
         };
       }),
-      insertExtendedRow
+      insertExtendedRow,
     ];
 
     expect(rowsAfterMigration.toSet(), expectedRowsAfterMigration.toSet());
@@ -349,7 +349,7 @@ void main() {
         Statement(
           'UPDATE parent SET value = ?, other = ? WHERE id = ?;',
           ['still local', 5, 1],
-        )
+        ),
       ],
     );
 
@@ -527,7 +527,6 @@ void main() {
       isTrue,
     );
   });
-
 
   // TODO(update): Missing tests
   /*

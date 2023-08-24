@@ -622,7 +622,8 @@ class SatelliteClient extends EventEmitter implements Client {
       if (resp.hasErr()) {
         inbound.isReplicating = ReplicationStatus.stopped;
         return StartReplicationResponse(
-            error: startReplicationErrorToSatelliteError(resp.err));
+          error: startReplicationErrorToSatelliteError(resp.err),
+        );
       } else {
         inbound.isReplicating = ReplicationStatus.active;
       }

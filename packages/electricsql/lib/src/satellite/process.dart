@@ -184,7 +184,7 @@ This means there is a notifier subscription leak.`''');
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
-      this.opts.pollingInterval,
+      opts.pollingInterval,
       (_) => throttledSnapshot(),
     );
 
@@ -248,7 +248,7 @@ This means there is a notifier subscription leak.`''');
         Statement(
           'DELETE FROM $tablename',
         ),
-        ..._enableTriggers([tablename])
+        ..._enableTriggers([tablename]),
       ]);
       return stmts;
       // does not delete shadow rows but we can do that
@@ -458,7 +458,7 @@ This means there is a notifier subscription leak.`''');
           columns,
           records,
           maxSqlParameters,
-        )
+        ),
       ]);
     }
 
@@ -513,7 +513,8 @@ This means there is a notifier subscription leak.`''');
 
   Future<void> _handleBehindWindow() async {
     logger.warning(
-        'client cannot resume replication from server, resetting replication state');
+      'client cannot resume replication from server, resetting replication state',
+    );
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
     final List<ClientShapeDefinition> shapeDefs = subscriptionIds
         .map((subId) => subscriptions.shapesForActiveSubscription(subId))
@@ -1149,7 +1150,7 @@ This means there is a notifier subscription leak.`''');
     final allStatements = [
       ..._disableTriggers(notNewTableNames),
       ...stmts,
-      ..._enableTriggers(tablenames)
+      ..._enableTriggers(tablenames),
     ];
 
     if (transaction.migrationVersion != null) {
@@ -1208,7 +1209,7 @@ This means there is a notifier subscription leak.`''');
         Statement(
           'UPDATE $triggers SET flag = ? WHERE $tablesOr',
           [if (flag) 1 else 0, ...tablenames],
-        )
+        ),
       ];
     } else {
       return [];

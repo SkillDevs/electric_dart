@@ -28,5 +28,5 @@ final kBaseMigrations = [
       'CREATE TABLE $shadowTable (\n  namespace TEXT NOT NULL,\n  tablename TEXT NOT NULL,\n  primaryKey TEXT NOT NULL,\n  tags TEXT NOT NULL,\n  PRIMARY KEY (namespace, tablename, primaryKey));',
     ],
     version: '0',
-  )
+  ),
 ];

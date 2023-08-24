@@ -215,7 +215,7 @@ List<Statement> generateTriggers(Tables tables) {
     Statement(
       'CREATE TABLE _electric_trigger_settings(tablename TEXT PRIMARY KEY, flag INTEGER);',
     ),
-    ...tableTriggers
+    ...tableTriggers,
   ];
 
   return stmts;

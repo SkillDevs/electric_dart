@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
-import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';

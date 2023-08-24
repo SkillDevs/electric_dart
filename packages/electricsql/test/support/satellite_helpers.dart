@@ -75,7 +75,7 @@ OplogEntry generateLocalOplogEntry(
   }
   if (optype != OpType.delete && clearTags == null) {
     tags = encodeTags([
-      generateTag('remote', DateTime.fromMillisecondsSinceEpoch(timestamp))
+      generateTag('remote', DateTime.fromMillisecondsSinceEpoch(timestamp)),
     ]);
   }
 
@@ -188,7 +188,7 @@ primaryKey = ?
     final args = <Object?>[
       oplog.namespace,
       oplog.tablename,
-      getShadowPrimaryKey(oplog)
+      getShadowPrimaryKey(oplog),
     ];
     query = Statement(selectTags, args);
   } else {
