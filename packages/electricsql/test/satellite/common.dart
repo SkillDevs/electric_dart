@@ -27,11 +27,13 @@ Map<String, Relation> kTestRelations = {
       RelationColumn(
         name: 'id',
         type: 'INTEGER',
+        isNullable: false,
         primaryKey: true,
       ),
       RelationColumn(
         name: 'parent',
         type: 'INTEGER',
+        isNullable: true,
         primaryKey: false,
       ),
     ],
@@ -45,16 +47,19 @@ Map<String, Relation> kTestRelations = {
       RelationColumn(
         name: 'id',
         type: 'INTEGER',
+        isNullable: false,
         primaryKey: true,
       ),
       RelationColumn(
         name: 'value',
         type: 'TEXT',
+        isNullable: true,
         primaryKey: false,
       ),
       RelationColumn(
         name: 'other',
         type: 'INTEGER',
+        isNullable: true,
         primaryKey: false,
       ),
     ],
@@ -68,6 +73,7 @@ Map<String, Relation> kTestRelations = {
       RelationColumn(
         name: 'id',
         type: 'INTEGER',
+        isNullable: false,
         primaryKey: true,
       ),
     ],

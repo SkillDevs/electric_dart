@@ -10,6 +10,7 @@ import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
+import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
@@ -80,7 +81,7 @@ void main() {
 
     final meta = await loadSatelliteMetaTable(adapter);
     expect(meta, {
-      'compensations': 0,
+      'compensations': 1,
       'lastAckdRowId': '0',
       'lastSentRowId': '0',
       'lsn': '',
@@ -281,7 +282,7 @@ void main() {
       OpType.insert,
       incomingTs,
       encodeTags([
-        generateTag('remote', DateTime.fromMillisecondsSinceEpoch(incomingTs))
+        generateTag('remote', DateTime.fromMillisecondsSinceEpoch(incomingTs)),
       ]),
       newValues: {
         'id': 1,
@@ -302,9 +303,7 @@ void main() {
     final local = await satellite.getEntries();
     final localTimestamp =
         DateTime.parse(local[0].timestamp).millisecondsSinceEpoch;
-    final merged = satellite.mergeEntries(clientId, local, 'remote', [
-      incomingEntry,
-    ]);
+    final merged = mergeEntries(clientId, local, 'remote', [incomingEntry]);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -369,9 +368,7 @@ void main() {
       oldValues: {},
     );
 
-    final merged = satellite.mergeEntries(clientId, local, 'remote', [
-      incomingEntry,
-    ]);
+    final merged = mergeEntries(clientId, local, 'remote', [incomingEntry]);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -631,7 +628,7 @@ void main() {
       ),
     ];
 
-    final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
+    final merged = mergeEntries(clientId, local, 'remote', incoming);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -715,7 +712,7 @@ void main() {
       ),
     ];
 
-    final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
+    final merged = mergeEntries(clientId, local, 'remote', incoming);
     final item = merged['main.parent']!['{"id":1}']!;
 
     // The incoming entry modified the value of the `value` column to `'remote'`
@@ -772,7 +769,7 @@ void main() {
     ];
 
     final local = <OplogEntry>[];
-    final merged = satellite.mergeEntries(clientId, local, 'remote', incoming);
+    final merged = mergeEntries(clientId, local, 'remote', incoming);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -1280,10 +1277,7 @@ void main() {
     final base64lsn = base64.encode(numberToBytes(kMockBehindWindowLsn));
     await satellite.setMeta('lsn', base64lsn);
     try {
-      final conn = await satellite.start(
-        authConfig,
-        opts: SatelliteReplicationOptions(clearOnBehindWindow: true),
-      );
+      final conn = await satellite.start(authConfig);
       await conn.connectionFuture;
       final lsnAfter = await satellite.getMeta<String?>('lsn');
       expect(lsnAfter, isNot(base64lsn));

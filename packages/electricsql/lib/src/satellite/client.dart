@@ -324,14 +324,14 @@ class SatelliteClient extends EventEmitter implements Client {
   void handleIncoming(Uint8List data) {
     bool handleIsRpc = false;
     try {
-      final message = toMessage(data);
+      final messageInfo = toMessage(data);
 
       if (logger.level <= Level.FINE) {
-        logger.fine('[proto] recv: ${msgToString(message)}');
+        logger.fine('[proto] recv: ${msgToString(messageInfo)}');
       }
 
-      final handler = getIncomingHandlerForMessage(message.msgType);
-      final response = handler.handle(message);
+      final handler = getIncomingHandlerForMessage(messageInfo.msgType);
+      final response = handler.handle(messageInfo.msg);
       handleIsRpc = handler.isRpc;
       if (handleIsRpc) {
         emit('rpc_response', response);
@@ -416,7 +416,7 @@ class SatelliteClient extends EventEmitter implements Client {
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
-  ) {
+  ) async {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(
         SatelliteErrorCode.replicationAlreadyStarted,
@@ -441,7 +441,8 @@ class SatelliteClient extends EventEmitter implements Client {
       request = SatInStartReplicationReq(schemaVersion: schemaVersion);
     } else {
       logger.info(
-          'starting replication with lsn: ${base64.encode(lsn)} subscriptions: $subscriptionIds');
+        'starting replication with lsn: ${base64.encode(lsn)} subscriptions: $subscriptionIds',
+      );
       request = SatInStartReplicationReq(
         lsn: lsn,
         subscriptionIds: subscriptionIds,
@@ -490,8 +491,9 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMessage(Object request) {
-    if (logger.level <= Level.FINE)
+    if (logger.level <= Level.FINE) {
       logger.fine('[proto] send: ${msgToString(request)}');
+    }
     final _socket = socket;
     if (_socket == null) {
       throw SatelliteException(
