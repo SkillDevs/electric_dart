@@ -188,8 +188,6 @@ class _DeleteDbButton extends StatelessWidget {
       onPressed: () async {
         await impl.deleteTodosDbFile();
 
-        // TODO: False positive remove in Dart 3.1.0
-        // ignore: use_build_context_synchronously
         if (!context.mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(

@@ -327,7 +327,7 @@ class SatelliteClient extends EventEmitter implements Client {
       final messageInfo = toMessage(data);
 
       if (logger.level <= Level.FINE) {
-        logger.fine('[proto] recv: ${msgToString(messageInfo)}');
+        logger.fine('[proto] recv: ${msgToString(messageInfo.msg)}');
       }
 
       final handler = getIncomingHandlerForMessage(messageInfo.msgType);
