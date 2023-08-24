@@ -12,7 +12,7 @@ For development updates make sure to check out the official [ElectricSQL Discord
 
 ---
 
-Non official Dart client implementation for [Electric](https://electric-sql.com/) based on commit `cd77e4a67f5367e1376cab752bd16177801d20b5` of the [electric git repository](https://github.com/electric-sql/electric)
+Non official Dart client implementation for [Electric](https://electric-sql.com/) based on commit `6017643d64f52796e56e451a2275efc5ad088e4f` of the [electric git repository](https://github.com/electric-sql/electric)
 
 - Client based on the typescript client from the `clients/typescript` subfolder.
 
