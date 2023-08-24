@@ -1,13 +1,9 @@
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 
 class ElectricNamespace {
   final DatabaseAdapter adapter;
   final Notifier notifier;
-  final Satellite satellite;
-
-  late final ShapeManager shapeManager = ShapeManager(satellite);
 
   bool _isConnected = false;
   bool get isConnected => _isConnected;
@@ -15,9 +11,7 @@ class ElectricNamespace {
   ElectricNamespace({
     required this.adapter,
     required this.notifier,
-    required this.satellite,
   }) {
-
     // XXX if you're implementing VAX-799, see the note below and maybe refactor
     // this out of here whilst cleaning up the subscription.
 

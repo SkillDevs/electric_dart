@@ -55,7 +55,11 @@ Future<ElectricClient> electrify({
     config: configWithDefaults,
   );
 
-  final electric = ElectricClient(adapter: adapter, notifier: notifier, satellite: satellite);
+  final electric = ElectricClient.create(
+    adapter: adapter,
+    notifier: notifier,
+    satellite: satellite,
+  );
 
   if (satellite.connectivityState != null) {
     electric.setIsConnected(satellite.connectivityState!);
