@@ -1,5 +1,4 @@
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
@@ -47,10 +46,6 @@ Future<ElectricClient> electrify({
   final notifier = opts.notifier ?? EventNotifier(dbName: dbName);
   final registry = opts.registry ?? globalRegistry;
 
-  // It needs to be before ensureStarted, so that the internal connectivity state
-  // listener is ready to receive events.
-  final electric = ElectricClient(adapter: adapter, notifier: notifier);
-
   final satellite = await registry.ensureStarted(
     dbName: dbName,
     adapter: adapter,
@@ -60,12 +55,11 @@ Future<ElectricClient> electrify({
     config: configWithDefaults,
   );
 
+  final electric = ElectricClient(adapter: adapter, notifier: notifier, satellite: satellite);
+
   if (satellite.connectivityState != null) {
     electric.setIsConnected(satellite.connectivityState!);
   }
-
-  // initialize the shape manager
-  shapeManager.init(satellite);
 
   return electric;
 }

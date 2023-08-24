@@ -9,30 +9,27 @@ class Shape {
   Shape({required this.tables});
 }
 
-abstract class IShapeManager {
-  void init(Satellite satellite);
+abstract interface class IShapeManager {
   Future<ShapeSubscription> sync(Shape shape);
-  bool hasBeenSubscribed(TableName shape);
+  bool hasBeenSubscribed(TableName table);
 }
 
-class ShapeManager implements IShapeManager {
+abstract class BaseShapeManager implements IShapeManager {
   final Set<TableName> tablesPreviouslySubscribed = {};
-  Satellite? satellite;
 
   @override
-  void init(Satellite satellite) {
-    this.satellite = satellite;
+  bool hasBeenSubscribed(TableName table) {
+    return tablesPreviouslySubscribed.contains(table);
   }
+}
+
+class ShapeManager extends BaseShapeManager {
+  final Satellite satellite;
+
+  ShapeManager(this.satellite);
 
   @override
   Future<ShapeSubscription> sync(Shape shape) async {
-    final _satellite = satellite;
-    if (_satellite == null) {
-      throw Exception(
-        'Shape cannot be synced because the `ShapeManager` is not yet initialised.',
-      );
-    }
-
     // Convert the shape to the format expected by the Satellite process
     final shapeDef = ClientShapeDefinition(
       selects: shape.tables.map((tbl) {
@@ -42,7 +39,7 @@ class ShapeManager implements IShapeManager {
       }).toList(),
     );
 
-    final sub = await _satellite.subscribe([shapeDef]);
+    final sub = await satellite.subscribe([shapeDef]);
 
     final dataReceivedProm = sub.synced.then((_) {
       // When all data is received
@@ -63,7 +60,7 @@ class ShapeManager implements IShapeManager {
   }
 }
 
-class ShapeManagerMock extends ShapeManager {
+class ShapeManagerMock extends BaseShapeManager {
   @override
   Future<ShapeSubscription> sync(Shape shape) async {
     // Do not contact the server but directly store the synced tables
@@ -76,6 +73,3 @@ class ShapeManagerMock extends ShapeManager {
     );
   }
 }
-
-// a shape manager singleton
-final shapeManager = ShapeManager();

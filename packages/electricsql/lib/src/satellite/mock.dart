@@ -160,7 +160,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
           });
         } else {
           shapeReqToUuid[shape.requestId] = uuid();
-          final List<DataRecord> records = relationData[tablename]!;
+          final List<DataRecord> records = relationData[tablename] ?? [];
 
           for (final record in records) {
             final dataChange = InitialDataChange(

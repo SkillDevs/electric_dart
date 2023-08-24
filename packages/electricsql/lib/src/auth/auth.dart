@@ -17,3 +17,5 @@ class AuthConfig {
     required this.token,
   });
 }
+
+typedef TokenClaims = Map<String, Object?>;

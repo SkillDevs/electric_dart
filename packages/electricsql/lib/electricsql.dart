@@ -1,8 +1,11 @@
 /// Dart implementation of Electric SQL
 library electricsql;
 
+export 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart' show JWTAlgorithm;
+
 export 'src/auth/auth.dart' show AuthConfig, AuthState;
-export 'src/auth/util.dart' show authToken;
+export 'src/auth/insecure.dart' show insecureAuthToken;
+export 'src/auth/secure.dart' show mockSecureAuthToken, secureAuthToken;
 export 'src/client/model/client.dart' show ElectricClient;
 export 'src/config/config.dart'
     show ConsoleConfig, ElectricConfig, HydratedConfig, ReplicationConfig;
