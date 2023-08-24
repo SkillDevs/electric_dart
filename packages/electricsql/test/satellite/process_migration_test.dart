@@ -528,76 +528,67 @@ void main() {
     );
   });
 
-  // TODO(update): Missing tests
-  /*
-  const migrationWithFKs: SchemaChange[] = [
-  {
-    migrationType: SatOpMigrate_Type.CREATE_TABLE,
-    sql: `
+  final migrationWithFKs = <SchemaChange>[
+    SchemaChange(
+      migrationType: SatOpMigrate_Type.CREATE_TABLE,
+      sql: '''
     CREATE TABLE "test_items" (
       "id" TEXT NOT NULL,
       CONSTRAINT "test_items_pkey" PRIMARY KEY ("id")
     ) WITHOUT ROWID;
-    `,
-    table: {
-      name: 'test_items',
-      columns: [{ name: 'id' }],
-      fks: [],
-      pks: ['id'],
-    },
-  },
-  {
-    migrationType: SatOpMigrate_Type.CREATE_TABLE,
-    sql: `
+    ''',
+      table: SatOpMigrate_Table(
+        name: 'test_items',
+        columns: [SatOpMigrate_Column(name: 'id')],
+        fks: [],
+        pks: ['id'],
+      ),
+    ),
+    SchemaChange(
+      migrationType: SatOpMigrate_Type.CREATE_TABLE,
+      sql: '''
     CREATE TABLE "test_other_items" (
       "id" TEXT NOT NULL,
       "item_id" TEXT,
       -- CONSTRAINT "test_other_items_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "test_items" ("id"),
       CONSTRAINT "test_other_items_pkey" PRIMARY KEY ("id")
     ) WITHOUT ROWID;
-    `,
-    table: {
-      name: 'test_other_items',
-      columns: [{ name: 'id' }, { name: 'item_id' }],
-      fks: [
-        {
-          $type: 'Electric.Satellite.v1_4.SatOpMigrate.ForeignKey',
-          fkCols: ['item_id'],
-          pkTable: 'test_items',
-          pkCols: ['id'],
-        },
-      ],
-      pks: ['id'],
-    },
-  },
-]
+    ''',
+      table: SatOpMigrate_Table(
+        name: 'test_other_items',
+        columns: [
+          SatOpMigrate_Column(name: 'id'),
+          SatOpMigrate_Column(name: 'item_id'),
+        ],
+        fks: [
+          SatOpMigrate_ForeignKey(
+            fkCols: ['item_id'],
+            pkTable: 'test_items',
+            pkCols: ['id'],
+          ),
+        ],
+        pks: ['id'],
+      ),
+    ),
+  ];
 
-test.serial.only('apply another migration', async (t) => {
-  const { satellite } = t.context
+  test('apply another migration', () async {
+    final migrationTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(DateTime.now().millisecondsSinceEpoch),
+      changes: migrationWithFKs,
+      lsn: [],
+      // starts at 3, because the app already defines 2 migrations
+      // (see test/support/migrations/migrations.js)
+      // which are loaded when Satellite is started
+      migrationVersion: '3',
+    );
 
-  const migrationTx = {
-    origin: 'remote',
-    commit_timestamp: Long.fromNumber(new Date().getTime()),
-    changes: migrationWithFKs,
-    lsn: new Uint8Array(),
-    // starts at 3, because the app already defines 2 migrations
-    // (see test/support/migrations/migrations.js)
-    // which are loaded when Satellite is started
-    migrationVersion: '3',
-  }
+    // Apply the migration transaction
+    await satellite.applyTransaction(migrationTx);
 
-  // Apply the migration transaction
-  try {
-    await satellite._applyTransaction(migrationTx)
-  } catch (e) {
-    console.error(e)
-    throw e
-  }
-
-  await assertDbHasTables(t, 'test_items', 'test_other_items')
-  t.pass()
-})
-  */
+    await assertDbHasTables(['test_items', 'test_other_items']);
+  });
 }
 
 Future<void> populateDB(SatelliteTestContext context) async {
