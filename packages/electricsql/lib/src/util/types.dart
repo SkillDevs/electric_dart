@@ -43,6 +43,7 @@ class SatelliteException implements Exception {
 }
 
 enum SatelliteErrorCode {
+  connectionFailed,
   internal,
   timeout,
   replicationNotStarted,
@@ -52,6 +53,7 @@ enum SatelliteErrorCode {
   protocolViolation,
   unknownDataType,
   authError,
+  serverError,
 
   subscriptionAlreadyExists,
   unexpectedSubscriptionState,
@@ -263,16 +265,18 @@ class Relation with EquatableMixin {
 class RelationColumn with EquatableMixin {
   final String name;
   final String type;
+  final bool isNullable;
   final bool? primaryKey;
 
   RelationColumn({
     required this.name,
     required this.type,
+    required this.isNullable,
     this.primaryKey,
   });
 
   @override
-  List<Object?> get props => [name, type, primaryKey];
+  List<Object?> get props => [name, type, isNullable, primaryKey];
 }
 
 enum AckType {
@@ -304,6 +308,18 @@ class AuthResponse {
   final Object? error;
 
   AuthResponse(this.serverId, this.error);
+}
+
+class StartReplicationResponse {
+  final SatelliteException? error;
+
+  StartReplicationResponse({this.error});
+}
+
+class StopReplicationResponse {
+  final SatelliteException? error;
+
+  StopReplicationResponse({this.error});
 }
 
 class TransactionEvent {

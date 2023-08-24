@@ -112,7 +112,9 @@ class BundleMigrator implements Migrator {
 
       if (migration.version != version) {
         throw Exception(
-          'Migrations cannot be altered once applied: expecting $version at index $i.',
+          'Local migrations $version does not match server version ${migration.version}. '
+          'This is an unrecoverable error. Please clear your local storage and try again. '
+          'Check documentation (https://electric-sql.com/docs/reference/limitations) to learn more.',
         );
       }
     }

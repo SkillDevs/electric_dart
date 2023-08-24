@@ -268,10 +268,10 @@ OplogTableChanges localOperationsToTableChanges(
   });
 }
 
-ShadowTableChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
-  final ShadowTableChanges initialValue = {};
+PendingChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
+  final PendingChanges initialValue = {};
 
-  return operations.fold<ShadowTableChanges>(initialValue, (acc, entry) {
+  return operations.fold<PendingChanges>(initialValue, (acc, entry) {
     final entryChanges = remoteEntryToChanges(entry);
 
     // Sort for deterministic key generation.
@@ -322,7 +322,7 @@ typedef OplogColumnChanges = Map<String, OplogColumnChange>;
 
 // First key qualifiedTablenameStr
 // Second key primaryKey
-typedef ShadowTableChanges = Map<String, Map<String, ShadowEntryChanges>>;
+typedef PendingChanges = Map<String, Map<String, ShadowEntryChanges>>;
 typedef OplogTableChanges = Map<String, Map<String, OplogTableChange>>;
 
 class ShadowEntry with EquatableMixin {

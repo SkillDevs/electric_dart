@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:electricsql/src/proto/satellite.pb.dart';
+import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/types.dart';
 
@@ -342,4 +343,9 @@ List<SatShapeReq> shapeRequestToSatShapeReq(List<ShapeRequest> shapeRequests) {
     shapeReqs.add(req);
   }
   return shapeReqs;
+}
+
+String msgToString(Object msg) {
+  // TODO(update): Implement toString
+  return msg.runtimeType.toString();
 }

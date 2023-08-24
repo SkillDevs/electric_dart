@@ -4,6 +4,67 @@ import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/util/sets.dart';
 import 'package:electricsql/src/util/types.dart' show Row;
 
+/// Merge server-sent operation with local pending oplog to arrive at the same row state the server is at.
+/// @param localOrigin string specifying the local origin
+/// @param local local oplog entries
+/// @param incomingOrigin string specifying the upstream origin
+/// @param incoming incoming oplog entries
+/// @returns Changes to be made to the shadow tables
+PendingChanges mergeEntries(
+  String localOrigin,
+  List<OplogEntry> local,
+  String incomingOrigin,
+  List<OplogEntry> incoming,
+) {
+  final localTableChanges =
+      localOperationsToTableChanges(local, (DateTime timestamp) {
+    return generateTag(localOrigin, timestamp);
+  });
+  final incomingTableChanges = remoteOperationsToTableChanges(incoming);
+
+  for (final incomingTableChangeEntry in incomingTableChanges.entries) {
+    final tablename = incomingTableChangeEntry.key;
+    final incomingMapping = incomingTableChangeEntry.value;
+    final localMapping = localTableChanges[tablename];
+
+    if (localMapping == null) {
+      continue;
+    }
+
+    for (final incomingMappingEntry in incomingMapping.entries) {
+      final primaryKey = incomingMappingEntry.key;
+      final incomingChanges = incomingMappingEntry.value;
+      final localInfo = localMapping[primaryKey];
+      if (localInfo == null) {
+        continue;
+      }
+      final localChanges = localInfo.oplogEntryChanges;
+
+      final changes = mergeChangesLastWriteWins(
+        localOrigin,
+        localChanges.changes,
+        incomingOrigin,
+        incomingChanges.changes,
+        incomingChanges.fullRow,
+      );
+      late final ChangesOpType optype;
+
+      final tags = mergeOpTags(localChanges, incomingChanges);
+      if (tags.isEmpty) {
+        optype = ChangesOpType.delete;
+      } else {
+        optype = ChangesOpType.upsert;
+      }
+
+      incomingChanges.changes = changes;
+      incomingChanges.optype = optype;
+      incomingChanges.tags = tags;
+    }
+  }
+
+  return incomingTableChanges;
+}
+
 /// Merge two sets of changes, using the timestamp to arbitrate conflicts
 /// so that the last write wins.
 ///

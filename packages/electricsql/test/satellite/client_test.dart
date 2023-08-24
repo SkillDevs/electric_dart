@@ -50,7 +50,7 @@ void main() {
   });
 
   tearDown(() async {
-    await client.close();
+    client.close();
     await server.close();
   });
 
