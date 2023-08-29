@@ -762,7 +762,7 @@ This means there is a notifier subscription leak.`''');
     );
 
     // And finally delete any shadow rows where the last oplog operation was a `DELETE`
-    // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on 
+    // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on
     // re-executing a query per every row in shadow table, but uses a PK join instead.
     final q4 = Statement(
       '''
