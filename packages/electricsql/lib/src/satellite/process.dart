@@ -762,17 +762,23 @@ This means there is a notifier subscription leak.`''');
     );
 
     // And finally delete any shadow rows where the last oplog operation was a `DELETE`
+    // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on 
+    // re-executing a query per every row in shadow table, but uses a PK join instead.
     final q4 = Statement(
       '''
-      DELETE FROM $shadow
-      WHERE EXISTS (
-        SELECT 1
-        FROM $oplog AS op
-        WHERE timestamp = ?
-              AND rowid > ?
-        GROUP BY namespace, tablename, primaryKey
-        HAVING rowid = max(rowid) AND optype = 'DELETE'
+      WITH _to_be_deleted (rowid) AS (
+        SELECT shadow.rowid
+          FROM $oplog AS op
+          INNER JOIN $shadow AS shadow
+            ON shadow.namespace = op.namespace AND shadow.tablename = op.tablename AND shadow.primaryKey = op.primaryKey
+          WHERE op.timestamp = ?
+                AND op.rowid > ?
+          GROUP BY op.namespace, op.tablename, op.primaryKey
+          HAVING op.rowid = max(op.rowid) AND op.optype = 'DELETE'
       )
+
+      DELETE FROM $shadow
+      WHERE rowid IN _to_be_deleted
     ''',
       [timestamp.toISOStringUTC(), _lastAckdRowId],
     );

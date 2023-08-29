@@ -1793,6 +1793,42 @@ void main() {
     );
     expect(oplogs[0]['clearTags'], genEncodedTags('remote', [expectedTs]));
   });
+
+  test('DELETE after DELETE sends clearTags', () async {
+    await runMigrations();
+
+    await satellite.setAuthState(authState);
+
+    await adapter
+        .run(Statement("INSERT INTO parent(id, value) VALUES (1,'val1')"));
+    await adapter
+        .run(Statement("INSERT INTO parent(id, value) VALUES (2,'val2')"));
+
+    await adapter.run(Statement('DELETE FROM parent WHERE id=1'));
+
+    await satellite.performSnapshot();
+
+    await adapter.run(Statement('DELETE FROM parent WHERE id=2'));
+
+    await satellite.performSnapshot();
+
+    final entries = await satellite.getEntries();
+
+    expect(entries.length, 4);
+
+    final delete1 = entries[2];
+    final delete2 = entries[3];
+
+    expect(delete1.primaryKey, '{"id":1}');
+    expect(delete1.optype, OpType.delete);
+    // No tags for first delete
+    expect(delete1.clearTags, '[]');
+
+    expect(delete2.primaryKey, '{"id":2}');
+    expect(delete2.optype, OpType.delete);
+    // The second should have clearTags
+    expect(delete2.clearTags, isNot('[]'));
+  });
 }
 
 // TODO: implement reconnect protocol
