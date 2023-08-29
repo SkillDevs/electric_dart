@@ -22,7 +22,7 @@ Future<ElectricClient> startElectricDrift(
     migrations: kElectricMigrations,
     config: ElectricConfig(
       auth: AuthConfig(
-        token: await authToken(
+        token: await mockSecureAuthToken(
             iss: 'local-development',
             key: 'local-development-key-minimum-32-symbols'),
       ),
