@@ -27,6 +27,7 @@ Future<ElectricClient> startElectricDrift(
             key: 'local-development-key-minimum-32-symbols'),
       ),
       debug: true,
+      // url: '<ELECTRIC_SERVICE_URL>',
     ),
   );
 

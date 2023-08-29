@@ -12,27 +12,36 @@ For development updates make sure to check out the official [ElectricSQL Discord
 
 ---
 
-Non official Dart client implementation for [Electric](https://electric-sql.com/) based on commit `6017643d64f52796e56e451a2275efc5ad088e4f` of the [electric git repository](https://github.com/electric-sql/electric)
+Unofficial Dart client implementation for [Electric](https://electric-sql.com/).
 
-- Client based on the typescript client from the `clients/typescript` subfolder.
+Client based on the typescript client from the `clients/typescript` subfolder from [electric git repository](https://github.com/electric-sql/electric) 
 
-- Electric backend running with the `local-stack` Docker Compose using the `electric` Docker image built in that specific commit.
+### Reference implementation: 
+
+* [NPM package](https://www.npmjs.com/package/electric-sql). 
+* Version `v0.5.0`
+* Commit: `6017643d64f52796e56e451a2275efc5ad088e4f` 
+
 
 ### Run the Todos example
 
-Flutter version used: 3.10.x
+Flutter version used: 3.13.x
 
 This demo is compatible with the `todoMVC` official example [Link](https://github.com/electric-sql/examples).
 
 1. Run the Electric backend ([Instructions](https://electric-sql.com/docs/overview/examples))
 
+    * Locally, the `local-stack` Docker Compose can be used [Link](https://github.com/electric-sql/electric/tree/main/local-stack)
+
 2. Apply the migrations in Postgres following the Migrations section [here](https://github.com/SkillDevs/electric_dart/blob/master/todos_flutter/README.md)
 
 3. From inside the todos_flutter directory: `flutter run` with the platform of your choice.
 
+4. You can optionally tweak the `electrify` function in `lib/electric.dart` to change the Electric configuration, such as changing the URL or disable logs.
+
 Note:
 
-> Right now the `todoMVC` web examples are running against Electric client version 0.4.3. Which is incompatible with the server in the commit this is based on. You'll need to compile the typescript client and use that build in the web examples.
+> Right now the `todoMVC` web examples are running against Electric client version 0.4.3. Which is incompatible with the server in the commit this is based on. For now, if you want to test multiple clients simultaneously, you can run the Flutter app on multiple platforms or on web and test it with different browsers.
 
 ![Electric Flutter](https://github.com/SkillDevs/electric_dart/assets/22084723/bcff59b3-747f-4e88-bb5c-79bb4c21bf2f)
 
