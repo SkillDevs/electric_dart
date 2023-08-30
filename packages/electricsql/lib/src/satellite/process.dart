@@ -1094,6 +1094,9 @@ This means there is a notifier subscription leak.`''');
       newTables = <String>{...newTables, ...createdTables};
     }
 
+    // Start with garbage collection, because if this a transaction after round-trip, then we don't want it in conflict resolution
+    await maybeGarbageCollect(origin, commitTimestamp);
+
     // Now process all changes per chunk.
     // We basically take a prefix of changes of the same type
     // which we call a `dmlChunk` or `ddlChunk` if the changes
@@ -1172,17 +1175,13 @@ This means there is a notifier subscription leak.`''');
       await adapter.runInTransaction(allStatements);
     }
 
-    await notifyChangesAndGCopLog(opLogEntries, origin, commitTimestamp);
+    await _notifyChanges(opLogEntries);
   }
 
-  @visibleForTesting
-  Future<void> notifyChangesAndGCopLog(
-    List<OplogEntry> opLogEntries,
+  Future<void> maybeGarbageCollect(
     String origin,
     DateTime commitTimestamp,
   ) async {
-    await _notifyChanges(opLogEntries);
-
     if (origin == authState!.clientId) {
       /* Any outstanding transaction that originated on Satellite but haven't
        * been received back from the Electric is considered to be concurrent with

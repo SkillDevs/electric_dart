@@ -396,6 +396,101 @@ void main() {
     );
   });
 
+  test('merge incoming wins on persisted ops', () async {
+    await runMigrations();
+    await satellite.setAuthState(authState);
+    satellite.relations = kTestRelations;
+
+    // This operation is persisted
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value, other) VALUES (1, 'local', 1)",
+      ),
+    );
+    await satellite.performSnapshot();
+    final [originalInsert] = await satellite.getEntries();
+    final [tx] = toTransactions([originalInsert], satellite.relations);
+    tx.origin = authState.clientId;
+    await satellite.applyTransaction(tx);
+
+    // Verify that GC worked as intended and the oplog entry was deleted
+    expect(await satellite.getEntries(), isEmpty);
+
+    // This operation is done offline
+    await adapter.run(
+      Statement("UPDATE parent SET value = 'new local' WHERE id = 1"),
+    );
+    await satellite.performSnapshot();
+    final [offlineInsert] = await satellite.getEntries();
+    final offlineTimestamp = DateTime.parse(offlineInsert.timestamp);
+
+    // This operation is done concurrently with offline but at a later point in time. It's sent immediately on connection
+    final incomingTs = offlineTimestamp.add(const Duration(milliseconds: 1));
+    final firstIncomingEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.update,
+      incomingTs.millisecondsSinceEpoch,
+      genEncodedTags('remote', [incomingTs]),
+      newValues: {'id': 1, 'value': 'incoming'},
+      oldValues: {'id': 1, 'value': 'local'},
+    );
+
+    final firstIncomingTx = Transaction(
+      origin: 'remote',
+      commitTimestamp: Int64(incomingTs.millisecondsSinceEpoch),
+      changes: [opLogEntryToChange(firstIncomingEntry, satellite.relations)],
+      lsn: [],
+    );
+    await satellite.applyTransaction(firstIncomingTx);
+
+    var [row] = await adapter.query(
+      Statement('SELECT value FROM parent WHERE id = 1'),
+    );
+    final value1 = row['value']!;
+    expect(
+      value1,
+      'incoming',
+      reason:
+          'LWW conflict merge of the incoming transaction should lead to incoming operation winning',
+    );
+
+    // And after the offline transaction was sent, the resolved no-op transaction comes in
+    final secondIncomingEntry = generateRemoteOplogEntry(
+      tableInfo,
+      'main',
+      'parent',
+      OpType.update,
+      offlineTimestamp.millisecondsSinceEpoch,
+      encodeTags([
+        generateTag('remote', incomingTs),
+        generateTag(authState.clientId, offlineTimestamp),
+      ]),
+      newValues: {'id': 1, 'value': 'incoming'},
+      oldValues: {'id': 1, 'value': 'incoming'},
+    );
+
+    final secondIncomingTx = Transaction(
+      origin: authState.clientId,
+      commitTimestamp: Int64(offlineTimestamp.millisecondsSinceEpoch),
+      changes: [opLogEntryToChange(secondIncomingEntry, satellite.relations)],
+      lsn: [],
+    );
+    await satellite.applyTransaction(secondIncomingTx);
+
+    [row] = await adapter.query(
+      Statement('SELECT value FROM parent WHERE id = 1'),
+    );
+    final value2 = row['value']!;
+    expect(
+      value2,
+      'incoming',
+      reason:
+          'Applying the resolved write from the round trip should be a no-op',
+    );
+  });
+
   test('apply does not add anything to oplog', () async {
     await runMigrations();
     await adapter.run(
