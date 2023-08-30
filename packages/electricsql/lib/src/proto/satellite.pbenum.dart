@@ -99,17 +99,10 @@ class SatInStartReplicationReq_Option extends $pb.ProtobufEnum {
           const $core.bool.fromEnvironment('protobuf.omit_enum_names')
               ? ''
               : 'NONE');
-  static const SatInStartReplicationReq_Option SYNC_MODE =
-      SatInStartReplicationReq_Option._(
-          2,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'SYNC_MODE');
 
   static const $core.List<SatInStartReplicationReq_Option> values =
       <SatInStartReplicationReq_Option>[
     NONE,
-    SYNC_MODE,
   ];
 
   static final $core.Map<$core.int, SatInStartReplicationReq_Option> _byValue =

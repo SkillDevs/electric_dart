@@ -1,6 +1,7 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
+import 'package:electricsql/src/sockets/mock.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
@@ -107,6 +108,7 @@ void main() {
           token: 'test-token',
         ),
       ),
+      opts: ElectrifyOptions(socketFactory: MockSocketFactory()),
     );
 
     // Check that the DB is initialized with the stars table

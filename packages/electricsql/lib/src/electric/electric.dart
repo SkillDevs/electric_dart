@@ -9,16 +9,25 @@ import 'package:logging/logging.dart';
 // These are the options that should be provided to the adapter's electrify
 // entrypoint. They are all optional to optionally allow different / mock
 // implementations to be passed in to facilitate testing.
-class ElectrifyOptions {
-  final DatabaseAdapter adapter;
-  final Migrator? migrator;
-  final Notifier? notifier;
-  final SocketFactory socketFactory;
-  final Registry? registry;
+class ElectrifyOptions extends ElectrifyBaseOptions {
+  final DatabaseAdapter? adapter;
+  final SocketFactory? socketFactory;
 
   ElectrifyOptions({
-    required this.adapter,
-    required this.socketFactory,
+    this.adapter,
+    this.socketFactory,
+    super.migrator,
+    super.notifier,
+    super.registry,
+  });
+}
+
+class ElectrifyBaseOptions {
+  final Migrator? migrator;
+  final Notifier? notifier;
+  final Registry? registry;
+
+  ElectrifyBaseOptions({
     this.migrator,
     this.notifier,
     this.registry,
@@ -33,12 +42,11 @@ Future<ElectricClient> electrify({
   required DbName dbName,
   required List<Migration> migrations,
   required ElectricConfig config,
-  required ElectrifyOptions opts,
+  required DatabaseAdapter adapter,
+  required SocketFactory socketFactory,
+  required ElectrifyBaseOptions opts,
 }) async {
   setLogLevel((config.debug ?? false) ? Level.ALL : Level.WARNING);
-
-  final adapter = opts.adapter;
-  final socketFactory = opts.socketFactory;
 
   final configWithDefaults = hydrateConfig(config);
   final migrator =

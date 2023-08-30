@@ -491,12 +491,6 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
         valueOf: SatInStartReplicationReq_Option.valueOf,
         enumValues: SatInStartReplicationReq_Option.values,
         defaultEnumValue: SatInStartReplicationReq_Option.NONE)
-    ..a<$core.int>(
-        3,
-        const $core.bool.fromEnvironment('protobuf.omit_field_names')
-            ? ''
-            : 'syncBatchSize',
-        $pb.PbFieldType.O3)
     ..pPS(
         4,
         const $core.bool.fromEnvironment('protobuf.omit_field_names')
@@ -513,7 +507,6 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
   factory SatInStartReplicationReq({
     $core.List<$core.int>? lsn,
     $core.Iterable<SatInStartReplicationReq_Option>? options,
-    $core.int? syncBatchSize,
     $core.Iterable<$core.String>? subscriptionIds,
     $core.String? schemaVersion,
   }) {
@@ -523,9 +516,6 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     }
     if (options != null) {
       _result.options.addAll(options);
-    }
-    if (syncBatchSize != null) {
-      _result.syncBatchSize = syncBatchSize;
     }
     if (subscriptionIds != null) {
       _result.subscriptionIds.addAll(subscriptionIds);
@@ -579,30 +569,18 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   $core.List<SatInStartReplicationReq_Option> get options => $_getList(1);
 
-  @$pb.TagNumber(3)
-  $core.int get syncBatchSize => $_getIZ(2);
-  @$pb.TagNumber(3)
-  set syncBatchSize($core.int v) {
-    $_setSignedInt32(2, v);
-  }
-
-  @$pb.TagNumber(3)
-  $core.bool hasSyncBatchSize() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearSyncBatchSize() => clearField(3);
-
   @$pb.TagNumber(4)
-  $core.List<$core.String> get subscriptionIds => $_getList(3);
+  $core.List<$core.String> get subscriptionIds => $_getList(2);
 
   @$pb.TagNumber(5)
-  $core.String get schemaVersion => $_getSZ(4);
+  $core.String get schemaVersion => $_getSZ(3);
   @$pb.TagNumber(5)
   set schemaVersion($core.String v) {
-    $_setString(4, v);
+    $_setString(3, v);
   }
 
   @$pb.TagNumber(5)
-  $core.bool hasSchemaVersion() => $_has(4);
+  $core.bool hasSchemaVersion() => $_has(3);
   @$pb.TagNumber(5)
   void clearSchemaVersion() => clearField(5);
 }
