@@ -20,7 +20,7 @@ Client based on the typescript client from the `clients/typescript` subfolder fr
 
 * [NPM package](https://www.npmjs.com/package/electric-sql). 
 * Version `v0.5.1-dev`
-* Commit: `3ba6c5dd43fd3fff42b84371fe296118e6c2cce0` 
+* Commit: `7f3d6916a0889a79dea9c4965af81c87a140057b` 
 
 
 ### Run the Todos example

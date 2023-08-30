@@ -225,7 +225,6 @@ class SubscriptionsDataCache extends EventEmitter {
   }
 
   Never subscriptionDataError(SubscriptionId subId, SatSubsDataError msg) {
-    reset(subId);
     var error = subsDataErrorToSatelliteError(msg);
 
     if (inDelivery == null) {
@@ -234,6 +233,8 @@ class SubscriptionsDataCache extends EventEmitter {
         'received subscription data error, but no subscription is being delivered: ${error.message}',
       );
     }
+
+    reset(subId);
 
     emit(
       kSubscriptionError,

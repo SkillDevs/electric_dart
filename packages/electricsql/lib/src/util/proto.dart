@@ -199,6 +199,19 @@ String getProtocolVersion() {
   return kProtobufPackage;
 }
 
+const Map<SatErrorResp_ErrorCode, SatelliteErrorCode> serverErrorToSatError = {
+  SatErrorResp_ErrorCode.AUTH_FAILED: SatelliteErrorCode.authFailed,
+  SatErrorResp_ErrorCode.AUTH_REQUIRED: SatelliteErrorCode.authRequired,
+  SatErrorResp_ErrorCode.INVALID_REQUEST: SatelliteErrorCode.invalidRequest,
+  SatErrorResp_ErrorCode.PROTO_VSN_MISMATCH:
+      SatelliteErrorCode.protoVersionMismatch,
+  SatErrorResp_ErrorCode.REPLICATION_FAILED:
+      SatelliteErrorCode.replicationFailed,
+  SatErrorResp_ErrorCode.SCHEMA_VSN_MISMATCH:
+      SatelliteErrorCode.unknownSchemaVersion,
+  SatErrorResp_ErrorCode.INTERNAL: SatelliteErrorCode.internal,
+};
+
 const Map<SatInStartReplicationResp_ReplicationError_Code, SatelliteErrorCode>
     startReplicationErrorToSatError = {
   SatInStartReplicationResp_ReplicationError_Code.CODE_UNSPECIFIED:
@@ -252,6 +265,13 @@ const Map<SatSubsDataError_ShapeReqError_Code, SatelliteErrorCode>
   SatSubsDataError_ShapeReqError_Code.SHAPE_SIZE_LIMIT_EXCEEDED:
       SatelliteErrorCode.shapeSizeLimitExceeded,
 };
+
+SatelliteException serverErrorToSatelliteError(SatErrorResp error) {
+  return SatelliteException(
+    serverErrorToSatError[error.errorType] ?? SatelliteErrorCode.unrecognized,
+    'server error',
+  );
+}
 
 SatelliteException startReplicationErrorToSatelliteError(
   SatInStartReplicationResp_ReplicationError error,
@@ -360,7 +380,7 @@ String msgToString(Object message) {
   } else if (message is SatErrorResp) {
     return '#SatErrorResp{type: ${message.errorType.name}}';
   } else if (message is SatInStartReplicationResp) {
-    return '#SatInStartReplicationResp{}';
+    return '#SatInStartReplicationResp{${message.hasErr() ? '`${startReplicationErrorToSatelliteError(message.err)}`' : ''}}';
   } else if (message is SatInStartReplicationReq) {
     final schemaVersion =
         message.hasSchemaVersion() ? ' schema: ${message.schemaVersion},' : '';
@@ -379,7 +399,7 @@ String msgToString(Object message) {
   } else if (message is SatMigrationNotification) {
     return '#SatMigrationNotification{to: ${message.newSchemaVersion}, from: ${message.newSchemaVersion}}';
   } else if (message is SatSubsReq) {
-    return '#SatSubsReq{id: ${message.subscriptionId}, shapes: ${message.shapeRequests}}';
+    return '#SatSubsReq{id: ${message.subscriptionId}, shapes: ${message.shapeRequests.map((r) => r.writeToJson()).toList()}}';
   } else if (message is SatSubsResp) {
     if (message.hasErr()) {
       final shapeErrors = message.err.shapeRequestError.map(

@@ -21,7 +21,7 @@ import 'package:events_emitter/events_emitter.dart';
 typedef DataRecord = Record;
 
 const kMockBehindWindowLsn = 42;
-const kMockInvalidPositionLsn = 27;
+const kMockInternalError = 27;
 
 class MockSatelliteProcess implements Satellite {
   @override
@@ -220,6 +220,16 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
+  EventListener<SatelliteException> subscribeToError(ErrorCallback callback) {
+    return on('error', callback);
+  }
+
+  @override
+  void unsubscribeToError(EventListener<SatelliteException> eventListener) {
+    removeEventListener(eventListener);
+  }
+
+  @override
   bool isClosed() {
     return closed;
   }
@@ -245,13 +255,13 @@ class MockSatelliteClient extends EventEmitter implements Client {
   @override
   void close() {
     closed = true;
-    _removeAllListeners();
     for (final t in timeouts) {
       t.cancel();
     }
     return;
   }
 
+  // ignore: unused_element
   void _removeAllListeners() {
     // Prevent concurrent modification
     for (final listener in [...listeners]) {
@@ -296,12 +306,12 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
     }
 
-    if (lsn != null && bytesToNumber(lsn) == kMockInvalidPositionLsn) {
+    if (lsn != null && bytesToNumber(lsn) == kMockInternalError) {
       return Future.value(
         StartReplicationResponse(
           error: SatelliteException(
-            SatelliteErrorCode.invalidPosition,
-            'MOCK INVALID_POSITION ERROR',
+            SatelliteErrorCode.internal,
+            'MOCK INTERNAL_ERROR',
           ),
         ),
       );

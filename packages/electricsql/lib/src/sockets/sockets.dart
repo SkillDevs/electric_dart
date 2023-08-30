@@ -17,11 +17,13 @@ abstract class Socket {
   Socket closeAndRemoveListeners();
 
   void onMessage(void Function(Data data) cb);
-  void onError(void Function(Object error) cb);
+  void onError(void Function(SatelliteException error) cb);
   void onClose(void Function() cb);
 
   void onceConnect(void Function() cb);
-  void onceError(void Function(Object error) cb);
+  void onceError(void Function(SatelliteException error) cb);
+
+  void removeErrorListener(void Function(SatelliteException error) cb);
 }
 
 class ConnectionOptions {
@@ -41,9 +43,9 @@ abstract class WebSocketBase<SocketType> implements Socket {
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
   List<void Function()> _onceConnectCallbacks = [];
-  List<void Function(Object error)> _onceErrorCallbacks = [];
+  List<void Function(SatelliteException error)> _onceErrorCallbacks = [];
 
-  List<void Function(Object error)> _errorCallbacks = [];
+  List<void Function(SatelliteException error)> _errorCallbacks = [];
   List<void Function()> _closeCallbacks = [];
   List<void Function(Data data)> _messageCallbacks = [];
 
@@ -88,15 +90,8 @@ abstract class WebSocketBase<SocketType> implements Socket {
   }
 
   @override
-  void onError(void Function(Object error) cb) {
-    _errorCallbacks.add(
-      (_) => cb(
-        SatelliteException(
-          SatelliteErrorCode.connectionFailed,
-          'failed to establish connection',
-        ),
-      ),
-    );
+  void onError(void Function(SatelliteException error) cb) {
+    _errorCallbacks.add(cb);
   }
 
   @override
@@ -110,8 +105,13 @@ abstract class WebSocketBase<SocketType> implements Socket {
   }
 
   @override
-  void onceError(void Function(Object error) cb) {
+  void onceError(void Function(SatelliteException error) cb) {
     _onceErrorCallbacks.add(cb);
+  }
+
+  @override
+  void removeErrorListener(void Function(SatelliteException error) cb) {
+    _errorCallbacks.remove(cb);
   }
 
   @override
@@ -121,11 +121,23 @@ abstract class WebSocketBase<SocketType> implements Socket {
   }
 
   Future<void> _asyncStart(ConnectionOptions opts) async {
+    if (this._channel != null) {
+      throw SatelliteException(
+        SatelliteErrorCode.internal,
+        'trying to open a socket before closing existing socket',
+      );
+    }
+
     late final SocketType ws;
     try {
       ws = await createNativeSocketConnection(opts.url);
     } catch (e) {
-      _notifyErrorAndCloseSocket(Exception('failed to establish connection'));
+      _notifyErrorAndCloseSocket(
+        SatelliteException(
+          SatelliteErrorCode.socketError,
+          'failed to stablish a socket connection',
+        ),
+      );
       return;
     }
 
@@ -146,12 +158,19 @@ abstract class WebSocketBase<SocketType> implements Socket {
             cb(bytes);
           }
         } catch (e) {
-          _notifyErrorAndCloseSocket(e);
+          _notifyErrorAndCloseSocket(
+            SatelliteException(
+              SatelliteErrorCode.internal,
+              'error parsing processing socket data',
+            ),
+          );
         }
       },
       cancelOnError: true,
       onError: (Object e) {
-        _notifyErrorAndCloseSocket(e);
+        _notifyErrorAndCloseSocket(
+          SatelliteException(SatelliteErrorCode.socketError, 'socket error'),
+        );
       },
       onDone: () {
         _socketClose();
@@ -160,7 +179,7 @@ abstract class WebSocketBase<SocketType> implements Socket {
     _subscriptions.add(msgSubscription);
   }
 
-  void _notifyErrorAndCloseSocket(Object e) {
+  void _notifyErrorAndCloseSocket(SatelliteException e) {
     for (final cb in _errorCallbacks) {
       cb(e);
     }
