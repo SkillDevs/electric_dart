@@ -156,13 +156,6 @@ const SatInStartReplicationReq$json = const {
       '10': 'options'
     },
     const {
-      '1': 'sync_batch_size',
-      '3': 3,
-      '4': 1,
-      '5': 5,
-      '10': 'syncBatchSize'
-    },
-    const {
       '1': 'subscription_ids',
       '3': 4,
       '4': 3,
@@ -183,6 +176,9 @@ const SatInStartReplicationReq$json = const {
   '8': const [
     const {'1': '_schema_version'},
   ],
+  '9': const [
+    const {'1': 3, '2': 4},
+  ],
 };
 
 @$core.Deprecated('Use satInStartReplicationReqDescriptor instead')
@@ -190,10 +186,10 @@ const SatInStartReplicationReq_Option$json = const {
   '1': 'Option',
   '2': const [
     const {'1': 'NONE', '2': 0},
-    const {'1': 'SYNC_MODE', '2': 2},
   ],
   '4': const [
     const {'1': 1, '2': 1},
+    const {'1': 2, '2': 2},
     const {'1': 3, '2': 3},
     const {'1': 4, '2': 4},
   ],
@@ -202,7 +198,7 @@ const SatInStartReplicationReq_Option$json = const {
 /// Descriptor for `SatInStartReplicationReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satInStartReplicationReqDescriptor =
     $convert.base64Decode(
-        'ChhTYXRJblN0YXJ0UmVwbGljYXRpb25SZXESEAoDbHNuGAEgASgMUgNsc24SUgoHb3B0aW9ucxgCIAMoDjI4LkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEluU3RhcnRSZXBsaWNhdGlvblJlcS5PcHRpb25SB29wdGlvbnMSJgoPc3luY19iYXRjaF9zaXplGAMgASgFUg1zeW5jQmF0Y2hTaXplEikKEHN1YnNjcmlwdGlvbl9pZHMYBCADKAlSD3N1YnNjcmlwdGlvbklkcxIqCg5zY2hlbWFfdmVyc2lvbhgFIAEoCUgAUg1zY2hlbWFWZXJzaW9uiAEBIjMKBk9wdGlvbhIICgROT05FEAASDQoJU1lOQ19NT0RFEAIiBAgBEAEiBAgDEAMiBAgEEARCEQoPX3NjaGVtYV92ZXJzaW9u');
+        'ChhTYXRJblN0YXJ0UmVwbGljYXRpb25SZXESEAoDbHNuGAEgASgMUgNsc24SUgoHb3B0aW9ucxgCIAMoDjI4LkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEluU3RhcnRSZXBsaWNhdGlvblJlcS5PcHRpb25SB29wdGlvbnMSKQoQc3Vic2NyaXB0aW9uX2lkcxgEIAMoCVIPc3Vic2NyaXB0aW9uSWRzEioKDnNjaGVtYV92ZXJzaW9uGAUgASgJSABSDXNjaGVtYVZlcnNpb26IAQEiKgoGT3B0aW9uEggKBE5PTkUQACIECAEQASIECAIQAiIECAMQAyIECAQQBEIRCg9fc2NoZW1hX3ZlcnNpb25KBAgDEAQ=');
 @$core.Deprecated('Use satInStartReplicationRespDescriptor instead')
 const SatInStartReplicationResp$json = const {
   '1': 'SatInStartReplicationResp',
