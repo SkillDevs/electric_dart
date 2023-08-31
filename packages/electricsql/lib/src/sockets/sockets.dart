@@ -43,76 +43,40 @@ abstract class WebSocketBase<SocketType> implements Socket {
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
   List<void Function()> _onceConnectCallbacks = [];
+  List<void Function(SatelliteException error)> _errorCallbacks = [];
   List<void Function(SatelliteException error)> _onceErrorCallbacks = [];
 
-  List<void Function(SatelliteException error)> _errorCallbacks = [];
-  List<void Function()> _closeCallbacks = [];
-  List<void Function(Data data)> _messageCallbacks = [];
+  void Function()? _closeListener;
+  void Function(Data data)? _messageListener;
+
+  // event doesn't provide much
+  void _notifyErrorAndCloseSocket([SatelliteException? error]) {
+    final effectiveError = error ??
+        SatelliteException(SatelliteErrorCode.socketError, 'socket error');
+    for (final callback in _errorCallbacks) {
+      callback(effectiveError);
+    }
+
+    while (_onceErrorCallbacks.isNotEmpty) {
+      final callback = _onceErrorCallbacks.removeLast();
+
+      callback(effectiveError);
+    }
+
+    _socketClose();
+  }
+
+  void _connectListener() {
+    while (_onceConnectCallbacks.isNotEmpty) {
+      _onceConnectCallbacks.removeLast()();
+    }
+  }
 
   @protected
   Future<SocketType> createNativeSocketConnection(String url);
 
   @protected
   WebSocketChannel createSocketChannel(SocketType socketType);
-
-  @override
-  Socket closeAndRemoveListeners() {
-    _socketClose();
-    _onceConnectCallbacks = [];
-    _onceErrorCallbacks = [];
-
-    return this;
-  }
-
-  void _socketClose() {
-    for (final subscription in _subscriptions) {
-      subscription.cancel();
-    }
-    _subscriptions = [];
-
-    _channel?.sink.close();
-
-    final closeCallbacks = [..._closeCallbacks];
-    _closeCallbacks = [];
-    for (final cb in closeCallbacks) {
-      cb();
-    }
-
-    _errorCallbacks = [];
-    _messageCallbacks = [];
-
-    _channel = null;
-  }
-
-  @override
-  void onClose(void Function() cb) {
-    _closeCallbacks.add(cb);
-  }
-
-  @override
-  void onError(void Function(SatelliteException error) cb) {
-    _errorCallbacks.add(cb);
-  }
-
-  @override
-  void onMessage(void Function(Data data) cb) {
-    _messageCallbacks.add(cb);
-  }
-
-  @override
-  void onceConnect(void Function() cb) {
-    _onceConnectCallbacks.add(cb);
-  }
-
-  @override
-  void onceError(void Function(SatelliteException error) cb) {
-    _onceErrorCallbacks.add(cb);
-  }
-
-  @override
-  void removeErrorListener(void Function(SatelliteException error) cb) {
-    _errorCallbacks.remove(cb);
-  }
 
   @override
   Socket open(ConnectionOptions opts) {
@@ -142,9 +106,7 @@ abstract class WebSocketBase<SocketType> implements Socket {
     }
 
     // Notify connected
-    while (_onceConnectCallbacks.isNotEmpty) {
-      _onceConnectCallbacks.removeLast()();
-    }
+    _connectListener();
 
     _channel = createSocketChannel(ws);
     final msgSubscription = _channel!.stream //
@@ -154,9 +116,7 @@ abstract class WebSocketBase<SocketType> implements Socket {
           final bytes = rawData as Uint8List;
 
           // Notify message
-          for (final cb in _messageCallbacks) {
-            cb(bytes);
-          }
+          _messageListener?.call(bytes);
         } catch (e) {
           _notifyErrorAndCloseSocket(
             SatelliteException(
@@ -168,9 +128,7 @@ abstract class WebSocketBase<SocketType> implements Socket {
       },
       cancelOnError: true,
       onError: (Object e) {
-        _notifyErrorAndCloseSocket(
-          SatelliteException(SatelliteErrorCode.socketError, 'socket error'),
-        );
+        _notifyErrorAndCloseSocket();
       },
       onDone: () {
         _socketClose();
@@ -179,21 +137,81 @@ abstract class WebSocketBase<SocketType> implements Socket {
     _subscriptions.add(msgSubscription);
   }
 
-  void _notifyErrorAndCloseSocket(SatelliteException e) {
-    for (final cb in _errorCallbacks) {
-      cb(e);
-    }
-
-    while (_onceErrorCallbacks.isNotEmpty) {
-      _onceErrorCallbacks.removeLast()(e);
-    }
-
-    _socketClose();
-  }
-
   @override
   Socket write(Data data) {
     _channel?.sink.add(data);
     return this;
+  }
+
+  @override
+  Socket closeAndRemoveListeners() {
+    _messageListener = null;
+    _closeListener = null;
+
+    _socketClose();
+
+    return this;
+  }
+
+  @override
+  void onMessage(void Function(Data data) cb) {
+    if (_messageListener != null) {
+      throw SatelliteException(
+        SatelliteErrorCode.internal,
+        'socket does not support multiple message listeners',
+      );
+    }
+    _messageListener = cb;
+  }
+
+  @override
+  void onError(void Function(SatelliteException error) cb) {
+    _errorCallbacks.add(cb);
+  }
+
+  @override
+  void onClose(void Function() cb) {
+    if (_closeListener != null) {
+      throw SatelliteException(
+        SatelliteErrorCode.internal,
+        'socket does not support multiple close listeners',
+      );
+    }
+    _closeListener = cb;
+  }
+
+  @override
+  void onceConnect(void Function() cb) {
+    _onceConnectCallbacks.add(cb);
+  }
+
+  @override
+  void onceError(void Function(SatelliteException error) cb) {
+    _onceErrorCallbacks.add(cb);
+  }
+
+  @override
+  void removeErrorListener(void Function(SatelliteException error) cb) {
+    _errorCallbacks.remove(cb);
+    _onceErrorCallbacks.remove(cb);
+  }
+
+  void _socketClose() {
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions = [];
+
+    _channel?.sink.close();
+
+    _closeListener?.call();
+    _closeListener = null;
+
+    _onceConnectCallbacks = [];
+    _errorCallbacks = [];
+    _onceErrorCallbacks = [];
+    _messageListener = null;
+
+    _channel = null;
   }
 }

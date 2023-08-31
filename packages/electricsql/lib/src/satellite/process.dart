@@ -694,7 +694,6 @@ This means there is a notifier subscription leak.`''');
       );
 
       initializing?.completeError(e);
-      initializing = null;
       notifier.connectivityStateChanged(
         dbName,
         ConnectivityState.disconnected,

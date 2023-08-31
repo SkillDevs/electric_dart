@@ -200,10 +200,6 @@ class SatelliteClient extends EventEmitter implements Client {
     }
 
     final completer = Completer<void>();
-    // This is so that errors can be sent to the completer even when no one is
-    // waiting for the future
-    // TODO(update): Review this
-    //initializing!.future.ignore();
 
     final socket = socketFactory.create();
     this.socket = socket;
