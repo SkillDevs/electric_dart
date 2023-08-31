@@ -38,7 +38,7 @@ abstract class SocketFactory {
 
 /// Socket implementation that uses web_socket_channel
 /// io and html both derive from the main logic here
-abstract class WebSocketBase<SocketType> implements Socket {
+abstract class WebSocketBase implements Socket {
   WebSocketChannel? _channel;
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
@@ -73,10 +73,7 @@ abstract class WebSocketBase<SocketType> implements Socket {
   }
 
   @protected
-  Future<SocketType> createNativeSocketConnection(String url);
-
-  @protected
-  WebSocketChannel createSocketChannel(SocketType socketType);
+  WebSocketChannel createSocketChannel(String url);
 
   @override
   Socket open(ConnectionOptions opts) {
@@ -85,16 +82,16 @@ abstract class WebSocketBase<SocketType> implements Socket {
   }
 
   Future<void> _asyncStart(ConnectionOptions opts) async {
-    if (this._channel != null) {
+    if (_channel != null) {
       throw SatelliteException(
         SatelliteErrorCode.internal,
         'trying to open a socket before closing existing socket',
       );
     }
 
-    late final SocketType ws;
     try {
-      ws = await createNativeSocketConnection(opts.url);
+      _channel = createSocketChannel(opts.url);
+      await _channel!.ready;
     } catch (e) {
       _notifyErrorAndCloseSocket(
         SatelliteException(
@@ -108,7 +105,6 @@ abstract class WebSocketBase<SocketType> implements Socket {
     // Notify connected
     _connectListener();
 
-    _channel = createSocketChannel(ws);
     final msgSubscription = _channel!.stream //
         .listen(
       (rawData) {
