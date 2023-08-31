@@ -267,8 +267,6 @@ class SatelliteClient extends EventEmitter implements Client {
     );
 
     socketHandler = null;
-    // TODO(update): SHould this be removed??
-    // removeAllListeners();
 
     if (socket != null) {
       socket!.closeAndRemoveListeners();
