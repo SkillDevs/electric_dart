@@ -1,3 +1,4 @@
+import 'package:ansicolor/ansicolor.dart';
 import 'package:logging/logging.dart';
 
 final Logger logger = _createLogger();
@@ -26,8 +27,19 @@ Logger _createLogger() {
       extra += '\n\tStackTrace: ${event.stackTrace}';
     }
 
+    final pen = AnsiPen();
+
+    final level = event.level;
+    if (level >= Level.SEVERE) {
+      pen.red();
+    } else if (level >= Level.WARNING) {
+      pen.yellow();
+    } else if (level <= Level.FINE) {
+      pen.gray(level: 0.6);
+    }
+
     // ignore: avoid_print
-    print('${event.level.name}: ${event.time}: ${event.message} $extra');
+    print(pen('${event.level.name}: ${event.time}: ${event.message} $extra'));
   });
 
   return logger;
