@@ -1403,7 +1403,7 @@ void main() {
     final conn = await satellite.start(authConfig);
     await Future.wait<dynamic>(
       [
-        satellite.initializing!.future,
+        satellite.initializing!.waitOn(),
         conn.connectionFuture,
       ].map(
         (f) => f.onError<SatelliteException>((e, st) {
@@ -1963,7 +1963,7 @@ void main() {
     satellite.connectRetryHandler = retry;
 
     await Future.wait<dynamic>(
-      [satellite.connectWithBackoff(), satellite.initializing!.future].map(
+      [satellite.connectWithBackoff(), satellite.initializing!.waitOn()].map(
         (f) => f.catchError((e) => numExpects++),
       ),
     );
