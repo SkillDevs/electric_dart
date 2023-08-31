@@ -66,11 +66,13 @@ void main() {
   });
 
   test('start creates system tables', () async {
-    await satellite.start(context.authConfig);
+    final conn = await satellite.start(context.authConfig);
 
     const sql = "select name from sqlite_master where type = 'table'";
     final rows = await adapter.query(Statement(sql));
     final names = rows.map((row) => row['name']! as String).toList();
+
+    await conn.connectionFuture;
 
     expect(names, contains('_electric_oplog'));
   });
@@ -1286,6 +1288,7 @@ void main() {
 
     final lsn1 = numberToBytes(1);
     client.emit('ack_lsn', AckLsnEvent(lsn1, AckType.localSend));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
 
     final lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '1');
@@ -1306,7 +1309,10 @@ void main() {
 
     final sentLsn = await satellite.getMeta<String>('lastSentRowId');
     expect(sentLsn, '1');
-    await client.once<AckLsnEvent>('ack_lsn');
+
+    final ackCompleter = Completer<void>();
+    await client.once<AckLsnEvent>('ack_lsn', (_) => ackCompleter.complete());
+    await ackCompleter.future;
 
     final acknowledgedLsn = await satellite.getMeta<String>('lastAckdRowId');
     expect(acknowledgedLsn, '1');
