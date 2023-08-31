@@ -579,8 +579,7 @@ This means there is a notifier subscription leak.`''');
     final subscriptionId = errorData.subscriptionId;
     final satelliteError = errorData.error;
 
-    logger
-        .severe('encountered a subscription error: ${satelliteError.message}');
+    logger.error('encountered a subscription error: ${satelliteError.message}');
 
     await _resetClientState();
 
@@ -633,7 +632,7 @@ This means there is a notifier subscription leak.`''');
     ConnectivityState status,
   ) async {
     connectivityState = status;
-    logger.fine('connectivity state changed $status');
+    logger.debug('connectivity state changed $status');
 
     // TODO: no op if state is the same
     switch (status) {
@@ -721,7 +720,7 @@ This means there is a notifier subscription leak.`''');
         throw authResp.error!;
       }
     } catch (error) {
-      logger.fine(
+      logger.debug(
         'server returned an error while establishing connection: $error',
       );
       rethrow;
