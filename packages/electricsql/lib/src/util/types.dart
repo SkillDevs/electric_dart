@@ -90,46 +90,30 @@ enum SatelliteErrorCode {
   shapeSizeLimitExceeded,
 }
 
-class BaseReplication<TransactionType> {
+class Replication<TransactionType> {
   bool authenticated;
   ReplicationStatus isReplicating;
   Map<int, Relation> relations;
-  LSN? ackLsn;
-  LSN? enqueuedLsn;
+  LSN? lastLsn;
   List<TransactionType> transactions;
 
-  BaseReplication({
+  Replication({
     required this.authenticated,
     required this.isReplicating,
     required this.relations,
     required this.transactions,
-    this.ackLsn,
-    this.enqueuedLsn,
+    this.lastLsn,
   });
 
-  BaseReplication<TransactionType> clone() {
-    return BaseReplication<TransactionType>(
+  Replication<TransactionType> clone() {
+    return Replication<TransactionType>(
       authenticated: authenticated,
       isReplicating: isReplicating,
       relations: relations,
       transactions: transactions,
-      ackLsn: ackLsn,
-      enqueuedLsn: enqueuedLsn,
+      lastLsn: lastLsn,
     );
   }
-}
-
-typedef Replication = BaseReplication<Transaction>;
-typedef OutgoingReplication = BaseReplication<DataTransaction>;
-
-class LogPositions {
-  final LSN ack;
-  final LSN enqueued;
-
-  LogPositions({
-    required this.ack,
-    required this.enqueued,
-  });
 }
 
 class BaseTransaction<ChangeT> with EquatableMixin {
@@ -288,12 +272,6 @@ class RelationColumn with EquatableMixin {
   List<Object?> get props => [name, type, isNullable, primaryKey];
 }
 
-enum AckType {
-  localSend,
-  remoteCommit,
-}
-
-typedef AckCallback = EventCallbackCall<AckLsnEvent>;
 typedef ErrorCallback = EventCallbackCall<SatelliteException>;
 
 // class Relation {
@@ -337,13 +315,6 @@ class TransactionEvent {
   final void Function() ackCb;
 
   TransactionEvent(this.transaction, this.ackCb);
-}
-
-class AckLsnEvent {
-  final LSN lsn;
-  final AckType ackType;
-
-  AckLsnEvent(this.lsn, this.ackType);
 }
 
 enum ConnectivityState {

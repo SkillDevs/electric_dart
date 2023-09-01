@@ -356,10 +356,10 @@ void main() {
     final completer = Completer<void>();
     client.on('transaction', (TransactionEvent event) {
       final ack = event.ackCb;
-      final lsn0 = client.inbound.ackLsn;
+      final lsn0 = client.inbound.lastLsn;
       expect(lsn0, null);
       ack();
-      final lsn1 = base64.encode(client.inbound.ackLsn!);
+      final lsn1 = base64.encode(client.inbound.lastLsn!);
       expect(lsn1, 'FAKE');
       completer.complete();
     });
@@ -513,57 +513,6 @@ void main() {
 
     await completer.future;
     expect(expectedCount, 0);
-  });
-
-  test('ack on send and pong', () async {
-    await connectAndAuth();
-
-    final lsn_1 = numberToBytes(1);
-
-    final startResp = SatInStartReplicationResp();
-    final pingResponse = SatPingResp(lsn: lsn_1);
-
-    server.nextResponses([startResp]);
-    server.nextResponses([]);
-    server.nextResponses([pingResponse]);
-
-    await client.startReplication(null, null, null);
-
-    final transaction = DataTransaction(
-      lsn: lsn_1,
-      commitTimestamp: Int64.ZERO,
-      changes: [
-        DataChange(
-          relation: kTestRelations['parent']!,
-          type: DataChangeType.insert,
-          record: {'id': 0},
-          tags: [], // actual value is not relevent here
-        ),
-      ],
-    );
-
-    final completer = Completer<void>();
-
-    var sent = false;
-    client.subscribeToAck((event) {
-      final lsn = event.lsn;
-      final type = event.ackType;
-
-      if (type == AckType.localSend) {
-        expect(bytesToNumber(lsn), 1);
-        sent = true;
-      } else if (sent && type == AckType.remoteCommit) {
-        expect(bytesToNumber(lsn), 1);
-        expect(sent, true);
-        completer.complete();
-      }
-    });
-
-    await Future.delayed(const Duration(milliseconds: 100), () {
-      client.enqueueTransaction(transaction);
-    });
-
-    await completer.future;
   });
 
   test('default and null test', () async {

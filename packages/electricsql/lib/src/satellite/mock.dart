@@ -110,7 +110,6 @@ class MockSatelliteClient extends EventEmitter implements Client {
   List<int>? inboundAck = kDefaultLogPos;
 
   List<int> outboundSent = kDefaultLogPos;
-  List<int> outboundAck = kDefaultLogPos;
 
   // to clear any pending timeouts
   List<Timer> timeouts = [];
@@ -235,14 +234,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void resetOutboundLogPositions(LSN sent, LSN ack) {
-    outboundSent = sent;
-    outboundAck = ack;
-  }
-
-  @override
-  LogPositions getOutboundLogPositions() {
-    return LogPositions(enqueued: outboundSent, ack: outboundAck);
+  LSN getLastSentLsn() {
+    return outboundSent;
   }
 
   @override
@@ -339,30 +332,6 @@ class MockSatelliteClient extends EventEmitter implements Client {
     DataTransaction transaction,
   ) {
     outboundSent = transaction.lsn;
-
-    emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.localSend));
-
-    // simulate ping message effect
-    final t = Timer(const Duration(milliseconds: 500), () {
-      outboundAck = transaction.lsn;
-      emit('ack_lsn', AckLsnEvent(transaction.lsn, AckType.remoteCommit));
-    });
-    timeouts.add(t);
-  }
-
-  @override
-  EventListener<AckLsnEvent> subscribeToAck(AckCallback ackCallback) {
-    return on('ack_lsn', ackCallback);
-  }
-
-  @override
-  void unsubscribeToAck(EventListener<AckLsnEvent> eventListener) {
-    removeEventListener(eventListener);
-  }
-
-  void setOutboundLogPositions(LSN sent, LSN ack) {
-    outboundSent = sent;
-    outboundAck = ack;
   }
 
   @override

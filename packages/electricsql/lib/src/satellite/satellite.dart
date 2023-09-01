@@ -72,10 +72,7 @@ abstract class Client {
   void enqueueTransaction(
     DataTransaction transaction,
   );
-  EventListener<AckLsnEvent> subscribeToAck(AckCallback callback);
-  void unsubscribeToAck(EventListener<AckLsnEvent> eventListener);
-  void resetOutboundLogPositions(LSN sent, LSN ack);
-  LogPositions getOutboundLogPositions();
+  LSN getLastSentLsn();
   EventListener<void> subscribeToOutboundEvent(void Function() callback);
   void unsubscribeToOutboundEvent(EventListener<void> eventListener);
   EventListener<SatelliteException> subscribeToError(ErrorCallback callback);

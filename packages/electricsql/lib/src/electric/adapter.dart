@@ -12,8 +12,12 @@ abstract class DatabaseAdapter {
   // Query the database.
   Future<List<Row>> query(Statement statement);
 
-  // Runs the provided function inside a transaction
-  // The function may not use async/await otherwise the transaction may commit before the queries are actually executed
+  /// Runs the provided __non-async__ function inside a transaction.
+  ///
+  /// The function may not use async/await otherwise the transaction may commit before
+  /// the queries are actually executed. This is a limitation of some adapters, that the
+  /// function passed to the transaction runs "synchronously" through callbacks without
+  /// releasing the event loop.
   Future<T> transaction<T>(
     void Function(Transaction tx, void Function(T res)) setResult,
   );

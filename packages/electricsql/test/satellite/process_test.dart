@@ -83,8 +83,6 @@ void main() {
     final meta = await loadSatelliteMetaTable(adapter);
     expect(meta, {
       'compensations': 1,
-      'lastAckdRowId': '0',
-      'lastSentRowId': '0',
       'lsn': '',
       'clientId': '',
       'subscriptions': '',
@@ -890,50 +888,6 @@ void main() {
     );
   });
 
-  test('advance oplog cursor', () async {
-    await runMigrations();
-
-    // fake current propagated rowId
-    satellite.lastSentRowId = 2;
-
-    // Get tablenames.
-    final oplogTablename = opts.oplogTable.tablename;
-    final metaTablename = opts.metaTable.tablename;
-
-    // Insert a couple of rows.
-    await adapter
-        .run(Statement("INSERT INTO main.parent(id) VALUES ('1'),('2')"));
-
-    // We have two rows in the oplog.
-    var rows = await adapter.query(
-      Statement(
-        'SELECT count(rowid) as num_rows FROM $oplogTablename',
-      ),
-    );
-    expect(rows[0]['num_rows'], 2);
-
-    // Ack.
-    await satellite.ack(2, true);
-
-    // NOTE: The oplog is not clean! This is a current design decision to clear
-    // oplog only when receiving transaction that originated from Satellite in the
-    // first place.
-    rows = await adapter.query(
-      Statement(
-        'SELECT count(rowid) as num_rows FROM $oplogTablename',
-      ),
-    );
-    expect(rows[0]['num_rows'], 2);
-
-    // Verify the meta.
-    rows = await adapter.query(
-      Statement(
-        "SELECT value FROM $metaTablename WHERE key = 'lastAckdRowId'",
-      ),
-    );
-    expect(rows[0]['value'], '2');
-  });
-
   test('compensations: referential integrity is enforced', () async {
     await runMigrations();
 
@@ -1083,14 +1037,13 @@ void main() {
 
     await adapter.run(Statement('PRAGMA foreign_keys = ON'));
     await satellite.setMeta('compensations', 0);
-    satellite.lastSentRowId = 1;
 
     await adapter.run(
       Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
     );
     await satellite.setAuthState(authState);
-    await satellite.performSnapshot();
-    await satellite.ack(1, true);
+    final ts = await satellite.performSnapshot();
+    await satellite.garbageCollectOplog(ts);
 
     await adapter
         .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
@@ -1137,14 +1090,13 @@ void main() {
 
     await adapter.run(Statement('PRAGMA foreign_keys = ON'));
     await satellite.setMeta('compensations', 1);
-    satellite.lastSentRowId = 1;
 
     await adapter.run(
       Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
     );
     await satellite.setAuthState(authState);
-    await satellite.performSnapshot();
-    await satellite.ack(1, true);
+    final ts = await satellite.performSnapshot();
+    await satellite.garbageCollectOplog(ts);
 
     await adapter
         .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
@@ -1282,18 +1234,6 @@ void main() {
     expect(opLog, expected);
   });
 
-  test('rowid acks updates meta', () async {
-    await runMigrations();
-    await satellite.start(authConfig);
-
-    final lsn1 = numberToBytes(1);
-    client.emit('ack_lsn', AckLsnEvent(lsn1, AckType.localSend));
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-
-    final lsn = await satellite.getMeta<String>('lastSentRowId');
-    expect(lsn, '1');
-  });
-
   test('handling connectivity state change stops queueing operations',
       () async {
     await runMigrations();
@@ -1307,15 +1247,9 @@ void main() {
 
     await satellite.performSnapshot();
 
-    final sentLsn = await satellite.getMeta<String>('lastSentRowId');
-    expect(sentLsn, '1');
-
-    final ackCompleter = Completer<void>();
-    await client.once<AckLsnEvent>('ack_lsn', (_) => ackCompleter.complete());
-    await ackCompleter.future;
-
-    final acknowledgedLsn = await satellite.getMeta<String>('lastAckdRowId');
-    expect(acknowledgedLsn, '1');
+    // We should have sent (or at least enqueued to send) one row
+    final sentLsn = satellite.client.getLastSentLsn();
+    expect(sentLsn, numberToBytes(1));
 
     await satellite.connectivityStateChanged(ConnectivityState.disconnected);
 
@@ -1327,14 +1261,16 @@ void main() {
 
     await satellite.performSnapshot();
 
-    final lsn1 = await satellite.getMeta<String>('lastSentRowId');
-    expect(lsn1, '1');
+    // Since connectivity is down, that row isn't yet sent
+    final lsn1 = satellite.client.getLastSentLsn();
+    expect(lsn1, sentLsn);
 
+    // Once connectivity is restored, we will immediately run a snapshot to send pending rows
     await satellite.connectivityStateChanged(ConnectivityState.available);
-
+    // Wait for snapshot to run
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    final lsn2 = await satellite.getMeta<String>('lastSentRowId');
-    expect(lsn2, '2');
+    final lsn2 = satellite.client.getLastSentLsn();
+    expect(lsn2, numberToBytes(2));
   });
 
   test(
@@ -1354,14 +1290,14 @@ void main() {
       ),
     );
 
-    var lsn = await satellite.getMeta<String>('lastSentRowId');
-    expect(lsn, '0');
+    // Before snapshot, we didn't send anything
+    final lsn1 = satellite.client.getLastSentLsn();
+    expect(lsn1, numberToBytes(0));
 
+    // Snapshot sends these oplog entries
     await satellite.performSnapshot();
-
-    lsn = await satellite.getMeta<String>('lastSentRowId');
-    expect(lsn, '2');
-    lsn = await satellite.getMeta<String>('lastAckdRowId');
+    final lsn2 = satellite.client.getLastSentLsn();
+    expect(lsn2, numberToBytes(2));
 
     final old_oplog = await satellite.getEntries();
     final transactions = toTransactions(old_oplog, kTestRelations);
@@ -1369,6 +1305,7 @@ void main() {
     final clientId = satellite.authState!.clientId;
     transactions[0].origin = clientId;
 
+    // Transaction containing these oplogs is applies, which means we delete them
     await satellite.applyTransaction(transactions[0]);
     final new_oplog = await satellite.getEntries();
     expect(new_oplog, isEmpty);

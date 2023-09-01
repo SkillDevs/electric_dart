@@ -48,8 +48,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
   Socket? socket;
 
-  late Replication inbound;
-  late OutgoingReplication outbound;
+  late Replication<Transaction> inbound;
+  late Replication<DataTransaction> outbound;
 
   // can only handle a single subscription at a time
   final SubscriptionsDataCache _subscriptionsDataCache =
@@ -66,22 +66,20 @@ class SatelliteClient extends EventEmitter implements Client {
     required Notifier notifier,
     required this.opts,
   }) {
-    inbound = resetReplication<Transaction>(null, null, null);
-    outbound = resetReplication<DataTransaction>(null, null, null);
+    inbound = resetReplication<Transaction>(null, null);
+    outbound = resetReplication<DataTransaction>(null, null);
   }
 
-  BaseReplication<TransactionType> resetReplication<TransactionType>(
-    LSN? enqueued,
-    LSN? ack,
+  Replication<TransactionType> resetReplication<TransactionType>(
+    LSN? lastLsn,
     ReplicationStatus? isReplicating,
   ) {
-    return BaseReplication<TransactionType>(
+    return Replication<TransactionType>(
       authenticated: false,
       isReplicating: isReplicating ?? ReplicationStatus.stopped,
       relations: {},
       transactions: [],
-      ackLsn: ack,
-      enqueuedLsn: enqueued,
+      lastLsn: lastLsn,
     );
   }
 
@@ -259,12 +257,8 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   void close() {
-    outbound = resetReplication(outbound.enqueuedLsn, outbound.ackLsn, null);
-    inbound = resetReplication(
-      inbound.enqueuedLsn,
-      inbound.ackLsn,
-      null,
-    );
+    outbound = resetReplication(outbound.lastLsn, null);
+    inbound = resetReplication(inbound.lastLsn, null);
 
     socketHandler = null;
 
@@ -366,11 +360,9 @@ class SatelliteClient extends EventEmitter implements Client {
     }
 
     outbound.transactions.add(transaction);
-    outbound.enqueuedLsn = transaction.lsn;
+    outbound.lastLsn = transaction.lsn;
 
-    if (throttledPushTransaction != null) {
-      throttledPushTransaction!.call();
-    }
+    throttledPushTransaction?.call();
   }
 
   @override
@@ -412,7 +404,7 @@ class SatelliteClient extends EventEmitter implements Client {
     }
 
     // Then set the replication state
-    inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
+    inbound = resetReplication(lsn, ReplicationStatus.starting);
 
     return rpc<StartReplicationResponse>(request);
   }
@@ -530,16 +522,8 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void resetOutboundLogPositions(LSN sent, LSN ack) {
-    outbound = resetReplication(sent, ack, null);
-  }
-
-  @override
-  LogPositions getOutboundLogPositions() {
-    return LogPositions(
-      ack: outbound.ackLsn ?? kDefaultLogPos,
-      enqueued: outbound.enqueuedLsn ?? kDefaultLogPos,
-    );
+  LSN getLastSentLsn() {
+    return outbound.lastLsn ?? kDefaultLogPos;
   }
 
   AuthResponse handleAuthResp(Object? message) {
@@ -582,15 +566,13 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleInStartReplicationReq(SatInStartReplicationReq message) {
-    logger.info('received replication request $message');
+    logger.info(
+      'Server sent a replication request to start from ${bytesToNumber(message.lsn)}, and options ${message.options.map((e) => e.name)}',
+    );
     if (outbound.isReplicating == ReplicationStatus.stopped) {
-      final replication = outbound.clone();
-      replication.ackLsn = kDefaultLogPos;
-      replication.enqueuedLsn = kDefaultLogPos;
-
+      // Use server-sent LSN as the starting point for replication
       outbound = resetReplication(
-        replication.enqueuedLsn,
-        replication.ackLsn,
+        message.lsn,
         ReplicationStatus.active,
       );
 
@@ -599,7 +581,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
       final response = SatInStartReplicationResp();
       sendMessage(response);
-      emit('outbound_started', replication.enqueuedLsn);
+      emit('outbound_started', message.lsn);
     } else {
       final response = SatErrorResp(
         errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
@@ -632,7 +614,6 @@ class SatelliteClient extends EventEmitter implements Client {
       final SatOpLog satOpLog = transactionToSatOpLog(next);
 
       sendMessage(satOpLog);
-      emit<AckLsnEvent>('ack_lsn', AckLsnEvent(next.lsn, AckType.localSend));
     }
   }
 
@@ -643,16 +624,6 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   void unsubscribeToError(EventListener<SatelliteException> eventListener) {
-    removeEventListener(eventListener);
-  }
-
-  @override
-  EventListener<AckLsnEvent> subscribeToAck(AckCallback callback) {
-    return on<AckLsnEvent>('ack_lsn', callback);
-  }
-
-  @override
-  void unsubscribeToAck(EventListener<AckLsnEvent> eventListener) {
     removeEventListener(eventListener);
   }
 
@@ -748,7 +719,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
   void sendMissingRelations(
     DataTransaction transaction,
-    OutgoingReplication replication,
+    Replication<DataTransaction> replication,
   ) {
     for (final change in transaction.changes) {
       final relation = change.relation;
@@ -821,21 +792,17 @@ class SatelliteClient extends EventEmitter implements Client {
 
   void handlePingReq() {
     logger.info(
-      "respond to ping with last ack ${inbound.ackLsn != null ? base64.encode(inbound.ackLsn!) : 'NULL'}",
+      'respond to ping with last ack ${inbound.lastLsn != null ? base64.encode(inbound.lastLsn!) : 'NULL'}',
     );
-    final pong = SatPingResp(lsn: inbound.ackLsn);
+    final pong = SatPingResp(lsn: inbound.lastLsn);
     sendMessage(pong);
   }
 
   void handlePingResp(Object? message) {
-    if (message is SatPingResp) {
-      if (message.lsn.isNotEmpty) {
-        outbound.ackLsn = Uint8List.fromList(message.lsn);
-        emit('ack_lsn', AckLsnEvent(message.lsn, AckType.remoteCommit));
-      }
-    } else {
-      throw StateError('Unexpected ping resp message');
-    }
+    // TODO: This message is not used in any way right now.
+    //       We might be dropping client-initiated pings completely.
+    //       However, the server sends these messages without any prompting,
+    //       so this handler cannot just throw an error
   }
 
   void handleRelation(SatRelation message) {
@@ -958,7 +925,7 @@ class SatelliteClient extends EventEmitter implements Client {
           'transaction',
           TransactionEvent(
             transaction,
-            () => inbound.ackLsn = transaction.lsn,
+            () => inbound.lastLsn = transaction.lsn,
           ),
         );
         replication.transactions.removeAt(lastTxnIdx);

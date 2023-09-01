@@ -82,9 +82,6 @@ class SatelliteProcess implements Satellite {
 
   late final Throttle<DateTime> throttledSnapshot;
 
-  int _lastAckdRowId = 0;
-  @visibleForTesting
-  int lastSentRowId = 0;
   LSN? _lsn;
 
   @visibleForTesting
@@ -211,14 +208,6 @@ This means there is a notifier subscription leak.`''');
     relations = await getLocalRelations();
     await checkMaxSqlParameters();
 
-    _lastAckdRowId = int.parse((await getMeta('lastAckdRowId'))!);
-    lastSentRowId = int.parse((await getMeta('lastSentRowId'))!);
-
-    client.resetOutboundLogPositions(
-      numberToBytes(_lastAckdRowId),
-      numberToBytes(lastSentRowId),
-    );
-
     final lsnBase64 = await getMeta<String?>('lsn');
     if (lsnBase64 != null && lsnBase64.isNotEmpty) {
       _lsn = base64.decode(lsnBase64);
@@ -280,10 +269,8 @@ This means there is a notifier subscription leak.`''');
   void setClientListeners() {
     client.subscribeToError(_handleClientError);
     client.subscribeToRelations(updateRelations);
+    // FIXME: calling an async function in an event emitter
     client.subscribeToTransactions(applyTransaction);
-    // When a local transaction is sent, or an acknowledgement for
-    // a remote transaction commit is received, we update lsn records.
-    client.subscribeToAck(_handleAck);
     client.subscribeToOutboundEvent(() => throttledSnapshot());
 
     client.subscribeToSubscriptionEvents(
@@ -622,11 +609,6 @@ This means there is a notifier subscription leak.`''');
     );
   }
 
-  Future<void> _handleAck(AckLsnEvent ackLsnEvent) async {
-    final decoded = bytesToNumber(ackLsnEvent.lsn);
-    await ack(decoded, ackLsnEvent.ackType == AckType.remoteCommit);
-  }
-
   @visibleForTesting
   Future<void> connectivityStateChanged(
     ConnectivityState status,
@@ -861,12 +843,11 @@ This means there is a notifier subscription leak.`''');
       WHERE rowid in (
         SELECT rowid FROM $oplog
             WHERE timestamp is NULL
-            AND rowid > ?
         ORDER BY rowid ASC
         )
       RETURNING *
     ''',
-      [timestamp.toISOStringUTC(), _lastAckdRowId],
+      [timestamp.toISOStringUTC()],
     );
 
     // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
@@ -882,12 +863,11 @@ This means there is a notifier subscription leak.`''');
             AND op.tablename = shadow.tablename
             AND op.primaryKey = shadow.primaryKey
         WHERE op.timestamp = ?
-              AND op.rowid > ?
         GROUP BY op.namespace, op.tablename, op.primaryKey
       ) AS updates
       WHERE updates.op_rowid = $oplog.rowid
     ''',
-      [timestamp.toISOStringUTC(), _lastAckdRowId],
+      [timestamp.toISOStringUTC()],
     );
 
     // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
@@ -897,14 +877,12 @@ This means there is a notifier subscription leak.`''');
       SELECT namespace, tablename, primaryKey, ?
         FROM $oplog AS op
         WHERE timestamp = ?
-              AND rowid > ?
         GROUP BY namespace, tablename, primaryKey
         HAVING rowid = max(rowid) AND optype != 'DELETE'
     ''',
       [
         encodeTags([newTag]),
         timestamp.toISOStringUTC(),
-        _lastAckdRowId,
       ],
     );
 
@@ -919,7 +897,6 @@ This means there is a notifier subscription leak.`''');
           INNER JOIN $shadow AS shadow
             ON shadow.namespace = op.namespace AND shadow.tablename = op.tablename AND shadow.primaryKey = op.primaryKey
           WHERE op.timestamp = ?
-                AND op.rowid > ?
           GROUP BY op.namespace, op.tablename, op.primaryKey
           HAVING op.rowid = max(op.rowid) AND op.optype = 'DELETE'
       )
@@ -927,7 +904,7 @@ This means there is a notifier subscription leak.`''');
       DELETE FROM $shadow
       WHERE rowid IN _to_be_deleted
     ''',
-      [timestamp.toISOStringUTC(), _lastAckdRowId],
+      [timestamp.toISOStringUTC()],
     );
 
     // Execute the four queries above in a transaction, returning the results from the first query
@@ -957,7 +934,7 @@ This means there is a notifier subscription leak.`''');
     }
 
     if (!client.isClosed()) {
-      final LogPositions(:enqueued) = client.getOutboundLogPositions();
+      final enqueued = client.getLastSentLsn();
       final enqueuedLogPos = bytesToNumber(enqueued);
 
       // TODO: handle case where pending oplog is large
@@ -1066,7 +1043,8 @@ This means there is a notifier subscription leak.`''');
 
   @visibleForTesting
   Future<List<OplogEntry>> getEntries({int? since}) async {
-    since ??= _lastAckdRowId;
+    // `rowid` is never below 0, so -1 means "everything"
+    since ??= -1;
     final oplog = opts.oplogTable.toString();
 
     final selectEntries = '''
@@ -1368,31 +1346,6 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  @visibleForTesting
-  Future<void> ack(int lsn, bool isAck) async {
-    if (lsn < _lastAckdRowId || (lsn > lastSentRowId && isAck)) {
-      throw Exception('Invalid position');
-    }
-
-    final meta = opts.metaTable.toString();
-
-    final sql = ' UPDATE $meta SET value = ? WHERE key = ?';
-    final args = <Object?>[
-      lsn.toString(),
-      if (isAck) 'lastAckdRowId' else 'lastSentRowId',
-    ];
-
-    if (isAck) {
-      _lastAckdRowId = lsn;
-      await adapter.runInTransaction([
-        Statement(sql, args),
-      ]);
-    } else {
-      lastSentRowId = lsn;
-      await adapter.run(Statement(sql, args));
-    }
-  }
-
   Statement _setMetaStatement(String key, Object? value) {
     final meta = opts.metaTable.toString();
 
@@ -1435,7 +1388,7 @@ This means there is a notifier subscription leak.`''');
     return clientId;
   }
 
-  Future<List<Row>> _getLocalTableNames() async {
+  Future<List<({String name})>> _getLocalTableNames() async {
     final notIn = <String>[
       opts.metaTable.tablename,
       opts.migrationsTable.tablename,
@@ -1453,7 +1406,7 @@ This means there is a notifier subscription leak.`''');
           AND name NOT IN (${notIn.map((_) => '?').join(',')})
     ''';
     final tableNames = await adapter.query(Statement(tables, notIn));
-    return tableNames;
+    return tableNames.map((row) => (name: row['name']! as String)).toList();
   }
 
   // Fetch primary keys from local store and use them to identify incoming ops.
@@ -1466,7 +1419,7 @@ This means there is a notifier subscription leak.`''');
     int id = 0;
     const schema = 'public'; // TODO
     for (final table in tableNames) {
-      final tableName = table['name']! as String;
+      final tableName = table.name;
       const sql = 'SELECT * FROM pragma_table_info(?)';
       final args = [tableName];
       final columnsForTable = await adapter.query(Statement(sql, args));
@@ -1506,11 +1459,13 @@ This means there is a notifier subscription leak.`''');
   Future<void> garbageCollectOplog(DateTime commitTimestamp) async {
     final isoString = commitTimestamp.toISOStringUTC();
     final String oplog = opts.oplogTable.tablename;
-    final stmt = '''
-      DELETE FROM $oplog
-      WHERE timestamp = ?;
-    ''';
-    await adapter.run(Statement(stmt, <Object?>[isoString]));
+
+    await adapter.run(
+      Statement(
+        'DELETE FROM $oplog WHERE timestamp = ?',
+        <Object?>[isoString],
+      ),
+    );
   }
 
   /// Update `this._lsn` to the new value and generate a statement to persist this change
