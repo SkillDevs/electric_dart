@@ -53,9 +53,7 @@ abstract class Satellite {
 }
 
 abstract class Client {
-  Future<void> connect({
-    bool Function(Object error, int attempt)? retryHandler,
-  });
+  Future<void> connect();
   void close();
   Future<AuthResponse> authenticate(
     AuthState authState,
@@ -80,6 +78,8 @@ abstract class Client {
   LogPositions getOutboundLogPositions();
   EventListener<void> subscribeToOutboundEvent(void Function() callback);
   void unsubscribeToOutboundEvent(EventListener<void> eventListener);
+  EventListener<SatelliteException> subscribeToError(ErrorCallback callback);
+  void unsubscribeToError(EventListener<SatelliteException> eventListener);
 
   Future<SubscribeResponse> subscribe(
     String subscriptionId,

@@ -1,4 +1,5 @@
 import 'package:electricsql/src/sockets/sockets.dart';
+import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/emitters/event_emitter.dart';
 
 class MockSocketFactory implements SocketFactory {
@@ -28,7 +29,7 @@ class MockSocket extends EventEmitter implements Socket {
   void onClose(void Function() cb) {}
 
   @override
-  void onError(void Function(Object error) cb) {}
+  void onError(void Function(SatelliteException error) cb) {}
 
   @override
   void onMessage(void Function(Data data) cb) {}
@@ -37,5 +38,8 @@ class MockSocket extends EventEmitter implements Socket {
   void onceConnect(void Function() cb) {}
 
   @override
-  void onceError(void Function(Object error) cb) {}
+  void onceError(void Function(SatelliteException error) cb) {}
+
+  @override
+  void removeErrorListener(void Function(SatelliteException error) cb) {}
 }

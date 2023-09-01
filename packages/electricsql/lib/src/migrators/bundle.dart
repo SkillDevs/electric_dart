@@ -6,6 +6,10 @@ import 'package:electricsql/src/util/types.dart';
 
 const kElectricMigrationsTable = '_electric_migrations';
 
+const kSchemaVersionErrorMsg = '''
+Local schema doesn't match server's. Clear local state through developer tools and retry connection manually. '''
+    'If error persists, re-generate the client. Check documentation (https://electric-sql.com/docs/reference/limitations) to learn more.';
+
 final kValidVersionExp = RegExp(r'^[0-9_]+$');
 
 class BundleMigrator implements Migrator {
@@ -111,10 +115,9 @@ class BundleMigrator implements Migrator {
       final migration = migrations[i];
 
       if (migration.version != version) {
-        throw Exception(
-          'Local migrations $version does not match server version ${migration.version}. '
-          'This is an unrecoverable error. Please clear your local storage and try again. '
-          'Check documentation (https://electric-sql.com/docs/reference/limitations) to learn more.',
+        throw SatelliteException(
+          SatelliteErrorCode.unknownSchemaVersion,
+          kSchemaVersionErrorMsg,
         );
       }
     }

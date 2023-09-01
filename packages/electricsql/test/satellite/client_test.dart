@@ -58,46 +58,6 @@ void main() {
     await client.connect();
   });
 
-  test('connection backoff success', () async {
-    await server.close();
-
-    bool passed = false;
-
-    bool retry(Object _e, int a) {
-      if (a > 0) {
-        passed = true;
-        return false;
-      }
-      return true;
-    }
-
-    try {
-      await client.connect(retryHandler: retry);
-    } catch (e) {
-      //
-    }
-
-    expect(passed, isTrue);
-  });
-
-  test('connection backoff failure', () async {
-    await server.close();
-
-    bool retry(Object _e, int a) {
-      if (a > 0) {
-        return false;
-      }
-      return true;
-    }
-
-    try {
-      await client.connect(retryHandler: retry);
-      fail('Should have failed');
-    } catch (e) {
-      // Should pass
-    }
-  });
-
   // TODO: handle connection errors scenarios
 
   Future<void> connectAndAuth() async {
@@ -849,12 +809,15 @@ void main() {
     const subscriptionId = 'THE_ID';
 
     final subsResp = SatSubsResp(subscriptionId: subscriptionId);
+    final subsData = SatSubsDataBegin(
+      subscriptionId: subscriptionId,
+    );
     final subsError = SatSubsDataError(
       code: SatSubsDataError_Code.SHAPE_DELIVERY_ERROR,
       message: 'FAKE ERROR',
       subscriptionId: subscriptionId,
     );
-    server.nextResponses([subsResp, subsError]);
+    server.nextResponses([subsResp, subsData, subsError]);
 
     void success(_) => fail('Should have failed');
     void error(_) {}

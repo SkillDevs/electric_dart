@@ -66,11 +66,13 @@ void main() {
   });
 
   test('start creates system tables', () async {
-    await satellite.start(context.authConfig);
+    final conn = await satellite.start(context.authConfig);
 
     const sql = "select name from sqlite_master where type = 'table'";
     final rows = await adapter.query(Statement(sql));
     final names = rows.map((row) => row['name']! as String).toList();
+
+    await conn.connectionFuture;
 
     expect(names, contains('_electric_oplog'));
   });
@@ -211,23 +213,27 @@ void main() {
 
     await Future<void>.delayed(opts.pollingInterval);
 
-    expect(notifier.notifications.length, 1);
+    // connect, 1st txn
+    expect(notifier.notifications.length, 2);
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('3'),('4')"));
     await Future<void>.delayed(opts.pollingInterval);
 
-    expect(notifier.notifications.length, 2);
+    // 2nd txm
+    expect(notifier.notifications.length, 3);
 
     await satellite.stop();
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('5'),('6')"));
     await Future<void>.delayed(opts.pollingInterval);
 
-    expect(notifier.notifications.length, 2);
+    // no txn notified
+    expect(notifier.notifications.length, 3);
 
     await satellite.start(authConfig);
     await Future<void>.delayed(Duration.zero);
 
-    expect(notifier.notifications.length, 3);
+    // connect, 4th txn
+    expect(notifier.notifications.length, 5);
   });
 
   test('snapshots on potential data change', () async {
@@ -1282,6 +1288,7 @@ void main() {
 
     final lsn1 = numberToBytes(1);
     client.emit('ack_lsn', AckLsnEvent(lsn1, AckType.localSend));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
 
     final lsn = await satellite.getMeta<String>('lastSentRowId');
     expect(lsn, '1');
@@ -1302,7 +1309,10 @@ void main() {
 
     final sentLsn = await satellite.getMeta<String>('lastSentRowId');
     expect(sentLsn, '1');
-    await client.once<AckLsnEvent>('ack_lsn');
+
+    final ackCompleter = Completer<void>();
+    await client.once<AckLsnEvent>('ack_lsn', (_) => ackCompleter.complete());
+    await ackCompleter.future;
 
     final acknowledgedLsn = await satellite.getMeta<String>('lastAckdRowId');
     expect(acknowledgedLsn, '1');
@@ -1385,15 +1395,26 @@ void main() {
   test('throw other replication errors', () async {
     await runMigrations();
 
-    final base64lsn = base64.encode(numberToBytes(kMockInvalidPositionLsn));
+    final base64lsn = base64.encode(numberToBytes(kMockInternalError));
     await satellite.setMeta('lsn', base64lsn);
-    try {
-      final conn = await satellite.start(authConfig);
-      await conn.connectionFuture;
-      fail('start should throw');
-    } on SatelliteException catch (e) {
-      expect(e.code, SatelliteErrorCode.invalidPosition);
-    }
+
+    int numExpects = 0;
+
+    final conn = await satellite.start(authConfig);
+    await Future.wait<dynamic>(
+      [
+        satellite.initializing!.waitOn(),
+        conn.connectionFuture,
+      ].map(
+        (f) => f.onError<SatelliteException>((e, st) {
+          //console.log(`error ${e}`)
+          numExpects++;
+          expect(e.code, SatelliteErrorCode.internal);
+        }),
+      ),
+    );
+
+    expect(numExpects, 2);
   });
 
   test('apply shape data and persist subscription', () async {
@@ -1420,8 +1441,9 @@ void main() {
         await satellite.subscribe([shapeDef]);
     await synced;
 
-    expect(notifier.notifications.length, 1);
-    final changeNotification = notifier.notifications[0] as ChangeNotification;
+// first notification is 'connected'
+    expect(notifier.notifications.length, 2);
+    final changeNotification = notifier.notifications[1] as ChangeNotification;
     expect(changeNotification.changes.length, 1);
     expect(
       changeNotification.changes[0],
@@ -1923,6 +1945,30 @@ void main() {
     expect(delete2.optype, OpType.delete);
     // The second should have clearTags
     expect(delete2.clearTags, isNot('[]'));
+  });
+
+  test('connection backoff success', () async {
+    client.close();
+
+    int numExpects = 0;
+
+    bool retry(Object _e, int a) {
+      if (a > 0) {
+        numExpects++;
+        return false;
+      }
+      return true;
+    }
+
+    satellite.connectRetryHandler = retry;
+
+    await Future.wait<dynamic>(
+      [satellite.connectWithBackoff(), satellite.initializing!.waitOn()].map(
+        (f) => f.catchError((e) => numExpects++),
+      ),
+    );
+
+    expect(numExpects, 3);
   });
 }
 

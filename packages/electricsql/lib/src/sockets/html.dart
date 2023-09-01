@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:html' as html;
-
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:web_socket_channel/html.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -16,16 +13,9 @@ class WebSocketHtmlFactory implements SocketFactory {
   }
 }
 
-class WebSocketHtml extends WebSocketBase<html.WebSocket> {
+class WebSocketHtml extends WebSocketBase {
   @override
-  Future<html.WebSocket> createNativeSocketConnection(String url) async {
-    final ws = html.WebSocket(url);
-    ws.binaryType = 'arraybuffer';
-    return ws;
-  }
-
-  @override
-  WebSocketChannel createSocketChannel(html.WebSocket socketType) {
-    return HtmlWebSocketChannel(socketType);
+  WebSocketChannel createSocketChannel(String url) {
+    return HtmlWebSocketChannel.connect(url, binaryType: BinaryType.list);
   }
 }

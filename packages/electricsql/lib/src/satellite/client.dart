@@ -18,8 +18,6 @@ import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
-import 'package:logging/logging.dart';
-import 'package:retry/retry.dart' as retry_lib;
 
 class IncomingHandler {
   final Object? Function(Object?) handle;
@@ -35,12 +33,18 @@ class DecodedMessage {
   DecodedMessage(this.msg, this.msgType);
 }
 
+const subscriptionError = {
+  SatelliteErrorCode.unexpectedSubscriptionState,
+  SatelliteErrorCode.subscriptionError,
+  SatelliteErrorCode.subscriptionAlreadyExists,
+  SatelliteErrorCode.subscriptionIdAlreadyExists,
+  SatelliteErrorCode.subscriptionNotFound,
+  SatelliteErrorCode.shapeDeliveryError,
+};
+
 class SatelliteClient extends EventEmitter implements Client {
-  final String dbName;
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
-  final Notifier notifier;
-  Completer<void>? initializing;
 
   Socket? socket;
 
@@ -55,9 +59,11 @@ class SatelliteClient extends EventEmitter implements Client {
   void Function(Uint8List bytes)? socketHandler;
 
   SatelliteClient({
-    required this.dbName,
+    // ignore: avoid_unused_constructor_parameters
+    required DbName dbName,
     required this.socketFactory,
-    required this.notifier,
+    // ignore: avoid_unused_constructor_parameters
+    required Notifier notifier,
     required this.opts,
   }) {
     inbound = resetReplication<Transaction>(null, null, null);
@@ -187,103 +193,72 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  Future<void> connect({
-    bool Function(Object error, int attempt)? retryHandler,
-  }) async {
+  Future<void> connect() async {
     if (!isClosed()) {
       close();
     }
 
-    initializing = Completer();
-    // This is so that errors can be sent to the completer even when no one is
-    // waiting for the future
-    initializing!.future.ignore();
+    final completer = Completer<void>();
 
-    Future<void> _attemptBody() {
-      final Completer<void> connectCompleter = Completer();
+    final socket = socketFactory.create();
+    this.socket = socket;
 
-      // TODO: ensure any previous socket is closed, or reject
-      if (this.socket != null) {
+    void onceError(Object error) {
+      close();
+      completer.completeError(error);
+    }
+
+    void onceConnect() {
+      if (this.socket == null) {
         throw SatelliteException(
           SatelliteErrorCode.unexpectedState,
-          'a socket already exist. ensure it is closed before reconnecting.',
+          'socket got unassigned somehow',
         );
       }
-      final socket = socketFactory.create();
-      this.socket = socket;
-
-      socket.onceConnect(() {
-        if (this.socket == null) {
-          throw SatelliteException(
-            SatelliteErrorCode.unexpectedState,
-            'socket got unassigned somehow',
+      socket.removeErrorListener(onceError);
+      socketHandler = (Uint8List message) => handleIncoming(message);
+      socket.onMessage(socketHandler!);
+      socket.onError((error) {
+        if (listenerCount('error') == 0) {
+          close();
+          logger.error(
+            'socket error but no listener is attached: $error',
           );
         }
-        socketHandler = (Uint8List message) => handleIncoming(message);
-        notifier.connectivityStateChanged(dbName, ConnectivityState.connected);
-        socket.onMessage(socketHandler!);
-        socket.onError((error) {
-          notifier.connectivityStateChanged(dbName, ConnectivityState.error);
-        });
-        socket.onClose(() {
-          notifier.connectivityStateChanged(
-            dbName,
-            ConnectivityState.disconnected,
-          );
-        });
-        connectCompleter.complete();
+        emit('error', error);
       });
-
-      socket.onceError((error) {
-        // print("Once Error $error");
-        this.socket = null;
-        notifier.connectivityStateChanged(
-          dbName,
-          ConnectivityState.disconnected,
+      socket.onClose(() {
+        close();
+        if (listenerCount('error') == 0) {
+          logger.error('socket closed but no listener is attached');
+        }
+        emit(
+          'error',
+          SatelliteException(SatelliteErrorCode.socketError, 'socket closed'),
         );
-        if (!connectCompleter.isCompleted) {
-          connectCompleter.completeError(error);
-        }
       });
 
-      final host = opts.host;
-      final port = opts.port;
-      final ssl = opts.ssl;
-      final url = "${ssl ? 'wss' : 'ws'}://$host:$port/ws";
-      socket.open(ConnectionOptions(url));
-
-      return connectCompleter.future;
+      completer.complete();
     }
 
-    int retryAttempt = 0;
-    try {
-      await retry_lib.retry(
-        () {
-          retryAttempt++;
-          return _attemptBody();
-        },
-        maxAttempts: 10,
-        maxDelay: const Duration(milliseconds: 100),
-        delayFactor: const Duration(milliseconds: 100),
-        retryIf: (e) {
-          if (retryHandler != null) {
-            return retryHandler(e, retryAttempt);
-          }
-          return true;
-        },
-      );
-    } catch (e) {
-      // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
-      initializing?.completeError(e);
-      initializing = null;
-      rethrow;
-    }
+    socket.onceError(onceError);
+    socket.onceConnect(onceConnect);
+
+    final host = opts.host;
+    final port = opts.port;
+    final ssl = opts.ssl;
+    final url = "${ssl ? 'wss' : 'ws'}://$host:$port/ws";
+    socket.open(ConnectionOptions(url));
+
+    return completer.future;
+  }
+
+  int listenerCount(String event) {
+    return listeners.where((l) => l.type == event).length;
   }
 
   @override
   void close() {
-    logger.info('closing client');
-
     outbound = resetReplication(outbound.enqueuedLsn, outbound.ackLsn, null);
     inbound = resetReplication(
       inbound.enqueuedLsn,
@@ -292,16 +267,6 @@ class SatelliteClient extends EventEmitter implements Client {
     );
 
     socketHandler = null;
-    removeAllListeners();
-
-    initializing?.future.ignore();
-    initializing?.completeError(
-      SatelliteException(
-        SatelliteErrorCode.internal,
-        'Socket is closed by the client while initializing',
-      ),
-    );
-    initializing = null;
 
     if (socket != null) {
       socket!.closeAndRemoveListeners();
@@ -326,8 +291,8 @@ class SatelliteClient extends EventEmitter implements Client {
     try {
       final messageInfo = toMessage(data);
 
-      if (logger.level <= Level.FINE) {
-        logger.fine('[proto] recv: ${msgToString(messageInfo.msg)}');
+      if (logger.levelImportance <= Level.debug.value) {
+        logger.debug('[proto] recv: ${msgToString(messageInfo.msg)}');
       }
 
       final handler = getIncomingHandlerForMessage(messageInfo.msgType);
@@ -339,12 +304,13 @@ class SatelliteClient extends EventEmitter implements Client {
     } catch (error) {
       if (error is SatelliteException) {
         if (handleIsRpc) {
-          emit('error', error);
+          emit('rpc_error', error);
+        } else {
+          // subscription errors are emitted through specific event
+          if (!subscriptionError.contains(error.code)) {
+            emit('error', error);
+          }
         }
-        // no one is watching this error
-        logger.warning(
-          'unhandled satellite errors while processing incoming message: $error',
-        );
       } else {
         // This is an unexpected runtime error
         rethrow;
@@ -367,11 +333,7 @@ class SatelliteClient extends EventEmitter implements Client {
       token: authState.token,
       headers: headers,
     );
-    return rpc<AuthResponse>(request).catchError((Object e) {
-      initializing?.completeError(e);
-      initializing = null;
-      throw e;
-    });
+    return rpc<AuthResponse>(request);
   }
 
   @override
@@ -452,26 +414,7 @@ class SatelliteClient extends EventEmitter implements Client {
     // Then set the replication state
     inbound = resetReplication(lsn, lsn, ReplicationStatus.starting);
 
-    return rpc<StartReplicationResponse>(request).then((resp) {
-      // FIXME: process handles BEHIND_WINDOW, we cant reject or resolve
-      // initializing. If process returns without triggering another
-      // RPC, initializing will never resolve.
-      // We shall improve this code to make no assumptions on how
-      // process handles errors
-      if (resp.error != null) {
-        if (resp.error!.code != SatelliteErrorCode.behindWindow) {
-          initializing?.completeError(resp.error!);
-        }
-      } else {
-        initializing?.complete();
-      }
-      initializing = null;
-      return resp;
-    }).catchError((Object e) {
-      initializing?.completeError(e);
-      initializing = null;
-      throw e;
-    });
+    return rpc<StartReplicationResponse>(request);
   }
 
   @override
@@ -491,14 +434,14 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMessage(Object request) {
-    if (logger.level <= Level.FINE) {
-      logger.fine('[proto] send: ${msgToString(request)}');
+    if (logger.levelImportance <= Level.debug.value) {
+      logger.debug('[proto] send: ${msgToString(request)}');
     }
     final _socket = socket;
-    if (_socket == null) {
+    if (_socket == null || isClosed()) {
       throw SatelliteException(
         SatelliteErrorCode.unexpectedState,
-        'trying to send message, but no socket exists',
+        'trying to send message, but client is closed',
       );
     }
     final msgType = getTypeFromSatObject(request);
@@ -532,7 +475,7 @@ class SatelliteClient extends EventEmitter implements Client {
       });
 
       // reject on any error
-      errorListener = on('error', (error) {
+      errorListener = on('rpc_error', (error) {
         errorListener?.cancel();
         errorListener = null;
         completer.completeError(error as Object);
@@ -608,7 +551,7 @@ class SatelliteClient extends EventEmitter implements Client {
     } else if (message is SatErrorResp) {
       error = SatelliteException(
         SatelliteErrorCode.authError,
-        '${message.errorType}',
+        'An internal error occurred during authentication',
       );
     } else {
       throw StateError('Unexpected message $message');
@@ -694,6 +637,16 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
+  EventListener<SatelliteException> subscribeToError(ErrorCallback callback) {
+    return on<SatelliteException>('error', callback);
+  }
+
+  @override
+  void unsubscribeToError(EventListener<SatelliteException> eventListener) {
+    removeEventListener(eventListener);
+  }
+
+  @override
   EventListener<AckLsnEvent> subscribeToAck(AckCallback callback) {
     return on<AckLsnEvent>('ack_lsn', callback);
   }
@@ -746,10 +699,6 @@ class SatelliteClient extends EventEmitter implements Client {
     String subscriptionId,
     List<ShapeRequest> shapes,
   ) async {
-    if (initializing != null) {
-      await initializing!.future;
-    }
-
     if (inbound.isReplicating != ReplicationStatus.active) {
       return Future.error(
         SatelliteException(
@@ -935,15 +884,9 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleErrorResp(SatErrorResp error) {
-    // TODO: this causing intermittent issues in tests because
-    // no one might catch this error. We shall pass this information
-    // as part of connectivity state
     emit(
       'error',
-      SatelliteException(
-        SatelliteErrorCode.serverError,
-        'server replied with error code: ${error.errorType}',
-      ),
+      serverErrorToSatelliteError(error),
     );
   }
 

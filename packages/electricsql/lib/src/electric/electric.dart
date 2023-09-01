@@ -3,8 +3,8 @@ import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
+import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:logging/logging.dart';
 
 // These are the options that should be provided to the adapter's electrify
 // entrypoint. They are all optional to optionally allow different / mock
@@ -46,7 +46,7 @@ Future<ElectricClient> electrify({
   required SocketFactory socketFactory,
   required ElectrifyBaseOptions opts,
 }) async {
-  setLogLevel((config.debug ?? false) ? Level.ALL : Level.WARNING);
+  setLogLevel((config.debug ?? false) ? Level.trace : Level.warning);
 
   final configWithDefaults = hydrateConfig(config);
   final migrator =

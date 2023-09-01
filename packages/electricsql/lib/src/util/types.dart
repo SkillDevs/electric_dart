@@ -43,7 +43,7 @@ class SatelliteException implements Exception {
 }
 
 enum SatelliteErrorCode {
-  connectionFailed,
+  connectionFailedAfterRetry,
   internal,
   timeout,
   replicationNotStarted,
@@ -52,11 +52,18 @@ enum SatelliteErrorCode {
   unexpectedMessageType,
   protocolViolation,
   unknownDataType,
-  authError,
-  serverError,
+  socketError,
+  unrecognized,
 
-  subscriptionAlreadyExists,
-  unexpectedSubscriptionState,
+  // auth errors
+  authError,
+  authFailed,
+  authRequired,
+
+  // server errors
+  invalidRequest,
+  protoVersionMismatch,
+  replicationFailed,
 
   // start replication errors
   behindWindow,
@@ -69,6 +76,8 @@ enum SatelliteErrorCode {
   // subscription errors
   shapeRequestError,
   subscriptionIdAlreadyExists,
+  subscriptionAlreadyExists,
+  unexpectedSubscriptionState,
 
   // shape request errors
   tableNotFound,
@@ -284,7 +293,8 @@ enum AckType {
   remoteCommit,
 }
 
-typedef AckCallback = EventCallback<AckLsnEvent>;
+typedef AckCallback = EventCallbackCall<AckLsnEvent>;
+typedef ErrorCallback = EventCallbackCall<SatelliteException>;
 
 // class Relation {
 //   final int id;

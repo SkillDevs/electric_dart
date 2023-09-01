@@ -80,3 +80,30 @@ extension DateExtension on DateTime {
     return toUtc().copyWith(microsecond: 0).toIso8601String();
   }
 }
+
+class Waiter {
+  bool _waiting = false;
+  bool _finished = false;
+  final Completer<void> _completer = Completer();
+
+  Future<void> waitOn() async {
+    _waiting = true;
+    await _completer.future;
+  }
+
+  void complete() {
+    if (_completer.isCompleted) return;
+
+    _finished = true;
+    _completer.complete();
+  }
+
+  void completeError(Object error) {
+    if (_completer.isCompleted) return;
+
+    _finished = true;
+    _waiting ? _completer.completeError(error) : _completer.complete();
+  }
+
+  bool get finished => _finished;
+}
