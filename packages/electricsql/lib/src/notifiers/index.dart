@@ -1,4 +1,5 @@
-export 'package:events_emitter/events_emitter.dart' show EventEmitter, EventListener;
+export 'package:events_emitter/events_emitter.dart'
+    show EventEmitter, EventListener;
 
 export 'event.dart' show EventNotifier;
 export 'notifiers.dart'
