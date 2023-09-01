@@ -18,7 +18,6 @@ import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
-import 'package:logging/logging.dart';
 
 class IncomingHandler {
   final Object? Function(Object?) handle;
@@ -222,7 +221,7 @@ class SatelliteClient extends EventEmitter implements Client {
       socket.onError((error) {
         if (listenerCount('error') == 0) {
           close();
-          logger.severe(
+          logger.error(
             'socket error but no listener is attached: $error',
           );
         }
@@ -231,7 +230,7 @@ class SatelliteClient extends EventEmitter implements Client {
       socket.onClose(() {
         close();
         if (listenerCount('error') == 0) {
-          logger.severe('socket closed but no listener is attached');
+          logger.error('socket closed but no listener is attached');
         }
         emit(
           'error',
@@ -268,8 +267,6 @@ class SatelliteClient extends EventEmitter implements Client {
     );
 
     socketHandler = null;
-    // TODO(update): SHould this be removed??
-    // removeAllListeners();
 
     if (socket != null) {
       socket!.closeAndRemoveListeners();
@@ -294,8 +291,8 @@ class SatelliteClient extends EventEmitter implements Client {
     try {
       final messageInfo = toMessage(data);
 
-      if (logger.level <= Level.FINE) {
-        logger.fine('[proto] recv: ${msgToString(messageInfo.msg)}');
+      if (logger.levelImportance <= Level.debug.value) {
+        logger.debug('[proto] recv: ${msgToString(messageInfo.msg)}');
       }
 
       final handler = getIncomingHandlerForMessage(messageInfo.msgType);
@@ -437,8 +434,8 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void sendMessage(Object request) {
-    if (logger.level <= Level.FINE) {
-      logger.fine('[proto] send: ${msgToString(request)}');
+    if (logger.levelImportance <= Level.debug.value) {
+      logger.debug('[proto] send: ${msgToString(request)}');
     }
     final _socket = socket;
     if (_socket == null || isClosed()) {

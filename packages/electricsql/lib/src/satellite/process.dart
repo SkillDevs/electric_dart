@@ -49,6 +49,8 @@ final ConnectRetryHandler defaultConnectRetryHandler = (_error, _attempts) {
   return true;
 };
 
+const connectionRetryPolicy = ConnectionRetryPolicy();
+
 const throwErrors = {SatelliteErrorCode.internal};
 
 class SatelliteProcess implements Satellite {
@@ -107,7 +109,7 @@ class SatelliteProcess implements Satellite {
 
   @visibleForTesting
   late ConnectRetryHandler connectRetryHandler;
-  Completer? initializing;
+  Waiter? initializing;
 
   SatelliteProcess({
     required this.dbName,
@@ -327,7 +329,7 @@ This means there is a notifier subscription leak.`''');
     List<ClientShapeDefinition> shapeDefinitions,
   ) async {
     // Await for client to be ready before doing anything else
-    await initializing?.future;
+    await initializing?.waitOn();
 
     // First, we want to check if we already have either fulfilled or fulfilling subscriptions with exactly the same definitions
     final existingSubscription =
@@ -577,8 +579,7 @@ This means there is a notifier subscription leak.`''');
     final subscriptionId = errorData.subscriptionId;
     final satelliteError = errorData.error;
 
-    logger
-        .severe('encountered a subscription error: ${satelliteError.message}');
+    logger.error('encountered a subscription error: ${satelliteError.message}');
 
     await _resetClientState();
 
@@ -594,7 +595,7 @@ This means there is a notifier subscription leak.`''');
 
   // handles async client erros: can be a socket error or a server error message
   Future<void> _handleClientError(SatelliteException satelliteError) async {
-    if (initializing != null && !initializing!.isCompleted) {
+    if (initializing != null && !initializing!.finished) {
       if (satelliteError.code == SatelliteErrorCode.socketError) {
         logger.warning(
           'a socket error occurred while connecting to server: ${satelliteError.message}',
@@ -631,7 +632,7 @@ This means there is a notifier subscription leak.`''');
     ConnectivityState status,
   ) async {
     connectivityState = status;
-    logger.fine('connectivity state changed $status');
+    logger.debug('connectivity state changed $status');
 
     // TODO: no op if state is the same
     switch (status) {
@@ -662,8 +663,8 @@ This means there is a notifier subscription leak.`''');
   @visibleForTesting
   Future<void> connectWithBackoff() async {
     final _initializing = initializing;
-    if (_initializing == null || _initializing.isCompleted) {
-      initializing = Completer<void>();
+    if (_initializing == null || _initializing.finished) {
+      initializing = Waiter();
     }
 
     Future<void> _attemptBody() async {
@@ -677,9 +678,9 @@ This means there is a notifier subscription leak.`''');
           retryAttempt++;
           return _attemptBody();
         },
-        maxAttempts: 100,
-        maxDelay: const Duration(milliseconds: 5000),
-        delayFactor: const Duration(milliseconds: 100),
+        maxAttempts: connectionRetryPolicy.numOfAttempts,
+        maxDelay: connectionRetryPolicy.maxDelay,
+        delayFactor: connectionRetryPolicy.startingDelay,
         retryIf: (e) {
           return connectRetryHandler(e, retryAttempt);
         },
@@ -719,7 +720,7 @@ This means there is a notifier subscription leak.`''');
         throw authResp.error!;
       }
     } catch (error) {
-      logger.fine(
+      logger.debug(
         'server returned an error while establishing connection: $error',
       );
       rethrow;
@@ -1664,5 +1665,17 @@ class ApplyIncomingResult {
   ApplyIncomingResult({
     required this.tableNames,
     required this.statements,
+  });
+}
+
+class ConnectionRetryPolicy {
+  final int numOfAttempts;
+  final Duration startingDelay;
+  final Duration maxDelay;
+
+  const ConnectionRetryPolicy({
+    this.numOfAttempts = 100,
+    this.startingDelay = const Duration(milliseconds: 100),
+    this.maxDelay = const Duration(milliseconds: 5000),
   });
 }
