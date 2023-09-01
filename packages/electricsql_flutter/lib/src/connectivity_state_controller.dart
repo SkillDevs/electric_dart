@@ -1,4 +1,6 @@
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/notifiers.dart';
+import 'package:electricsql/util.dart';
 import 'package:flutter/foundation.dart';
 
 class ConnectivityStateController with ChangeNotifier {

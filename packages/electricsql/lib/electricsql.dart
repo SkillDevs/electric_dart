@@ -1,32 +1,21 @@
 /// Dart implementation of Electric SQL
 library electricsql;
 
-export 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart' show JWTAlgorithm;
+// Auth
+export 'src/auth/index.dart';
 
-export 'src/auth/auth.dart' show AuthConfig, AuthState;
-export 'src/auth/insecure.dart' show insecureAuthToken;
-export 'src/auth/secure.dart' show mockSecureAuthToken, secureAuthToken;
-export 'src/client/model/client.dart' show ElectricClient;
-export 'src/config/config.dart'
-    show ConsoleConfig, ElectricConfig, HydratedConfig, ReplicationConfig;
+// ElectricClient
+export 'src/client/model/index.dart';
+
+// Config
+export 'src/config/config.dart' show ElectricConfig, HydratedConfig;
+
 export 'src/electric/adapter.dart' show DatabaseAdapter;
-export 'src/electric/electric.dart' show ElectrifyOptions;
-export 'src/migrators/builder.dart' show MetaData, makeMigration, parseMetadata;
-export 'src/migrators/bundle.dart' show BundleMigrator;
+
+// Electric
+export 'src/electric/index.dart';
+
 export 'src/migrators/migrators.dart' show Migration;
-export 'src/notifiers/event.dart' show EventNotifier;
-export 'src/notifiers/notifiers.dart'
-    show
-        AttachedDbIndex,
-        AuthStateCallback,
-        AuthStateNotification,
-        Change,
-        ChangeNotification,
-        ConnectivityStateChangeNotification,
-        PotentialChangeCallback,
-        PotentialChangeNotification;
-export 'src/satellite/registry.dart' show globalRegistry;
-export 'src/satellite/satellite.dart' show Satellite;
-export 'src/sockets/sockets.dart' show SocketFactory;
-export 'src/util/debug/debug.dart' show setLogLevel;
-export 'src/util/types.dart' show ConnectivityState;
+
+// Debug
+export 'src/util/debug/index.dart';

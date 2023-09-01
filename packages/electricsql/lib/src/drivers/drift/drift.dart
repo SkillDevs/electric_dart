@@ -15,7 +15,7 @@ Future<ElectricClient> electrify({
   final adapter = opts?.adapter ?? DriftAdapter(db);
   final socketFactory = opts?.socketFactory ?? getDefaultSocketFactory();
 
-  final namespace = await electrify_lib.electrify(
+  final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
     migrations: migrations,
     config: config,

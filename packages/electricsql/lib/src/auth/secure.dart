@@ -1,6 +1,8 @@
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:electricsql/src/auth/auth.dart';
 
+export 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart' show JWTAlgorithm;
+
 Future<String> secureAuthToken({
   required TokenClaims claims,
   required String iss,

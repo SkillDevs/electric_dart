@@ -1,10 +1,10 @@
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/migrators.dart';
+import 'package:electricsql/notifiers.dart';
+import 'package:electricsql/satellite.dart';
+import 'package:electricsql/sockets.dart';
 import 'package:electricsql/src/config/config.dart';
-import 'package:electricsql/src/migrators/migrators.dart';
-import 'package:electricsql/src/notifiers/notifiers.dart';
-import 'package:electricsql/src/satellite/satellite.dart';
-import 'package:electricsql/src/util/debug/debug.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
 
 // These are the options that should be provided to the adapter's electrify
 // entrypoint. They are all optional to optionally allow different / mock
@@ -38,7 +38,7 @@ class ElectrifyBaseOptions {
 /// call once they've constructed their implementations. This function can
 /// also be called directly by tests that don't want to go via the adapter
 /// entrypoints in order to avoid loading the environment dependencies.
-Future<ElectricClient> electrify({
+Future<ElectricClient> electrifyBase({
   required DbName dbName,
   required List<Migration> migrations,
   required ElectricConfig config,

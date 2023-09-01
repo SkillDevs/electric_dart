@@ -1,4 +1,5 @@
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/sockets/mock.dart';

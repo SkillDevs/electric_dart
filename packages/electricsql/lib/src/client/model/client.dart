@@ -1,6 +1,5 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
-import 'package:electricsql/src/electric/namespace.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 

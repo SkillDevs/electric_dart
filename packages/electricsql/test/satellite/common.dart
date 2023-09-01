@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';

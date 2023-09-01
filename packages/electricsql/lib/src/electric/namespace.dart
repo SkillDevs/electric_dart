@@ -1,5 +1,6 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
+import 'package:electricsql/util.dart';
 
 class ElectricNamespace {
   final DatabaseAdapter adapter;

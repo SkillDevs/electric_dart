@@ -1,4 +1,4 @@
-import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/sockets.dart';
 
 SocketFactory getDefaultSocketFactory() {
   return throw UnimplementedError();

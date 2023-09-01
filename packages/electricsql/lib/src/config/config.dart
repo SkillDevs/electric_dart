@@ -1,8 +1,5 @@
 import 'package:electricsql/src/auth/auth.dart';
 
-typedef AppName = String;
-typedef EnvName = String;
-
 class ElectricConfig {
   final AuthConfig auth;
 
@@ -42,30 +39,6 @@ class HydratedConfig {
     required this.auth,
     required this.replication,
     required this.debug,
-  });
-}
-
-class InternalElectricConfig {
-  final AuthConfig auth;
-  final ReplicationConfig? replication;
-  final bool? debug;
-
-  InternalElectricConfig({
-    required this.auth,
-    required this.replication,
-    required this.debug,
-  });
-}
-
-class ConsoleConfig {
-  final String host;
-  final int port;
-  final bool ssl;
-
-  ConsoleConfig({
-    required this.host,
-    required this.port,
-    required this.ssl,
   });
 }
 
