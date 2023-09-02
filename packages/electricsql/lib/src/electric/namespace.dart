@@ -9,6 +9,8 @@ class ElectricNamespace {
   bool _isConnected = false;
   bool get isConnected => _isConnected;
 
+  late final String _connectivityChangesSubscriptionId;
+
   ElectricNamespace({
     required this.adapter,
     required this.notifier,
@@ -18,7 +20,8 @@ class ElectricNamespace {
 
     // we need to set isConnected before the first event is emitted,
     // otherwise application might be out of sync with satellite state.
-    notifier.subscribeToConnectivityStateChanges((notification) {
+    _connectivityChangesSubscriptionId =
+        notifier.subscribeToConnectivityStateChanges((notification) {
       setIsConnected(notification.connectivityState);
     });
   }
@@ -37,5 +40,11 @@ class ElectricNamespace {
   /// db.electric.notifier.potentiallyChanged().
   void potentiallyChanged() {
     notifier.potentiallyChanged();
+  }
+
+  void dispose() {
+    notifier.unsubscribeFromConnectivityStateChanges(
+      _connectivityChangesSubscriptionId,
+    );
   }
 }

@@ -3,6 +3,7 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/sockets.dart';
+import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/util.dart';
 
@@ -63,7 +64,7 @@ Future<ElectricClient> electrifyBase({
     config: configWithDefaults,
   );
 
-  final electric = ElectricClient.create(
+  final electric = ElectricClientImpl.create(
     adapter: adapter,
     notifier: notifier,
     satellite: satellite,

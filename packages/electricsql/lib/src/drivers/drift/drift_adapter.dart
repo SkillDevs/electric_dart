@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/electric/adapter.dart' as adp;
-import 'package:electricsql/src/notifiers/notifiers.dart';
-import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class DriftAdapter implements adp.DatabaseAdapter {
@@ -63,35 +61,6 @@ class DriftAdapter implements adp.DatabaseAdapter {
       });
       return completer.future;
     });
-  }
-
-  void Function() hookToNotifier(
-    Notifier notifier,
-  ) {
-    final key = notifier.subscribeToDataChanges(
-      (notification) {
-        final tablesChanged = notification.changes.map((e) {
-          final tableName = e.qualifiedTablename.tablename;
-          return tableName;
-        }).toSet();
-
-        final tableUpdates = tablesChanged.map((e) => TableUpdate(e)).toSet();
-        logger.info('Notifying table changes to drift: $tablesChanged');
-        db.notifyUpdates(tableUpdates);
-      },
-    );
-
-    final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
-      logger.info(
-        'Drift tables have been updated $updatedTables. Notifying Electric.',
-      );
-      notifier.potentiallyChanged();
-    });
-
-    return () {
-      notifier.unsubscribeFromDataChanges(key);
-      tableUpdateSub.cancel();
-    };
   }
 }
 
