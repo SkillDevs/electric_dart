@@ -52,15 +52,57 @@ If this argument is not provided they are written to
 
   @override
   Future<int> run() async {
-    final service =
+    String service =
         (argResults?['service'] as String?) ?? 'http://127.0.0.1:5050';
+    if (service.endsWith('/')) {
+      service = service.substring(0, service.length - 1);
+    }
 
     final out = (argResults?['out'] as String?) ??
         'lib/generated/electric_migrations.dart';
 
+    final valid = await _prechecks(service: service, out: out);
+    if (!valid) {
+      return ExitCode.config.code;
+    }
+
     await _runGenerator(service: service, out: out);
 
     return ExitCode.success.code;
+  }
+
+  Future<bool> _prechecks({
+    required String service,
+    required String out,
+  }) async {
+    if (!(await _isDartProject())) {
+      _logger.err('ERROR: This command must be run inside a Dart project');
+      return false;
+    }
+
+    if (!(await _isElectricServiceReachable(service))) {
+      _logger.err('ERROR: Could not reach Electric service at $service');
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<bool> _isDartProject() async {
+    final pubspecFile = File('pubspec.yaml');
+    return pubspecFile.exists();
+  }
+
+  Future<bool> _isElectricServiceReachable(String service) async {
+    final url = '$service/api';
+
+    try {
+      await http.get(Uri.parse(url));
+      // If we get here, the service is reachable
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> _runGenerator({
