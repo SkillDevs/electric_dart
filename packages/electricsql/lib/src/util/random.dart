@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:electricsql/src/util/common.dart';
+
 final _random = Random();
 
 String randomValue() {
@@ -8,4 +10,8 @@ String randomValue() {
 
 String _randomHex() {
   return _random.nextInt(16).toRadixString(16);
+}
+
+String genUUID() {
+  return uuid();
 }

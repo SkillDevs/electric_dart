@@ -15,6 +15,7 @@ dependencies:
   flutter:
     sdk: flutter
   electricsql_flutter: ^0.1.0
+  electricsql: ^0.1.0
   cupertino_icons: ^1.0.2
   sqlite3: ^2.0.0
   sqlite3_flutter_libs: ^0.5.15

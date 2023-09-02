@@ -9,8 +9,8 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:todos_electrified/database/database.dart';
 import 'package:todos_electrified/database/drift/connection/connection.dart'
     as impl;
-import 'package:todos_electrified/database/drift/database.dart' hide Todo;
 import 'package:todos_electrified/electric.dart';
+import 'package:todos_electrified/init.dart';
 import 'package:todos_electrified/todos.dart';
 import 'package:todos_electrified/util.dart';
 import 'package:animated_emoji/animated_emoji.dart';
@@ -23,40 +23,11 @@ Future<void> main() async {
   runApp(_Entrypoint());
 }
 
-typedef _InitData = ({
-  TodosDatabase todosDb,
-  ElectricClient electricClient,
-  ConnectivityStateController connectivityStateController,
-});
-
 class _Entrypoint extends HookWidget {
   @override
   Widget build(BuildContext context) {
-    final initDataVN = useState<_InitData?>(null);
-    useEffect(() {
-      () async {
-        final driftRepo = await initDriftTodosDatabase();
-        final todosDb = TodosDatabase(driftRepo);
-        // final sqliteRepo = initSqliteRepository(dbPath);
-        // final todosDb = TodosDatabase(sqliteRepo);
-        // final adapter = SqliteAdapter(sqliteRepo.db);
+    final initData = useInitData();
 
-        const dbName = "todos_db";
-        final electricClient = await startElectricDrift(dbName, driftRepo.db);
-
-        final connectivityStateController =
-            ConnectivityStateController(electricClient)..init();
-
-        initDataVN.value = (
-          todosDb: todosDb,
-          electricClient: electricClient,
-          connectivityStateController: connectivityStateController,
-        );
-      }();
-      return null;
-    }, []);
-
-    final initData = initDataVN.value;
     if (initData == null) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -67,8 +38,9 @@ class _Entrypoint extends HookWidget {
       overrides: [
         todosDatabaseProvider.overrideWithValue(initData.todosDb),
         electricClientProvider.overrideWithValue(initData.electricClient),
-        connectivityStateControllerProvider
-            .overrideWith(((ref) => initData.connectivityStateController)),
+        connectivityStateControllerProvider.overrideWith(
+          (ref) => initData.connectivityStateController,
+        ),
       ],
       child: const MyApp(),
     );
