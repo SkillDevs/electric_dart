@@ -77,7 +77,7 @@ Bind live data to the widgets. This can be possible when using drift + its Strea
 ```dart
 AppDatabase db;
 // Since we've electrified it, we can now use the original database instance normally.
-final Stream<Todo> todosStream = db.select(db.todos).watch();
+final Stream<List<Todo>> todosStream = db.select(db.todos).watch();
 
 // Stateful Widget + initState
 todosStream.listen((liveTodos) {
@@ -118,7 +118,9 @@ This automatic reactivity works no matter where the write is made — locally, [
 
 Check out the official docs from ElectricSQL [here](https://electric-sql.com/docs) to look at live demos, API docs and integrations.
 
-## Development of the client for maintainers or contributors
+---
+
+## Development instructions for maintainers and contributors
 
 Dart 3.x and Melos required
 
