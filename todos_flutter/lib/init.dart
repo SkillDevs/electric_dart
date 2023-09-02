@@ -44,7 +44,7 @@ InitData? useInitData() {
 
     return () {
       mounted = false;
-      
+
       initData?.connectivityStateController.dispose();
       initData?.electricClient.dispose();
     };

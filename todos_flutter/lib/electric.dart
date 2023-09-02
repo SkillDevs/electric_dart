@@ -17,7 +17,7 @@ Future<DriftElectricClient<AppDatabase>> startElectricDrift(
   String dbName,
   AppDatabase db,
 ) async {
-  final namespace = await electrify<AppDatabase>(
+  final client = await electrify<AppDatabase>(
     dbName: dbName,
     db: db,
     migrations: kElectricMigrations,
@@ -30,5 +30,5 @@ Future<DriftElectricClient<AppDatabase>> startElectricDrift(
     ),
   );
 
-  return namespace;
+  return client;
 }
