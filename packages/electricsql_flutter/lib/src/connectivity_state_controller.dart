@@ -15,6 +15,8 @@ class ConnectivityStateController with ChangeNotifier {
   ConnectivityStateController(this.electric);
 
   void init() {
+    assert(_connectivityChangeSubscriptionId == null, 'Already initialized');
+
     setConnectivityState(_getElectricState(electric));
 
     void handler(ConnectivityStateChangeNotification notification) {
@@ -36,6 +38,7 @@ class ConnectivityStateController with ChangeNotifier {
       electric.notifier.unsubscribeFromConnectivityStateChanges(
         _connectivityChangeSubscriptionId!,
       );
+      _connectivityChangeSubscriptionId = null;
     }
     super.dispose();
   }
