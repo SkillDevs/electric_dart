@@ -274,7 +274,7 @@ packages:
     source: hosted
     version: "0.3.1"
   electricsql:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       path: "../packages/electricsql"
       relative: true
