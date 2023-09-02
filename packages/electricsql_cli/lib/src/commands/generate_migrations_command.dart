@@ -239,9 +239,11 @@ If this argument is not provided they are written to
   }
 }
 
+const _kTab = '  ';
+
 String generateMigrationsDartCode(List<Migration> migrations) {
   final migrationLines =
-      migrations.map((m) => "${generateSingleMigrationDartCode(m, '\t')},");
+      migrations.map((m) => '${generateSingleMigrationDartCode(m, _kTab)},');
   final migrationsStr = migrationLines.join('\n');
   return '''
 // GENERATED CODE - DO NOT MODIFY BY HAND
@@ -258,7 +260,7 @@ String generateSingleMigrationDartCode(
   Migration migration,
   String indent,
 ) {
-  final stmtIndent = '$indent\t\t\t';
+  final stmtIndent = '$indent$_kTab$_kTab';
   final statments = migration.statements.map((stmt) {
     final singleLineStmt = stmt
         .replaceAll('\n', r'\n')
@@ -269,9 +271,9 @@ String generateSingleMigrationDartCode(
   final statementsString = statments.join('\n');
   return '''
 ${indent}Migration(
-$indent\tstatements: [
+$indent${_kTab}statements: [
 $statementsString
-$indent\t],
-$indent\tversion: "${migration.version}",
+$indent$_kTab],
+$indent${_kTab}version: "${migration.version}",
 $indent)''';
 }

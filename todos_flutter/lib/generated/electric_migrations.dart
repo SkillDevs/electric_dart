@@ -26,6 +26,6 @@ final kElectricMigrations = [
       "\n    DROP TRIGGER IF EXISTS delete_main_todo_into_oplog;\n    ",
       "\n    CREATE TRIGGER delete_main_todo_into_oplog\n       AFTER DELETE ON main.todo\n       WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == 'main.todo')\n    BEGIN\n      INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)\n      VALUES ('main', 'todo', 'DELETE', json_object('id', old.id), NULL, json_object('completed', old.completed, 'id', old.id, 'listid', old.listid, 'text', old.text), NULL);\n    END;\n    ",
     ],
-    version: "20230902170946_923",
+    version: "20230902175402_176",
   ),
 ];
