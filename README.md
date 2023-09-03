@@ -27,7 +27,7 @@ Client based on the typescript client from the `clients/typescript` subfolder fr
 
 [Instructions](https://github.com/SkillDevs/electric_dart/blob/master/todos_flutter/README.md)
 
-![Electric Flutter](https://github.com/SkillDevs/electric_dart/assets/22084723/bcff59b3-747f-4e88-bb5c-79bb4c21bf2f)
+![Electric Flutter](https://github.com/SkillDevs/electric_dart/assets/22084723/4fa1d198-97c6-48ef-9500-24bd1cf788ea)
 
 ## Usage
 
