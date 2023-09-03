@@ -36,7 +36,7 @@ class LoggerConfig {
 }
 
 Logger _createLogger() {
-  final logger = loglib.Logger('electric');
+  final logger = loglib.Logger('Electric');
 
   loglib.hierarchicalLoggingEnabled = true;
 
@@ -58,16 +58,26 @@ Logger _createLogger() {
     final pen = AnsiPen();
 
     final level = event.level;
+    final String levelName;
     if (level >= loglib.Level.SEVERE) {
       pen.red();
+      levelName = 'ERROR';
     } else if (level >= loglib.Level.WARNING) {
       pen.yellow();
+      levelName = 'WARN';
     } else if (level <= loglib.Level.FINE) {
       pen.gray(level: 0.6);
+      levelName = 'DEBUG';
+    } else {
+      levelName = 'INFO';
     }
 
+    final paddedName = levelName.padLeft(5);
+
     // ignore: avoid_print
-    print(pen('${event.level.name}: ${event.time}: ${event.message} $extra'));
+    print(
+      pen('${event.loggerName} $paddedName: ${_toIso8601StringOnlyDay(event.time)}: ${event.message} $extra'),
+    );
   });
 
   // Wrapped simplified logger
@@ -129,4 +139,23 @@ extension _LevelExt on Level {
         return loglib.Level.SEVERE;
     }
   }
+}
+
+String _toIso8601StringOnlyDay(DateTime date) {
+  final String h = _twoDigits(date.hour);
+  final String min = _twoDigits(date.minute);
+  final String sec = _twoDigits(date.second);
+  final String ms = _threeDigits(date.millisecond);
+  return '$h:$min:$sec.$ms';
+}
+
+String _threeDigits(int n) {
+  if (n >= 100) return '$n';
+  if (n >= 10) return '0$n';
+  return '00$n';
+}
+
+String _twoDigits(int n) {
+  if (n >= 10) return '$n';
+  return '0$n';
 }
