@@ -249,6 +249,12 @@ class _TodosLoaded extends HookConsumerWidget {
                     hintText: "What needs to be done?",
                   ),
                   onEditingComplete: () async {
+                    final text = textController.text;
+                    if (text.trim().isEmpty) {
+                      // clear focus
+                      FocusScope.of(context).requestFocus(FocusNode());
+                      return;
+                    }
                     print("done");
                     final db = ref.read(todosDatabaseProvider);
                     await db.insertTodo(
