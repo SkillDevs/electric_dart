@@ -279,7 +279,7 @@ packages:
       path: "../packages/electricsql"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.1.2+1"
   electricsql_cli:
     dependency: "direct dev"
     description:
