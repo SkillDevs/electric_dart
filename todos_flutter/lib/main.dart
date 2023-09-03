@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:electricsql_flutter/electricsql_flutter.dart';
+import 'package:electricsql/util.dart' show genUUID;
+import 'package:electricsql/electricsql.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -12,7 +13,6 @@ import 'package:todos_electrified/database/drift/connection/connection.dart'
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/init.dart';
 import 'package:todos_electrified/todos.dart';
-import 'package:todos_electrified/util.dart';
 import 'package:animated_emoji/animated_emoji.dart';
 
 const kClientId = "FAKE-CLIENT-ID";
@@ -226,7 +226,7 @@ class _TodosLoaded extends HookConsumerWidget {
                     final db = ref.read(todosDatabaseProvider);
                     await db.insertTodo(
                       Todo(
-                        id: newUUID(),
+                        id: genUUID(),
                         listId: kClientId,
                         text: textController.text,
                         completed: false,

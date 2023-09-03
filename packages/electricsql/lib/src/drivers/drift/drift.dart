@@ -7,7 +7,6 @@ import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
-import 'package:electricsql/src/util/types.dart';
 
 Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
   required String dbName,

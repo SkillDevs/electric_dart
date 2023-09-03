@@ -1,4 +1,4 @@
 /// drift Driver
-library electric_flutter_drift;
+library driver_drift;
 
 export 'package:electricsql/drivers/drift.dart';

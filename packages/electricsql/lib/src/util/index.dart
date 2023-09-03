@@ -1,3 +1,3 @@
 export 'random.dart' show genUUID;
 export 'tablename.dart';
-export 'types.dart';
+export 'types.dart' hide Row;
