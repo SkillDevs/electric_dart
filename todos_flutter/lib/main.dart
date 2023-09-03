@@ -5,13 +5,16 @@ import 'package:electricsql/electricsql.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:todos_electrified/database/database.dart';
 import 'package:todos_electrified/database/drift/connection/connection.dart'
     as impl;
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/init.dart';
+import 'package:todos_electrified/theme.dart';
 import 'package:todos_electrified/todos.dart';
 import 'package:animated_emoji/animated_emoji.dart';
 
@@ -55,9 +58,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
-      theme: ThemeData(
+      theme: ThemeData.from(
         useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
+        colorScheme: kElectricColorScheme,
       ),
       home: const MyHomePage(),
     );
@@ -80,9 +83,10 @@ class MyHomePage extends HookConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: const Center(
-            child: FlutterLogo(
-          size: 35,
-        )),
+          child: FlutterLogo(
+            size: 35,
+          ),
+        ),
         title: Row(
           children: [
             const Text("todos", style: TextStyle(fontSize: 30)),
@@ -101,8 +105,6 @@ class MyHomePage extends HookConsumerWidget {
       body: Column(
         children: [
           const SizedBox(height: 10),
-          const _ConnectivityStatusText(),
-          const SizedBox(height: 10),
           const ConnectivityButton(),
           const SizedBox(height: 10),
           Expanded(
@@ -116,6 +118,24 @@ class MyHomePage extends HookConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
             ),
           ),
+          Align(
+            alignment: Alignment.center,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  const Text(
+                    "Unofficial Dart client running on top of\nthe sync service powered by",
+                    textAlign: TextAlign.center,
+                  ),
+                  SvgPicture.asset(
+                    "assets/electric.svg",
+                    height: 40,
+                  ),
+                ],
+              ),
+            ),
+          ),
           if (!kIsWeb)
             const Align(
               alignment: Alignment.centerLeft,
@@ -123,29 +143,9 @@ class MyHomePage extends HookConsumerWidget {
                 padding: EdgeInsets.all(8.0),
                 child: _DeleteDbButton(),
               ),
-            )
+            ),
         ],
       ),
-    );
-  }
-}
-
-class _ConnectivityStatusText extends ConsumerWidget {
-  const _ConnectivityStatusText();
-
-  @override
-  Widget build(BuildContext context, ref) {
-    final connectivity = ref.watch(connectivityStateControllerProvider
-        .select((value) => value.connectivityState));
-
-    Color? textColor = Theme.of(context).textTheme.bodySmall!.color;
-    if (connectivity == ConnectivityState.disconnected) {
-      textColor = Theme.of(context).colorScheme.error;
-    }
-
-    return Text(
-      connectivity.name,
-      style: TextStyle(color: textColor),
     );
   }
 }
@@ -156,7 +156,8 @@ class _DeleteDbButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextButton.icon(
-      style: TextButton.styleFrom(foregroundColor: Colors.red),
+      style: TextButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.error),
       onPressed: () async {
         await impl.deleteTodosDbFile();
 
@@ -166,7 +167,7 @@ class _DeleteDbButton extends StatelessWidget {
           const SnackBar(content: Text("Database deleted, restart the app")),
         );
       },
-      icon: const Icon(Icons.delete),
+      icon: const Icon(Symbols.delete),
       label: const Text("Delete local database"),
     );
   }
@@ -182,17 +183,43 @@ class ConnectivityButton extends HookConsumerWidget {
           .select((value) => value.connectivityState),
     );
 
-    return ElevatedButton(
+    final theme = Theme.of(context);
+
+    final ({Color color, IconData icon}) iconInfo = switch (connectivityState) {
+      ConnectivityState.available => (
+          icon: Symbols.wifi,
+          color: Colors.orangeAccent
+        ),
+      ConnectivityState.connected => (
+          icon: Symbols.wifi,
+          color: theme.colorScheme.primary
+        ),
+      ConnectivityState.disconnected => (
+          icon: Symbols.wifi_off,
+          color: theme.colorScheme.error
+        ),
+      ConnectivityState.error => (
+          icon: Symbols.wifi_off,
+          color: theme.colorScheme.error
+        ),
+    };
+
+    final String label = switch (connectivityState) {
+      ConnectivityState.available => "Available",
+      ConnectivityState.connected => "Connected",
+      ConnectivityState.disconnected => "Disconnected",
+      ConnectivityState.error => "Error",
+    };
+
+    return ElevatedButton.icon(
       onPressed: () async {
         final connectivityStateController =
             ref.read(connectivityStateControllerProvider);
         connectivityStateController.toggleConnectivityState();
       },
-      child: Text(
-        connectivityState == ConnectivityState.connected
-            ? "Disconnect"
-            : "Connect",
-      ),
+      style: ElevatedButton.styleFrom(foregroundColor: iconInfo.color),
+      icon: Icon(iconInfo.icon),
+      label: Text(label),
     );
   }
 }
@@ -243,16 +270,21 @@ class _TodosLoaded extends HookConsumerWidget {
                   height: 15,
                 ),
                 Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    separatorBuilder: (context, i) => const Divider(
-                      height: 0,
-                    ),
-                    itemBuilder: (context, i) {
-                      return TodoTile(todo: todos[i]);
-                    },
-                    itemCount: todos.length,
-                  ),
+                  child: todos.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("No todos yet"),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          separatorBuilder: (context, i) => const Divider(
+                            height: 0,
+                          ),
+                          itemBuilder: (context, i) {
+                            return TodoTile(todo: todos[i]);
+                          },
+                          itemCount: todos.length,
+                        ),
                 ),
               ],
             ),
@@ -279,11 +311,11 @@ class TodoTile extends ConsumerWidget {
           // satellite.notifier.potentiallyChanged();
         },
         icon: todo.completed
-            ? const Icon(
-                Icons.check_circle_outline,
-                color: Colors.green,
+            ? Icon(
+                Symbols.check_circle_outline,
+                color: Theme.of(context).colorScheme.primary,
               )
-            : const Icon(Icons.circle_outlined),
+            : const Icon(Symbols.circle),
       ),
       title: Text(
         todo.text ?? "",
@@ -300,7 +332,7 @@ class TodoTile extends ConsumerWidget {
           // final satellite = ref.read(satelliteProvider);
           // satellite.notifier.potentiallyChanged();
         },
-        icon: const Icon(Icons.delete),
+        icon: const Icon(Symbols.delete),
       ),
     );
   }

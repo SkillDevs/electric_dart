@@ -55,8 +55,10 @@ class DriftRepository implements m.TodosRepository {
 
   @override
   Future<List<m.Todo>> fetchTodos() async {
-    return db.todos
-        .select()
+    return (db.todos.select()
+          ..orderBy(
+            [(tbl) => OrderingTerm(expression: tbl.textCol.lower())],
+          ))
         .map(
           (todo) => m.Todo(
               completed: todo.completed,
@@ -101,8 +103,10 @@ class DriftRepository implements m.TodosRepository {
 
   @override
   Stream<List<m.Todo>> watchTodos() {
-    return db.todos
-        .select()
+    return (db.todos.select()
+          ..orderBy(
+            [(tbl) => OrderingTerm(expression: tbl.textCol.lower())],
+          ))
         .map(
           (todo) => m.Todo(
               completed: todo.completed,
