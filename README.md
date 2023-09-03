@@ -54,7 +54,9 @@ final electric = await electrify<AppDatabase>(
             // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
             token: '<your JWT>',
         ),
-        // debug: true,
+        // logger: LoggerConfig(
+        //     level: Level.debug, // in production you can use Logger.off
+        // ),
         // url: '<ELECTRIC_SERVICE_URL>',
     ),
 );

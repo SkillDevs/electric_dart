@@ -3,8 +3,36 @@ import 'package:logging/logging.dart' as loglib;
 
 final Logger logger = _createLogger();
 
-void setLogLevel(Level logLevel) {
+void _setLogLevel(Level logLevel) {
   logger.setLogLevel(logLevel);
+}
+
+void _setColoredLogger(bool value) {
+  // Global variable from the ansicolor package
+  ansiColorDisabled = !value;
+}
+
+void configureElectricLogger(LoggerConfig config) {
+  if (config.level != null) {
+    _setLogLevel(config.level!);
+  }
+
+  if (config.colored != null) {
+    _setColoredLogger(config.colored!);
+  }
+}
+
+class LoggerConfig {
+  /// The minimum level of log messages to print.
+  final Level? level;
+
+  /// Whether to colorize the log messages.
+  final bool? colored;
+
+  LoggerConfig({
+    this.level,
+    this.colored,
+  });
 }
 
 Logger _createLogger() {
@@ -47,7 +75,7 @@ Logger _createLogger() {
 }
 
 enum Level {
-  trace,
+  off,
   debug,
   info,
   warning,
@@ -67,10 +95,6 @@ class Logger {
 
   void setLogLevel(Level logLevel) {
     _logger.level = logLevel.loggingLibLevel;
-  }
-
-  void trace(String message) {
-    _logger.log(Level.trace.loggingLibLevel, message);
   }
 
   void debug(String message) {
@@ -93,8 +117,8 @@ class Logger {
 extension _LevelExt on Level {
   loglib.Level get loggingLibLevel {
     switch (this) {
-      case Level.trace:
-        return loglib.Level.FINEST;
+      case Level.off:
+        return loglib.Level.OFF;
       case Level.debug:
         return loglib.Level.FINE;
       case Level.info:

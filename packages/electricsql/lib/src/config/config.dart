@@ -1,4 +1,4 @@
-import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/electricsql.dart';
 
 class ElectricConfig {
   final AuthConfig auth;
@@ -18,27 +18,23 @@ class ElectricConfig {
   /// `http://127.0.0.1:5133`
   final String? url;
 
-  ///  Optional flag to activate debug mode
-  ///  which produces more verbose output.
-  ///  Defaults to `false`.
-  final bool? debug;
+  /// Optional logger configuration.
+  final LoggerConfig? logger;
 
   ElectricConfig({
     required this.auth,
     this.url,
-    this.debug,
+    this.logger,
   });
 }
 
 class HydratedConfig {
   final AuthConfig auth;
   final ReplicationConfig replication;
-  final bool debug;
 
   HydratedConfig({
     required this.auth,
     required this.replication,
-    required this.debug,
   });
 }
 
@@ -57,7 +53,7 @@ class ReplicationConfig {
 HydratedConfig hydrateConfig(ElectricConfig config) {
   final auth = config.auth;
 
-  final debug = config.debug ?? false;
+  //final debug = config.debug ?? false;
 
   final url = Uri.parse(config.url ?? 'http://127.0.0.1:5133');
 
@@ -76,6 +72,6 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
   return HydratedConfig(
     auth: auth,
     replication: replication,
-    debug: debug,
+    //debug: debug,
   );
 }

@@ -47,7 +47,12 @@ Future<ElectricClient> electrifyBase({
   required SocketFactory socketFactory,
   required ElectrifyBaseOptions opts,
 }) async {
-  setLogLevel((config.debug ?? false) ? Level.trace : Level.warning);
+  configureElectricLogger(
+    LoggerConfig(
+      level: config.logger?.level ?? Level.warning,
+      colored: config.logger?.colored ?? true,
+    ),
+  );
 
   final configWithDefaults = hydrateConfig(config);
   final migrator =

@@ -20,7 +20,7 @@ final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
 
 final HydratedConfig config = HydratedConfig(
-  debug: true,
+  //debug: true,
   replication: ReplicationConfig(host: '127.0.0.1', port: 5133, ssl: false),
   auth: const AuthConfig(clientId: null, token: 'test-token'),
 );

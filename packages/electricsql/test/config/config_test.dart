@@ -18,7 +18,7 @@ void main() {
 
     expect(hydrated.auth.token, 'test-token');
 
-    expect(hydrated.debug, false);
+    //expect(hydrated.debug, false);
   });
 
   test('custom config', () {
@@ -28,7 +28,7 @@ void main() {
           token: 'test-token-2',
         ),
         url: 'https://192.169.2.10',
-        debug: true,
+        //debug: true,
       ),
     );
 
@@ -38,7 +38,7 @@ void main() {
 
     expect(hydrated.auth.token, 'test-token-2');
 
-    expect(hydrated.debug, true);
+    //expect(hydrated.debug, true);
   });
 
   test('port inference', () {

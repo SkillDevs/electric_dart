@@ -1,1 +1,1 @@
-export 'debug.dart' show Level, setLogLevel;
+export 'debug.dart' show Level, LoggerConfig, configureElectricLogger;

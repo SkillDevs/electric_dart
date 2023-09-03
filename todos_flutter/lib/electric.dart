@@ -25,7 +25,9 @@ Future<DriftElectricClient<AppDatabase>> startElectricDrift(
       auth: AuthConfig(
         token: authToken(),
       ),
-      debug: true,
+      logger: LoggerConfig(
+        level: Level.debug,
+      ),
       // url: '<ELECTRIC_SERVICE_URL>',
     ),
   );
