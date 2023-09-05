@@ -32,7 +32,7 @@ scripts:
   test:
     run: |
       melos exec -c 6 --fail-fast -- \
-        "dart test"
+        "dart test" 
     description: Run `dart test` for a specific package.
     packageFilters:
       dirExists:
