@@ -31,21 +31,14 @@ else
 	export ELECTRIC_CLIENT_IMAGE=${ELECTRIC_CLIENT_IMAGE_NAME}:${ELECTRIC_IMAGE_TAG}
 endif
 
-# Extracts the Electric repo commit from which this is based on 
-# The README.md contains a line like:
-# * Commit: `<some commit>`
-export ELECTRIC_COMMIT=$(shell cat ../README.md | grep -oE 'Commit: `([0-9a-fA-F]+)`' | sed -E 's/Commit: `(.*)`/\1/')
-
-print_electric_commit:
-	echo "${ELECTRIC_COMMIT}"
+export ELECTRIC_COMMIT=$(shell cd .. && tool/extract_electric_commit.sh)
 
 export ELECTRIC_REPO := $(abspath $(E2E_ROOT)/electric_repo)
 
 clone_electric:
-	rm -rf ${ELECTRIC_REPO}
-	git clone https://github.com/electric-sql/electric ${ELECTRIC_REPO}
+	git clone https://github.com/electric-sql/electric ${ELECTRIC_REPO} || true
 	cd ${ELECTRIC_REPO} && \
-	git checkout ${ELECTRIC_COMMIT}
+	git checkout --force ${ELECTRIC_COMMIT}
 
 lux: ${LUX}
 
