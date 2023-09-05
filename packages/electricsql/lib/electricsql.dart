@@ -5,7 +5,7 @@ library electricsql;
 export 'src/auth/index.dart';
 
 // ElectricClient
-export 'src/client/model/index.dart';
+export 'src/client/model/index.dart'; 
 
 // Config
 export 'src/config/config.dart' show ElectricConfig, HydratedConfig;
