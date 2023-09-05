@@ -40,7 +40,7 @@ services:
       - "host.docker.internal:host-gateway"
 
   satellite_client:
-    image: "satellite_client:local"
+    image: "satellite_dart_client:local"
     environment:
       AUTH_JWT_ALG: HS256
       AUTH_JWT_KEY: integration-tests-signing-key-example

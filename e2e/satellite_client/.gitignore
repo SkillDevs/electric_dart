@@ -4,3 +4,4 @@
 .cache
 dist/
 node_modules/
+docker_cache

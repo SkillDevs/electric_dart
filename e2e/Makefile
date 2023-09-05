@@ -1,7 +1,7 @@
 include common.mk
 
 deps: lux
-	clone_electric
+	make clone_electric
 	make -C satellite_client build
 	make -C elixir_client build
 
