@@ -1,0 +1,18 @@
+name: satellite_dart_client
+description: A sample command-line application.
+version: 1.0.0
+publish_to: 'none'
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.1.0
+
+# Add regular dependencies here.
+dependencies:
+  drift: ^2.11.1
+  electricsql:
+    path: ../../packages/electricsql
+
+dev_dependencies:
+  lints: ^2.0.0
+  test: ^1.21.0

@@ -31,7 +31,7 @@ else
 	export ELECTRIC_CLIENT_IMAGE=${ELECTRIC_CLIENT_IMAGE_NAME}:${ELECTRIC_IMAGE_TAG}
 endif
 
-export ELECTRIC_COMMIT=$(shell cd .. && tool/extract_electric_commit.sh)
+export ELECTRIC_COMMIT:=$(shell cd $(PROJECT_ROOT) && tool/extract_electric_commit.sh)
 
 export ELECTRIC_REPO := $(abspath $(E2E_ROOT)/electric_repo)
 

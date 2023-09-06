@@ -1,23 +1,20 @@
 [global node=>]
 
 [macro connect_to_electric host port migrations]
-    !client = await import('./dist/client.js')
-    ?$node
     # !migrations = await client.read_migrations(process.env.MIGRATION_DIRS + "/index.js")
     # ?$node
     !migrations = $migrations
     ?$node
-    !originalDb = client.make_db(process.env.SATELLITE_DB_PATH + "/$LUX_SHELLNAME")
+    !shell_db_path = get_shell_db_path "$LUX_SHELLNAME"
+    ?$node
+    !originalDb = make_db shell_db_path
     ?$node
     [invoke electrify_db "originalDb" $host $port $migrations]
     ??(in electrify_db) config:
 [endmacro]
 
 [macro electrify_db db host port migrations]
-     !db = await client.electrify_db(originalDb, \
-                                     "$host", \
-                                     $port, \
-                                     $migrations)
+    !db = electrify_db originalDb "$host" $port $migrations
 [endmacro]
 
 [macro setup_client_with_migrations satellite_number electric port migrations]
@@ -32,15 +29,15 @@
 [endmacro]
 
 [macro node_await_get match]
-    [invoke wait-for "await client.get_items(db)" "${match}" 10 $node]
+    [invoke wait-for "get_items db" "${match}" 10 $node]
 [endmacro]
 
 [macro node_await_table match]
-    [invoke wait-for "await client.get_tables(db)" "${match}" 10 $node]
+    [invoke wait-for "get_tables db" "${match}" 10 $node]
 [endmacro]
 
 [macro node_await_column table column]
-    [invoke wait-for "await client.get_columns(db, '${table}')" "${column}" 10 $node]
+    [invoke wait-for "get_columns db '${table}'" "${column}" 10 $node]
 [endmacro]
 
 [macro node_await_column_value table column value]

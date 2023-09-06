@@ -12,10 +12,8 @@ endif
 # By default we would like to build in docker, as we intend
 # to run tests with Satellite in it
 build:
-	docker buildx build --load ${CACHING_SETTINGS} -f ./Dockerfile -t satellite_dart_client:local ${ELECTRIC_REPO}
+	docker buildx build --no-cache --load ${CACHING_SETTINGS} -f ./Dockerfile -t satellite_dart_client:local ${PROJECT_ROOT}
 
 local-build:
-	pnpm i --frozen-lockfile
-	make -C ../../clients/typescript build
-	pnpm run build
+	dart compile exe bin/satellite_dart_client.dart -o satellite_dart_client
 

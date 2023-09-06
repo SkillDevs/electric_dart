@@ -1,7 +1,4 @@
-.bash_history
-.npm/
-.yarnrc
-.cache
-dist/
-node_modules/
-docker_cache
+# https://dart.dev/guides/libraries/private-files
+# Created by `dart pub`
+.dart_tool/
+satellite_cache
