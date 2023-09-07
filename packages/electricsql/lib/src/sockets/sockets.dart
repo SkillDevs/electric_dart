@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/version.dart';
 import 'package:meta/meta.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -10,6 +11,9 @@ export 'stub.dart'
     if (dart.library.html) 'html.dart';
 
 typedef Data = Uint8List;
+
+final kProtocolVsn =
+    'electric.${kLibVersion.split('.').sublist(0, 2).join('.')}';
 
 abstract class Socket {
   Socket open(ConnectionOptions opts);
@@ -33,12 +37,13 @@ class ConnectionOptions {
 }
 
 abstract class SocketFactory {
-  Socket create();
+  Socket create(String protocolVsn);
 }
 
 /// Socket implementation that uses web_socket_channel
 /// io and html both derive from the main logic here
 abstract class WebSocketBase implements Socket {
+  final String protocolVsn;
   WebSocketChannel? _channel;
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
@@ -48,6 +53,8 @@ abstract class WebSocketBase implements Socket {
 
   void Function()? _closeListener;
   void Function(Data data)? _messageListener;
+
+  WebSocketBase(this.protocolVsn);
 
   // event doesn't provide much
   void _notifyErrorAndCloseSocket([SatelliteException? error]) {

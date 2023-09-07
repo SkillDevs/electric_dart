@@ -20,6 +20,7 @@ class ElectrifyOptions extends ElectrifyBaseOptions {
     super.migrator,
     super.notifier,
     super.registry,
+    super.prepare,
   });
 }
 
@@ -28,11 +29,23 @@ class ElectrifyBaseOptions {
   final Notifier? notifier;
   final Registry? registry;
 
+  /// Function that prepares the database connection.
+  /// If not overridden, the default prepare function
+  /// enables the `foreign_key` pragma on the DB connection.
+  /// @param connection The database connection.
+  /// @returns A promise that resolves when the database connection is prepared.
+  final Future<void> Function(DatabaseAdapter connection)? prepare;
+
   ElectrifyBaseOptions({
     this.migrator,
     this.notifier,
     this.registry,
+    this.prepare,
   });
+}
+
+Future<void> defaultPrepare(DatabaseAdapter connection) async {
+  await connection.run(Statement('PRAGMA foreign_keys = ON;'));
 }
 
 /// This is the primary `electrify()` endpoint that the individual drivers
@@ -53,6 +66,9 @@ Future<ElectricClient> electrifyBase({
       colored: config.logger?.colored ?? true,
     ),
   );
+
+  final prepare = opts.prepare ?? defaultPrepare;
+  await prepare(adapter);
 
   final configWithDefaults = hydrateConfig(config);
   final migrator =

@@ -94,7 +94,12 @@ Future<SatelliteTestContext> makeContext({
 
   final dbName = '.tmp/test-${randomValue()}.db';
   final db = openSqliteDb(dbName);
+
   final adapter = SqliteAdapter(db);
+  // Electric depends on Foregin keys being ON and tests do not electrify
+  // So we call it explicitly
+  await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+
   final migrator =
       BundleMigrator(adapter: adapter, migrations: kTestMigrations);
   final notifier = MockNotifier(dbName);

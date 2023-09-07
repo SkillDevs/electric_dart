@@ -14,13 +14,15 @@ const SatAuthHeader$json = const {
   '1': 'SatAuthHeader',
   '2': const [
     const {'1': 'UNSPECIFIED', '2': 0},
-    const {'1': 'PROTO_VERSION', '2': 1},
+  ],
+  '4': const [
+    const {'1': 1, '2': 1},
   ],
 };
 
 /// Descriptor for `SatAuthHeader`. Decode as a `google.protobuf.EnumDescriptorProto`.
-final $typed_data.Uint8List satAuthHeaderDescriptor = $convert.base64Decode(
-    'Cg1TYXRBdXRoSGVhZGVyEg8KC1VOU1BFQ0lGSUVEEAASEQoNUFJPVE9fVkVSU0lPThAB');
+final $typed_data.Uint8List satAuthHeaderDescriptor = $convert
+    .base64Decode('Cg1TYXRBdXRoSGVhZGVyEg8KC1VOU1BFQ0lGSUVEEAAiBAgBEAE=');
 @$core.Deprecated('Use satPingReqDescriptor instead')
 const SatPingReq$json = const {
   '1': 'SatPingReq',
@@ -60,7 +62,7 @@ const SatAuthHeaderPair$json = const {
       '3': 1,
       '4': 1,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatAuthHeader',
+      '6': '.Electric.Satellite.SatAuthHeader',
       '10': 'key'
     },
     const {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
@@ -69,7 +71,7 @@ const SatAuthHeaderPair$json = const {
 
 /// Descriptor for `SatAuthHeaderPair`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satAuthHeaderPairDescriptor = $convert.base64Decode(
-    'ChFTYXRBdXRoSGVhZGVyUGFpchI4CgNrZXkYASABKA4yJi5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRBdXRoSGVhZGVyUgNrZXkSFAoFdmFsdWUYAiABKAlSBXZhbHVl');
+    'ChFTYXRBdXRoSGVhZGVyUGFpchIzCgNrZXkYASABKA4yIS5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0QXV0aEhlYWRlclIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZQ==');
 @$core.Deprecated('Use satAuthReqDescriptor instead')
 const SatAuthReq$json = const {
   '1': 'SatAuthReq',
@@ -81,7 +83,7 @@ const SatAuthReq$json = const {
       '3': 3,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatAuthHeaderPair',
+      '6': '.Electric.Satellite.SatAuthHeaderPair',
       '10': 'headers'
     },
   ],
@@ -89,7 +91,7 @@ const SatAuthReq$json = const {
 
 /// Descriptor for `SatAuthReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satAuthReqDescriptor = $convert.base64Decode(
-    'CgpTYXRBdXRoUmVxEg4KAmlkGAEgASgJUgJpZBIUCgV0b2tlbhgCIAEoCVIFdG9rZW4SRAoHaGVhZGVycxgDIAMoCzIqLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEF1dGhIZWFkZXJQYWlyUgdoZWFkZXJz');
+    'CgpTYXRBdXRoUmVxEg4KAmlkGAEgASgJUgJpZBIUCgV0b2tlbhgCIAEoCVIFdG9rZW4SPwoHaGVhZGVycxgDIAMoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoSGVhZGVyUGFpclIHaGVhZGVycw==');
 @$core.Deprecated('Use satAuthRespDescriptor instead')
 const SatAuthResp$json = const {
   '1': 'SatAuthResp',
@@ -100,7 +102,7 @@ const SatAuthResp$json = const {
       '3': 3,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatAuthHeaderPair',
+      '6': '.Electric.Satellite.SatAuthHeaderPair',
       '10': 'headers'
     },
   ],
@@ -108,7 +110,7 @@ const SatAuthResp$json = const {
 
 /// Descriptor for `SatAuthResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satAuthRespDescriptor = $convert.base64Decode(
-    'CgtTYXRBdXRoUmVzcBIOCgJpZBgBIAEoCVICaWQSRAoHaGVhZGVycxgDIAMoCzIqLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEF1dGhIZWFkZXJQYWlyUgdoZWFkZXJz');
+    'CgtTYXRBdXRoUmVzcBIOCgJpZBgBIAEoCVICaWQSPwoHaGVhZGVycxgDIAMoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoSGVhZGVyUGFpclIHaGVhZGVycw==');
 @$core.Deprecated('Use satErrorRespDescriptor instead')
 const SatErrorResp$json = const {
   '1': 'SatErrorResp',
@@ -118,7 +120,7 @@ const SatErrorResp$json = const {
       '3': 1,
       '4': 1,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatErrorResp.ErrorCode',
+      '6': '.Electric.Satellite.SatErrorResp.ErrorCode',
       '10': 'errorType'
     },
   ],
@@ -141,7 +143,7 @@ const SatErrorResp_ErrorCode$json = const {
 
 /// Descriptor for `SatErrorResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satErrorRespDescriptor = $convert.base64Decode(
-    'CgxTYXRFcnJvclJlc3ASTgoKZXJyb3JfdHlwZRgBIAEoDjIvLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEVycm9yUmVzcC5FcnJvckNvZGVSCWVycm9yVHlwZSKbAQoJRXJyb3JDb2RlEgwKCElOVEVSTkFMEAASEQoNQVVUSF9SRVFVSVJFRBABEg8KC0FVVEhfRkFJTEVEEAISFgoSUkVQTElDQVRJT05fRkFJTEVEEAMSEwoPSU5WQUxJRF9SRVFVRVNUEAQSFgoSUFJPVE9fVlNOX01JU01BVENIEAUSFwoTU0NIRU1BX1ZTTl9NSVNNQVRDSBAG');
+    'CgxTYXRFcnJvclJlc3ASSQoKZXJyb3JfdHlwZRgBIAEoDjIqLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRFcnJvclJlc3AuRXJyb3JDb2RlUgllcnJvclR5cGUimwEKCUVycm9yQ29kZRIMCghJTlRFUk5BTBAAEhEKDUFVVEhfUkVRVUlSRUQQARIPCgtBVVRIX0ZBSUxFRBACEhYKElJFUExJQ0FUSU9OX0ZBSUxFRBADEhMKD0lOVkFMSURfUkVRVUVTVBAEEhYKElBST1RPX1ZTTl9NSVNNQVRDSBAFEhcKE1NDSEVNQV9WU05fTUlTTUFUQ0gQBg==');
 @$core.Deprecated('Use satInStartReplicationReqDescriptor instead')
 const SatInStartReplicationReq$json = const {
   '1': 'SatInStartReplicationReq',
@@ -152,7 +154,7 @@ const SatInStartReplicationReq$json = const {
       '3': 2,
       '4': 3,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatInStartReplicationReq.Option',
+      '6': '.Electric.Satellite.SatInStartReplicationReq.Option',
       '10': 'options'
     },
     const {
@@ -198,7 +200,7 @@ const SatInStartReplicationReq_Option$json = const {
 /// Descriptor for `SatInStartReplicationReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satInStartReplicationReqDescriptor =
     $convert.base64Decode(
-        'ChhTYXRJblN0YXJ0UmVwbGljYXRpb25SZXESEAoDbHNuGAEgASgMUgNsc24SUgoHb3B0aW9ucxgCIAMoDjI4LkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEluU3RhcnRSZXBsaWNhdGlvblJlcS5PcHRpb25SB29wdGlvbnMSKQoQc3Vic2NyaXB0aW9uX2lkcxgEIAMoCVIPc3Vic2NyaXB0aW9uSWRzEioKDnNjaGVtYV92ZXJzaW9uGAUgASgJSABSDXNjaGVtYVZlcnNpb26IAQEiKgoGT3B0aW9uEggKBE5PTkUQACIECAEQASIECAIQAiIECAMQAyIECAQQBEIRCg9fc2NoZW1hX3ZlcnNpb25KBAgDEAQ=');
+        'ChhTYXRJblN0YXJ0UmVwbGljYXRpb25SZXESEAoDbHNuGAEgASgMUgNsc24STQoHb3B0aW9ucxgCIAMoDjIzLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRJblN0YXJ0UmVwbGljYXRpb25SZXEuT3B0aW9uUgdvcHRpb25zEikKEHN1YnNjcmlwdGlvbl9pZHMYBCADKAlSD3N1YnNjcmlwdGlvbklkcxIqCg5zY2hlbWFfdmVyc2lvbhgFIAEoCUgAUg1zY2hlbWFWZXJzaW9uiAEBIioKBk9wdGlvbhIICgROT05FEAAiBAgBEAEiBAgCEAIiBAgDEAMiBAgEEARCEQoPX3NjaGVtYV92ZXJzaW9uSgQIAxAE');
 @$core.Deprecated('Use satInStartReplicationRespDescriptor instead')
 const SatInStartReplicationResp$json = const {
   '1': 'SatInStartReplicationResp',
@@ -208,8 +210,7 @@ const SatInStartReplicationResp$json = const {
       '3': 1,
       '4': 1,
       '5': 11,
-      '6':
-          '.Electric.Satellite.v1_4.SatInStartReplicationResp.ReplicationError',
+      '6': '.Electric.Satellite.SatInStartReplicationResp.ReplicationError',
       '9': 0,
       '10': 'err',
       '17': true
@@ -231,7 +232,7 @@ const SatInStartReplicationResp_ReplicationError$json = const {
       '4': 1,
       '5': 14,
       '6':
-          '.Electric.Satellite.v1_4.SatInStartReplicationResp.ReplicationError.Code',
+          '.Electric.Satellite.SatInStartReplicationResp.ReplicationError.Code',
       '10': 'code'
     },
     const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
@@ -255,7 +256,7 @@ const SatInStartReplicationResp_ReplicationError_Code$json = const {
 /// Descriptor for `SatInStartReplicationResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satInStartReplicationRespDescriptor =
     $convert.base64Decode(
-        'ChlTYXRJblN0YXJ0UmVwbGljYXRpb25SZXNwEloKA2VychgBIAEoCzJDLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEluU3RhcnRSZXBsaWNhdGlvblJlc3AuUmVwbGljYXRpb25FcnJvckgAUgNlcnKIAQEamQIKEFJlcGxpY2F0aW9uRXJyb3ISXAoEY29kZRgBIAEoDjJILkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdEluU3RhcnRSZXBsaWNhdGlvblJlc3AuUmVwbGljYXRpb25FcnJvci5Db2RlUgRjb2RlEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2UijAEKBENvZGUSFAoQQ09ERV9VTlNQRUNJRklFRBAAEhEKDUJFSElORF9XSU5ET1cQARIUChBJTlZBTElEX1BPU0lUSU9OEAISGgoWU1VCU0NSSVBUSU9OX05PVF9GT1VORBADEhEKDU1BTEZPUk1FRF9MU04QBBIWChJVTktOT1dOX1NDSEVNQV9WU04QBUIGCgRfZXJy');
+        'ChlTYXRJblN0YXJ0UmVwbGljYXRpb25SZXNwElUKA2VychgBIAEoCzI+LkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRJblN0YXJ0UmVwbGljYXRpb25SZXNwLlJlcGxpY2F0aW9uRXJyb3JIAFIDZXJyiAEBGpQCChBSZXBsaWNhdGlvbkVycm9yElcKBGNvZGUYASABKA4yQy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVzcC5SZXBsaWNhdGlvbkVycm9yLkNvZGVSBGNvZGUSGAoHbWVzc2FnZRgCIAEoCVIHbWVzc2FnZSKMAQoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASEQoNQkVISU5EX1dJTkRPVxABEhQKEElOVkFMSURfUE9TSVRJT04QAhIaChZTVUJTQ1JJUFRJT05fTk9UX0ZPVU5EEAMSEQoNTUFMRk9STUVEX0xTThAEEhYKElVOS05PV05fU0NIRU1BX1ZTThAFQgYKBF9lcnI=');
 @$core.Deprecated('Use satInStopReplicationReqDescriptor instead')
 const SatInStopReplicationReq$json = const {
   '1': 'SatInStopReplicationReq',
@@ -296,7 +297,7 @@ const SatRelation$json = const {
       '3': 2,
       '4': 1,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatRelation.RelationType',
+      '6': '.Electric.Satellite.SatRelation.RelationType',
       '10': 'tableType'
     },
     const {'1': 'table_name', '3': 3, '4': 1, '5': 9, '10': 'tableName'},
@@ -306,7 +307,7 @@ const SatRelation$json = const {
       '3': 5,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatRelationColumn',
+      '6': '.Electric.Satellite.SatRelationColumn',
       '10': 'columns'
     },
   ],
@@ -326,7 +327,7 @@ const SatRelation_RelationType$json = const {
 
 /// Descriptor for `SatRelation`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satRelationDescriptor = $convert.base64Decode(
-    'CgtTYXRSZWxhdGlvbhIfCgtzY2hlbWFfbmFtZRgBIAEoCVIKc2NoZW1hTmFtZRJQCgp0YWJsZV90eXBlGAIgASgOMjEuRWxlY3RyaWMuU2F0ZWxsaXRlLnYxXzQuU2F0UmVsYXRpb24uUmVsYXRpb25UeXBlUgl0YWJsZVR5cGUSHQoKdGFibGVfbmFtZRgDIAEoCVIJdGFibGVOYW1lEh8KC3JlbGF0aW9uX2lkGAQgASgNUgpyZWxhdGlvbklkEkQKB2NvbHVtbnMYBSADKAsyKi5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRSZWxhdGlvbkNvbHVtblIHY29sdW1ucyI7CgxSZWxhdGlvblR5cGUSCQoFVEFCTEUQABIJCgVJTkRFWBABEggKBFZJRVcQAhILCgdUUklHR0VSEAM=');
+    'CgtTYXRSZWxhdGlvbhIfCgtzY2hlbWFfbmFtZRgBIAEoCVIKc2NoZW1hTmFtZRJLCgp0YWJsZV90eXBlGAIgASgOMiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFJlbGF0aW9uLlJlbGF0aW9uVHlwZVIJdGFibGVUeXBlEh0KCnRhYmxlX25hbWUYAyABKAlSCXRhYmxlTmFtZRIfCgtyZWxhdGlvbl9pZBgEIAEoDVIKcmVsYXRpb25JZBI/Cgdjb2x1bW5zGAUgAygLMiUuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFJlbGF0aW9uQ29sdW1uUgdjb2x1bW5zIjsKDFJlbGF0aW9uVHlwZRIJCgVUQUJMRRAAEgkKBUlOREVYEAESCAoEVklFVxACEgsKB1RSSUdHRVIQAw==');
 @$core.Deprecated('Use satOpLogDescriptor instead')
 const SatOpLog$json = const {
   '1': 'SatOpLog',
@@ -336,7 +337,7 @@ const SatOpLog$json = const {
       '3': 1,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatTransOp',
+      '6': '.Electric.Satellite.SatTransOp',
       '10': 'ops'
     },
   ],
@@ -344,7 +345,7 @@ const SatOpLog$json = const {
 
 /// Descriptor for `SatOpLog`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpLogDescriptor = $convert.base64Decode(
-    'CghTYXRPcExvZxI1CgNvcHMYASADKAsyIy5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRUcmFuc09wUgNvcHM=');
+    'CghTYXRPcExvZxIwCgNvcHMYASADKAsyHi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0VHJhbnNPcFIDb3Bz');
 @$core.Deprecated('Use satTransOpDescriptor instead')
 const SatTransOp$json = const {
   '1': 'SatTransOp',
@@ -354,7 +355,7 @@ const SatTransOp$json = const {
       '3': 1,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpBegin',
+      '6': '.Electric.Satellite.SatOpBegin',
       '9': 0,
       '10': 'begin'
     },
@@ -363,7 +364,7 @@ const SatTransOp$json = const {
       '3': 2,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpCommit',
+      '6': '.Electric.Satellite.SatOpCommit',
       '9': 0,
       '10': 'commit'
     },
@@ -372,7 +373,7 @@ const SatTransOp$json = const {
       '3': 3,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpUpdate',
+      '6': '.Electric.Satellite.SatOpUpdate',
       '9': 0,
       '10': 'update'
     },
@@ -381,7 +382,7 @@ const SatTransOp$json = const {
       '3': 4,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpInsert',
+      '6': '.Electric.Satellite.SatOpInsert',
       '9': 0,
       '10': 'insert'
     },
@@ -390,7 +391,7 @@ const SatTransOp$json = const {
       '3': 5,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpDelete',
+      '6': '.Electric.Satellite.SatOpDelete',
       '9': 0,
       '10': 'delete'
     },
@@ -399,7 +400,7 @@ const SatTransOp$json = const {
       '3': 6,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpMigrate',
+      '6': '.Electric.Satellite.SatOpMigrate',
       '9': 0,
       '10': 'migrate'
     },
@@ -411,7 +412,7 @@ const SatTransOp$json = const {
 
 /// Descriptor for `SatTransOp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satTransOpDescriptor = $convert.base64Decode(
-    'CgpTYXRUcmFuc09wEjsKBWJlZ2luGAEgASgLMiMuRWxlY3RyaWMuU2F0ZWxsaXRlLnYxXzQuU2F0T3BCZWdpbkgAUgViZWdpbhI+CgZjb21taXQYAiABKAsyJC5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRPcENvbW1pdEgAUgZjb21taXQSPgoGdXBkYXRlGAMgASgLMiQuRWxlY3RyaWMuU2F0ZWxsaXRlLnYxXzQuU2F0T3BVcGRhdGVIAFIGdXBkYXRlEj4KBmluc2VydBgEIAEoCzIkLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wSW5zZXJ0SABSBmluc2VydBI+CgZkZWxldGUYBSABKAsyJC5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRPcERlbGV0ZUgAUgZkZWxldGUSQQoHbWlncmF0ZRgGIAEoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wTWlncmF0ZUgAUgdtaWdyYXRlQgQKAm9w');
+    'CgpTYXRUcmFuc09wEjYKBWJlZ2luGAEgASgLMh4uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wQmVnaW5IAFIFYmVnaW4SOQoGY29tbWl0GAIgASgLMh8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wQ29tbWl0SABSBmNvbW1pdBI5CgZ1cGRhdGUYAyABKAsyHy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BVcGRhdGVIAFIGdXBkYXRlEjkKBmluc2VydBgEIAEoCzIfLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcEluc2VydEgAUgZpbnNlcnQSOQoGZGVsZXRlGAUgASgLMh8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wRGVsZXRlSABSBmRlbGV0ZRI8CgdtaWdyYXRlGAYgASgLMiAuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wTWlncmF0ZUgAUgdtaWdyYXRlQgQKAm9w');
 @$core.Deprecated('Use satOpBeginDescriptor instead')
 const SatOpBegin$json = const {
   '1': 'SatOpBegin',
@@ -473,7 +474,7 @@ const SatOpInsert$json = const {
       '3': 2,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpRow',
+      '6': '.Electric.Satellite.SatOpRow',
       '10': 'rowData'
     },
     const {'1': 'tags', '3': 3, '4': 3, '5': 9, '10': 'tags'},
@@ -482,7 +483,7 @@ const SatOpInsert$json = const {
 
 /// Descriptor for `SatOpInsert`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpInsertDescriptor = $convert.base64Decode(
-    'CgtTYXRPcEluc2VydBIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI8Cghyb3dfZGF0YRgCIAEoCzIhLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wUm93Ugdyb3dEYXRhEhIKBHRhZ3MYAyADKAlSBHRhZ3M=');
+    'CgtTYXRPcEluc2VydBIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI3Cghyb3dfZGF0YRgCIAEoCzIcLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcFJvd1IHcm93RGF0YRISCgR0YWdzGAMgAygJUgR0YWdz');
 @$core.Deprecated('Use satOpUpdateDescriptor instead')
 const SatOpUpdate$json = const {
   '1': 'SatOpUpdate',
@@ -493,7 +494,7 @@ const SatOpUpdate$json = const {
       '3': 2,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpRow',
+      '6': '.Electric.Satellite.SatOpRow',
       '10': 'rowData'
     },
     const {
@@ -501,7 +502,7 @@ const SatOpUpdate$json = const {
       '3': 3,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpRow',
+      '6': '.Electric.Satellite.SatOpRow',
       '10': 'oldRowData'
     },
     const {'1': 'tags', '3': 4, '4': 3, '5': 9, '10': 'tags'},
@@ -510,7 +511,7 @@ const SatOpUpdate$json = const {
 
 /// Descriptor for `SatOpUpdate`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpUpdateDescriptor = $convert.base64Decode(
-    'CgtTYXRPcFVwZGF0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI8Cghyb3dfZGF0YRgCIAEoCzIhLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wUm93Ugdyb3dEYXRhEkMKDG9sZF9yb3dfZGF0YRgDIAEoCzIhLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wUm93UgpvbGRSb3dEYXRhEhIKBHRhZ3MYBCADKAlSBHRhZ3M=');
+    'CgtTYXRPcFVwZGF0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI3Cghyb3dfZGF0YRgCIAEoCzIcLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcFJvd1IHcm93RGF0YRI+CgxvbGRfcm93X2RhdGEYAyABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdGESEgoEdGFncxgEIAMoCVIEdGFncw==');
 @$core.Deprecated('Use satOpDeleteDescriptor instead')
 const SatOpDelete$json = const {
   '1': 'SatOpDelete',
@@ -521,7 +522,7 @@ const SatOpDelete$json = const {
       '3': 2,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpRow',
+      '6': '.Electric.Satellite.SatOpRow',
       '10': 'oldRowData'
     },
     const {'1': 'tags', '3': 3, '4': 3, '5': 9, '10': 'tags'},
@@ -530,7 +531,7 @@ const SatOpDelete$json = const {
 
 /// Descriptor for `SatOpDelete`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpDeleteDescriptor = $convert.base64Decode(
-    'CgtTYXRPcERlbGV0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBJDCgxvbGRfcm93X2RhdGEYAiABKAsyIS5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRPcFJvd1IKb2xkUm93RGF0YRISCgR0YWdzGAMgAygJUgR0YWdz');
+    'CgtTYXRPcERlbGV0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI+CgxvbGRfcm93X2RhdGEYAiABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdGESEgoEdGFncxgDIAMoCVIEdGFncw==');
 @$core.Deprecated('Use satMigrationNotificationDescriptor instead')
 const SatMigrationNotification$json = const {
   '1': 'SatMigrationNotification',
@@ -592,7 +593,7 @@ const SatOpMigrate$json = const {
       '3': 2,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpMigrate.Stmt',
+      '6': '.Electric.Satellite.SatOpMigrate.Stmt',
       '10': 'stmts'
     },
     const {
@@ -600,7 +601,7 @@ const SatOpMigrate$json = const {
       '3': 3,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpMigrate.Table',
+      '6': '.Electric.Satellite.SatOpMigrate.Table',
       '9': 0,
       '10': 'table',
       '17': true
@@ -628,7 +629,7 @@ const SatOpMigrate_Stmt$json = const {
       '3': 1,
       '4': 1,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatOpMigrate.Type',
+      '6': '.Electric.Satellite.SatOpMigrate.Type',
       '10': 'type'
     },
     const {'1': 'sql', '3': 2, '4': 1, '5': 9, '10': 'sql'},
@@ -656,7 +657,7 @@ const SatOpMigrate_Column$json = const {
       '3': 3,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpMigrate.PgColumnType',
+      '6': '.Electric.Satellite.SatOpMigrate.PgColumnType',
       '10': 'pgType'
     },
   ],
@@ -682,7 +683,7 @@ const SatOpMigrate_Table$json = const {
       '3': 2,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpMigrate.Column',
+      '6': '.Electric.Satellite.SatOpMigrate.Column',
       '10': 'columns'
     },
     const {
@@ -690,7 +691,7 @@ const SatOpMigrate_Table$json = const {
       '3': 3,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatOpMigrate.ForeignKey',
+      '6': '.Electric.Satellite.SatOpMigrate.ForeignKey',
       '10': 'fks'
     },
     const {'1': 'pks', '3': 4, '4': 3, '5': 9, '10': 'pks'},
@@ -709,7 +710,7 @@ const SatOpMigrate_Type$json = const {
 
 /// Descriptor for `SatOpMigrate`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpMigrateDescriptor = $convert.base64Decode(
-    'CgxTYXRPcE1pZ3JhdGUSGAoHdmVyc2lvbhgBIAEoCVIHdmVyc2lvbhJACgVzdG10cxgCIAMoCzIqLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wTWlncmF0ZS5TdG10UgVzdG10cxJGCgV0YWJsZRgDIAEoCzIrLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wTWlncmF0ZS5UYWJsZUgAUgV0YWJsZYgBARpYCgRTdG10Ej4KBHR5cGUYASABKA4yKi5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRPcE1pZ3JhdGUuVHlwZVIEdHlwZRIQCgNzcWwYAiABKAlSA3NxbBpMCgxQZ0NvbHVtblR5cGUSEgoEbmFtZRgBIAEoCVIEbmFtZRIUCgVhcnJheRgCIAMoBVIFYXJyYXkSEgoEc2l6ZRgDIAMoBVIEc2l6ZRqKAQoGQ29sdW1uEhIKBG5hbWUYASABKAlSBG5hbWUSHwoLc3FsaXRlX3R5cGUYAiABKAlSCnNxbGl0ZVR5cGUSSwoHcGdfdHlwZRgDIAEoCzIyLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wTWlncmF0ZS5QZ0NvbHVtblR5cGVSBnBnVHlwZRpZCgpGb3JlaWduS2V5EhcKB2ZrX2NvbHMYASADKAlSBmZrQ29scxIZCghwa190YWJsZRgCIAEoCVIHcGtUYWJsZRIXCgdwa19jb2xzGAMgAygJUgZwa0NvbHMauQEKBVRhYmxlEhIKBG5hbWUYASABKAlSBG5hbWUSRgoHY29sdW1ucxgCIAMoCzIsLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdE9wTWlncmF0ZS5Db2x1bW5SB2NvbHVtbnMSQgoDZmtzGAMgAygLMjAuRWxlY3RyaWMuU2F0ZWxsaXRlLnYxXzQuU2F0T3BNaWdyYXRlLkZvcmVpZ25LZXlSA2ZrcxIQCgNwa3MYBCADKAlSA3BrcyJACgRUeXBlEhAKDENSRUFURV9UQUJMRRAAEhAKDENSRUFURV9JTkRFWBABEhQKEEFMVEVSX0FERF9DT0xVTU4QBkIICgZfdGFibGU=');
+    'CgxTYXRPcE1pZ3JhdGUSGAoHdmVyc2lvbhgBIAEoCVIHdmVyc2lvbhI7CgVzdG10cxgCIAMoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuU3RtdFIFc3RtdHMSQQoFdGFibGUYAyABKAsyJi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLlRhYmxlSABSBXRhYmxliAEBGlMKBFN0bXQSOQoEdHlwZRgBIAEoDjIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuVHlwZVIEdHlwZRIQCgNzcWwYAiABKAlSA3NxbBpMCgxQZ0NvbHVtblR5cGUSEgoEbmFtZRgBIAEoCVIEbmFtZRIUCgVhcnJheRgCIAMoBVIFYXJyYXkSEgoEc2l6ZRgDIAMoBVIEc2l6ZRqFAQoGQ29sdW1uEhIKBG5hbWUYASABKAlSBG5hbWUSHwoLc3FsaXRlX3R5cGUYAiABKAlSCnNxbGl0ZVR5cGUSRgoHcGdfdHlwZRgDIAEoCzItLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuUGdDb2x1bW5UeXBlUgZwZ1R5cGUaWQoKRm9yZWlnbktleRIXCgdma19jb2xzGAEgAygJUgZma0NvbHMSGQoIcGtfdGFibGUYAiABKAlSB3BrVGFibGUSFwoHcGtfY29scxgDIAMoCVIGcGtDb2xzGq8BCgVUYWJsZRISCgRuYW1lGAEgASgJUgRuYW1lEkEKB2NvbHVtbnMYAiADKAsyJy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkNvbHVtblIHY29sdW1ucxI9CgNma3MYAyADKAsyKy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkZvcmVpZ25LZXlSA2ZrcxIQCgNwa3MYBCADKAlSA3BrcyJACgRUeXBlEhAKDENSRUFURV9UQUJMRRAAEhAKDENSRUFURV9JTkRFWBABEhQKEEFMVEVSX0FERF9DT0xVTU4QBkIICgZfdGFibGU=');
 @$core.Deprecated('Use satSubsReqDescriptor instead')
 const SatSubsReq$json = const {
   '1': 'SatSubsReq',
@@ -726,7 +727,7 @@ const SatSubsReq$json = const {
       '3': 2,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatShapeReq',
+      '6': '.Electric.Satellite.SatShapeReq',
       '10': 'shapeRequests'
     },
   ],
@@ -734,7 +735,7 @@ const SatSubsReq$json = const {
 
 /// Descriptor for `SatSubsReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsReqDescriptor = $convert.base64Decode(
-    'CgpTYXRTdWJzUmVxEicKD3N1YnNjcmlwdGlvbl9pZBgBIAEoCVIOc3Vic2NyaXB0aW9uSWQSSwoOc2hhcGVfcmVxdWVzdHMYAiADKAsyJC5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRTaGFwZVJlcVINc2hhcGVSZXF1ZXN0cw==');
+    'CgpTYXRTdWJzUmVxEicKD3N1YnNjcmlwdGlvbl9pZBgBIAEoCVIOc3Vic2NyaXB0aW9uSWQSRgoOc2hhcGVfcmVxdWVzdHMYAiADKAsyHy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U2hhcGVSZXFSDXNoYXBlUmVxdWVzdHM=');
 @$core.Deprecated('Use satSubsRespDescriptor instead')
 const SatSubsResp$json = const {
   '1': 'SatSubsResp',
@@ -751,7 +752,7 @@ const SatSubsResp$json = const {
       '3': 2,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatSubsResp.SatSubsError',
+      '6': '.Electric.Satellite.SatSubsResp.SatSubsError',
       '9': 0,
       '10': 'err',
       '17': true
@@ -772,7 +773,7 @@ const SatSubsResp_SatSubsError$json = const {
       '3': 2,
       '4': 1,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatSubsResp.SatSubsError.Code',
+      '6': '.Electric.Satellite.SatSubsResp.SatSubsError.Code',
       '10': 'code'
     },
     const {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
@@ -781,7 +782,7 @@ const SatSubsResp_SatSubsError$json = const {
       '3': 4,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatSubsResp.SatSubsError.ShapeReqError',
+      '6': '.Electric.Satellite.SatSubsResp.SatSubsError.ShapeReqError',
       '10': 'shapeRequestError'
     },
   ],
@@ -798,8 +799,7 @@ const SatSubsResp_SatSubsError_ShapeReqError$json = const {
       '3': 1,
       '4': 1,
       '5': 14,
-      '6':
-          '.Electric.Satellite.v1_4.SatSubsResp.SatSubsError.ShapeReqError.Code',
+      '6': '.Electric.Satellite.SatSubsResp.SatSubsError.ShapeReqError.Code',
       '10': 'code'
     },
     const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
@@ -832,7 +832,7 @@ const SatSubsResp_SatSubsError_Code$json = const {
 
 /// Descriptor for `SatSubsResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsRespDescriptor = $convert.base64Decode(
-    'CgtTYXRTdWJzUmVzcBInCg9zdWJzY3JpcHRpb25faWQYASABKAlSDnN1YnNjcmlwdGlvbklkEkgKA2VychgCIAEoCzIxLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdFN1YnNSZXNwLlNhdFN1YnNFcnJvckgAUgNlcnKIAQEagwUKDFNhdFN1YnNFcnJvchJKCgRjb2RlGAIgASgOMjYuRWxlY3RyaWMuU2F0ZWxsaXRlLnYxXzQuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLkNvZGVSBGNvZGUSGAoHbWVzc2FnZRgDIAEoCVIHbWVzc2FnZRJvChNzaGFwZV9yZXF1ZXN0X2Vycm9yGAQgAygLMj8uRWxlY3RyaWMuU2F0ZWxsaXRlLnYxXzQuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLlNoYXBlUmVxRXJyb3JSEXNoYXBlUmVxdWVzdEVycm9yGsACCg1TaGFwZVJlcUVycm9yElgKBGNvZGUYASABKA4yRC5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRTdWJzUmVzcC5TYXRTdWJzRXJyb3IuU2hhcGVSZXFFcnJvci5Db2RlUgRjb2RlEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USHQoKcmVxdWVzdF9pZBgDIAEoCVIJcmVxdWVzdElkIpsBCgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABITCg9UQUJMRV9OT1RfRk9VTkQQARIjCh9SRUZFUkVOVElBTF9JTlRFR1JJVFlfVklPTEFUSU9OEAISGgoWRU1QVFlfU0hBUEVfREVGSU5JVElPThADEicKI0RVUExJQ0FURV9UQUJMRV9JTl9TSEFQRV9ERUZJTklUSU9OEAQiWQoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASIgoeU1VCU0NSSVBUSU9OX0lEX0FMUkVBRFlfRVhJU1RTEAESFwoTU0hBUEVfUkVRVUVTVF9FUlJPUhACQgYKBF9lcnI=');
+    'CgtTYXRTdWJzUmVzcBInCg9zdWJzY3JpcHRpb25faWQYASABKAlSDnN1YnNjcmlwdGlvbklkEkMKA2VychgCIAEoCzIsLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcC5TYXRTdWJzRXJyb3JIAFIDZXJyiAEBGvQECgxTYXRTdWJzRXJyb3ISRQoEY29kZRgCIAEoDjIxLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcC5TYXRTdWJzRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdlGAMgASgJUgdtZXNzYWdlEmoKE3NoYXBlX3JlcXVlc3RfZXJyb3IYBCADKAsyOi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLlNoYXBlUmVxRXJyb3JSEXNoYXBlUmVxdWVzdEVycm9yGrsCCg1TaGFwZVJlcUVycm9yElMKBGNvZGUYASABKA4yPy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLlNoYXBlUmVxRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh0KCnJlcXVlc3RfaWQYAyABKAlSCXJlcXVlc3RJZCKbAQoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASEwoPVEFCTEVfTk9UX0ZPVU5EEAESIwofUkVGRVJFTlRJQUxfSU5URUdSSVRZX1ZJT0xBVElPThACEhoKFkVNUFRZX1NIQVBFX0RFRklOSVRJT04QAxInCiNEVVBMSUNBVEVfVEFCTEVfSU5fU0hBUEVfREVGSU5JVElPThAEIlkKBENvZGUSFAoQQ09ERV9VTlNQRUNJRklFRBAAEiIKHlNVQlNDUklQVElPTl9JRF9BTFJFQURZX0VYSVNUUxABEhcKE1NIQVBFX1JFUVVFU1RfRVJST1IQAkIGCgRfZXJy');
 @$core.Deprecated('Use satUnsubsReqDescriptor instead')
 const SatUnsubsReq$json = const {
   '1': 'SatUnsubsReq',
@@ -868,7 +868,7 @@ const SatShapeReq$json = const {
       '3': 2,
       '4': 1,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatShapeDef',
+      '6': '.Electric.Satellite.SatShapeDef',
       '10': 'shapeDefinition'
     },
   ],
@@ -876,7 +876,7 @@ const SatShapeReq$json = const {
 
 /// Descriptor for `SatShapeReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satShapeReqDescriptor = $convert.base64Decode(
-    'CgtTYXRTaGFwZVJlcRIdCgpyZXF1ZXN0X2lkGAEgASgJUglyZXF1ZXN0SWQSTwoQc2hhcGVfZGVmaW5pdGlvbhgCIAEoCzIkLkVsZWN0cmljLlNhdGVsbGl0ZS52MV80LlNhdFNoYXBlRGVmUg9zaGFwZURlZmluaXRpb24=');
+    'CgtTYXRTaGFwZVJlcRIdCgpyZXF1ZXN0X2lkGAEgASgJUglyZXF1ZXN0SWQSSgoQc2hhcGVfZGVmaW5pdGlvbhgCIAEoCzIfLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTaGFwZURlZlIPc2hhcGVEZWZpbml0aW9u');
 @$core.Deprecated('Use satShapeDefDescriptor instead')
 const SatShapeDef$json = const {
   '1': 'SatShapeDef',
@@ -886,7 +886,7 @@ const SatShapeDef$json = const {
       '3': 1,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatShapeDef.Select',
+      '6': '.Electric.Satellite.SatShapeDef.Select',
       '10': 'selects'
     },
   ],
@@ -903,7 +903,7 @@ const SatShapeDef_Select$json = const {
 
 /// Descriptor for `SatShapeDef`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satShapeDefDescriptor = $convert.base64Decode(
-    'CgtTYXRTaGFwZURlZhJFCgdzZWxlY3RzGAEgAygLMisuRWxlY3RyaWMuU2F0ZWxsaXRlLnYxXzQuU2F0U2hhcGVEZWYuU2VsZWN0UgdzZWxlY3RzGiYKBlNlbGVjdBIcCgl0YWJsZW5hbWUYASABKAlSCXRhYmxlbmFtZQ==');
+    'CgtTYXRTaGFwZURlZhJACgdzZWxlY3RzGAEgAygLMiYuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFNoYXBlRGVmLlNlbGVjdFIHc2VsZWN0cxomCgZTZWxlY3QSHAoJdGFibGVuYW1lGAEgASgJUgl0YWJsZW5hbWU=');
 @$core.Deprecated('Use satSubsDataErrorDescriptor instead')
 const SatSubsDataError$json = const {
   '1': 'SatSubsDataError',
@@ -913,7 +913,7 @@ const SatSubsDataError$json = const {
       '3': 1,
       '4': 1,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatSubsDataError.Code',
+      '6': '.Electric.Satellite.SatSubsDataError.Code',
       '10': 'code'
     },
     const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
@@ -929,7 +929,7 @@ const SatSubsDataError$json = const {
       '3': 4,
       '4': 3,
       '5': 11,
-      '6': '.Electric.Satellite.v1_4.SatSubsDataError.ShapeReqError',
+      '6': '.Electric.Satellite.SatSubsDataError.ShapeReqError',
       '10': 'shapeRequestError'
     },
   ],
@@ -946,7 +946,7 @@ const SatSubsDataError_ShapeReqError$json = const {
       '3': 1,
       '4': 1,
       '5': 14,
-      '6': '.Electric.Satellite.v1_4.SatSubsDataError.ShapeReqError.Code',
+      '6': '.Electric.Satellite.SatSubsDataError.ShapeReqError.Code',
       '10': 'code'
     },
     const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
@@ -975,7 +975,7 @@ const SatSubsDataError_Code$json = const {
 
 /// Descriptor for `SatSubsDataError`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsDataErrorDescriptor = $convert.base64Decode(
-    'ChBTYXRTdWJzRGF0YUVycm9yEkIKBGNvZGUYASABKA4yLi5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRTdWJzRGF0YUVycm9yLkNvZGVSBGNvZGUSGAoHbWVzc2FnZRgCIAEoCVIHbWVzc2FnZRInCg9zdWJzY3JpcHRpb25faWQYAyABKAlSDnN1YnNjcmlwdGlvbklkEmcKE3NoYXBlX3JlcXVlc3RfZXJyb3IYBCADKAsyNy5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRTdWJzRGF0YUVycm9yLlNoYXBlUmVxRXJyb3JSEXNoYXBlUmVxdWVzdEVycm9yGtcBCg1TaGFwZVJlcUVycm9yElAKBGNvZGUYASABKA4yPC5FbGVjdHJpYy5TYXRlbGxpdGUudjFfNC5TYXRTdWJzRGF0YUVycm9yLlNoYXBlUmVxRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh0KCnJlcXVlc3RfaWQYAyABKAlSCXJlcXVlc3RJZCI7CgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABIdChlTSEFQRV9TSVpFX0xJTUlUX0VYQ0VFREVEEAEiNgoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASGAoUU0hBUEVfREVMSVZFUllfRVJST1IQAQ==');
+    'ChBTYXRTdWJzRGF0YUVycm9yEj0KBGNvZGUYASABKA4yKS5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic0RhdGFFcnJvci5Db2RlUgRjb2RlEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USJwoPc3Vic2NyaXB0aW9uX2lkGAMgASgJUg5zdWJzY3JpcHRpb25JZBJiChNzaGFwZV9yZXF1ZXN0X2Vycm9yGAQgAygLMjIuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFN1YnNEYXRhRXJyb3IuU2hhcGVSZXFFcnJvclIRc2hhcGVSZXF1ZXN0RXJyb3Ia0gEKDVNoYXBlUmVxRXJyb3ISSwoEY29kZRgBIAEoDjI3LkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzRGF0YUVycm9yLlNoYXBlUmVxRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh0KCnJlcXVlc3RfaWQYAyABKAlSCXJlcXVlc3RJZCI7CgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABIdChlTSEFQRV9TSVpFX0xJTUlUX0VYQ0VFREVEEAEiNgoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASGAoUU0hBUEVfREVMSVZFUllfRVJST1IQAQ==');
 @$core.Deprecated('Use satSubsDataBeginDescriptor instead')
 const SatSubsDataBegin$json = const {
   '1': 'SatSubsDataBegin',

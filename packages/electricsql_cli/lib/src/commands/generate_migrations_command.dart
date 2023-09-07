@@ -25,7 +25,7 @@ class GenerateMigrationsCommand extends Command<int> {
 Optional argument providing the url to connect to Electric.
 If not provided, it uses the url set in the `ELECTRIC_URL`
 environment variable. If that variable is not set, it
-resorts to the default url which is `http://127.0.0.1:5050''',
+resorts to the default url which is `http://127.0.0.1:5133''',
         valueHelp: 'url',
       )
       ..addOption(
@@ -53,7 +53,7 @@ If this argument is not provided they are written to
   @override
   Future<int> run() async {
     String service =
-        (argResults?['service'] as String?) ?? 'http://127.0.0.1:5050';
+        (argResults?['service'] as String?) ?? 'http://127.0.0.1:5133';
     if (service.endsWith('/')) {
       service = service.substring(0, service.length - 1);
     }

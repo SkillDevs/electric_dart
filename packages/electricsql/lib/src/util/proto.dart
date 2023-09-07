@@ -8,7 +8,7 @@ import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/types.dart';
 
-const kProtobufPackage = 'Electric.Satellite.v1_4';
+const kProtobufPackage = 'Electric.Satellite';
 
 enum SatMsgType {
   errorResp(code: 0),

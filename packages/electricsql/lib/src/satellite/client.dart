@@ -198,7 +198,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
     final completer = Completer<void>();
 
-    final socket = socketFactory.create();
+    final socket = socketFactory.create(kProtocolVsn);
     this.socket = socket;
 
     void onceError(Object error) {
@@ -316,16 +316,10 @@ class SatelliteClient extends EventEmitter implements Client {
   Future<AuthResponse> authenticate(
     AuthState authState,
   ) {
-    final headers = [
-      SatAuthHeaderPair(
-        key: SatAuthHeader.PROTO_VERSION,
-        value: getProtocolVersion(),
-      ),
-    ];
     final request = SatAuthReq(
       id: authState.clientId,
       token: authState.token,
-      headers: headers,
+      headers: [],
     );
     return rpc<AuthResponse>(request);
   }
