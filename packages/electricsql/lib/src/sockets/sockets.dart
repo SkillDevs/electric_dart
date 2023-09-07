@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:electricsql/src/util/types.dart';
-import 'package:electricsql/version.dart';
 import 'package:meta/meta.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -12,8 +11,10 @@ export 'stub.dart'
 
 typedef Data = Uint8List;
 
-final kProtocolVsn =
-    'electric.${kLibVersion.split('.').sublist(0, 2).join('.')}';
+const _kProtocolVersionCode = '0.5';
+
+/// Returns the protocol version string as the server expects. i.e: 'electric.0.5'
+const kProtocolVsn = 'electric.$_kProtocolVersionCode';
 
 abstract class Socket {
   Socket open(ConnectionOptions opts);
