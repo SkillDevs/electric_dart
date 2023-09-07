@@ -23,36 +23,6 @@ const SatAuthHeader$json = const {
 /// Descriptor for `SatAuthHeader`. Decode as a `google.protobuf.EnumDescriptorProto`.
 final $typed_data.Uint8List satAuthHeaderDescriptor = $convert
     .base64Decode('Cg1TYXRBdXRoSGVhZGVyEg8KC1VOU1BFQ0lGSUVEEAAiBAgBEAE=');
-@$core.Deprecated('Use satPingReqDescriptor instead')
-const SatPingReq$json = const {
-  '1': 'SatPingReq',
-};
-
-/// Descriptor for `SatPingReq`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List satPingReqDescriptor =
-    $convert.base64Decode('CgpTYXRQaW5nUmVx');
-@$core.Deprecated('Use satPingRespDescriptor instead')
-const SatPingResp$json = const {
-  '1': 'SatPingResp',
-  '2': const [
-    const {
-      '1': 'lsn',
-      '3': 1,
-      '4': 1,
-      '5': 12,
-      '9': 0,
-      '10': 'lsn',
-      '17': true
-    },
-  ],
-  '8': const [
-    const {'1': '_lsn'},
-  ],
-};
-
-/// Descriptor for `SatPingResp`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List satPingRespDescriptor = $convert.base64Decode(
-    'CgtTYXRQaW5nUmVzcBIVCgNsc24YASABKAxIAFIDbHNuiAEBQgYKBF9sc24=');
 @$core.Deprecated('Use satAuthHeaderPairDescriptor instead')
 const SatAuthHeaderPair$json = const {
   '1': 'SatAuthHeaderPair',

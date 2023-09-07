@@ -115,18 +115,6 @@ class SatelliteClient extends EventEmitter implements Client {
           isRpc: true,
         );
 
-      case SatMsgType.pingReq:
-        return IncomingHandler(
-          handle: (v) => handlePingReq(),
-          isRpc: true,
-        );
-
-      case SatMsgType.pingResp:
-        return IncomingHandler(
-          handle: (v) => handlePingResp(v),
-          isRpc: false,
-        );
-
       case SatMsgType.opLog:
         return IncomingHandler(
           handle: (v) => handleTransaction(v! as SatOpLog),
@@ -782,21 +770,6 @@ class SatelliteClient extends EventEmitter implements Client {
         ),
       );
     }
-  }
-
-  void handlePingReq() {
-    logger.info(
-      'respond to ping with last ack ${inbound.lastLsn != null ? base64.encode(inbound.lastLsn!) : 'NULL'}',
-    );
-    final pong = SatPingResp(lsn: inbound.lastLsn);
-    sendMessage(pong);
-  }
-
-  void handlePingResp(Object? message) {
-    // TODO: This message is not used in any way right now.
-    //       We might be dropping client-initiated pings completely.
-    //       However, the server sends these messages without any prompting,
-    //       so this handler cannot just throw an error
   }
 
   void handleRelation(SatRelation message) {

@@ -229,7 +229,8 @@ If this argument is not provided they are written to
 
       return parseMetadata(jsonData);
     } catch (e, st) {
-      throw Exception('Error while parsing migration file ${file.path}. $e\n$st');
+      throw Exception(
+          'Error while parsing migration file ${file.path}. $e\n$st');
     }
   }
 
