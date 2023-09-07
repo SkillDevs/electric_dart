@@ -147,6 +147,13 @@ If this argument is not provided they are written to
     Future<bool> gotNewMigrationsFun() async {
       final response = await http.get(Uri.parse(endpoint));
 
+      if (response.statusCode >= 400) {
+        throw Exception(
+          'Error while fetching migrations from $endpoint: '
+          '${response.statusCode} ${response.reasonPhrase}',
+        );
+      }
+
       if (response.statusCode == 204) {
         // No new migrations
         return false;
@@ -209,20 +216,20 @@ If this argument is not provided they are written to
   /// Reads the specified metadata file.
   /// @param path Path to the metadata file.
   /// @returns A promise that resolves with the metadata.
-  Future<MetaData> readMetadataFile(File path) async {
+  Future<MetaData> readMetadataFile(File file) async {
     try {
-      final data = await path.readAsString();
+      final data = await file.readAsString();
       final jsonData = json.decode(data);
 
       if (jsonData is! Map<String, Object?>) {
         throw Exception(
-            'Migration file $path has wrong format, expected JSON object '
+            'Migration file ${file.path} has wrong format, expected JSON object '
             'but found something else.');
       }
 
       return parseMetadata(jsonData);
-    } catch (e) {
-      throw Exception('Error while parsing migration file $path');
+    } catch (e, st) {
+      throw Exception('Error while parsing migration file ${file.path}. $e\n$st');
     }
   }
 
