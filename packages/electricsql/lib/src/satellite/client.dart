@@ -115,6 +115,18 @@ class SatelliteClient extends EventEmitter implements Client {
           isRpc: true,
         );
 
+      case SatMsgType.pingReq:
+        return IncomingHandler(
+          handle: (v) => handlePingReq(),
+          isRpc: true,
+        );
+
+      case SatMsgType.pingResp:
+        return IncomingHandler(
+          handle: (v) => handlePingResp(v),
+          isRpc: false,
+        );
+
       case SatMsgType.opLog:
         return IncomingHandler(
           handle: (v) => handleTransaction(v! as SatOpLog),
@@ -186,7 +198,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
     final completer = Completer<void>();
 
-    final socket = socketFactory.create(kProtocolVsn);
+    final socket = socketFactory.create();
     this.socket = socket;
 
     void onceError(Object error) {
@@ -304,10 +316,16 @@ class SatelliteClient extends EventEmitter implements Client {
   Future<AuthResponse> authenticate(
     AuthState authState,
   ) {
+    final headers = [
+      SatAuthHeaderPair(
+        key: SatAuthHeader.PROTO_VERSION,
+        value: getProtocolVersion(),
+      ),
+    ];
     final request = SatAuthReq(
       id: authState.clientId,
       token: authState.token,
-      headers: [],
+      headers: headers,
     );
     return rpc<AuthResponse>(request);
   }
@@ -770,6 +788,21 @@ class SatelliteClient extends EventEmitter implements Client {
         ),
       );
     }
+  }
+
+  void handlePingReq() {
+    logger.info(
+      'respond to ping with last ack ${inbound.lastLsn != null ? base64.encode(inbound.lastLsn!) : 'NULL'}',
+    );
+    final pong = SatPingResp(lsn: inbound.lastLsn);
+    sendMessage(pong);
+  }
+
+  void handlePingResp(Object? message) {
+    // TODO: This message is not used in any way right now.
+    //       We might be dropping client-initiated pings completely.
+    //       However, the server sends these messages without any prompting,
+    //       so this handler cannot just throw an error
   }
 
   void handleRelation(SatRelation message) {

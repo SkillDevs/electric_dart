@@ -85,6 +85,15 @@ class SatelliteWSServerStub {
               socketClient.add(encodeSocketMessage(msgType, msg as SatOpLog));
             }
 
+            if (msgType == SatMsgType.pingReq) {
+              socketClient.add(encodeSocketMessage(msgType, msg as SatPingReq));
+            }
+
+            if (msgType == SatMsgType.pingResp) {
+              socketClient
+                  .add(encodeSocketMessage(msgType, msg as SatPingResp));
+            }
+
             if (msgType == SatMsgType.subsResp) {
               socketClient
                   .add(encodeSocketMessage(msgType, msg as SatSubsResp));

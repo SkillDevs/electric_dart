@@ -9,12 +9,14 @@ import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:protobuf/protobuf.dart';
 
-const kProtobufPackage = 'Electric.Satellite';
+const kProtobufPackage = 'Electric.Satellite.v1_4';
 
 enum SatMsgType {
   errorResp(code: 0),
   authReq(code: 1),
   authResp(code: 2),
+  pingReq(code: 3),
+  pingResp(code: 4),
   inStartReplicationReq(code: 5),
   inStartReplicationResp(code: 6),
   inStopReplicationReq(code: 7),
@@ -53,6 +55,10 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
       return SatAuthReq.fromBuffer(data);
     case SatMsgType.authResp:
       return SatAuthResp.fromBuffer(data);
+    case SatMsgType.pingReq:
+      return SatPingReq.fromBuffer(data);
+    case SatMsgType.pingResp:
+      return SatPingResp.fromBuffer(data);
     case SatMsgType.inStartReplicationReq:
       return SatInStartReplicationReq.fromBuffer(data);
     case SatMsgType.inStartReplicationResp:
@@ -91,6 +97,10 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
 SatMsgType? getTypeFromSatObject(Object object) {
   if (object is SatAuthReq) {
     return SatMsgType.authReq;
+  } else if (object is SatPingReq) {
+    return SatMsgType.pingReq;
+  } else if (object is SatPingResp) {
+    return SatMsgType.pingResp;
   } else if (object is SatErrorResp) {
     return SatMsgType.errorResp;
   } else if (object is SatAuthResp) {
@@ -324,6 +334,10 @@ String msgToString(Object message) {
     return '#SatAuthReq{id: ${message.id}, token: ${message.token}}';
   } else if (message is SatAuthResp) {
     return '#SatAuthResp{id: ${message.id}}';
+  } else if (message is SatPingReq) {
+    return '#SatPingReq{}';
+  } else if (message is SatPingResp) {
+    return '#SatPingResp{lsn: ${message.hasLsn() ? base64.encode(message.lsn) : 'NULL'}}';
   } else if (message is SatErrorResp) {
     return '#SatErrorResp{type: ${message.errorType.name}}';
   } else if (message is SatInStartReplicationResp) {

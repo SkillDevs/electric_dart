@@ -79,7 +79,7 @@ void main() {
         ),
       ),
     ],
-    protocolVersion: 'Electric.Satellite',
+    protocolVersion: 'Electric.Satellite.v1_4',
     version: '20230613112725_814',
   );
 
