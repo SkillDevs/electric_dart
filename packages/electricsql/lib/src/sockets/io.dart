@@ -8,16 +8,16 @@ SocketFactory getDefaultSocketFactory() {
 
 class WebSocketIOFactory implements SocketFactory {
   @override
-  Socket create() {
-    return WebSocketIO();
+  Socket create(String protocolVsn) {
+    return WebSocketIO(protocolVsn);
   }
 }
 
 class WebSocketIO extends WebSocketBase {
-  WebSocketIO();
+  WebSocketIO(super.protocolVsn);
 
   @override
   WebSocketChannel createSocketChannel(String url) {
-    return IOWebSocketChannel.connect(url);
+    return IOWebSocketChannel.connect(url, protocols: [protocolVsn]);
   }
 }
