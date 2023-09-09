@@ -71,6 +71,7 @@ Logger _createLogger() {
       pen.gray(level: 0.6);
       levelName = 'DEBUG';
     } else {
+      pen.blue();
       levelName = 'INFO';
     }
 
