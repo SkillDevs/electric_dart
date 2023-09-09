@@ -11,6 +11,11 @@ export 'stub.dart'
 
 typedef Data = Uint8List;
 
+const _kProtocolVersionCode = '0.5';
+
+/// Returns the protocol version string as the server expects. i.e: 'electric.0.5'
+const kProtocolVsn = 'electric.$_kProtocolVersionCode';
+
 abstract class Socket {
   Socket open(ConnectionOptions opts);
   Socket write(Data data);
@@ -33,12 +38,13 @@ class ConnectionOptions {
 }
 
 abstract class SocketFactory {
-  Socket create();
+  Socket create(String protocolVsn);
 }
 
 /// Socket implementation that uses web_socket_channel
 /// io and html both derive from the main logic here
 abstract class WebSocketBase implements Socket {
+  final String protocolVsn;
   WebSocketChannel? _channel;
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
@@ -49,7 +55,7 @@ abstract class WebSocketBase implements Socket {
   void Function()? _closeListener;
   void Function(Data data)? _messageListener;
 
-  WebSocketBase();
+  WebSocketBase(this.protocolVsn);
 
   // event doesn't provide much
   void _notifyErrorAndCloseSocket([SatelliteException? error]) {

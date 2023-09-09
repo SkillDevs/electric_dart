@@ -230,28 +230,6 @@ void main() {
     }
   });
 
-  test('server pings client', () async {
-    await connectAndAuth();
-
-    final start = SatInStartReplicationResp();
-    final ping = SatPingReq();
-    final stop = SatInStopReplicationResp();
-    final completer = Completer<void>();
-
-    server.nextResponses([start, ping]);
-    server.nextResponses([
-      (_) {
-        completer.complete();
-      },
-    ]);
-    server.nextResponses([stop]);
-
-    await client.startReplication(null, null, null);
-    await client.stopReplication();
-
-    await completer.future;
-  });
-
   test('receive transaction over multiple messages', () async {
     await connectAndAuth();
 

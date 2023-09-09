@@ -15,15 +15,9 @@ class SatAuthHeader extends $pb.ProtobufEnum {
       const $core.bool.fromEnvironment('protobuf.omit_enum_names')
           ? ''
           : 'UNSPECIFIED');
-  static const SatAuthHeader PROTO_VERSION = SatAuthHeader._(
-      1,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'PROTO_VERSION');
 
   static const $core.List<SatAuthHeader> values = <SatAuthHeader>[
     UNSPECIFIED,
-    PROTO_VERSION,
   ];
 
   static final $core.Map<$core.int, SatAuthHeader> _byValue =
