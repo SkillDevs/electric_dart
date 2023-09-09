@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:ansicolor/ansicolor.dart';
 import 'package:logging/logging.dart' as loglib;
 
@@ -72,11 +74,12 @@ Logger _createLogger() {
       levelName = 'INFO';
     }
 
-    final paddedName = levelName.padLeft(5);
+    final paddedName = '$levelName:'.padRight(6);
 
     // ignore: avoid_print
-    print(
-      pen('${event.loggerName} $paddedName: ${_toIso8601StringOnlyDay(event.time)}: ${event.message} $extra'),
+    developer.log(
+      pen('$paddedName ${_toIso8601StringOnlyDay(event.time)} ${event.message} $extra'),
+      name: event.loggerName,
     );
   });
 

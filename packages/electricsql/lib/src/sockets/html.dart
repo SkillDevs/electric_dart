@@ -14,8 +14,13 @@ class WebSocketHtmlFactory implements SocketFactory {
 }
 
 class WebSocketHtml extends WebSocketBase {
+  WebSocketHtml();
+
   @override
   WebSocketChannel createSocketChannel(String url) {
-    return HtmlWebSocketChannel.connect(url, binaryType: BinaryType.list);
+    return HtmlWebSocketChannel.connect(
+      url,
+      binaryType: BinaryType.list,
+    );
   }
 }

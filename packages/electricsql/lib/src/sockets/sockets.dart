@@ -49,6 +49,8 @@ abstract class WebSocketBase implements Socket {
   void Function()? _closeListener;
   void Function(Data data)? _messageListener;
 
+  WebSocketBase();
+
   // event doesn't provide much
   void _notifyErrorAndCloseSocket([SatelliteException? error]) {
     final effectiveError = error ??

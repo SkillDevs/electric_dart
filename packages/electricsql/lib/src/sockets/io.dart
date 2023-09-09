@@ -14,6 +14,8 @@ class WebSocketIOFactory implements SocketFactory {
 }
 
 class WebSocketIO extends WebSocketBase {
+  WebSocketIO();
+
   @override
   WebSocketChannel createSocketChannel(String url) {
     return IOWebSocketChannel.connect(url);

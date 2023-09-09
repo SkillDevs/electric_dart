@@ -7,6 +7,7 @@ import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/types.dart';
+import 'package:protobuf/protobuf.dart';
 
 const kProtobufPackage = 'Electric.Satellite.v1_4';
 
@@ -142,47 +143,7 @@ SatMsgType? getTypeFromSatObject(Object object) {
 }
 
 Uint8List encodeMessage(Object message) {
-  if (message is SatAuthReq) {
-    return message.writeToBuffer();
-  } else if (message is SatPingReq) {
-    return message.writeToBuffer();
-  } else if (message is SatPingResp) {
-    return message.writeToBuffer();
-  } else if (message is SatErrorResp) {
-    return message.writeToBuffer();
-  } else if (message is SatAuthResp) {
-    return message.writeToBuffer();
-  } else if (message is SatInStartReplicationResp) {
-    return message.writeToBuffer();
-  } else if (message is SatInStartReplicationReq) {
-    return message.writeToBuffer();
-  } else if (message is SatInStopReplicationReq) {
-    return message.writeToBuffer();
-  } else if (message is SatInStopReplicationResp) {
-    return message.writeToBuffer();
-  } else if (message is SatOpLog) {
-    return message.writeToBuffer();
-  } else if (message is SatRelation) {
-    return message.writeToBuffer();
-  } else if (message is SatMigrationNotification) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsReq) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsResp) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsDataError) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsDataBegin) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsDataEnd) {
-    return message.writeToBuffer();
-  } else if (message is SatShapeDataBegin) {
-    return message.writeToBuffer();
-  } else if (message is SatShapeDataEnd) {
-    return message.writeToBuffer();
-  } else if (message is SatUnsubsReq) {
-    return message.writeToBuffer();
-  } else if (message is SatUnsubsResp) {
+  if (message is GeneratedMessage) {
     return message.writeToBuffer();
   }
 
