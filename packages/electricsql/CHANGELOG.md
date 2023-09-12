@@ -1,6 +1,6 @@
 ## 0.1.3
 
-* Code based on official Typescript client v0.5.3 (https://github.com/electric-sql/electric/releases/tag/electric-sql@0.5.3)
+* Code based on official Typescript client [v0.5.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.5.3)
 * Logger configuration
 
 ## 0.1.2
@@ -9,7 +9,7 @@
 
 ## 0.1.1
 
-* Code based on official Typescript client v0.5.2 (https://github.com/electric-sql/electric/releases/tag/electric-sql@0.5.2)
+* Code based on official Typescript client [v0.5.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.5.2)
 * Colored logs
 
 ## 0.1.0
