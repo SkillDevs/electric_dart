@@ -352,9 +352,9 @@ String msgToString(Object message) {
       final shapeErrors = message.err.shapeRequestError.map(
         (x) => '${x.requestId}: ${x.code.name} (${x.message})',
       );
-      return '#SatSubsReq{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: [$shapeErrors]}';
+      return '#SatSubsResp{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: [$shapeErrors]}';
     } else {
-      return '#SatSubsReq{id: ${message.subscriptionId}}';
+      return '#SatSubsResp{id: ${message.subscriptionId}}';
     }
   } else if (message is SatSubsDataError) {
     final shapeErrors = message.shapeRequestError.map(
