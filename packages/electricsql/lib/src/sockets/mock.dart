@@ -4,7 +4,7 @@ import 'package:events_emitter/emitters/event_emitter.dart';
 
 class MockSocketFactory implements SocketFactory {
   @override
-  Socket create() {
+  Socket create(String protocolVsn) {
     return MockSocket();
   }
 }

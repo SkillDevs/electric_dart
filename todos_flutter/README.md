@@ -21,6 +21,8 @@ cd backend
 ./start.sh # This sets environment variables from .envrc and starts the docker-compose
 ```
 
+> **NOTE**: If you are running the example from a non tagged commit, it is highly recommended to change the `ELECTRIC_IMAGE` in the `.envrc` file to `electric:local-build` and run `make` on the main Electric repository (https://github.com/electric-sql/electric) at the same commit the Dart client is based on. You can find that commit in the Dart client README. This will ensure that the client matches the Electric service behavior, as the protocol can vary depending on the version.
+
 ### 2. Apply migrations in Postgres
 
 In this demo we used [go-migrate](https://github.com/golang-migrate/migrate) to apply the migrations automatically into Postgres.

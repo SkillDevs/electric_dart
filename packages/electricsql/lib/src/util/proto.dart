@@ -7,15 +7,14 @@ import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/types.dart';
+import 'package:protobuf/protobuf.dart';
 
-const kProtobufPackage = 'Electric.Satellite.v1_4';
+const kProtobufPackage = 'Electric.Satellite';
 
 enum SatMsgType {
   errorResp(code: 0),
   authReq(code: 1),
   authResp(code: 2),
-  pingReq(code: 3),
-  pingResp(code: 4),
   inStartReplicationReq(code: 5),
   inStartReplicationResp(code: 6),
   inStopReplicationReq(code: 7),
@@ -54,10 +53,6 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
       return SatAuthReq.fromBuffer(data);
     case SatMsgType.authResp:
       return SatAuthResp.fromBuffer(data);
-    case SatMsgType.pingReq:
-      return SatPingReq.fromBuffer(data);
-    case SatMsgType.pingResp:
-      return SatPingResp.fromBuffer(data);
     case SatMsgType.inStartReplicationReq:
       return SatInStartReplicationReq.fromBuffer(data);
     case SatMsgType.inStartReplicationResp:
@@ -96,10 +91,6 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
 SatMsgType? getTypeFromSatObject(Object object) {
   if (object is SatAuthReq) {
     return SatMsgType.authReq;
-  } else if (object is SatPingReq) {
-    return SatMsgType.pingReq;
-  } else if (object is SatPingResp) {
-    return SatMsgType.pingResp;
   } else if (object is SatErrorResp) {
     return SatMsgType.errorResp;
   } else if (object is SatAuthResp) {
@@ -142,47 +133,7 @@ SatMsgType? getTypeFromSatObject(Object object) {
 }
 
 Uint8List encodeMessage(Object message) {
-  if (message is SatAuthReq) {
-    return message.writeToBuffer();
-  } else if (message is SatPingReq) {
-    return message.writeToBuffer();
-  } else if (message is SatPingResp) {
-    return message.writeToBuffer();
-  } else if (message is SatErrorResp) {
-    return message.writeToBuffer();
-  } else if (message is SatAuthResp) {
-    return message.writeToBuffer();
-  } else if (message is SatInStartReplicationResp) {
-    return message.writeToBuffer();
-  } else if (message is SatInStartReplicationReq) {
-    return message.writeToBuffer();
-  } else if (message is SatInStopReplicationReq) {
-    return message.writeToBuffer();
-  } else if (message is SatInStopReplicationResp) {
-    return message.writeToBuffer();
-  } else if (message is SatOpLog) {
-    return message.writeToBuffer();
-  } else if (message is SatRelation) {
-    return message.writeToBuffer();
-  } else if (message is SatMigrationNotification) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsReq) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsResp) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsDataError) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsDataBegin) {
-    return message.writeToBuffer();
-  } else if (message is SatSubsDataEnd) {
-    return message.writeToBuffer();
-  } else if (message is SatShapeDataBegin) {
-    return message.writeToBuffer();
-  } else if (message is SatShapeDataEnd) {
-    return message.writeToBuffer();
-  } else if (message is SatUnsubsReq) {
-    return message.writeToBuffer();
-  } else if (message is SatUnsubsResp) {
+  if (message is GeneratedMessage) {
     return message.writeToBuffer();
   }
 
@@ -373,10 +324,6 @@ String msgToString(Object message) {
     return '#SatAuthReq{id: ${message.id}, token: ${message.token}}';
   } else if (message is SatAuthResp) {
     return '#SatAuthResp{id: ${message.id}}';
-  } else if (message is SatPingReq) {
-    return '#SatPingReq{}';
-  } else if (message is SatPingResp) {
-    return '#SatPingResp{lsn: ${message.hasLsn() ? base64.encode(message.lsn) : 'NULL'}}';
   } else if (message is SatErrorResp) {
     return '#SatErrorResp{type: ${message.errorType.name}}';
   } else if (message is SatInStartReplicationResp) {
@@ -405,9 +352,9 @@ String msgToString(Object message) {
       final shapeErrors = message.err.shapeRequestError.map(
         (x) => '${x.requestId}: ${x.code.name} (${x.message})',
       );
-      return '#SatSubsReq{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: [$shapeErrors]}';
+      return '#SatSubsResp{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: [$shapeErrors]}';
     } else {
-      return '#SatSubsReq{id: ${message.subscriptionId}}';
+      return '#SatSubsResp{id: ${message.subscriptionId}}';
     }
   } else if (message is SatSubsDataError) {
     final shapeErrors = message.shapeRequestError.map(

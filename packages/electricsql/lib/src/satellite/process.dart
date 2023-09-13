@@ -16,12 +16,12 @@ import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/manager.dart';
 import 'package:electricsql/src/satellite/shapes/shapes.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
-import 'package:electricsql/src/util/types.dart' as types;
 import 'package:meta/meta.dart';
 import 'package:retry/retry.dart' as retry_lib;
 import 'package:synchronized/synchronized.dart';
@@ -146,9 +146,6 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<ConnectionWrapper> start(AuthConfig authConfig) async {
-    // TODO(dart): Explicitly enable foreign keys, which is used by Electric
-    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
-
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -1222,57 +1219,15 @@ This means there is a notifier subscription leak.`''');
     // Start with garbage collection, because if this a transaction after round-trip, then we don't want it in conflict resolution
     await maybeGarbageCollect(origin, commitTimestamp);
 
-    // Now process all changes per chunk.
-    // We basically take a prefix of changes of the same type
-    // which we call a `dmlChunk` or `ddlChunk` if the changes
-    // are DML statements, respectively, DDL statements.
-    // We process chunk per chunk in-order.
-    var dmlChunk = <DataChange>[];
-    var ddlChunk = <SchemaChange>[];
-
-    final changes = transaction.changes;
-    for (int idx = 0; idx < changes.length; idx++) {
-      final change = changes[idx];
-      ChangeType getChangeType(types.Change change) {
-        return change is DataChange ? ChangeType.dml : ChangeType.ddl;
-      }
-
-      bool sameChangeTypeAsPrevious() {
-        return idx == 0 ||
-            getChangeType(changes[idx]) == getChangeType(changes[idx - 1]);
-      }
-
-      void addToChunk(types.Change change) {
-        if (change is DataChange) {
-          dmlChunk.add(change);
-        } else {
-          ddlChunk.add(change as SchemaChange);
-        }
-      }
-
-      Future<void> processChunk(ChangeType type) async {
-        if (type == ChangeType.dml) {
-          await processDML(dmlChunk);
-          dmlChunk = [];
-        } else {
-          await processDDL(ddlChunk);
-          ddlChunk = [];
-        }
-      }
-
-      addToChunk(change); // add the change in the right chunk
-      if (!sameChangeTypeAsPrevious()) {
-        // We're starting a new chunk
-        // process the previous chunk and clear it
-        final previousChange = changes[idx - 1];
-        await processChunk(getChangeType(previousChange));
-      }
-
-      if (idx == changes.length - 1) {
-        // we're at the last change
-        // process this chunk
-        final thisChange = changes[idx];
-        await processChunk(getChangeType(thisChange));
+    // Chunk incoming changes by their types, and process each chunk one by one
+    for (final (dataChange, chunk) in chunkBy(
+      transaction.changes,
+      (c, _, __) => c is DataChange,
+    )) {
+      if (dataChange) {
+        await processDML(chunk.cast<DataChange>());
+      } else {
+        await processDDL(chunk.cast<SchemaChange>());
       }
     }
 

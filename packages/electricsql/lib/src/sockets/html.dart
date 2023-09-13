@@ -8,14 +8,20 @@ SocketFactory getDefaultSocketFactory() {
 
 class WebSocketHtmlFactory implements SocketFactory {
   @override
-  Socket create() {
-    return WebSocketHtml();
+  Socket create(String protocolVsn) {
+    return WebSocketHtml(protocolVsn);
   }
 }
 
 class WebSocketHtml extends WebSocketBase {
+  WebSocketHtml(super.protocolVsn);
+
   @override
   WebSocketChannel createSocketChannel(String url) {
-    return HtmlWebSocketChannel.connect(url, binaryType: BinaryType.list);
+    return HtmlWebSocketChannel.connect(
+      url,
+      binaryType: BinaryType.list,
+      protocols: [protocolVsn],
+    );
   }
 }

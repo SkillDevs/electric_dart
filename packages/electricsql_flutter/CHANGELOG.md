@@ -1,3 +1,7 @@
+## 0.1.3
+
+* Simplify package exports
+
 ## 0.1.2
 
 * Warn when initializing the `ConnectivityStateController` twice.
