@@ -12,7 +12,7 @@ endif
 # By default we would like to build in docker, as we intend
 # to run tests with Satellite in it
 build:
-	docker buildx build --no-cache --load ${CACHING_SETTINGS} -f ./Dockerfile -t satellite_dart_client:local ${PROJECT_ROOT}
+	docker buildx build --load ${CACHING_SETTINGS} -f ./Dockerfile -t satellite_dart_client:local ${PROJECT_ROOT}
 
 local-build:
 	dart compile exe bin/satellite_dart_client.dart -o satellite_dart_client
