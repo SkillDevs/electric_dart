@@ -108,12 +108,34 @@ Future<void> start() async {
         await processCommand<void>(state, command, () async {
           return await insertItem(electric, keys);
         });
-      } else if (name == "insert_item_extended") {
+      } else if (name == "insert_extended_item") {
         final electric = command.arguments[0] as DriftElectricClient;
         final values = (command.arguments[1] as Map<String, dynamic>)
             .cast<String, String>();
         await processCommand<void>(state, command, () async {
-          return await insertItemExtended(electric, values);
+          return await insertExtendedItem(electric, values);
+        });
+      } else if (name == "delete_item") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final keys = (command.arguments[1] as List<dynamic>).cast<String>();
+        await processCommand<void>(state, command, () async {
+          return await deleteItem(electric, keys);
+        });
+      } else if (name == "get_other_items") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        await processCommand<List<Row>>(state, command, () async {
+          return await getOtherItems(electric);
+        });
+      } else if (name == "insert_other_item") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final keys = (command.arguments[1] as List<dynamic>).cast<String>();
+        await processCommand<void>(state, command, () async {
+          return await insertOtherItem(electric, keys);
+        });
+      } else if (name == "stop") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        await processCommand<void>(state, command, () async {
+          return await stop(electric);
         });
       } else {
         throw Exception("Unknown command: $name");

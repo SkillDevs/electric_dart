@@ -24,7 +24,7 @@
     -$fail_pattern
     [invoke node_sync_table "items"]
     # As soon as sync is done, we expect to see the row in the database
-    !await client.get_items(db)
+    !get_items db
     ??hello from pg
 
 [shell pg_1]
@@ -35,7 +35,7 @@
 [shell satellite_1]
     # This one gets propagated "normally"
     [invoke node_await_get "00000000-0000-0000-0000-000000000001"]
-    !await client.delete_item(db, ['hello from pg again'])
+    !delete_item db ['hello from pg again']
     ?$node
 
 [shell pg_1]

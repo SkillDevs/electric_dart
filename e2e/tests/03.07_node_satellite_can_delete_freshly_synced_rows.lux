@@ -28,9 +28,9 @@
     -$fail_pattern
     [invoke node_sync_table "items"]
     # As soon as sync it done, we expect to see the row in the database
-    !await client.get_items(db)
+    !get_items db
     ??hello from pg
-    !await client.delete_item(db, ['hello from pg'])
+    !delete_item db ['hello from pg']
     ?$node
 
 [shell pg_1]

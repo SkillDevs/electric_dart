@@ -127,7 +127,7 @@ Future<void> insertItem(DriftElectricClient electric, List<String> keys) async {
   });
 }
 
-Future<void> insertItemExtended(
+Future<void> insertExtendedItem(
   DriftElectricClient electric,
   Map<String, String> values,
 ) async {
@@ -147,7 +147,7 @@ Future<void> insertItemExtended(
   ];
 
   await electric.db.customInsert(
-    "INSERT INTO items($columnNames) VALUES ($placeholders); RETURNING *;",
+    "INSERT INTO items($columnNames) VALUES ($placeholders) RETURNING *;",
     variables: dynamicArgsToVariables(args),
   );
 }
@@ -196,17 +196,28 @@ Future<void> insertOtherItem(
   });
 }
 
-Future<void> stop() async {
+Future<void> stop(DriftElectricClient db) async {
   await globalRegistry.stopAll();
 }
 
 /////////////////////////////////
 
 List<Row> _toRows(List<QueryRow> rows) {
-  return rows.map((r) => r.data).toList();
+  return rows.map((r) {
+    final data = r.data;
+    return data.map((key, value) {
+      final String newVal;
+      if (value is String) {
+        newVal = "'$value'";
+      } else {
+        newVal = value.toString();
+      }
+      return MapEntry(key, newVal);
+    });
+  }).toList();
 }
 
-typedef Row = Map<String, Object?>;
+typedef Row = Map<String, String>;
 
 List<Variable> dynamicArgsToVariables(List<Object?>? args) {
   return (args ?? const [])

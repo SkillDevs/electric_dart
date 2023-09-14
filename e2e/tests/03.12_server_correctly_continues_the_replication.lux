@@ -21,7 +21,7 @@
 
 [shell satellite_1]
   [progress stopping client]
-  !await client.stop(db)
+  !stop db
   ?$node
 
   # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.

@@ -55,7 +55,7 @@
 [endmacro]
 
 [macro node_await_get_other match]
-    [invoke wait-for "client.get_other_items(db)" "${match}" 10 $node]
+    [invoke wait-for "get_other_items db" "${match}" 10 $node]
 [endmacro]
 
 [macro node_await_insert_other keys]
