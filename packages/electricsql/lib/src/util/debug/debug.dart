@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:ansicolor/ansicolor.dart';
 import 'package:logging/logging.dart' as loglib;
+import 'package:platform_info/platform_info.dart';
 
 final Logger logger = _createLogger();
 
@@ -45,6 +46,8 @@ Logger _createLogger() {
   // No logging by default
   logger.level = loglib.Level.OFF;
 
+  final outputFun = _getOutputFun();
+
   logger.onRecord.listen((event) {
     final error = event.error;
 
@@ -77,11 +80,11 @@ Logger _createLogger() {
 
     final paddedName = '$levelName:'.padRight(6);
 
-    // ignore: avoid_print
-    developer.log(
-      pen('$paddedName ${_toIso8601StringOnlyDay(event.time)} ${event.message} $extra'),
-      name: event.loggerName,
+    final message = pen(
+      '$paddedName ${_toIso8601StringOnlyDay(event.time)} ${event.message} $extra',
     );
+
+    outputFun(message, event.loggerName);
   });
 
   // Wrapped simplified logger
@@ -162,4 +165,25 @@ String _threeDigits(int n) {
 String _twoDigits(int n) {
   if (n >= 10) return '$n';
   return '0$n';
+}
+
+typedef LoggerOutput = void Function(String message, String loggerName);
+
+LoggerOutput _getOutputFun() {
+  final platform = Platform.instance.operatingSystem;
+
+  if (platform == OperatingSystem.iOS || platform == OperatingSystem.macOS) {
+    // Colors don't work correctly on iOS/macos when using print
+    return (message, loggerName) {
+      developer.log(
+        message,
+        name: loggerName,
+      );
+    };
+  } else {
+    return (message, loggerName) {
+      // ignore: avoid_print
+      print('[$loggerName] $message');
+    };
+  }
 }

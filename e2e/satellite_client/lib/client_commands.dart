@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -53,7 +52,7 @@ void setSubscribers(DriftElectricClient db) {
   });
   db.notifier.subscribeToDataChanges((x) {
     print('data changes: ');
-    // TODO: To json
+    // TODO(dart): To json
     //print(json.encode(x));
   });
 }
@@ -204,9 +203,6 @@ Future<void> stop(DriftElectricClient db) async {
 
 Future<void> rawStatement(DriftElectricClient db, String statement) async {
   await db.db.customStatement(statement);
-
-  // TODO: Review this
-  db.notifier.potentiallyChanged();
 }
 
 void changeConnectivity(DriftElectricClient db, String connectivityName) {

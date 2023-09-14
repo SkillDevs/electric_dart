@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:electricsql/drivers/drift.dart';
-import 'package:electricsql/electricsql.dart';
 import 'package:satellite_dart_client/client_commands.dart';
 import 'package:satellite_dart_client/cli/reader.dart';
 import 'package:satellite_dart_client/cli/tokens.dart';
