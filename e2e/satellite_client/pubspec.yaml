@@ -9,6 +9,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  cli_repl: ^0.2.3
   drift: ^2.11.1
   electricsql:
     path: ../../packages/electricsql

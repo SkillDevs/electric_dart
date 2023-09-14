@@ -1,21 +1,27 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
-import 'package:satellite_dart_client/cli/commands.dart';
-import 'package:satellite_dart_client/generic_db.dart';
-import 'package:satellite_dart_client/state.dart';
+import 'package:satellite_dart_client/client_commands.dart';
+import 'package:satellite_dart_client/cli/reader.dart';
+import 'package:satellite_dart_client/cli/tokens.dart';
+import 'package:satellite_dart_client/util/generic_db.dart';
+import 'package:satellite_dart_client/cli/state.dart';
 
 Future<void> start() async {
+  final reader = createReader();
+
   final state = AppState();
-
-  while (true) {
+  for (final input in reader()) {
     try {
-      final command = _prompt(state);
+      final command = await parseCommand(input, state);
 
-      //print("command: $command");
+      if (command == null) {
+        break;
+      }
 
-      if (command == null) break;
+      print(command);
 
       final name = command.name;
 
@@ -40,12 +46,12 @@ Future<void> start() async {
           return value;
         });
       } else if (name == "electrify_db") {
-        await processCommand<ElectricClient>(state, command, () async {
+        await processCommand<DriftElectricClient>(state, command, () async {
           final db = command.arguments[0] as GenericDb;
-          final dbName = command.arguments[1] as String;
-          final host = command.arguments[2] as String;
-          final port = command.arguments[3] as int;
-          final migrationsJ = command.arguments[4] as String;
+          final dbName = "db_${db.hashCode.toString()}";
+          final host = command.arguments[1] as String;
+          final port = command.arguments[2] as int;
+          final migrationsJ = command.arguments[3] as List<dynamic>;
 
           return await electrifyDb(
             db,
@@ -54,6 +60,17 @@ Future<void> start() async {
             port,
             migrationsJ,
           );
+        });
+      } else if (name == "get_tables") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        await processCommand<List<Row>>(state, command, () async {
+          return await getTables(electric);
+        });
+      } else if (name == "get_columns") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final table = command.arguments[1] as String;
+        await processCommand<List<Row>>(state, command, () async {
+          return await getColumns(electric, table);
         });
       } else {
         throw Exception("Unknown command: $name");
@@ -76,97 +93,49 @@ Future<void> processCommand<T>(
   if (command.variable != null) {
     state.variables[command.variable!] = res;
   }
+
+  // Log output of the command
+  print(res);
 }
 
-Command? _prompt(AppState appState) {
-  stdout.write('> ');
-
-  //String? input = readInputSync();
-  //String? input = stdin.readLineSync();
-  String? input = myReadLine();
-
-  if (input == null) return null;
-
+Future<Command?> parseCommand(String input, AppState appState) async {
   input = input.trim();
 
   if (input.isEmpty) return null;
 
+  var tokens = await extractTokens(appState, input);
+
   String? variable;
-  final byEquals = input.split('=');
-  if (byEquals.length > 1) {
-    variable = byEquals[0].trim();
-    if (variable.isEmpty) {
-      throw Exception("Invalid variable name");
+  if (tokens.length >= 3) {
+    if (tokens[1].text == "=") {
+      variable = tokens[0].text;
+      tokens = tokens.sublist(2);
     }
-    input = byEquals[1].trim();
   }
 
-  final parts = input.split(' ');
-
-  // final name = parts[0];
-  // final argumentsRaw = parts.length < 2 ? <String>[] : parts.sublist(1);
-
-  final joinedArgs = joinArguments(parts);
-
-  // print("ARGS:");
-  // for (final arg in joinedArgs) {
-  //   final cleaned = arg.replaceAll('\n', '\\n');
-  //   print("  <<$cleaned>>");
-  // }
-
-  // Process arguments and variables
-  final List<Object?> arguments = joinedArgs.map((argRaw) {
-    if (argRaw == "null") {
-      return null;
-    }
-
-    //print("argRaw: '$argRaw'");
-    if (appState.variables.containsKey(argRaw)) {
-      // Resolve argument
-      return appState.variables[argRaw];
-    } else {
-      if (argRaw.startsWith("'''") &&
-          argRaw.endsWith("'''") &&
-          argRaw.length >= 6) {
-        // String multiline
-        return argRaw.substring(3, argRaw.length - 3);
-      } else if (argRaw.startsWith('"') &&
-          argRaw.endsWith('"') &&
-          argRaw.length >= 2) {
-        // String
-        return argRaw.substring(1, argRaw.length - 1);
-      } else {
-        // Number
-        final argNum = num.tryParse(argRaw);
-        if (argNum == null) {
-          return ArgIdentifier(argRaw);
-        }
-        return argNum;
-      }
-    }
-  }).toList();
-
   final String name;
-  final List<Object?> effectiveArgs;
-  if (arguments.length == 1 && variable != null) {
+  final List<Token> effectiveArgs;
+  if (tokens.length == 1 && variable != null) {
     name = "assignVar";
-    effectiveArgs = arguments;
-  } else if (arguments.isEmpty) {
+    effectiveArgs = tokens;
+  } else if (tokens.isEmpty) {
     throw Exception("Empty command");
   } else {
-    name = (arguments.removeAt(0) as ArgIdentifier).name;
-    effectiveArgs = arguments;
+    name = (tokens.removeAt(0).dartValue as ArgIdentifier).name;
+    effectiveArgs = tokens;
   }
 
   for (final arg in effectiveArgs) {
-    if (arg is ArgIdentifier) {
-      throw Exception("Variable unknown: ${arg.name}");
+    if (arg.isVariable) {
+      throw Exception("Variable unknown: ${arg.text}");
     }
   }
 
+  final dartValues = effectiveArgs.map((e) => e.dartValue).toList();
+
   return Command(
     name,
-    effectiveArgs,
+    dartValues,
     variable: variable,
   );
 }
@@ -181,135 +150,5 @@ class Command {
   @override
   String toString() {
     return 'Command{name: $name, arguments: $arguments, variable: $variable}';
-  }
-}
-
-String? myReadLine() {
-  StringBuffer? buf;
-  int numMultiLineBlocks = 0;
-
-  while (true) {
-    String? input = stdin.readLineSync();
-
-    //print("read line: <<$input>>");
-
-    if (input == null) {
-      return buf?.toString();
-    }
-
-    buf ??= StringBuffer();
-
-    buf.write(input);
-
-    final numMultiLine = "'''".allMatches(input).length;
-    // print("num matches: $numMultiLine");
-    numMultiLineBlocks += numMultiLine;
-
-    if (numMultiLineBlocks % 2 == 1) {
-      buf.write('\n');
-      continue;
-    }
-
-    break;
-  }
-
-  //print("DONE: <${cleanInput(buf.toString())}>)}");
-
-  return buf.toString();
-}
-
-String cleanInput(String input) {
-  final cleaned = input.replaceAll('\n', '\\n');
-  return cleaned;
-}
-
-List<String> joinArguments(List<String> argsRaw) {
-  final List<String> args = [];
-
-  while (argsRaw.isNotEmpty) {
-    var argRaw = argsRaw.removeAt(0);
-    argRaw = argRaw.trimLeft();
-
-    if (argRaw.startsWith("'''")) {
-      final multiLine = readUntilEndMultiLine(argRaw, argsRaw);
-      args.add(multiLine);
-      continue;
-    } else if (argRaw.startsWith('"')) {
-      final str = readUntilEndQuotes(argRaw, argsRaw);
-      args.add(str);
-      continue;
-    } else {
-      argRaw = argRaw.trim();
-      if (argRaw.isEmpty) continue;
-
-      args.add(argRaw);
-    }
-  }
-
-  return args;
-}
-
-String readUntilEndMultiLine(String start, List<String> argsRaw) {
-  final buf = StringBuffer(start);
-  if (start.startsWith("'''") && start.endsWith("'''") && start.length >= 6) {
-    return start;
-  }
-
-  bool foundEnd = false;
-  while (argsRaw.isNotEmpty) {
-    final argRaw = argsRaw.removeAt(0);
-
-    if (argRaw.endsWith("'''")) {
-      buf.write(argRaw);
-      foundEnd = true;
-      break;
-    }
-
-    buf.write(argRaw);
-    buf.write(' ');
-  }
-
-  if (!foundEnd) {
-    throw Exception("Missing end of multiline string");
-  }
-
-  return buf.toString();
-}
-
-String readUntilEndQuotes(String start, List<String> argsRaw) {
-  if (start.startsWith('"') && start.endsWith('"') && start.length >= 2) {
-    return start;
-  }
-
-  final buf = StringBuffer(start);
-  bool foundEnd = false;
-  while (argsRaw.isNotEmpty) {
-    final argRaw = argsRaw.removeAt(0);
-
-    if (argRaw.endsWith('"')) {
-      buf.write(argRaw);
-      foundEnd = true;
-      break;
-    }
-
-    buf.write(argRaw);
-    buf.write(' ');
-  }
-
-  if (!foundEnd) {
-    throw Exception("Missing end of quotes");
-  }
-
-  return buf.toString();
-}
-
-class ArgIdentifier {
-  final String name;
-
-  ArgIdentifier(this.name);
-
-  @override
-  String toString() {
-    return 'ArgIdentifier{name: $name}';
   }
 }

@@ -34,7 +34,7 @@
 # ENTRYPOINT ["node"]
 
 FROM ubuntu:22.04 as base
-RUN apt-get update && apt install sqlite3 wget -y
+RUN apt-get update && apt install sqlite3 wget nodejs -y
 
 #############################################
 
