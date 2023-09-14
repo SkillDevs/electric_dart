@@ -49,24 +49,37 @@ List<String> extractTokenParts(String text) {
 
   final tokens = <String>[];
 
+  String? waitingStringCloseChar;
+
   for (var i = 0; i < text.length; ++i) {
     final ch = text[i];
 
     if (ch == " ") {
-      if (buffer.isNotEmpty && stack.isEmpty) {
+      if (buffer.isNotEmpty &&
+          stack.isEmpty &&
+          waitingStringCloseChar == null) {
         tokens.add(buffer.toString());
         buffer.clear();
         continue;
       }
     }
 
-    if (_leftBrackets.contains(ch)) {
-      stack.add(ch);
-    } else if (_rightToLeftBracketMap.containsKey(ch)) {
-      // not check matching pairs currently, since user can
-      // input a wrong grammar
-      if (stack.isNotEmpty) stack.removeLast();
+    if (ch == "'" || ch == '"') {
+      if (ch == waitingStringCloseChar) {
+        waitingStringCloseChar = null;
+      } else {
+        waitingStringCloseChar ??= ch;
+      }
+    } else if (waitingStringCloseChar == null) {
+      if (_leftBrackets.contains(ch)) {
+        stack.add(ch);
+      } else if (_rightToLeftBracketMap.containsKey(ch)) {
+        // not check matching pairs currently, since user can
+        // input a wrong grammar
+        if (stack.isNotEmpty) stack.removeLast();
+      }
     }
+
     buffer.write(ch);
   }
 

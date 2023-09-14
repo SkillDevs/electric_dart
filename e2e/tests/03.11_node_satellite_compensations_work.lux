@@ -34,22 +34,17 @@
     [invoke node_await_table "other_items"]
     [invoke node_sync_table "other_items"]
     ??[proto] recv: #SatSubsDataEnd
-    !await db.db.raw({sql: "UPDATE _electric_meta SET value = 1 WHERE key = 'compensations' RETURNING *"})
+    !raw_statement db "UPDATE _electric_meta SET value = 1 WHERE key = 'compensations' RETURNING *"
     ?$node
 
-    """!await db.db.items.create({
-      data: {
-        id: "test_id_1",
-        content: "hello world"
-      }
-    })
-    """
+    [invoke node_await_insert_extended "{id: 'test_id_1', content: 'hello world'}"]
+    ?$node
     ??[proto] send: #SatOpLog
     ??[proto] recv: #SatOpLog
 
 # TEST:
     # Disconnect the client
-    !db.notifier.connectivityStateChanged(db.notifier.dbName, 'disconnected')
+    !change_connectivity db 'disconnected'
 
 [shell pg_1]
     # Concurrently, update and then delete the referenced row on the server
@@ -59,20 +54,13 @@
 [shell satellite_1]
     # On a disconnected client, insert a dependent row
     ?$node
-    """!await db.db.other_items.create({
-      data: {
-        id: "other_test_id_1",
-        content: "",
-        item_id: "test_id_1"
-      }
-    })
-    """
+    !raw_statement db "INSERT INTO other_items(id, content, item_id) VALUES('other_test_id_1', '', 'test_id_1')"
     ?$node
 
 
 [shell satellite_1]
     # Reconnect the client, expecting no errors to show up
-    !db.notifier.connectivityStateChanged(db.notifier.dbName, 'available')
+    !change_connectivity db 'available'
     ??[proto] send: #SatOpLog
     ??[proto] recv: #SatOpLog
 

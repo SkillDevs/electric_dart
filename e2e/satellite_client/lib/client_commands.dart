@@ -135,16 +135,18 @@ Future<void> insertExtendedItem(
     "id": genUUID,
   };
 
-  final columns = [
-    ...fixedColumns.keys,
-    ...values.keys,
-  ];
+  final colToVal = <String, Object?>{
+    ...Map.fromEntries(
+      fixedColumns.entries.map((e) => MapEntry(e.key, e.value())),
+    ),
+    ...values,
+  };
+
+  final columns = colToVal.keys.toList();
   final columnNames = columns.join(", ");
   final placeholders = columns.map((_) => "?").join(", ");
-  final args = [
-    ...fixedColumns.values.map((f) => f()),
-    ...values.values,
-  ];
+
+  final args = colToVal.values.toList();
 
   await electric.db.customInsert(
     "INSERT INTO items($columnNames) VALUES ($placeholders) RETURNING *;",
@@ -198,6 +200,25 @@ Future<void> insertOtherItem(
 
 Future<void> stop(DriftElectricClient db) async {
   await globalRegistry.stopAll();
+}
+
+Future<void> rawStatement(DriftElectricClient db, String statement) async {
+  await db.db.customStatement(statement);
+
+  // TODO: Review this
+  db.notifier.potentiallyChanged();
+}
+
+void changeConnectivity(DriftElectricClient db, String connectivityName) {
+  final dbName = db.notifier.dbName;
+  final ConnectivityState state = switch (connectivityName) {
+    'disconnected' => ConnectivityState.disconnected,
+    'connected' => ConnectivityState.connected,
+    'available' => ConnectivityState.available,
+    _ => throw Exception('Unknown connectivity name: $connectivityName'),
+  };
+
+  db.notifier.connectivityStateChanged(dbName, state);
 }
 
 /////////////////////////////////

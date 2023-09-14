@@ -137,6 +137,18 @@ Future<void> start() async {
         await processCommand<void>(state, command, () async {
           return await stop(electric);
         });
+      } else if (name == "raw_statement") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final sql = command.arguments[1] as String;
+        await processCommand<void>(state, command, () async {
+          return await rawStatement(electric, sql);
+        });
+      } else if (name == "change_connectivity") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final connectivityName = command.arguments[1] as String;
+        await processCommand<void>(state, command, () {
+          return changeConnectivity(electric, connectivityName);
+        });
       } else {
         throw Exception("Unknown command: $name");
       }
