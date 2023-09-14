@@ -12,8 +12,10 @@ import 'package:satellite_dart_client/cli/state.dart';
 Future<void> start() async {
   final reader = createReader();
 
+  stdout.write(">>> ");
+
   final state = AppState();
-  for (final input in reader()) {
+  await for (final input in reader()) {
     try {
       final command = await parseCommand(input, state);
 
@@ -21,7 +23,7 @@ Future<void> start() async {
         break;
       }
 
-      print(command);
+      //print(command);
 
       final name = command.name;
 
@@ -45,6 +47,11 @@ Future<void> start() async {
           final value = command.arguments[0];
           return value;
         });
+      } else if (name == "showVar") {
+        await processCommand<dynamic>(state, command, () async {
+          final value = command.arguments[0];
+          return value;
+        });
       } else if (name == "electrify_db") {
         await processCommand<DriftElectricClient>(state, command, () async {
           final db = command.arguments[0] as GenericDb;
@@ -61,6 +68,12 @@ Future<void> start() async {
             migrationsJ,
           );
         });
+      } else if (name == "sync_table") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final table = command.arguments[1] as String;
+        await processCommand<void>(state, command, () async {
+          return await syncTable(electric, table);
+        });
       } else if (name == "get_tables") {
         final electric = command.arguments[0] as DriftElectricClient;
         await processCommand<List<Row>>(state, command, () async {
@@ -72,9 +85,41 @@ Future<void> start() async {
         await processCommand<List<Row>>(state, command, () async {
           return await getColumns(electric, table);
         });
+      } else if (name == "get_items") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        await processCommand<List<Row>>(state, command, () async {
+          return await getItems(electric);
+        });
+      } else if (name == "get_item_ids") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        await processCommand<List<Row>>(state, command, () async {
+          return await getItemIds(electric);
+        });
+      } else if (name == "get_item_columns") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final table = command.arguments[1] as String;
+        final column = command.arguments[2] as String;
+        await processCommand<List<Row>>(state, command, () async {
+          return await getItemColumns(electric, table, column);
+        });
+      } else if (name == "insert_item") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final keys = (command.arguments[1] as List<dynamic>).cast<String>();
+        await processCommand<void>(state, command, () async {
+          return await insertItem(electric, keys);
+        });
+      } else if (name == "insert_item_extended") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final values = (command.arguments[1] as Map<String, dynamic>)
+            .cast<String, String>();
+        await processCommand<void>(state, command, () async {
+          return await insertItemExtended(electric, values);
+        });
       } else {
         throw Exception("Unknown command: $name");
       }
+
+      stdout.write(">>> ");
     } catch (e, st) {
       print("ERROR: $e\n$st");
 
@@ -118,6 +163,9 @@ Future<Command?> parseCommand(String input, AppState appState) async {
   if (tokens.length == 1 && variable != null) {
     name = "assignVar";
     effectiveArgs = tokens;
+  } else if (tokens.length == 1 && tokens.first.dartValue is! ArgIdentifier) {
+    name = "showVar";
+    effectiveArgs = [tokens.first];
   } else if (tokens.isEmpty) {
     throw Exception("Empty command");
   } else {

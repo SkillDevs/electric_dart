@@ -41,16 +41,16 @@
 [endmacro]
 
 [macro node_await_column_value table column value]
-    [invoke wait-for "await client.get_item_columns(db, '${table}', '${column}')" $value 10 $node]
+    [invoke wait-for "get_item_columns db '${table}' '${column}'" $value 10 $node]
 [endmacro]
 
 [macro node_await_insert keys]
-    !await client.insert_item(db, ${keys})
+    !insert_item db ${keys}
     ?$node
 [endmacro]
 
 [macro node_await_insert_extended keys]
-    !await client.insert_extended_item(db, ${keys})
+    !insert_extended_item db ${keys}
     ?$node
 [endmacro]
 
@@ -59,10 +59,10 @@
 [endmacro]
 
 [macro node_await_insert_other keys]
-    !client.insert_other_item(db, ${keys})
+    !insert_other_item db ${keys}
     ?$node
 [endmacro]
 
 [macro node_sync_table table]
-    !await client.syncTable(db, "${table}")
+    !sync_table db "${table}"
 [endmacro]

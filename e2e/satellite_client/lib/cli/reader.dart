@@ -1,12 +1,12 @@
 import 'package:cli_repl/cli_repl.dart';
 
-typedef Reader = Iterable<String> Function();
+typedef Reader = Stream<String> Function();
 
 Reader createReader() => Repl(
-      prompt: '>>> ',
+      prompt: '',
       continuation: '... ',
       validator: replValidator,
-    ).run;
+    ).runAsync;
 
 const _leftBrackets = ['{', '[', '('];
 const _rightToLeftBracketMap = {'}': '{', ']': '[', ')': '('};

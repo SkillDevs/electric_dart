@@ -36,10 +36,10 @@
 
 [invoke log "Verify that satellite inserts reached each other"]
 [shell satellite_1]
-    [invoke wait-for "await client.get_items(db)" "hello from satellite_2" 10 $node]
+    [invoke wait-for "get_items db" "hello from satellite_2" 10 $node]
 
 [shell satellite_2]
-    [invoke wait-for "await client.get_items(db)" "hello from satellite_1" 10 $node]
+    [invoke wait-for "get_items db" "hello from satellite_1" 10 $node]
 
 [shell pg_1]
     [invoke log "Insert a row on PG side"]
