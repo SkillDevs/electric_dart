@@ -1,0 +1,415 @@
+diff -x lux -ur e2e/electric_repo/e2e/common.mk e2e/common.mk
+--- e2e/electric_repo/e2e/common.mk	2023-09-14 20:31:30.124032739 +0200
++++ e2e/common.mk	2023-09-14 21:04:42.955900754 +0200
+@@ -31,6 +31,15 @@
+ 	export ELECTRIC_CLIENT_IMAGE=${ELECTRIC_CLIENT_IMAGE_NAME}:${ELECTRIC_IMAGE_TAG}
+ endif
+ 
++export ELECTRIC_COMMIT:=$(shell cd $(PROJECT_ROOT) && tool/extract_electric_commit.sh)
++
++export ELECTRIC_REPO := $(abspath $(E2E_ROOT)/electric_repo)
++
++clone_electric:
++	git clone https://github.com/electric-sql/electric ${ELECTRIC_REPO} || true
++	cd ${ELECTRIC_REPO} && \
++	git checkout --force ${ELECTRIC_COMMIT}
++
+ lux: ${LUX}
+ 
+ ${LUX}:
+Only in e2e: electric_repo
+diff -x lux -ur e2e/electric_repo/e2e/elixir_client/Makefile e2e/elixir_client/Makefile
+--- e2e/electric_repo/e2e/elixir_client/Makefile	2023-09-14 20:31:30.124032739 +0200
++++ e2e/elixir_client/Makefile	2023-09-14 21:04:47.538916271 +0200
+@@ -7,7 +7,7 @@
+ export DOCKER_REPO ?= europe-docker.pkg.dev/vaxine/ci
+ export ELECTRIC_CLIENT_IMAGE_NAME ?= electric-ws-client
+ 
+-ELECTRIC_DIR=${PROJECT_ROOT}/components/electric
++ELECTRIC_DIR=${ELECTRIC_REPO}/components/electric
+ 
+ build:
+ 	make -C ${ELECTRIC_DIR} docker-build-ws-client
+diff -x lux -ur e2e/electric_repo/e2e/.gitignore e2e/.gitignore
+--- e2e/electric_repo/e2e/.gitignore	2023-09-14 20:31:30.123032738 +0200
++++ e2e/.gitignore	2023-09-14 19:22:46.145595523 +0200
+@@ -4,3 +4,4 @@
+ lux_logs
+ .pull
+ .sysbench_docker_build
++electric_repo
+\ No newline at end of file
+diff -x lux -ur e2e/electric_repo/e2e/Makefile e2e/Makefile
+--- e2e/electric_repo/e2e/Makefile	2023-09-14 20:31:30.123032738 +0200
++++ e2e/Makefile	2023-09-14 21:04:32.464865236 +0200
+@@ -1,6 +1,7 @@
+ include common.mk
+ 
+ deps: lux
++	make clone_electric
+ 	make -C satellite_client build
+ 	make -C elixir_client build
+ 
+Only in e2e/satellite_client: analysis_options.yaml
+Only in e2e/satellite_client: bin
+Only in e2e/satellite_client: .dart_tool
+diff -x lux -ur e2e/electric_repo/e2e/satellite_client/Dockerfile e2e/satellite_client/Dockerfile
+--- e2e/electric_repo/e2e/satellite_client/Dockerfile	2023-09-14 20:31:30.124032739 +0200
++++ e2e/satellite_client/Dockerfile	2023-09-14 21:25:40.950286535 +0200
+@@ -1,35 +1,34 @@
+-FROM node:18-alpine AS workspace
++FROM ubuntu:22.04 as base
+ 
+-RUN apk update && apk add git
+-RUN corepack enable && corepack prepare pnpm@8.6.0 --activate
++# Node is necessary because the client can interpret JS objects as arguments in the CLI
++RUN apt-get update && apt install sqlite3 wget nodejs -y
+ 
+-RUN mkdir /app
+-WORKDIR /app
++#############################################
+ 
+-COPY pnpm-lock.yaml ./
+-RUN pnpm fetch
++# Specify the Dart SDK base image version using dart:<version> (ex: dart:2.12)
++FROM dart:stable AS build
+ 
++WORKDIR /repo/packages/electricsql
++COPY packages/electricsql/pubspec.* ./
++RUN dart pub get
+ 
+-COPY pnpm-workspace.yaml ./
+-COPY clients/typescript ./clients/typescript
+-COPY generator ./generator
+-COPY e2e/satellite_client/package.json  ./e2e/satellite_client/
++WORKDIR /repo/e2e/satellite_client
++COPY e2e/satellite_client/pubspec.* ./
++RUN dart pub get
+ 
+-RUN pnpm install -r --filter @internal/satellite-client^...
+-RUN pnpm run -r --filter @internal/satellite-client^... build
+-RUN pnpm install -r --filter @internal/satellite-client
+-COPY e2e/satellite_client/src  ./e2e/satellite_client/src
+-COPY e2e/satellite_client/tsconfig.json  ./e2e/satellite_client
+-RUN pnpm run -r --filter @internal/satellite-client build
++WORKDIR /repo
+ 
+-RUN pnpm --filter @internal/satellite-client --prod deploy output
++COPY . .
+ 
+-FROM node:18-alpine AS runner
+-WORKDIR /app
++WORKDIR /repo/e2e/satellite_client
+ 
+-ENV NODE_ENV=production
++RUN dart pub get --offline
+ 
+-COPY --from=workspace /app/output .
++RUN dart compile exe bin/satellite_dart_client.dart -o bin/satellite_dart_client
+ 
+-ENTRYPOINT ["node"]
++#############################################
+ 
++FROM base
++COPY --from=build /repo/e2e/satellite_client/bin/satellite_dart_client /app/bin/
++
++CMD ["/app/bin/satellite_dart_client"]
+diff -x lux -ur e2e/electric_repo/e2e/satellite_client/.gitignore e2e/satellite_client/.gitignore
+--- e2e/electric_repo/e2e/satellite_client/.gitignore	2023-09-14 20:31:30.124032739 +0200
++++ e2e/satellite_client/.gitignore	2023-09-14 19:22:46.148595535 +0200
+@@ -1,6 +1,3 @@
+-.bash_history
+-.npm/
+-.yarnrc
+-.cache
+-dist/
+-node_modules/
++# https://dart.dev/guides/libraries/private-files
++# Created by `dart pub`
++.dart_tool/
+Only in e2e/satellite_client: lib
+diff -x lux -ur e2e/electric_repo/e2e/satellite_client/Makefile e2e/satellite_client/Makefile
+--- e2e/electric_repo/e2e/satellite_client/Makefile	2023-09-14 20:31:30.124032739 +0200
++++ e2e/satellite_client/Makefile	2023-09-14 21:45:24.837963606 +0200
+@@ -5,17 +5,15 @@
+ DOCKER_WORKDIR=${E2E_ROOT}/satellite_client
+ 
+ ifneq ($(GITHUB_ACTION),)
+-CACHING_SETTINGS := --cache-to type=gha,mode=max,scope=$GITHUB_REF_NAME-node-client --cache-from type=gha,scope=$GITHUB_REF_NAME-node-client
++CACHING_SETTINGS := --cache-to type=gha,mode=max,scope=$GITHUB_REF_NAME-dart-client --cache-from type=gha,scope=$GITHUB_REF_NAME-dart-client
+ # else
+-# CACHING_SETTINGS := --cache-to type=local,mode=max --cache-from type=local
++# CACHING_SETTINGS := --cache-to type=local,dest=docker_cache,mode=max --cache-from type=local,src=docker_cache
+ endif
+ # By default we would like to build in docker, as we intend
+ # to run tests with Satellite in it
+ build:
+-	docker buildx build --load ${CACHING_SETTINGS} -f ./Dockerfile -t satellite_client:local ${PROJECT_ROOT}
++	docker buildx build --load ${CACHING_SETTINGS} -f ./Dockerfile -t satellite_dart_client:local ${PROJECT_ROOT}
+ 
+ local-build:
+-	pnpm i --frozen-lockfile
+-	make -C ../../clients/typescript build
+-	pnpm run build
++	dart compile exe bin/satellite_dart_client.dart -o satellite_dart_client
+ 
+Only in e2e/electric_repo/e2e/satellite_client: package.json
+Only in e2e/electric_repo/e2e/satellite_client: .prettierrc.json
+Only in e2e/satellite_client: pubspec.lock
+Only in e2e/satellite_client: pubspec.yaml
+Only in e2e/satellite_client: README.md
+Only in e2e/satellite_client: satellite_dart_client
+Only in e2e/electric_repo/e2e/satellite_client: src
+Only in e2e/electric_repo/e2e/satellite_client: tsconfig.json
+diff -x lux -ur e2e/electric_repo/e2e/services_templates.yaml e2e/services_templates.yaml
+--- e2e/electric_repo/e2e/services_templates.yaml	2023-09-14 20:31:30.124032739 +0200
++++ e2e/services_templates.yaml	2023-09-14 21:04:51.588929984 +0200
+@@ -40,7 +40,7 @@
+       - "host.docker.internal:host-gateway"
+ 
+   satellite_client:
+-    image: "satellite_client:local"
++    image: "satellite_dart_client:local"
+     environment:
+       AUTH_JWT_ALG: HS256
+       AUTH_JWT_KEY: integration-tests-signing-key-example
+diff -x lux -ur e2e/electric_repo/e2e/tests/03.03_node_satellite_sends_and_recieves_data.lux e2e/tests/03.03_node_satellite_sends_and_recieves_data.lux
+--- e2e/electric_repo/e2e/tests/03.03_node_satellite_sends_and_recieves_data.lux	2023-09-14 20:31:30.125032741 +0200
++++ e2e/tests/03.03_node_satellite_sends_and_recieves_data.lux	2023-09-14 19:22:46.193595712 +0200
+@@ -36,10 +36,10 @@
+ 
+ [invoke log "Verify that satellite inserts reached each other"]
+ [shell satellite_1]
+-    [invoke wait-for "await client.get_items(db)" "hello from satellite_2" 10 $node]
++    [invoke wait-for "get_items db" "hello from satellite_2" 10 $node]
+ 
+ [shell satellite_2]
+-    [invoke wait-for "await client.get_items(db)" "hello from satellite_1" 10 $node]
++    [invoke wait-for "get_items db" "hello from satellite_1" 10 $node]
+ 
+ [shell pg_1]
+     [invoke log "Insert a row on PG side"]
+diff -x lux -ur e2e/electric_repo/e2e/tests/03.06_node_satellite_does_sync_on_subscribe.lux e2e/tests/03.06_node_satellite_does_sync_on_subscribe.lux
+--- e2e/electric_repo/e2e/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2023-09-14 20:31:30.125032741 +0200
++++ e2e/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2023-09-14 19:22:46.194595716 +0200
+@@ -24,7 +24,7 @@
+     -$fail_pattern
+     [invoke node_sync_table "items"]
+     # As soon as sync is done, we expect to see the row in the database
+-    !await client.get_items(db)
++    !get_items db
+     ??hello from pg
+ 
+ [shell pg_1]
+@@ -35,7 +35,7 @@
+ [shell satellite_1]
+     # This one gets propagated "normally"
+     [invoke node_await_get "00000000-0000-0000-0000-000000000001"]
+-    !await client.delete_item(db, ['hello from pg again'])
++    !delete_item db ['hello from pg again']
+     ?$node
+ 
+ [shell pg_1]
+diff -x lux -ur e2e/electric_repo/e2e/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux e2e/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux
+--- e2e/electric_repo/e2e/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2023-09-14 20:31:30.125032741 +0200
++++ e2e/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2023-09-14 19:22:46.194595716 +0200
+@@ -28,9 +28,9 @@
+     -$fail_pattern
+     [invoke node_sync_table "items"]
+     # As soon as sync it done, we expect to see the row in the database
+-    !await client.get_items(db)
++    !get_items db
+     ??hello from pg
+-    !await client.delete_item(db, ['hello from pg'])
++    !delete_item db ['hello from pg']
+     ?$node
+ 
+ [shell pg_1]
+diff -x lux -ur e2e/electric_repo/e2e/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux e2e/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux
+--- e2e/electric_repo/e2e/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2023-09-14 20:31:30.125032741 +0200
++++ e2e/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2023-09-14 19:22:46.194595716 +0200
+@@ -24,7 +24,7 @@
+     -$fail_pattern
+     [invoke node_sync_table "items"]
+     # As soon as sync is done, we expect to see the row in the database
+-    !await client.get_items(db)
++    !get_items db
+     ??hello from pg
+ 
+ [shell pg_1]
+@@ -35,7 +35,7 @@
+ [shell satellite_1]
+     # This one gets propagated "normally"
+     [invoke node_await_get "00000000-0000-0000-0000-000000000001"]
+-    !await client.delete_item(db, ['hello from pg again'])
++    !delete_item db ['hello from pg again']
+     ?$node
+ 
+ [shell pg_1]
+@@ -44,7 +44,7 @@
+ 
+ [shell satellite_1]
+     [progress stopping client]
+-    !await client.stop(db)
++    !stop db
+     ?$node
+     [progress resuming client]
+     [invoke electrify_db "originalDb" "electric_1" 5133 "[]"]
+diff -x lux -ur e2e/electric_repo/e2e/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux e2e/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux
+--- e2e/electric_repo/e2e/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2023-09-14 20:31:30.125032741 +0200
++++ e2e/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2023-09-14 19:22:46.194595716 +0200
+@@ -24,7 +24,7 @@
+   ?\[proto\] recv: #SatOpLog\{.*#Migrate\{vsn: $migration2_vsn, for: bar
+ 
+   [progress stopping client]
+-  !await client.stop(db)
++  !stop db
+   ?$node
+ 
+   # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.
+diff -x lux -ur e2e/electric_repo/e2e/tests/03.11_node_satellite_compensations_work.lux e2e/tests/03.11_node_satellite_compensations_work.lux
+--- e2e/electric_repo/e2e/tests/03.11_node_satellite_compensations_work.lux	2023-09-14 20:31:30.125032741 +0200
++++ e2e/tests/03.11_node_satellite_compensations_work.lux	2023-09-14 20:30:24.870928903 +0200
+@@ -34,22 +34,17 @@
+     [invoke node_await_table "other_items"]
+     [invoke node_sync_table "other_items"]
+     ??[proto] recv: #SatSubsDataEnd
+-    !await db.db.raw({sql: "UPDATE _electric_meta SET value = 1 WHERE key = 'compensations' RETURNING *"})
++    !raw_statement db "UPDATE _electric_meta SET value = 1 WHERE key = 'compensations' RETURNING *"
+     ?$node
+ 
+-    """!await db.db.items.create({
+-      data: {
+-        id: "test_id_1",
+-        content: "hello world"
+-      }
+-    })
+-    """
++    [invoke node_await_insert_extended "{id: 'test_id_1', content: 'hello world'}"]
++    ?$node
+     ??[proto] send: #SatOpLog
+     ??[proto] recv: #SatOpLog
+ 
+ # TEST:
+     # Disconnect the client
+-    !db.notifier.connectivityStateChanged(db.notifier.dbName, 'disconnected')
++    !change_connectivity db 'disconnected'
+ 
+ [shell pg_1]
+     # Concurrently, update and then delete the referenced row on the server
+@@ -59,20 +54,13 @@
+ [shell satellite_1]
+     # On a disconnected client, insert a dependent row
+     ?$node
+-    """!await db.db.other_items.create({
+-      data: {
+-        id: "other_test_id_1",
+-        content: "",
+-        item_id: "test_id_1"
+-      }
+-    })
+-    """
++    !raw_statement db "INSERT INTO other_items(id, content, item_id) VALUES('other_test_id_1', '', 'test_id_1')"
+     ?$node
+ 
+ 
+ [shell satellite_1]
+     # Reconnect the client, expecting no errors to show up
+-    !db.notifier.connectivityStateChanged(db.notifier.dbName, 'available')
++    !change_connectivity db 'available'
+     ??[proto] send: #SatOpLog
+     ??[proto] recv: #SatOpLog
+ 
+diff -x lux -ur e2e/electric_repo/e2e/tests/03.12_server_correctly_continues_the_replication.lux e2e/tests/03.12_server_correctly_continues_the_replication.lux
+--- e2e/electric_repo/e2e/tests/03.12_server_correctly_continues_the_replication.lux	2023-09-14 20:31:30.125032741 +0200
++++ e2e/tests/03.12_server_correctly_continues_the_replication.lux	2023-09-14 19:22:46.194595716 +0200
+@@ -21,7 +21,7 @@
+ 
+ [shell satellite_1]
+   [progress stopping client]
+-  !await client.stop(db)
++  !stop db
+   ?$node
+ 
+   # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.
+diff -x lux -ur e2e/electric_repo/e2e/tests/_satellite_macros.luxinc e2e/tests/_satellite_macros.luxinc
+--- e2e/electric_repo/e2e/tests/_satellite_macros.luxinc	2023-09-14 20:31:30.233032913 +0200
++++ e2e/tests/_satellite_macros.luxinc	2023-09-14 19:22:46.196595724 +0200
+@@ -1,23 +1,20 @@
+ [global node=>]
+ 
+ [macro connect_to_electric host port migrations]
+-    !client = await import('./dist/client.js')
+-    ?$node
+     # !migrations = await client.read_migrations(process.env.MIGRATION_DIRS + "/index.js")
+     # ?$node
+     !migrations = $migrations
+     ?$node
+-    !originalDb = client.make_db(process.env.SATELLITE_DB_PATH + "/$LUX_SHELLNAME")
++    !shell_db_path = get_shell_db_path "$LUX_SHELLNAME"
++    ?$node
++    !originalDb = make_db shell_db_path
+     ?$node
+     [invoke electrify_db "originalDb" $host $port $migrations]
+     ??(in electrify_db) config:
+ [endmacro]
+ 
+ [macro electrify_db db host port migrations]
+-     !db = await client.electrify_db(originalDb, \
+-                                     "$host", \
+-                                     $port, \
+-                                     $migrations)
++    !db = electrify_db originalDb "$host" $port $migrations
+ [endmacro]
+ 
+ [macro setup_client_with_migrations satellite_number electric port migrations]
+@@ -32,40 +29,40 @@
+ [endmacro]
+ 
+ [macro node_await_get match]
+-    [invoke wait-for "await client.get_items(db)" "${match}" 10 $node]
++    [invoke wait-for "get_items db" "${match}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_table match]
+-    [invoke wait-for "await client.get_tables(db)" "${match}" 10 $node]
++    [invoke wait-for "get_tables db" "${match}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_column table column]
+-    [invoke wait-for "await client.get_columns(db, '${table}')" "${column}" 10 $node]
++    [invoke wait-for "get_columns db '${table}'" "${column}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_column_value table column value]
+-    [invoke wait-for "await client.get_item_columns(db, '${table}', '${column}')" $value 10 $node]
++    [invoke wait-for "get_item_columns db '${table}' '${column}'" $value 10 $node]
+ [endmacro]
+ 
+ [macro node_await_insert keys]
+-    !await client.insert_item(db, ${keys})
++    !insert_item db ${keys}
+     ?$node
+ [endmacro]
+ 
+ [macro node_await_insert_extended keys]
+-    !await client.insert_extended_item(db, ${keys})
++    !insert_extended_item db ${keys}
+     ?$node
+ [endmacro]
+ 
+ [macro node_await_get_other match]
+-    [invoke wait-for "client.get_other_items(db)" "${match}" 10 $node]
++    [invoke wait-for "get_other_items db" "${match}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_insert_other keys]
+-    !client.insert_other_item(db, ${keys})
++    !insert_other_item db ${keys}
+     ?$node
+ [endmacro]
+ 
+ [macro node_sync_table table]
+-    !await client.syncTable(db, "${table}")
++    !sync_table db "${table}"
+ [endmacro]
