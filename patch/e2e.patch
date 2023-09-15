@@ -344,3 +344,15 @@ diff -x lux -x satellite_client -ur electric/tests/_satellite_macros.luxinc dart
 -    !await client.syncTable(db, "${table}")
 +    !sync_table db "${table}"
  [endmacro]
+diff -x lux -x satellite_client -ur electric/tests/_shared.luxinc dart/tests/_shared.luxinc
+--- electric/tests/_shared.luxinc	2023-09-15 17:40:31.353801170 +0200
++++ dart/tests/_shared.luxinc	2023-09-15 19:06:36.150277436 +0200
+@@ -107,7 +107,7 @@
+     ?$psql
+     [my old=$LUX_SHELLNAME]
+     [shell electric]
+-        ??[info] Applying migration $version
++        ??[info] Saved schema version $version
+     [shell $old]
+ [endmacro]
+ 
