@@ -55,8 +55,7 @@ void setSubscribers(DriftElectricClient db) {
   });
   db.notifier.subscribeToDataChanges((x) {
     print('data changes: ');
-    // TODO(dart): To json
-    //print(json.encode(x));
+    print(x.toMap());
   });
 }
 

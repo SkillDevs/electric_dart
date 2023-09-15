@@ -20,6 +20,13 @@ class Change with EquatableMixin {
 
   @override
   List<Object?> get props => [qualifiedTablename, rowids];
+
+  Map<String, Object?> toMap() {
+    return {
+      'qualifiedTablename': qualifiedTablename.toString(),
+      'rowids': rowids,
+    };
+  }
 }
 
 class ChangeNotification extends Notification {
@@ -27,6 +34,13 @@ class ChangeNotification extends Notification {
   final List<Change> changes;
 
   ChangeNotification({required this.dbName, required this.changes});
+
+  Map<String, Object?> toMap() {
+    return {
+      'dbName': dbName,
+      'changes': changes.map((c) => c.toMap()).toList(),
+    };
+  }
 }
 
 class PotentialChangeNotification extends Notification {
