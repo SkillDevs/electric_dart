@@ -8,18 +8,17 @@ import 'package:satellite_dart_client/cli/tokens.dart';
 import 'package:satellite_dart_client/util/generic_db.dart';
 import 'package:satellite_dart_client/cli/state.dart';
 
+const promptChar = "> ";
+
 Future<void> start() async {
-  final reader = createReader();
-
-  stdout.write(">>> ");
-
   final state = AppState();
-  await for (final input in reader()) {
+
+  await runReplAsync((input) async {
     try {
       final command = await parseCommand(input, state);
 
       if (command == null) {
-        break;
+        return NextAction.stop;
       }
 
       //print(command);
@@ -27,7 +26,7 @@ Future<void> start() async {
       final name = command.name;
 
       if (name == "exit") {
-        break;
+        return NextAction.stop;
       } else if (name == "get_shell_db_path") {
         final luxShellName = command.arguments[0] as String;
 
@@ -73,36 +72,36 @@ Future<void> start() async {
         });
       } else if (name == "get_tables") {
         final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<List<Row>>(state, command, () async {
+        await processCommand<Rows>(state, command, () async {
           return await getTables(electric);
         });
       } else if (name == "get_columns") {
         final electric = command.arguments[0] as DriftElectricClient;
         final table = command.arguments[1] as String;
-        await processCommand<List<Row>>(state, command, () async {
+        await processCommand<Rows>(state, command, () async {
           return await getColumns(electric, table);
         });
       } else if (name == "get_rows") {
         final electric = command.arguments[0] as DriftElectricClient;
         final table = command.arguments[1] as String;
-        await processCommand<List<Row>>(state, command, () async {
+        await processCommand<Rows>(state, command, () async {
           return await getRows(electric, table);
         });
       } else if (name == "get_items") {
         final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<List<Row>>(state, command, () async {
+        await processCommand<Rows>(state, command, () async {
           return await getItems(electric);
         });
       } else if (name == "get_item_ids") {
         final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<List<Row>>(state, command, () async {
+        await processCommand<Rows>(state, command, () async {
           return await getItemIds(electric);
         });
       } else if (name == "get_item_columns") {
         final electric = command.arguments[0] as DriftElectricClient;
         final table = command.arguments[1] as String;
         final column = command.arguments[2] as String;
-        await processCommand<List<Row>>(state, command, () async {
+        await processCommand<Rows>(state, command, () async {
           return await getItemColumns(electric, table, column);
         });
       } else if (name == "insert_item") {
@@ -114,15 +113,13 @@ Future<void> start() async {
       } else if (name == "insert_extended_into") {
         final electric = command.arguments[0] as DriftElectricClient;
         final table = command.arguments[1] as String;
-        final values = (command.arguments[2] as Map<String, dynamic>)
-            .cast<String, String>();
+        final values = (command.arguments[2] as Map<String, Object?>);
         await processCommand<void>(state, command, () async {
           return await insertExtendedInto(electric, table, values);
         });
       } else if (name == "insert_extended_item") {
         final electric = command.arguments[0] as DriftElectricClient;
-        final values = (command.arguments[1] as Map<String, dynamic>)
-            .cast<String, String>();
+        final values = (command.arguments[1] as Map<String, Object?>);
         await processCommand<void>(state, command, () async {
           return await insertExtendedItem(electric, values);
         });
@@ -134,7 +131,7 @@ Future<void> start() async {
         });
       } else if (name == "get_other_items") {
         final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<List<Row>>(state, command, () async {
+        await processCommand<Rows>(state, command, () async {
           return await getOtherItems(electric);
         });
       } else if (name == "insert_other_item") {
@@ -164,13 +161,13 @@ Future<void> start() async {
         throw Exception("Unknown command: $name");
       }
 
-      stdout.write(">>> ");
+      return NextAction.goOn;
     } catch (e, st) {
       print("ERROR: $e\n$st");
 
       exit(1);
     }
-  }
+  });
 }
 
 Future<void> processCommand<T>(
@@ -243,5 +240,36 @@ class Command {
   @override
   String toString() {
     return 'Command{name: $name, arguments: $arguments, variable: $variable}';
+  }
+}
+
+enum NextAction { goOn, stop }
+
+// We cannot use cli_repl runAsync because it doesn't correctly handle async
+// executions on the callback
+// https://github.com/jathak/cli_repl/issues/3#issuecomment-526851764
+Future<void> runReplAsync(FutureOr<NextAction> Function(String) onLine) async {
+  stdin.echoMode = false;
+  stdin.lineMode = false;
+
+  var stream = stdin.expand((b) => b);
+  stdout.write(promptChar);
+  final buf = StringBuffer();
+  await for (int i in stream) {
+    final c = String.fromCharCode(i);
+    stdout.write(c);
+    if (c == '\n') {
+      final current = buf.toString();
+      if (replValidator(current)) {
+        final action = await onLine(current);
+        buf.clear();
+        if (action == NextAction.stop) break;
+        stdout.write(promptChar);
+        continue;
+      }
+    }
+
+    // Continue buffering
+    buf.write(c);
   }
 }

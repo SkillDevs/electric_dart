@@ -76,14 +76,14 @@ Future<void> syncTable(DriftElectricClient electric, String table) async {
   }
 }
 
-Future<List<Row>> getTables(DriftElectricClient electric) async {
+Future<Rows> getTables(DriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect("SELECT name FROM sqlite_master WHERE type='table';")
       .get();
   return _toRows(rows);
 }
 
-Future<List<Row>> getColumns(DriftElectricClient electric, String table) async {
+Future<Rows> getColumns(DriftElectricClient electric, String table) async {
   final rows = await electric.db.customSelect(
     "SELECT * FROM pragma_table_info(?);",
     variables: [Variable.withString(table)],
@@ -91,7 +91,7 @@ Future<List<Row>> getColumns(DriftElectricClient electric, String table) async {
   return _toRows(rows);
 }
 
-Future<List<Row>> getRows(DriftElectricClient electric, String table) async {
+Future<Rows> getRows(DriftElectricClient electric, String table) async {
   final rows = await electric.db
       .customSelect(
         "SELECT * FROM $table;",
@@ -100,7 +100,7 @@ Future<List<Row>> getRows(DriftElectricClient electric, String table) async {
   return _toRows(rows);
 }
 
-Future<List<Row>> getItems(DriftElectricClient electric) async {
+Future<Rows> getItems(DriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT * FROM items;",
@@ -109,7 +109,7 @@ Future<List<Row>> getItems(DriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<List<Row>> getItemIds(DriftElectricClient electric) async {
+Future<Rows> getItemIds(DriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT id FROM items;",
@@ -118,7 +118,7 @@ Future<List<Row>> getItemIds(DriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<List<Row>> getItemColumns(
+Future<Rows> getItemColumns(
     DriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
       .customSelect(
@@ -144,7 +144,7 @@ Future<void> insertItem(DriftElectricClient electric, List<String> keys) async {
 
 Future<void> insertExtendedItem(
   DriftElectricClient electric,
-  Map<String, String> values,
+  Map<String, Object?> values,
 ) async {
   insertExtendedInto(electric, "items", values);
 }
@@ -152,7 +152,7 @@ Future<void> insertExtendedItem(
 Future<void> insertExtendedInto(
   DriftElectricClient electric,
   String table,
-  Map<String, String> values,
+  Map<String, Object?> values,
 ) async {
   final fixedColumns = <String, Object? Function()>{
     "id": genUUID,
@@ -189,7 +189,7 @@ Future<void> deleteItem(
   }
 }
 
-Future<List<Row>> getOtherItems(DriftElectricClient electric) async {
+Future<Rows> getOtherItems(DriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT * FROM other_items;",
@@ -243,19 +243,22 @@ void changeConnectivity(DriftElectricClient db, String connectivityName) {
 
 /////////////////////////////////
 
-List<Row> _toRows(List<QueryRow> rows) {
-  return rows.map((r) {
-    final data = r.data;
-    return data.map((key, value) {
-      final String newVal;
-      if (value is String) {
-        newVal = "'$value'";
-      } else {
-        newVal = value.toString();
-      }
-      return MapEntry(key, newVal);
-    });
-  }).toList();
+// It has a custom toString to match Lux expects
+Rows _toRows(List<QueryRow> rows) {
+  return Rows(
+    rows.map((r) {
+      final data = r.data;
+      return data.map((key, value) {
+        final String newVal;
+        if (value is String) {
+          newVal = "'$value'";
+        } else {
+          newVal = value.toString();
+        }
+        return MapEntry(key, newVal);
+      });
+    }).toList(),
+  );
 }
 
 typedef Row = Map<String, String>;
@@ -287,4 +290,37 @@ List<Variable> dynamicArgsToVariables(List<Object?>? args) {
       })
       .cast<Variable>()
       .toList();
+}
+
+class Rows {
+  final List<Row> rows;
+
+  Rows(this.rows);
+
+  @override
+  String toString() {
+    if (rows.isEmpty) {
+      return "[]";
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln("[");
+    for (final row in rows) {
+      buffer.write("  ");
+      buffer.write("{ ");
+      final entries = row.entries.toList();
+      for (var i = 0; i < entries.length; i++) {
+        final entry = entries[i];  
+        buffer.write("${entry.key}: ${entry.value}");
+
+        if (i != entries.length - 1) {
+          buffer.write(", ");
+        }
+      }
+      buffer.write(" }");
+      buffer.writeln(",");
+    }
+    buffer.writeln("]");
+    return buffer.toString();
+  }
 }
