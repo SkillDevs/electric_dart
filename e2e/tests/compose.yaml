@@ -1,0 +1,52 @@
+# Run using `docker compose -f databases.yaml up`.
+version: "3.7"
+
+services:
+  pg_1:
+    extends:
+      file: ../services_templates.yaml
+      service: postgresql
+    ports:
+      - "54320:5432"
+
+  electric_1:
+    extends:
+      file: ../services_templates.yaml
+      service: electric
+    environment:
+      DATABASE_URL: postgresql://postgres:password@pg_1:5432/electric
+      LOGICAL_PUBLISHER_HOST: electric_1
+    ports:
+      - "5133:5133"
+    depends_on:
+      - pg_1
+
+  sysbench:
+    extends:
+      file: ../services_templates.yaml
+      service: sysbench
+
+  elixir_client_1:
+    extends:
+      file: ../services_templates.yaml
+      service: elixir_client
+
+  elixir_client_2:
+    extends:
+      file: ../services_templates.yaml
+      service: elixir_client
+
+  elixir_client_3:
+    extends:
+      file: ../services_templates.yaml
+      service: elixir_client
+
+  satellite_client_1:
+    extends:
+      file: ../services_templates.yaml
+      service: satellite_client
+
+  satellite_client_2:
+    extends:
+      file: ../services_templates.yaml
+      service: satellite_client

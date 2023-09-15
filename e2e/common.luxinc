@@ -1,0 +1,125 @@
+[global dprompt=\w+!?@\w+:(\S+)[\#\$]]
+[global eprompt=iex\(ws_client@.*\)\d+>\s]
+
+[global _global_log_string_counter=0]
+[macro log string]
+    [my old=$LUX_SHELLNAME]
+[shell log]
+    !echo $((${_global_log_string_counter}+1))
+    """?
+    (.*)
+    SH-PROMPT:
+    """
+    [global _global_log_string_counter=$1]
+    [progress \n $_global_log_string_counter. $string \n]
+[shell $old]
+[endmacro]
+
+[macro ok]
+    ?SH-PROMPT:
+    [timeout 1]
+    !echo ==$$?==
+    ?^==0==
+    [timeout]
+[endmacro]
+
+[macro ok2 prompt]
+    ?$prompt
+    !echo ==$$?==
+    ?^==0==
+[endmacro]
+
+[macro wait-for command match max_time prompt]
+    [loop i 1..$max_time]
+        @$match
+        !$command
+        ??$command
+        ?$prompt
+        [sleep 1]
+    [endloop]
+    # The last prompt won't match since the loop pattern will
+    # match before it, so match it here instead.
+    ?$prompt
+
+    # Sync up after the loop.
+    !$command
+    ??$command
+    ?$prompt
+[endmacro]
+
+[macro wait_port host port]
+    [loop iter 1..10]
+          @==0==
+          !nc -z $host $port; echo ==$$?==
+          ?SH-PROMPT:
+          [sleep 1]
+    [endloop]
+[endmacro]
+
+[macro start_psql name]
+    [loop iter 1..10]
+        @electric=#
+        !make docker-psql-${name}
+        ?SH-PROMPT:
+        [sleep 1]
+    [endloop]
+    !\pset null '<NULL>'
+    !\pset pager off
+[endmacro]
+
+[macro start_elixir_test id]
+    !make start_elixir_test_${id}
+    ?$eprompt
+    !Logger.configure(level: :debug)
+    !Application.put_env(:elixir, :ansi_enabled, false)
+    !alias Satellite.{TestWsClient, ProtocolHelpers}
+    ?$eprompt
+[endmacro]
+
+[macro sysbench_prepare host table_size tables]
+    [invoke log "Prepare ${tables} tables and generate ${table_size} entries per table for ${host}"]
+    !sysbench --db-driver=pgsql \
+              --table-size=${table_size} \
+              --tables=${tables} \
+              --threads=1 \
+              --auto-inc=false \
+              --pgsql-host=${host} \
+              --pgsql-port=5432 \
+              --pgsql-user=postgres \
+              --pgsql-password=password \
+              --pgsql-db=electric \
+              oltp_write_only prepare
+    [invoke ok2 $dprompt]
+[endmacro]
+
+[macro sysbench_run host table_size tables]
+    !sysbench --db-driver=pgsql \
+              --table-size=${table_size} \
+              --tables=${tables} \
+              --threads=1 \
+              --time=10 \
+              --report-interval=1 \
+              --pgsql-host=${host} \
+              --pgsql-port=5432 \
+              --pgsql-user=postgres \
+              --pgsql-password=password \
+              --pgsql-db=electric \
+              oltp_write_only run
+    [invoke ok2 $dprompt]
+[endmacro]
+
+[macro electrify_table pg_id table_name]
+    [shell $pg_id]
+        [invoke electrify_table_tx $table_name]
+
+[endmacro]
+
+[macro electrify_table_tx table_name]
+    !BEGIN;
+    ?electric=\*#
+    !CALL electric.electrify('$table_name');
+    ?electric=\*#
+    !COMMIT;
+    ?electric=#
+[endmacro]
+

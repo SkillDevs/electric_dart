@@ -1,0 +1,58 @@
+services:
+  electric:
+    image: "${ELECTRIC_IMAGE}"
+    environment:
+      LOG_LEVEL: debug
+      AUTH_JWT_ALG: HS256
+      AUTH_JWT_KEY: integration-tests-signing-key-example
+      OFFSET_STORAGE_FILE: /tmp/electric-offset-storage.dat
+    init: true
+    privileged: true
+
+  sysbench:
+    image: "${SYSBENCH_IMAGE}"
+
+  postgresql:
+    image: "${POSTGRESQL_IMAGE}"
+    environment:
+      POSTGRES_DB: electric
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    volumes:
+      - ./00_shared_init.sql:/docker-entrypoint-initdb.d/00_shared_init.sql:ro
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./postgres.conf:/etc/postgresql.conf:ro
+    tmpfs:
+      - /var/lib/postgresql/data
+      - /tmp
+    command:
+      - -c
+      - config_file=/etc/postgresql.conf
+    cap_add:
+      - SYS_PTRACE
+    privileged: true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U electric"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  satellite_client:
+    image: "satellite_dart_client:local"
+    environment:
+      AUTH_JWT_ALG: HS256
+      AUTH_JWT_KEY: integration-tests-signing-key-example
+      HOME: ${E2E_ROOT}/satellite_client
+      SATELLITE_DB_PATH: /var/lib/satellite/data
+      NODE_DISABLE_COLORS: 1
+      NODE_REPL_HISTORY: ""
+    tmpfs:
+      - /var/lib/satellite/data
+    privileged: true
+
+  elixir_client:
+    image: ${ELECTRIC_CLIENT_IMAGE}
+    command: start_iex
+    privileged: true
