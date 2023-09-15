@@ -6,12 +6,15 @@ ROOT_DIR=$(realpath .)
 DART_E2E_BAK=$(realpath e2e.bak)
 ELECTRIC_REPO_PATH="$DART_E2E_BAK"/electric_repo
 
+ELECTRIC_COMMIT=$(tool/extract_electric_commit.sh)
+
+echo "Electric commit: $ELECTRIC_COMMIT"
+
+rm -rf "$DART_E2E_BAK"
 mv e2e "$DART_E2E_BAK"
 
 pushd "$DART_E2E_BAK"
-
 make clone_electric
-
 popd
 
 # Start with the base e2e from main electric
@@ -33,7 +36,7 @@ cp -rf "$DART_E2E_BAK"/lux e2e/lux
 # Resotore electric clone
 cp -rf "$DART_E2E_BAK"/electric_repo e2e/electric_repo
 
-# Apply patch
-pushd e2e
-patch -p1 < "$ROOT_DIR"/dart_e2e.diff
+pushd "$ROOT_DIR/e2e"
+# Apply patch ignoring first level from the diff (electric and dart subfolders)
+patch -p1  < "$ROOT_DIR"/patch/e2e.patch
 popd
