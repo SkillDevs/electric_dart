@@ -54,14 +54,12 @@ Future<void> start() async {
       } else if (name == "electrify_db") {
         await processCommand<DriftElectricClient>(state, command, () async {
           final db = command.arguments[0] as GenericDb;
-          final dbName = "db_${db.hashCode.toString()}";
           final host = command.arguments[1] as String;
           final port = command.arguments[2] as int;
           final migrationsJ = command.arguments[3] as List<dynamic>;
 
           return await electrifyDb(
             db,
-            dbName,
             host,
             port,
             migrationsJ,
@@ -83,6 +81,12 @@ Future<void> start() async {
         final table = command.arguments[1] as String;
         await processCommand<List<Row>>(state, command, () async {
           return await getColumns(electric, table);
+        });
+      } else if (name == "get_rows") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final table = command.arguments[1] as String;
+        await processCommand<List<Row>>(state, command, () async {
+          return await getRows(electric, table);
         });
       } else if (name == "get_items") {
         final electric = command.arguments[0] as DriftElectricClient;
@@ -106,6 +110,14 @@ Future<void> start() async {
         final keys = (command.arguments[1] as List<dynamic>).cast<String>();
         await processCommand<void>(state, command, () async {
           return await insertItem(electric, keys);
+        });
+      } else if (name == "insert_extended_into") {
+        final electric = command.arguments[0] as DriftElectricClient;
+        final table = command.arguments[1] as String;
+        final values = (command.arguments[2] as Map<String, dynamic>)
+            .cast<String, String>();
+        await processCommand<void>(state, command, () async {
+          return await insertExtendedInto(electric, table, values);
         });
       } else if (name == "insert_extended_item") {
         final electric = command.arguments[0] as DriftElectricClient;

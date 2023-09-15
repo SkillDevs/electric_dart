@@ -18,6 +18,9 @@ void main() {
         RelationColumn(name: 'int2', type: 'INTEGER', isNullable: true),
         RelationColumn(name: 'float1', type: 'FLOAT4', isNullable: true),
         RelationColumn(name: 'float2', type: 'FLOAT4', isNullable: true),
+        RelationColumn(name: 'bool1', type: 'BOOL', isNullable: true),
+        RelationColumn(name: 'bool2', type: 'BOOL', isNullable: true),
+        RelationColumn(name: 'bool3', type: 'BOOL', isNullable: true),
       ],
     );
 
@@ -29,6 +32,9 @@ void main() {
       'int2': -30,
       'float1': 1.1,
       'float2': -30.3,
+      'bool1': 1,
+      'bool2': 0,
+      'bool3': null,
     };
     final sRow = serializeRow(record, rel);
     final dRow = deserializeRow(sRow, rel);

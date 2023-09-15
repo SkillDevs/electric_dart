@@ -3,7 +3,7 @@
 set -e
 
 ROOT_DIR=$(realpath .)
-DART_E2E_BAK=$(realpath e2e.bak)
+DART_E2E_BAK="$ROOT_DIR"/e2e.bak
 ELECTRIC_REPO_PATH="$DART_E2E_BAK"/electric_repo
 
 ELECTRIC_COMMIT=$(tool/extract_electric_commit.sh)

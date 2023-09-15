@@ -43,8 +43,12 @@ class TypeEncoder {
     return numberToBytes(n);
   }
 
-  static Uint8List text(String text) {
-    return Uint8List.fromList(utf8.encode(text));
+  static List<int> text(String text) {
+    return utf8.encode(text);
+  }
+
+  static List<int> boolean(int b) {
+    return boolToBytes(b);
   }
 }
 
@@ -54,8 +58,30 @@ class TypeDecoder {
   }
 
   static String text(List<int> bytes) {
-    return utf8.decode(bytes);
+    return bytesToString(bytes);
   }
+
+  static int boolean(List<int> bytes) {
+    return bytesToBool(bytes);
+  }
+}
+
+final trueByte = 't'.codeUnitAt(0);
+final falseByte = 'f'.codeUnitAt(0);
+
+List<int> boolToBytes(int b) {
+  if (b != 0 && b != 1) {
+    throw Exception('Invalid boolean value: $b');
+  }
+  return [if (b == 1) trueByte else falseByte];
+}
+
+int bytesToBool(List<int> bs) {
+  if (bs.length == 1 && (bs[0] == trueByte || bs[0] == falseByte)) {
+    return bs[0] == trueByte ? 1 : 0;
+  }
+
+  throw Exception('Invalid binary-encoded boolean value: $bs');
 }
 
 List<int> numberToBytes(int i) {
@@ -73,6 +99,10 @@ int bytesToNumber(List<int> bytes) {
     n = (n << 8) | byte;
   }
   return n;
+}
+
+String bytesToString(List<int> bytes) {
+  return utf8.decode(bytes);
 }
 
 extension DateExtension on DateTime {

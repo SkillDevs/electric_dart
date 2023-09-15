@@ -1057,7 +1057,7 @@ SatOpRow serializeRow(Record rec, Relation relation) {
     (List<List<int>> acc, RelationColumn c) {
       final Object? value = rec[c.name];
       if (value != null) {
-        acc.add(serializeColumnData(value));
+        acc.add(serializeColumnData(value, c.type));
       } else {
         acc.add(serializeNullData());
         setMaskBit(recordNullBitMask, recordNumColumn);
@@ -1109,10 +1109,16 @@ Object deserializeColumnData(
   final columnType = columnInfo.type.toUpperCase();
   switch (columnType) {
     case 'CHAR':
+    case 'DATE':
     case 'TEXT':
+    case 'TIME':
+    case 'TIMESTAMP':
+    case 'TIMESTAMPZ':
     case 'UUID':
     case 'VARCHAR':
       return TypeDecoder.text(column);
+    case 'BOOL':
+      return TypeDecoder.boolean(column);
     case 'FLOAT4':
     case 'FLOAT8':
     case 'INT':
@@ -1129,8 +1135,13 @@ Object deserializeColumnData(
 }
 
 // All values serialized as textual representation
-List<int> serializeColumnData(Object columnValue) {
-  return TypeEncoder.text(columnValue.toString());
+List<int> serializeColumnData(Object columnValue, String colType) {
+  switch (colType.toUpperCase()) {
+    case 'BOOL':
+      return TypeEncoder.boolean(columnValue as int);
+    default:
+      return TypeEncoder.text(columnValue.toString());
+  }
 }
 
 List<int> serializeNullData() {

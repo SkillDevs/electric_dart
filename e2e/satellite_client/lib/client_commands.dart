@@ -10,13 +10,16 @@ import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
 import 'package:satellite_dart_client/util/json.dart';
 
+late String dbName;
+
 Future<GenericDb> makeDb(String dbPath) async {
   final db = await GenericDb.open(NativeDatabase(File(dbPath)));
+  dbName = dbPath;
   return db;
 }
 
-Future<DriftElectricClient> electrifyDb(GenericDb db, DbName dbName,
-    String host, int port, List<dynamic> migrationsJ) async {
+Future<DriftElectricClient> electrifyDb(
+    GenericDb db, String host, int port, List<dynamic> migrationsJ) async {
   final config = ElectricConfig(
     url: "electric://$host:$port",
     logger: LoggerConfig(level: Level.debug),
@@ -58,13 +61,17 @@ void setSubscribers(DriftElectricClient db) {
 }
 
 Future<void> syncTable(DriftElectricClient electric, String table) async {
-  if (table == 'items') {
-    final ShapeSubscription(:synced) = await electric.syncTables(["items"]);
-    return await synced;
-  } else if (table == 'other_items') {
+  if (table == 'other_items') {
     final ShapeSubscription(:synced) = await electric.syncTables(
       ["items", "other_items"],
     );
+
+    return await synced;
+  } else {
+    final satellite = globalRegistry.satellites[dbName]!;
+    final ShapeSubscription(:synced) = await satellite.subscribe([
+      ClientShapeDefinition(selects: [ShapeSelect(tablename: table)])
+    ]);
     return await synced;
   }
 }
@@ -81,6 +88,15 @@ Future<List<Row>> getColumns(DriftElectricClient electric, String table) async {
     "SELECT * FROM pragma_table_info(?);",
     variables: [Variable.withString(table)],
   ).get();
+  return _toRows(rows);
+}
+
+Future<List<Row>> getRows(DriftElectricClient electric, String table) async {
+  final rows = await electric.db
+      .customSelect(
+        "SELECT * FROM $table;",
+      )
+      .get();
   return _toRows(rows);
 }
 
@@ -130,6 +146,14 @@ Future<void> insertExtendedItem(
   DriftElectricClient electric,
   Map<String, String> values,
 ) async {
+  insertExtendedInto(electric, "items", values);
+}
+
+Future<void> insertExtendedInto(
+  DriftElectricClient electric,
+  String table,
+  Map<String, String> values,
+) async {
   final fixedColumns = <String, Object? Function()>{
     "id": genUUID,
   };
@@ -148,7 +172,7 @@ Future<void> insertExtendedItem(
   final args = colToVal.values.toList();
 
   await electric.db.customInsert(
-    "INSERT INTO items($columnNames) VALUES ($placeholders) RETURNING *;",
+    "INSERT INTO $table($columnNames) VALUES ($placeholders) RETURNING *;",
     variables: dynamicArgsToVariables(args),
   );
 }
