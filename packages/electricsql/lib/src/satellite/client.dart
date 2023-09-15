@@ -1113,7 +1113,7 @@ Object deserializeColumnData(
     case 'TEXT':
     case 'TIME':
     case 'TIMESTAMP':
-    case 'TIMESTAMPZ':
+    case 'TIMESTAMPTZ':
     case 'UUID':
     case 'VARCHAR':
       return TypeDecoder.text(column);

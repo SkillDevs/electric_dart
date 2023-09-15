@@ -22,7 +22,7 @@ Future<DriftElectricClient> electrifyDb(
     GenericDb db, String host, int port, List<dynamic> migrationsJ) async {
   final config = ElectricConfig(
     url: "electric://$host:$port",
-    logger: LoggerConfig(level: Level.debug),
+    logger: LoggerConfig(level: Level.debug, colored: false),
     auth: AuthConfig(token: await mockSecureAuthToken()),
   );
   print("(in electrify_db) config: ${electricConfigToJson(config)}");
