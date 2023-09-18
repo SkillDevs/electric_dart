@@ -25,7 +25,7 @@ ln -s "$ELECTRIC_REPO_E2E_PATH" electric
 ln -s "$DART_REPO_E2E_PATH" dart
 
 rm "$PATCH_PATH" || true
-diff -x "lux" -ur electric dart > "$PATCH_PATH" || true
+diff -x "lux" -x "satellite_client" -ur electric dart > "$PATCH_PATH" || true
 popd
 rm -rf diff
 ###################################

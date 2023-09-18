@@ -599,6 +599,10 @@ This means there is a notifier subscription leak.`''');
       throw satelliteError;
     }
 
+    logger.warning(
+      'an error occurred in satellite: ${satelliteError.message}',
+    );
+
     // all other errors are handled by closing the client (if not yet) and retrying
     unawaited(
       connectivityStateChanged(ConnectivityState.disconnected)

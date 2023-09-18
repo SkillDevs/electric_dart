@@ -1,9 +1,7 @@
 name: E2E
 on:
   push:
-    branches:
-      - master
-      - feat/e2e
+  
   pull_request:
     paths-ignore:
       # Root files

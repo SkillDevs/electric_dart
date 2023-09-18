@@ -3,7 +3,7 @@
 set -e
 
 ROOT_DIR=$(realpath .)
-DART_E2E_BAK=$(realpath e2e.bak)
+DART_E2E_BAK="$ROOT_DIR"/e2e.bak
 ELECTRIC_REPO_PATH="$DART_E2E_BAK"/electric_repo
 
 ELECTRIC_COMMIT=$(tool/extract_electric_commit.sh)
@@ -26,10 +26,10 @@ cp -r "$DART_E2E_BAK"/satellite_client "$SATELLITE_CLIENT_PATH"
 
 # Copy original from the electric e2e client that are in the patch file
 # so that we can apply the patch
-base_satellite_client_path="$ELECTRIC_REPO_PATH"/e2e/satellite_client
-cp "$base_satellite_client_path"/Dockerfile "$SATELLITE_CLIENT_PATH"/Dockerfile
-cp "$base_satellite_client_path"/.gitignore "$SATELLITE_CLIENT_PATH"/.gitignore
-cp "$base_satellite_client_path"/Makefile "$SATELLITE_CLIENT_PATH"/Makefile
+# base_satellite_client_path="$ELECTRIC_REPO_PATH"/e2e/satellite_client
+# cp "$base_satellite_client_path"/Dockerfile "$SATELLITE_CLIENT_PATH"/Dockerfile
+# cp "$base_satellite_client_path"/.gitignore "$SATELLITE_CLIENT_PATH"/.gitignore
+# cp "$base_satellite_client_path"/Makefile "$SATELLITE_CLIENT_PATH"/Makefile
 
 # Restore lux config
 cp -rf "$DART_E2E_BAK"/lux e2e/lux
