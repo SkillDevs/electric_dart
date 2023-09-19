@@ -5,7 +5,7 @@ library electricsql;
 export 'src/auth/index.dart';
 
 // ElectricClient
-export 'src/client/model/index.dart'; 
+export 'src/client/model/index.dart';
 
 // Config
 export 'src/config/config.dart' show ElectricConfig, HydratedConfig;
@@ -21,4 +21,4 @@ export 'src/migrators/migrators.dart' show Migration;
 export 'src/util/debug/index.dart';
 
 // Utils that we embed in the main library
-export 'src/util/index.dart' show ConnectivityState;
+export 'src/util/index.dart' show ConnectivityState, TypeConverters;

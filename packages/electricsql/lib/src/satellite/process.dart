@@ -18,6 +18,7 @@ import 'package:electricsql/src/satellite/shapes/shapes.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';

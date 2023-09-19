@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/sets.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';

@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:ansicolor/ansicolor.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:logging/logging.dart' as loglib;
 import 'package:platform_info/platform_info.dart';
 
@@ -81,7 +82,7 @@ Logger _createLogger() {
     final paddedName = '$levelName:'.padRight(6);
 
     final message = pen(
-      '$paddedName ${_toIso8601StringOnlyDay(event.time)} ${event.message} $extra',
+      '$paddedName ${event.time.copyWith(microsecond: 0).toTimeString()} ${event.message} $extra',
     );
 
     outputFun(message, event.loggerName);
@@ -146,25 +147,6 @@ extension _LevelExt on Level {
         return loglib.Level.SEVERE;
     }
   }
-}
-
-String _toIso8601StringOnlyDay(DateTime date) {
-  final String h = _twoDigits(date.hour);
-  final String min = _twoDigits(date.minute);
-  final String sec = _twoDigits(date.second);
-  final String ms = _threeDigits(date.millisecond);
-  return '$h:$min:$sec.$ms';
-}
-
-String _threeDigits(int n) {
-  if (n >= 100) return '$n';
-  if (n >= 10) return '0$n';
-  return '00$n';
-}
-
-String _twoDigits(int n) {
-  if (n >= 10) return '$n';
-  return '0$n';
 }
 
 typedef LoggerOutput = void Function(String message, String loggerName);

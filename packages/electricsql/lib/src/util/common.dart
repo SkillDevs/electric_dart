@@ -104,12 +104,6 @@ String bytesToString(List<int> bytes) {
   return utf8.decode(bytes);
 }
 
-extension DateExtension on DateTime {
-  String toISOStringUTC() {
-    return toUtc().copyWith(microsecond: 0).toIso8601String();
-  }
-}
-
 class Waiter {
   bool _waiting = false;
   bool _finished = false;
