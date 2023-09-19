@@ -11,26 +11,19 @@ import 'package:protobuf/protobuf.dart';
 
 const kProtobufPackage = 'Electric.Satellite';
 
+typedef HandlerMapping = Map<SatMsgType, void Function(Object msg)>;
+
 enum SatMsgType {
   errorResp(code: 0),
-  authReq(code: 1),
-  authResp(code: 2),
-  inStartReplicationReq(code: 5),
-  inStartReplicationResp(code: 6),
-  inStopReplicationReq(code: 7),
-  inStopReplicationResp(code: 8),
   opLog(code: 9),
   relation(code: 10),
-  migrationNotification(code: 11),
-  subsReq(code: 12),
-  subsResp(code: 13),
   subsDataError(code: 14),
   subsDataBegin(code: 15),
   subsDataEnd(code: 16),
   shapeDataBegin(code: 17),
   shapeDataEnd(code: 18),
-  unsubsReq(code: 19),
-  unsubsResp(code: 20);
+  rpcRequest(code: 21),
+  rpcResponse(code: 22);
 
   const SatMsgType({
     required this.code,
@@ -49,28 +42,10 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
   switch (type) {
     case SatMsgType.errorResp:
       return SatErrorResp.fromBuffer(data);
-    case SatMsgType.authReq:
-      return SatAuthReq.fromBuffer(data);
-    case SatMsgType.authResp:
-      return SatAuthResp.fromBuffer(data);
-    case SatMsgType.inStartReplicationReq:
-      return SatInStartReplicationReq.fromBuffer(data);
-    case SatMsgType.inStartReplicationResp:
-      return SatInStartReplicationResp.fromBuffer(data);
-    case SatMsgType.inStopReplicationReq:
-      return SatInStopReplicationReq.fromBuffer(data);
-    case SatMsgType.inStopReplicationResp:
-      return SatInStopReplicationResp.fromBuffer(data);
     case SatMsgType.opLog:
       return SatOpLog.fromBuffer(data);
     case SatMsgType.relation:
       return SatRelation.fromBuffer(data);
-    case SatMsgType.migrationNotification:
-      return SatMigrationNotification.fromBuffer(data);
-    case SatMsgType.subsReq:
-      return SatSubsReq.fromBuffer(data);
-    case SatMsgType.subsResp:
-      return SatSubsResp.fromBuffer(data);
     case SatMsgType.subsDataError:
       return SatSubsDataError.fromBuffer(data);
     case SatMsgType.subsDataBegin:
@@ -81,38 +56,20 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
       return SatShapeDataBegin.fromBuffer(data);
     case SatMsgType.shapeDataEnd:
       return SatShapeDataEnd.fromBuffer(data);
-    case SatMsgType.unsubsReq:
-      return SatUnsubsReq.fromBuffer(data);
-    case SatMsgType.unsubsResp:
-      return SatUnsubsResp.fromBuffer(data);
+    case SatMsgType.rpcRequest:
+      return SatRpcRequest.fromBuffer(data);
+    case SatMsgType.rpcResponse:
+      return SatRpcResponse.fromBuffer(data);
   }
 }
 
 SatMsgType? getTypeFromSatObject(Object object) {
-  if (object is SatAuthReq) {
-    return SatMsgType.authReq;
-  } else if (object is SatErrorResp) {
+  if (object is SatErrorResp) {
     return SatMsgType.errorResp;
-  } else if (object is SatAuthResp) {
-    return SatMsgType.authResp;
-  } else if (object is SatInStartReplicationResp) {
-    return SatMsgType.inStartReplicationResp;
-  } else if (object is SatInStartReplicationReq) {
-    return SatMsgType.inStartReplicationReq;
-  } else if (object is SatInStopReplicationReq) {
-    return SatMsgType.inStopReplicationReq;
-  } else if (object is SatInStopReplicationResp) {
-    return SatMsgType.inStopReplicationResp;
   } else if (object is SatOpLog) {
     return SatMsgType.opLog;
   } else if (object is SatRelation) {
     return SatMsgType.relation;
-  } else if (object is SatMigrationNotification) {
-    return SatMsgType.migrationNotification;
-  } else if (object is SatSubsReq) {
-    return SatMsgType.subsReq;
-  } else if (object is SatSubsResp) {
-    return SatMsgType.subsResp;
   } else if (object is SatSubsDataError) {
     return SatMsgType.subsDataError;
   } else if (object is SatSubsDataBegin) {
@@ -123,10 +80,10 @@ SatMsgType? getTypeFromSatObject(Object object) {
     return SatMsgType.shapeDataBegin;
   } else if (object is SatShapeDataEnd) {
     return SatMsgType.shapeDataEnd;
-  } else if (object is SatUnsubsReq) {
-    return SatMsgType.unsubsReq;
-  } else if (object is SatUnsubsResp) {
-    return SatMsgType.unsubsResp;
+  } else if (object is SatRpcRequest) {
+    return SatMsgType.rpcRequest;
+  } else if (object is SatRpcResponse) {
+    return SatMsgType.rpcResponse;
   }
 
   return null;
@@ -140,7 +97,7 @@ Uint8List encodeMessage(Object message) {
   throw UnimplementedError("Can't encode ${message.runtimeType}");
 }
 
-Uint8List getSizeBuf(SatMsgType msgType) {
+Uint8List getBufWithMsgTag(SatMsgType msgType) {
   final buf = Uint8List(1);
   buf.setRange(0, 1, [msgType.code]);
   return buf;
@@ -343,8 +300,6 @@ String msgToString(Object message) {
         .map((x) => '${x.name}: ${x.type}${x.primaryKey ? ' PK' : ''}')
         .join(', ');
     return '#SatRelation{for: ${message.schemaName}.${message.tableName}, as: ${message.relationId}, cols: [$cols]}';
-  } else if (message is SatMigrationNotification) {
-    return '#SatMigrationNotification{to: ${message.newSchemaVersion}, from: ${message.newSchemaVersion}}';
   } else if (message is SatSubsReq) {
     return '#SatSubsReq{id: ${message.subscriptionId}, shapes: ${message.shapeRequests.map((r) => r.writeToJson()).toList()}}';
   } else if (message is SatSubsResp) {
@@ -374,6 +329,10 @@ String msgToString(Object message) {
     return '#SatUnsubsReq{ids: ${message.subscriptionIds}}';
   } else if (message is SatUnsubsResp) {
     return '#SatUnsubsResp{}';
+  } else if (message is SatRpcRequest) {
+    return '#SatRpcRequest{method: ${message.method}, requestId: ${message.requestId}}';
+  } else if (message is SatRpcResponse) {
+    return '#SatRpcResponse{method: ${message.method}, requestId: ${message.requestId}${message.hasError() ? ', error: ${msgToString(message.error)}' : ''}}';
   }
 
   assert(false, "Can't convert ${message.runtimeType} to string");

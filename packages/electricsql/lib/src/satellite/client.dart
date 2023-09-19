@@ -7,6 +7,7 @@ import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart' hide Change;
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
+import 'package:electricsql/src/satellite/rpc.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/cache.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
@@ -18,13 +19,9 @@ import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
+import 'package:synchronized/synchronized.dart';
 
-class IncomingHandler {
-  final Object? Function(Object?) handle;
-  final bool isRpc;
-
-  IncomingHandler({required this.handle, required this.isRpc});
-}
+typedef IncomingHandler = void Function(Object?);
 
 class DecodedMessage {
   final Object msg;
@@ -55,8 +52,20 @@ class SatelliteClient extends EventEmitter implements Client {
   final SubscriptionsDataCache _subscriptionsDataCache =
       SubscriptionsDataCache();
 
-  Throttle<void>? throttledPushTransaction;
   void Function(Uint8List bytes)? socketHandler;
+  Throttle<void>? throttledPushTransaction;
+
+  late RPC rpcClient;
+  late RootApi _service;
+  Lock _incomingLock = Lock();
+
+  List<String> allowedMutexedRpcResponses = [];
+
+  late final Map<String, Future<Object> Function(Object)>
+      handlerForRpcRequests = {
+    'startReplication': (o) => handleStartReq(o as SatInStartReplicationReq),
+    'stopReplication': (o) => handleStopReq(o as SatInStopReplicationReq),
+  };
 
   SatelliteClient({
     // ignore: avoid_unused_constructor_parameters
@@ -68,6 +77,17 @@ class SatelliteClient extends EventEmitter implements Client {
   }) {
     inbound = resetReplication<Transaction>(null, null);
     outbound = resetReplication<DataTransaction>(null, null);
+
+    rpcClient = RPC(
+      sendMessage,
+      opts.timeout,
+      logger,
+    );
+
+    _service = withRpcRequestLogging(
+      RootApi(rpcClient),
+      logger,
+    );
   }
 
   Replication<TransactionType> resetReplication<TransactionType>(
@@ -85,96 +105,26 @@ class SatelliteClient extends EventEmitter implements Client {
 
   IncomingHandler getIncomingHandlerForMessage(SatMsgType msgType) {
     switch (msgType) {
-      case SatMsgType.authResp:
-        return IncomingHandler(
-          handle: (v) => handleAuthResp(v),
-          isRpc: true,
-        );
-
-      case SatMsgType.inStartReplicationReq:
-        return IncomingHandler(
-          handle: (v) =>
-              handleInStartReplicationReq(v! as SatInStartReplicationReq),
-          isRpc: false,
-        );
-      case SatMsgType.inStartReplicationResp:
-        return IncomingHandler(
-          handle: (v) => handleStartResp(v! as SatInStartReplicationResp),
-          isRpc: true,
-        );
-
-      case SatMsgType.inStopReplicationReq:
-        return IncomingHandler(
-          handle: (v) => handleStopReq(v! as SatInStopReplicationReq),
-          isRpc: false,
-        );
-
-      case SatMsgType.inStopReplicationResp:
-        return IncomingHandler(
-          handle: (v) => handleStopResp(v! as SatInStopReplicationResp),
-          isRpc: true,
-        );
-
       case SatMsgType.opLog:
-        return IncomingHandler(
-          handle: (v) => handleTransaction(v! as SatOpLog),
-          isRpc: false,
-        );
-
+        return (v) => handleTransaction(v! as SatOpLog);
       case SatMsgType.relation:
-        return IncomingHandler(
-          handle: (v) => handleRelation(v! as SatRelation),
-          isRpc: false,
-        );
-
+        return (msg) => handleRelation(msg! as SatRelation);
       case SatMsgType.errorResp:
-        return IncomingHandler(
-          handle: (v) => handleErrorResp(v! as SatErrorResp),
-          isRpc: false,
-        );
-
-      case SatMsgType.subsResp:
-        return IncomingHandler(
-          handle: (v) => handleSubscription(v! as SatSubsResp),
-          isRpc: true,
-        );
-
+        return (v) => handleErrorResp(v! as SatErrorResp);
       case SatMsgType.subsDataError:
-        return IncomingHandler(
-          handle: (v) => handleSubscriptionError(v! as SatSubsDataError),
-          isRpc: false,
-        );
+        return (v) => handleSubscriptionError(v! as SatSubsDataError);
       case SatMsgType.subsDataBegin:
-        return IncomingHandler(
-          handle: (v) => handleSubscriptionDataBegin(v! as SatSubsDataBegin),
-          isRpc: false,
-        );
-
+        return (v) => handleSubscriptionDataBegin(v! as SatSubsDataBegin);
       case SatMsgType.subsDataEnd:
-        return IncomingHandler(
-          handle: (v) => handleSubscriptionDataEnd(v! as SatSubsDataEnd),
-          isRpc: false,
-        );
+        return (v) => handleSubscriptionDataEnd(v! as SatSubsDataEnd);
       case SatMsgType.shapeDataBegin:
-        return IncomingHandler(
-          handle: (v) => handleShapeDataBegin(v! as SatShapeDataBegin),
-          isRpc: false,
-        );
+        return (v) => handleShapeDataBegin(v! as SatShapeDataBegin);
       case SatMsgType.shapeDataEnd:
-        return IncomingHandler(
-          handle: (v) => handleShapeDataEnd(v! as SatShapeDataEnd),
-          isRpc: false,
-        );
-      case SatMsgType.unsubsResp:
-        return IncomingHandler(
-          handle: (v) => handleUnsubscribeResponse(v! as SatUnsubsResp),
-          isRpc: true,
-        );
-      case SatMsgType.subsReq:
-      case SatMsgType.unsubsReq:
-      case SatMsgType.authReq:
-      case SatMsgType.migrationNotification:
-        throw UnimplementedError();
+        return (v) => handleShapeDataEnd(v! as SatShapeDataEnd);
+      case SatMsgType.rpcResponse:
+        return (v) => rpcClient.handleResponse(v! as SatRpcResponse);
+      case SatMsgType.rpcRequest:
+        return (v) => handleRpcRequest(v! as SatRpcRequest);
     }
   }
 
@@ -268,30 +218,42 @@ class SatelliteClient extends EventEmitter implements Client {
     }
   }
 
-  void handleIncoming(Uint8List data) {
-    bool handleIsRpc = false;
+  Future<T> delayIncomingMessages<T>(Future<T> Function() fn,
+      {required List<String> allowedRpcResponses}) {
+    return _incomingLock.synchronized(() async {
+      allowedMutexedRpcResponses = allowedRpcResponses;
+      try {
+        return await fn();
+      } finally {
+        allowedMutexedRpcResponses = [];
+      }
+    });
+  }
+
+  Future<void> handleIncoming(Uint8List data) async {
     try {
       final messageInfo = toMessage(data);
+      final message = messageInfo.msg;
+
+      if (_incomingLock.inLock &&
+          !(message is SatRpcResponse &&
+              allowedMutexedRpcResponses.contains(message.method))) {
+        // Wait for unlock
+        await _incomingLock.synchronized(() {});
+      }
 
       if (logger.levelImportance <= Level.debug.value) {
         logger.debug('[proto] recv: ${msgToString(messageInfo.msg)}');
       }
 
+      print("incoming message type: ${messageInfo.msgType} $message");
       final handler = getIncomingHandlerForMessage(messageInfo.msgType);
-      final response = handler.handle(messageInfo.msg);
-      handleIsRpc = handler.isRpc;
-      if (handleIsRpc) {
-        emit('rpc_response', response);
-      }
+      handler(message);
     } catch (error) {
       if (error is SatelliteException) {
-        if (handleIsRpc) {
-          emit('rpc_error', error);
-        } else {
-          // subscription errors are emitted through specific event
-          if (!subscriptionError.contains(error.code)) {
-            emit('error', error);
-          }
+        // subscription errors are emitted through specific event
+        if (!subscriptionError.contains(error.code)) {
+          emit('error', error);
         }
       } else {
         // This is an unexpected runtime error
@@ -309,7 +271,7 @@ class SatelliteClient extends EventEmitter implements Client {
       token: authState.token,
       headers: [],
     );
-    return rpc<AuthResponse>(request);
+    return _service.authenticate(null, request).then(handleAuthResp);
   }
 
   @override
@@ -388,7 +350,13 @@ class SatelliteClient extends EventEmitter implements Client {
     // Then set the replication state
     inbound = resetReplication(lsn, ReplicationStatus.starting);
 
-    return rpc<StartReplicationResponse>(request);
+    return delayIncomingMessages(
+      () async {
+        final resp = await _service.startReplication(null, request);
+        return handleStartResp(resp);
+      },
+      allowedRpcResponses: ['startReplication'],
+    );
   }
 
   @override
@@ -404,7 +372,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
     inbound.isReplicating = ReplicationStatus.stopping;
     final request = SatInStopReplicationReq();
-    return rpc<StopReplicationResponse>(request);
+    return _service.stopReplication(null, request).then(handleStopResp);
   }
 
   void sendMessage(Object request) {
@@ -430,79 +398,6 @@ class SatelliteClient extends EventEmitter implements Client {
     _socket.write(buffer);
   }
 
-  Future<T> rpc<T>(
-    Object request, {
-    Object Function(Object msg)? distinguishOn,
-  }) async {
-    Timer? timer;
-    EventListener? rpcRespListener;
-    EventListener? errorListener;
-    final Completer<T> completer = Completer();
-
-    try {
-      timer = Timer(Duration(milliseconds: opts.timeout), () {
-        final error = SatelliteException(
-          SatelliteErrorCode.timeout,
-          '${request.runtimeType}',
-        );
-        completer.completeError(error);
-      });
-
-      // reject on any error
-      errorListener = on('rpc_error', (error) {
-        errorListener?.cancel();
-        errorListener = null;
-        completer.completeError(error as Object);
-      });
-
-      if (distinguishOn != null) {
-        dynamic handleRpcResp(T resp) {
-          // TODO: remove this comment when RPC types are fixed
-          // @ts-ignore this comparison is valid because we expect the same field to be present on both request and response, but it's too much work at the moment to rewrite typings for it
-          final respValue = distinguishOn(resp as Object);
-          final reqValue = distinguishOn(request);
-          if (respValue == reqValue) {
-            errorListener?.cancel();
-            errorListener = null;
-
-            return completer.complete(resp);
-          } else {
-            // This WAS an RPC response, but not the one we were expecting, waiting more
-            rpcRespListener = on('rpc_response', (resp) {
-              rpcRespListener?.cancel();
-              rpcRespListener = null;
-              handleRpcResp(resp as T);
-            });
-          }
-        }
-
-        rpcRespListener = on('rpc_response', (resp) {
-          rpcRespListener?.cancel();
-          rpcRespListener = null;
-          handleRpcResp(resp as T);
-        });
-      } else {
-        rpcRespListener = on('rpc_response', (resp) {
-          rpcRespListener?.cancel();
-          rpcRespListener = null;
-
-          errorListener?.cancel();
-          errorListener = null;
-
-          completer.complete(resp as T);
-        });
-      }
-
-      sendMessage(request);
-
-      return await completer.future;
-    } finally {
-      timer?.cancel();
-      errorListener?.cancel();
-      rpcRespListener?.cancel();
-    }
-  }
-
   @override
   LSN getLastSentLsn() {
     return outbound.lastLsn ?? kDefaultLogPos;
@@ -526,6 +421,36 @@ class SatelliteClient extends EventEmitter implements Client {
     return AuthResponse(serverId, error);
   }
 
+  /// Server may issue RPC requests to the client, and we're handling them here.
+  Future<void> handleRpcRequest(SatRpcRequest message) async {
+    final responder = rpcRespond(sendMessage);
+
+    if (message.method == 'startReplication') {
+      final decoded = SatInStartReplicationReq.fromBuffer(message.message);
+      responder(
+        message,
+        await handlerForRpcRequests[message.method]!(decoded),
+      );
+    } else if (message.method == 'stopReplication') {
+      final decoded = SatInStopReplicationReq.fromBuffer(message.message);
+      responder(
+        message,
+        await handlerForRpcRequests[message.method]!(decoded),
+      );
+    } else {
+      logger.warning(
+        'Server has sent an RPC request with a method that the client does not support: ${message.method}',
+      );
+
+      responder(
+        message,
+        SatErrorResp(
+          errorType: SatErrorResp_ErrorCode.INVALID_REQUEST,
+        ),
+      );
+    }
+  }
+
   StartReplicationResponse handleStartResp(SatInStartReplicationResp resp) {
     if (inbound.isReplicating == ReplicationStatus.starting) {
       if (resp.hasErr()) {
@@ -547,7 +472,9 @@ class SatelliteClient extends EventEmitter implements Client {
     return StartReplicationResponse();
   }
 
-  void handleInStartReplicationReq(SatInStartReplicationReq message) {
+  Future<Object> handleStartReq(
+    SatInStartReplicationReq message,
+  ) async {
     logger.info(
       'Server sent a replication request to start from ${bytesToNumber(message.lsn)}, and options ${message.options.map((e) => e.name)}',
     );
@@ -561,21 +488,18 @@ class SatelliteClient extends EventEmitter implements Client {
       throttledPushTransaction =
           Throttle(pushTransactions, Duration(milliseconds: opts.pushPeriod));
 
-      final response = SatInStartReplicationResp();
-      sendMessage(response);
       emit('outbound_started', message.lsn);
+      return SatInStartReplicationResp();
     } else {
-      final response = SatErrorResp(
-        errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
-      );
-      sendMessage(response);
-
       emit(
         'error',
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${outbound.isReplicating} handling 'start' request",
         ),
+      );
+      return SatErrorResp(
+        errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
       );
     }
   }
@@ -667,22 +591,12 @@ class SatelliteClient extends EventEmitter implements Client {
     );
 
     _subscriptionsDataCache.subscriptionRequest(request);
-    return rpc<SubscribeResponse>(
-      request,
-      distinguishOn: (Object o) {
-        if (o is SatSubsReq) {
-          return o.subscriptionId;
-        } else if (o is SubscribeResponse) {
-          return o.subscriptionId;
-        } else {
-          throw StateError('Unexpected SatSubs');
-        }
-      },
-    );
+
+    return _service.subscribe(null, request).then(handleSubscription);
   }
 
   @override
-  Future<UnsubscribeResponse> unsubscribe(List<String> subIds) {
+  Future<UnsubscribeResponse> unsubscribe(List<String> subscriptionIds) {
     if (inbound.isReplicating != ReplicationStatus.active) {
       return Future.error(
         SatelliteException(
@@ -693,10 +607,10 @@ class SatelliteClient extends EventEmitter implements Client {
     }
 
     final request = SatUnsubsReq(
-      subscriptionIds: subIds,
+      subscriptionIds: subscriptionIds,
     );
 
-    return rpc(request);
+    return _service.unsubscribe(null, request).then(handleUnsubscribeResponse);
   }
 
   void sendMissingRelations(
@@ -731,7 +645,7 @@ class SatelliteClient extends EventEmitter implements Client {
     }
   }
 
-  void handleStopReq(SatInStopReplicationReq value) {
+  Future<Object> handleStopReq(SatInStopReplicationReq value) async {
     if (outbound.isReplicating == ReplicationStatus.active) {
       outbound.isReplicating = ReplicationStatus.stopped;
 
@@ -740,20 +654,18 @@ class SatelliteClient extends EventEmitter implements Client {
         throttledPushTransaction = null;
       }
 
-      final response = SatInStopReplicationResp();
-      sendMessage(response);
+      return SatInStopReplicationResp();
     } else {
-      final response = SatErrorResp(
-        errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
-      );
-      sendMessage(response);
-
       emit(
         'error',
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'stop' request",
         ),
+      );
+
+      return SatErrorResp(
+        errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
       );
     }
   }
@@ -1149,7 +1061,7 @@ List<int> serializeNullData() {
 }
 
 Uint8List encodeSocketMessage(SatMsgType msgType, Object msg) {
-  final typeEncoded = getSizeBuf(msgType);
+  final typeEncoded = getBufWithMsgTag(msgType);
   final msgEncoded = encodeMessage(msg);
   final totalBufLen = typeEncoded.length + msgEncoded.length;
 
