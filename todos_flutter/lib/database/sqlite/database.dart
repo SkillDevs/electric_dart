@@ -1,3 +1,4 @@
+import 'package:electricsql/electricsql.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:todos_electrified/database/database.dart';
 
@@ -30,6 +31,7 @@ class TodosRepositorySqlite implements TodosRepository {
         id: row['id'],
         listId: row['listid'],
         text: row['text'] as String,
+        editedAt: TypeConverters.timestamp.decode(row['edited_at'] as String),
         completed: row['completed'] == 1,
       );
     }).toList();
