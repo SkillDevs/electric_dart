@@ -1434,10 +1434,10 @@ This means there is a notifier subscription leak.`''');
   /// @returns statement to be executed to save the new LSN value in the database
   Statement updateLsnStmt(LSN lsn) {
     _lsn = lsn;
-    final lsn_base64 = base64.encode(lsn);
+    final lsnBase64 = base64.encode(lsn);
     return Statement(
       'UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?',
-      [lsn_base64, 'lsn'],
+      [lsnBase64, 'lsn'],
     );
   }
 

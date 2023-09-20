@@ -309,7 +309,7 @@ class Rows {
       buffer.write("{ ");
       final entries = row.entries.toList();
       for (var i = 0; i < entries.length; i++) {
-        final entry = entries[i];  
+        final entry = entries[i];
         buffer.write("${entry.key}: ${entry.value}");
 
         if (i != entries.length - 1) {

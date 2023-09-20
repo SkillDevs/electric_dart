@@ -44,7 +44,7 @@ class ColumnInfo with EquatableMixin {
   String name;
   String type;
   int notnull;
-  String? dflt_value;
+  String? dfltValue;
   int pk;
 
   ColumnInfo({
@@ -52,12 +52,12 @@ class ColumnInfo with EquatableMixin {
     required this.name,
     required this.type,
     required this.notnull,
-    required this.dflt_value,
+    required this.dfltValue,
     required this.pk,
   });
 
   @override
-  List<Object?> get props => [cid, name, type, notnull, dflt_value, pk];
+  List<Object?> get props => [cid, name, type, notnull, dfltValue, pk];
 }
 
 void main() {
@@ -639,7 +639,7 @@ Future<List<ColumnInfo>> getTableInfo(String table) async {
       name: r['name']! as String,
       type: r['type']! as String,
       notnull: r['notnull']! as int,
-      dflt_value: r['dflt_value'] as String?,
+      dfltValue: r['dflt_value'] as String?,
       pk: r['pk']! as int,
     );
   }).toList();
@@ -753,7 +753,7 @@ Future<void> checkMigrationIsApplied() async {
       name: 'id',
       type: 'TEXT',
       notnull: 1,
-      dflt_value: null,
+      dfltValue: null,
       pk: 1,
     ),
     ColumnInfo(
@@ -761,7 +761,7 @@ Future<void> checkMigrationIsApplied() async {
       name: 'foo',
       type: 'INTEGER',
       notnull: 0,
-      dflt_value: null,
+      dfltValue: null,
       pk: 0,
     ),
     ColumnInfo(
@@ -769,7 +769,7 @@ Future<void> checkMigrationIsApplied() async {
       name: 'bar',
       type: 'TEXT',
       notnull: 0,
-      dflt_value: null,
+      dfltValue: null,
       pk: 0,
     ),
   ]);
@@ -779,7 +779,7 @@ Future<void> checkMigrationIsApplied() async {
     return col.name == 'baz' &&
         col.type == 'TEXT' &&
         col.notnull == 0 &&
-        col.dflt_value == null &&
+        col.dfltValue == null &&
         col.pk == 0;
   });
 

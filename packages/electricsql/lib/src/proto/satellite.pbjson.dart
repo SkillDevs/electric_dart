@@ -23,6 +23,44 @@ const SatAuthHeader$json = const {
 /// Descriptor for `SatAuthHeader`. Decode as a `google.protobuf.EnumDescriptorProto`.
 final $typed_data.Uint8List satAuthHeaderDescriptor = $convert
     .base64Decode('Cg1TYXRBdXRoSGVhZGVyEg8KC1VOU1BFQ0lGSUVEEAAiBAgBEAE=');
+@$core.Deprecated('Use satRpcRequestDescriptor instead')
+const SatRpcRequest$json = const {
+  '1': 'SatRpcRequest',
+  '2': const [
+    const {'1': 'method', '3': 1, '4': 1, '5': 9, '10': 'method'},
+    const {'1': 'request_id', '3': 2, '4': 1, '5': 13, '10': 'requestId'},
+    const {'1': 'message', '3': 3, '4': 1, '5': 12, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `SatRpcRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List satRpcRequestDescriptor = $convert.base64Decode(
+    'Cg1TYXRScGNSZXF1ZXN0EhYKBm1ldGhvZBgBIAEoCVIGbWV0aG9kEh0KCnJlcXVlc3RfaWQYAiABKA1SCXJlcXVlc3RJZBIYCgdtZXNzYWdlGAMgASgMUgdtZXNzYWdl');
+@$core.Deprecated('Use satRpcResponseDescriptor instead')
+const SatRpcResponse$json = const {
+  '1': 'SatRpcResponse',
+  '2': const [
+    const {'1': 'method', '3': 1, '4': 1, '5': 9, '10': 'method'},
+    const {'1': 'request_id', '3': 2, '4': 1, '5': 13, '10': 'requestId'},
+    const {'1': 'message', '3': 3, '4': 1, '5': 12, '9': 0, '10': 'message'},
+    const {
+      '1': 'error',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.Electric.Satellite.SatErrorResp',
+      '9': 0,
+      '10': 'error'
+    },
+  ],
+  '8': const [
+    const {'1': 'result'},
+  ],
+};
+
+/// Descriptor for `SatRpcResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List satRpcResponseDescriptor = $convert.base64Decode(
+    'Cg5TYXRScGNSZXNwb25zZRIWCgZtZXRob2QYASABKAlSBm1ldGhvZBIdCgpyZXF1ZXN0X2lkGAIgASgNUglyZXF1ZXN0SWQSGgoHbWVzc2FnZRgDIAEoDEgAUgdtZXNzYWdlEjgKBWVycm9yGAQgASgLMiAuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEVycm9yUmVzcEgAUgVlcnJvckIICgZyZXN1bHQ=');
 @$core.Deprecated('Use satAuthHeaderPairDescriptor instead')
 const SatAuthHeaderPair$json = const {
   '1': 'SatAuthHeaderPair',
@@ -502,45 +540,6 @@ const SatOpDelete$json = const {
 /// Descriptor for `SatOpDelete`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpDeleteDescriptor = $convert.base64Decode(
     'CgtTYXRPcERlbGV0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI+CgxvbGRfcm93X2RhdGEYAiABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdGESEgoEdGFncxgDIAMoCVIEdGFncw==');
-@$core.Deprecated('Use satMigrationNotificationDescriptor instead')
-const SatMigrationNotification$json = const {
-  '1': 'SatMigrationNotification',
-  '2': const [
-    const {
-      '1': 'old_schema_version',
-      '3': 1,
-      '4': 1,
-      '5': 9,
-      '10': 'oldSchemaVersion'
-    },
-    const {
-      '1': 'old_schema_hash',
-      '3': 2,
-      '4': 1,
-      '5': 9,
-      '10': 'oldSchemaHash'
-    },
-    const {
-      '1': 'new_schema_version',
-      '3': 3,
-      '4': 1,
-      '5': 9,
-      '10': 'newSchemaVersion'
-    },
-    const {
-      '1': 'new_schema_hash',
-      '3': 4,
-      '4': 1,
-      '5': 9,
-      '10': 'newSchemaHash'
-    },
-  ],
-};
-
-/// Descriptor for `SatMigrationNotification`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List satMigrationNotificationDescriptor =
-    $convert.base64Decode(
-        'ChhTYXRNaWdyYXRpb25Ob3RpZmljYXRpb24SLAoSb2xkX3NjaGVtYV92ZXJzaW9uGAEgASgJUhBvbGRTY2hlbWFWZXJzaW9uEiYKD29sZF9zY2hlbWFfaGFzaBgCIAEoCVINb2xkU2NoZW1hSGFzaBIsChJuZXdfc2NoZW1hX3ZlcnNpb24YAyABKAlSEG5ld1NjaGVtYVZlcnNpb24SJgoPbmV3X3NjaGVtYV9oYXNoGAQgASgJUg1uZXdTY2hlbWFIYXNo');
 @$core.Deprecated('Use satOpRowDescriptor instead')
 const SatOpRow$json = const {
   '1': 'SatOpRow',
@@ -992,3 +991,94 @@ const SatShapeDataEnd$json = const {
 /// Descriptor for `SatShapeDataEnd`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satShapeDataEndDescriptor =
     $convert.base64Decode('Cg9TYXRTaGFwZURhdGFFbmQ=');
+const $core.Map<$core.String, $core.dynamic> RootServiceBase$json = const {
+  '1': 'Root',
+  '2': const [
+    const {
+      '1': 'authenticate',
+      '2': '.Electric.Satellite.SatAuthReq',
+      '3': '.Electric.Satellite.SatAuthResp'
+    },
+    const {
+      '1': 'startReplication',
+      '2': '.Electric.Satellite.SatInStartReplicationReq',
+      '3': '.Electric.Satellite.SatInStartReplicationResp'
+    },
+    const {
+      '1': 'stopReplication',
+      '2': '.Electric.Satellite.SatInStopReplicationReq',
+      '3': '.Electric.Satellite.SatInStopReplicationResp'
+    },
+    const {
+      '1': 'subscribe',
+      '2': '.Electric.Satellite.SatSubsReq',
+      '3': '.Electric.Satellite.SatSubsResp'
+    },
+    const {
+      '1': 'unsubscribe',
+      '2': '.Electric.Satellite.SatUnsubsReq',
+      '3': '.Electric.Satellite.SatUnsubsResp'
+    },
+  ],
+};
+
+@$core.Deprecated('Use rootServiceDescriptor instead')
+const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
+    RootServiceBase$messageJson = const {
+  '.Electric.Satellite.SatAuthReq': SatAuthReq$json,
+  '.Electric.Satellite.SatAuthHeaderPair': SatAuthHeaderPair$json,
+  '.Electric.Satellite.SatAuthResp': SatAuthResp$json,
+  '.Electric.Satellite.SatInStartReplicationReq': SatInStartReplicationReq$json,
+  '.Electric.Satellite.SatInStartReplicationResp':
+      SatInStartReplicationResp$json,
+  '.Electric.Satellite.SatInStartReplicationResp.ReplicationError':
+      SatInStartReplicationResp_ReplicationError$json,
+  '.Electric.Satellite.SatInStopReplicationReq': SatInStopReplicationReq$json,
+  '.Electric.Satellite.SatInStopReplicationResp': SatInStopReplicationResp$json,
+  '.Electric.Satellite.SatSubsReq': SatSubsReq$json,
+  '.Electric.Satellite.SatShapeReq': SatShapeReq$json,
+  '.Electric.Satellite.SatShapeDef': SatShapeDef$json,
+  '.Electric.Satellite.SatShapeDef.Select': SatShapeDef_Select$json,
+  '.Electric.Satellite.SatSubsResp': SatSubsResp$json,
+  '.Electric.Satellite.SatSubsResp.SatSubsError': SatSubsResp_SatSubsError$json,
+  '.Electric.Satellite.SatSubsResp.SatSubsError.ShapeReqError':
+      SatSubsResp_SatSubsError_ShapeReqError$json,
+  '.Electric.Satellite.SatUnsubsReq': SatUnsubsReq$json,
+  '.Electric.Satellite.SatUnsubsResp': SatUnsubsResp$json,
+};
+
+/// Descriptor for `Root`. Decode as a `google.protobuf.ServiceDescriptorProto`.
+final $typed_data.Uint8List rootServiceDescriptor = $convert.base64Decode(
+    'CgRSb290Ek8KDGF1dGhlbnRpY2F0ZRIeLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoUmVxGh8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEF1dGhSZXNwEm8KEHN0YXJ0UmVwbGljYXRpb24SLC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVxGi0uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RhcnRSZXBsaWNhdGlvblJlc3ASbAoPc3RvcFJlcGxpY2F0aW9uEisuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVxGiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVzcBJMCglzdWJzY3JpYmUSHi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic1JlcRofLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcBJSCgt1bnN1YnNjcmliZRIgLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRVbnN1YnNSZXEaIS5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0VW5zdWJzUmVzcA==');
+const $core.Map<$core.String, $core.dynamic> ClientRootServiceBase$json =
+    const {
+  '1': 'ClientRoot',
+  '2': const [
+    const {
+      '1': 'startReplication',
+      '2': '.Electric.Satellite.SatInStartReplicationReq',
+      '3': '.Electric.Satellite.SatInStartReplicationResp'
+    },
+    const {
+      '1': 'stopReplication',
+      '2': '.Electric.Satellite.SatInStopReplicationReq',
+      '3': '.Electric.Satellite.SatInStopReplicationResp'
+    },
+  ],
+};
+
+@$core.Deprecated('Use clientRootServiceDescriptor instead')
+const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
+    ClientRootServiceBase$messageJson = const {
+  '.Electric.Satellite.SatInStartReplicationReq': SatInStartReplicationReq$json,
+  '.Electric.Satellite.SatInStartReplicationResp':
+      SatInStartReplicationResp$json,
+  '.Electric.Satellite.SatInStartReplicationResp.ReplicationError':
+      SatInStartReplicationResp_ReplicationError$json,
+  '.Electric.Satellite.SatInStopReplicationReq': SatInStopReplicationReq$json,
+  '.Electric.Satellite.SatInStopReplicationResp': SatInStopReplicationResp$json,
+};
+
+/// Descriptor for `ClientRoot`. Decode as a `google.protobuf.ServiceDescriptorProto`.
+final $typed_data.Uint8List clientRootServiceDescriptor = $convert.base64Decode(
+    'CgpDbGllbnRSb290Em8KEHN0YXJ0UmVwbGljYXRpb24SLC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVxGi0uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RhcnRSZXBsaWNhdGlvblJlc3ASbAoPc3RvcFJlcGxpY2F0aW9uEisuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVxGiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVzcA==');

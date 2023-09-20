@@ -7,7 +7,6 @@ analyzer:
     strict-inference: true
 
   errors:
-    non_constant_identifier_names: ignore
     todo: info
 
 linter:

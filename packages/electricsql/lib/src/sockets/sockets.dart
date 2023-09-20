@@ -11,9 +11,9 @@ export 'stub.dart'
 
 typedef Data = Uint8List;
 
-const _kProtocolVersionCode = '0.5';
+const _kProtocolVersionCode = '0.6';
 
-/// Returns the protocol version string as the server expects. i.e: 'electric.0.5'
+/// Returns the protocol version string as the server expects. i.e: 'electric.0.6'
 const kProtocolVsn = 'electric.$_kProtocolVersionCode';
 
 abstract class Socket {
