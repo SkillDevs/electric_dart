@@ -57,7 +57,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
   late RPC rpcClient;
   late RootApi _service;
-  Lock _incomingLock = Lock();
+  final Lock _incomingLock = Lock();
 
   List<String> allowedMutexedRpcResponses = [];
 
@@ -84,10 +84,13 @@ class SatelliteClient extends EventEmitter implements Client {
       logger,
     );
 
-    _service = withRpcRequestLogging(
-      RootApi(rpcClient),
+    // Configure the RPC client to also log each request/response
+    rpcClient = withRpcRequestLogging(
+      rpcClient,
       logger,
     );
+
+    _service = RootApi(rpcClient);
   }
 
   Replication<TransactionType> resetReplication<TransactionType>(
@@ -218,9 +221,11 @@ class SatelliteClient extends EventEmitter implements Client {
     }
   }
 
-  Future<T> delayIncomingMessages<T>(Future<T> Function() fn,
-      {required List<String> allowedRpcResponses}) {
-    return _incomingLock.synchronized(() async {
+  Future<T> delayIncomingMessages<T>(
+    Future<T> Function() fn, {
+    required List<String> allowedRpcResponses,
+  }) async {
+    final res = await _incomingLock.synchronized(() async {
       allowedMutexedRpcResponses = allowedRpcResponses;
       try {
         return await fn();
@@ -228,6 +233,11 @@ class SatelliteClient extends EventEmitter implements Client {
         allowedMutexedRpcResponses = [];
       }
     });
+
+    // Drain the event loop to execute what was waiting for the lock
+    await Future<void>.delayed(Duration.zero);
+
+    return res;
   }
 
   Future<void> handleIncoming(Uint8List data) async {
@@ -239,14 +249,16 @@ class SatelliteClient extends EventEmitter implements Client {
           !(message is SatRpcResponse &&
               allowedMutexedRpcResponses.contains(message.method))) {
         // Wait for unlock
-        await _incomingLock.synchronized(() {});
+        await _incomingLock.synchronized(() {
+          // Needs to be async to preserve the order of locks
+          return Future<void>.value();
+        });
       }
 
       if (logger.levelImportance <= Level.debug.value) {
         logger.debug('[proto] recv: ${msgToString(messageInfo.msg)}');
       }
 
-      print("incoming message type: ${messageInfo.msgType} $message");
       final handler = getIncomingHandlerForMessage(messageInfo.msgType);
       handler(message);
     } catch (error) {

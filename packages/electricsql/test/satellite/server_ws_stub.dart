@@ -87,8 +87,9 @@ class SatelliteWSServerStub {
 
       for (final message in messages) {
         if (message is String) {
+          final intStr = message.replaceAll('ms', '');
           await Future<void>.delayed(
-            Duration(milliseconds: int.parse(message)),
+            Duration(milliseconds: int.parse(intStr)),
           );
         } else {
           socket.add(writeMsg(message));
@@ -111,7 +112,7 @@ class SatelliteWSServerStub {
 
       final messageQueue = responses is Function
           ? Function.apply(responses, [request]) as List<Object>? ?? []
-          : responses as List<Object>;
+          : (responses as List<dynamic>).cast<Object>();
 
       for (final message in messageQueue) {
         socket.add(writeMsg(message));
@@ -142,7 +143,7 @@ class SatelliteWSServerStub {
     if (queue != null) {
       queue.add(responses);
     } else {
-      this.rpcResponses[method] = [responses];
+      rpcResponses[method] = [responses];
     }
   }
 }
@@ -165,7 +166,6 @@ SatRpcResponse wrapRpcResponse(
 ) {
   final message = body is! SatErrorResp ? encodeMessage(body) : null;
   final error = body is SatErrorResp ? body : null;
-  print("WRAP create response msg=$message error=$error");
 
   return SatRpcResponse(
     method: request.method,

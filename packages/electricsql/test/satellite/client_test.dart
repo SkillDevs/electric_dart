@@ -164,12 +164,12 @@ void main() {
   });
 
   // TODO: Finish tests
-/*
+
   test('replication start failure', () async {
     await connectAndAuth();
 
     final startResp = SatInStartReplicationResp();
-    server.nextRpcResponse([startResp]);
+    server.nextRpcResponse('startReplication', [startResp]);
 
     try {
       await client.startReplication(null, null, null);
@@ -191,8 +191,8 @@ void main() {
 
     final start = SatInStartReplicationResp();
     final stop = SatInStopReplicationResp();
-    server.nextRpcResponse([start]);
-    server.nextRpcResponse([stop]);
+    server.nextRpcResponse('startReplication', [start]);
+    server.nextRpcResponse('stopReplication', [stop]);
 
     await client.startReplication(null, null, null);
     await client.stopReplication();
@@ -202,7 +202,7 @@ void main() {
     await connectAndAuth();
 
     final stop = SatInStopReplicationResp();
-    server.nextRpcResponse([stop]);
+    server.nextRpcResponse('stopReplication', [stop]);
 
     try {
       await client.stopReplication();
@@ -281,9 +281,10 @@ void main() {
     final stop = SatInStopReplicationResp();
 
     server.nextRpcResponse(
+      'startReplication',
       [start, relation, firstOpLogMessage, secondOpLogMessage],
     );
-    server.nextRpcResponse([stop]);
+    server.nextRpcResponse('stopReplication', [stop]);
 
     final completer = Completer<void>();
 
@@ -317,8 +318,8 @@ void main() {
 
     final stop = SatInStopReplicationResp();
 
-    server.nextRpcResponse([start, opLog]);
-    server.nextRpcResponse([stop]);
+    server.nextRpcResponse('startReplication', [start, opLog]);
+    server.nextRpcResponse('stopReplication', [stop]);
 
     final completer = Completer<void>();
     client.on('transaction', (TransactionEvent event) {
@@ -389,75 +390,62 @@ void main() {
     final transaction = toTransactions(opLogEntries, kTestRelations);
 
     final completer = Completer<void>();
-    server.nextRpcResponse([startResp]);
-    server.nextRpcResponse([]);
+    server.nextRpcResponse('startReplication', [startResp]);
+    server.nextMsgExpect(SatMsgType.rpcResponse, []);
 
     int expectedCount = 4;
     // first message is a relation
-    server.nextRpcResponse([
-      (Uint8List data) {
+    server.nextMsgExpect(
+      SatMsgType.relation,
+      (SatRelation msg) {
         expectedCount -= 1;
-        final code = data[0];
-        final msgType = getMsgFromCode(code);
 
-        if (msgType == SatMsgType.relation) {
-          final decodedMsg = decode(data);
-          expect((decodedMsg.msg as SatRelation).relationId, 1);
-        }
+        expect(msg.relationId, 1);
       },
-    ]);
+    );
 
     // second message is a transaction
-    server.nextRpcResponse([
-      (Uint8List data) {
+    server.nextMsgExpect(
+      SatMsgType.opLog,
+      (SatOpLog msg) {
         expectedCount -= 1;
-        final code = data[0];
-        final msgType = getMsgFromCode(code);
 
-        expect(msgType, SatMsgType.opLog);
-
-        final satOpLog = (decode(data).msg as SatOpLog).ops;
+        final satOpLog = msg.ops;
 
         final lsn = satOpLog[0].begin.lsn;
         expect(bytesToNumber(lsn), 1);
         expect(satOpLog[0].begin.commitTimestamp, Int64(1000));
       },
-    ]);
+    );
 
     // third message after new enqueue does not send relation
-    server.nextRpcResponse([
-      (Uint8List data) {
+    server.nextMsgExpect(
+      SatMsgType.opLog,
+      (SatOpLog msg) {
         expectedCount -= 1;
 
-        final code = data[0];
-        final msgType = getMsgFromCode(code);
-        expect(msgType, SatMsgType.opLog);
-
-        final satOpLog = (decode(data).msg as SatOpLog).ops;
+        final satOpLog = msg.ops;
 
         final lsn = satOpLog[0].begin.lsn;
         expect(bytesToNumber(lsn), 2);
         expect(satOpLog[0].begin.commitTimestamp, Int64(2000));
       },
-    ]);
+    );
 
     // fourth message is also an insert
-    server.nextRpcResponse([
-      (Uint8List data) {
+    server.nextMsgExpect(
+      SatMsgType.opLog,
+      (SatOpLog msg) {
         expectedCount -= 1;
 
-        final code = data[0];
-        final msgType = getMsgFromCode(code);
-        expect(msgType, SatMsgType.opLog);
-
-        final satOpLog = (decode(data).msg as SatOpLog).ops;
+        final satOpLog = msg.ops;
 
         final lsn = satOpLog[0].begin.lsn;
         expect(bytesToNumber(lsn), 3);
         expect(satOpLog[0].begin.commitTimestamp, Int64(3000));
         completer.complete();
       },
-    ]);
+    );
 
     final timeoutTimer = Timer(const Duration(milliseconds: 300), () {
       fail(
@@ -631,8 +619,11 @@ void main() {
       ],
     );
 
-    server.nextRpcResponse([start, relation, firstOpLogMessage]);
-    server.nextRpcResponse([stop]);
+    server.nextRpcResponse(
+      'startReplication',
+      [start, relation, firstOpLogMessage],
+    );
+    server.nextRpcResponse('stopReplication', [stop]);
     final completer = Completer<void>();
 
     client.on('transaction', (TransactionEvent transactionEvent) {
@@ -650,9 +641,7 @@ void main() {
   test('subscription succesful', () async {
     await connectAndAuth();
 
-    final startResp = SatInStartReplicationResp();
-    server.nextRpcResponse([startResp]);
-    await client.startReplication(null, null, null);
+    await startReplication();
 
     final shapeReq = ShapeRequest(
       requestId: 'fake',
@@ -663,7 +652,7 @@ void main() {
 
     const subscriptionId = 'THE_ID';
     final subsResp = SatSubsResp(subscriptionId: subscriptionId);
-    server.nextRpcResponse([subsResp]);
+    server.nextRpcResponse('subscribe', [subsResp]);
 
     final res = await client.subscribe(subscriptionId, [shapeReq]);
     expect(res.subscriptionId, subscriptionId);
@@ -672,9 +661,7 @@ void main() {
   test('RPC correctly handles interleaved subscribe responses', () async {
     await connectAndAuth();
 
-    final startResp = SatInStartReplicationResp();
-    server.nextRpcResponse([startResp]);
-    await client.startReplication(null, null, null);
+    await startReplication();
 
     final shapeReq1 = ShapeRequest(
       requestId: 'fake1',
@@ -698,11 +685,22 @@ void main() {
     final subsResp2 = SatSubsResp(
       subscriptionId: subscriptionId2,
     );
-    server.nextRpcResponse([subsResp1, subsResp2]);
+    // Result of the first call is delayed
+    server.nextRpcResponse('subscribe', (_req) async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      return [subsResp1];
+    });
+    server.nextRpcResponse('subscribe', [subsResp2]);
 
     final p1 = client.subscribe(subscriptionId1, [shapeReq1]);
     final p2 = client.subscribe(subscriptionId2, [shapeReq2]);
-    final [resp1, resp2] = await Future.wait([p1, p2]);
+
+    final [resp1, resp2] = await Future.any([
+      Future.wait([p1, p2]),
+      Future<void>.delayed(const Duration(milliseconds: 300)).then((_) {
+        throw Exception('Timed out while waiting for subsciptions to fulfill');
+      }),
+    ]);
 
     expect(resp1.subscriptionId, subscriptionId1);
     expect(resp2.subscriptionId, subscriptionId2);
@@ -711,9 +709,7 @@ void main() {
   test('listen to subscription events: error', () async {
     await connectAndAuth();
 
-    final startResp = SatInStartReplicationResp();
-    server.nextRpcResponse([startResp]);
-    await client.startReplication(null, null, null);
+    await startReplication();
 
     final shapeReq = ShapeRequest(
       requestId: 'fake',
@@ -733,7 +729,8 @@ void main() {
       message: 'FAKE ERROR',
       subscriptionId: subscriptionId,
     );
-    server.nextRpcResponse([subsResp, subsData, subsError]);
+    server
+        .nextRpcResponse('subscribe', [subsResp, '50ms', subsData, subsError]);
 
     void success(_) => fail('Should have failed');
     void error(_) {}
@@ -746,9 +743,7 @@ void main() {
   test('subscription incorrect protocol sequence', () async {
     await connectAndAuth();
 
-    final startResp = SatInStartReplicationResp();
-    server.nextRpcResponse([startResp]);
-    await client.startReplication(null, null, null);
+    await startReplication();
 
     const requestId = 'THE_REQUEST_ID';
     const subscriptionId = 'THE_SUBS_ID';
@@ -810,26 +805,34 @@ void main() {
     );
 
     final testCases = [
-      [subsResp, beginShape],
-      [subsResp, endShape],
-      [subsResp, endSub],
-      [subsResp, beginSub, endShape],
-      [subsResp, beginSub, beginShape, endSub],
-      [subsResp, beginSub, endShape],
-      [subsResp, beginSub, satOpLog],
-      [subsResp, beginSub, beginShape, endShape, satOpLog],
-      [subsResp, beginSub, beginShape, satOpLog, endSub],
-      [subsResp, beginSub, beginShape, wrongSatOpLog1],
-      [subsResp, beginSub, beginShape, wrongSatOpLog2],
-      [subsResp, beginSub, beginShape, wrongSatOpLog3],
-      [subsResp, beginSub, beginShape, wrongSatOpLog4],
-      [subsResp, beginSub, beginShape, validSatOpLog, endShape, validSatOpLog],
-      [subsRespWithErr, beginSub],
+      [subsResp, '10ms', beginShape],
+      [subsResp, '10ms', endShape],
+      [subsResp, '10ms', endSub],
+      [subsResp, '10ms', beginSub, endShape],
+      [subsResp, '10ms', beginSub, beginShape, endSub],
+      [subsResp, '10ms', beginSub, endShape],
+      [subsResp, '10ms', beginSub, satOpLog],
+      [subsResp, '10ms', beginSub, beginShape, endShape, satOpLog],
+      [subsResp, '10ms', beginSub, beginShape, satOpLog, endSub],
+      [subsResp, '10ms', beginSub, beginShape, wrongSatOpLog1],
+      [subsResp, '10ms', beginSub, beginShape, wrongSatOpLog2],
+      [subsResp, '10ms', beginSub, beginShape, wrongSatOpLog3],
+      [subsResp, '10ms', beginSub, beginShape, wrongSatOpLog4],
+      [
+        subsResp,
+        '10ms',
+        beginSub,
+        beginShape,
+        validSatOpLog,
+        endShape,
+        validSatOpLog,
+      ],
+      [subsRespWithErr, '10ms', beginSub],
     ];
 
     while (testCases.isNotEmpty) {
       final next = testCases.removeAt(0);
-      server.nextRpcResponse(next);
+      server.nextRpcResponse('subscribe', next);
 
       final completer = Completer<void>();
       void success(_) {
@@ -858,9 +861,7 @@ void main() {
   test('subscription correct protocol sequence with data', () async {
     await connectAndAuth();
 
-    final startResp = SatInStartReplicationResp();
-    server.nextRpcResponse([startResp]);
-    await client.startReplication(null, null, null);
+    await startReplication();
 
     final Relation rel = Relation(
       id: 0,
@@ -935,8 +936,9 @@ void main() {
       ops: [satTransOpInsert],
     );
 
-    server.nextRpcResponse([
+    server.nextRpcResponse('subscribe', [
       subsResp,
+      '10ms',
       beginSub,
       beginShape1,
       satOpLog1,
@@ -956,18 +958,16 @@ void main() {
     () async {
       await connectAndAuth();
 
-      final startResp = SatInStartReplicationResp();
-      server.nextRpcResponse([startResp]);
-      await client.startReplication(null, null, null);
+      await startReplication();
 
       const subscriptionId = 'THE_ID';
 
       final unsubResp = SatUnsubsResp();
-      server.nextRpcResponse([unsubResp]);
+      server.nextRpcResponse('unsubscribe', [unsubResp]);
       final resp = await client.unsubscribe([subscriptionId]);
       expect(resp, UnsubscribeResponse());
     },
-  ); */
+  );
 }
 
 AuthState createAuthState() {
@@ -977,8 +977,8 @@ AuthState createAuthState() {
   );
 }
 
-DecodedMessage decode(Uint8List data) {
-  final code = data[0];
-  final type = getMsgFromCode(code)!;
-  return DecodedMessage(decodeMessage(data.sublist(1), type), type);
+Future<void> startReplication() async {
+  final startResp = SatInStartReplicationResp();
+  server.nextRpcResponse('startReplication', [startResp]);
+  await client.startReplication(null, null, null);
 }

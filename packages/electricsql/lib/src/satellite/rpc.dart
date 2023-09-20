@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:electricsql/src/proto/satellite.pb.dart';
-import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -12,11 +10,15 @@ typedef RequestId = String;
 
 typedef SenderFn = void Function(Object msg);
 
+abstract class BaseRpcClient extends RpcClient {
+  Logger? logRequestsLogger;
+}
+
 /// Wrapper class that exposes a `request` method for generated RPC services to use.
 ///
 /// Any `SatRpcResponse` messages should be forwarded to this class to be correctly marked
 /// as fulfilled.
-class RPC implements RpcClient {
+class RPC extends BaseRpcClient {
   final SenderFn _sender;
   int defaultTimeout;
   final Logger _log;
@@ -55,6 +57,12 @@ class RPC implements RpcClient {
     GeneratedMessage messageProto,
     T emptyResponse,
   ) async {
+    final _logRequestLogger = logRequestsLogger;
+    if (_logRequestLogger != null &&
+        _logRequestLogger.levelImportance <= Level.debug.value) {
+      _logRequestLogger.debug('[rpc] send: ${msgToString(messageProto)}');
+    }
+
     final message = encodeMessage(messageProto);
     final requestId = nextRequestId++;
 
@@ -83,7 +91,14 @@ class RPC implements RpcClient {
 
     // Fill the response by decoding the bytes
     emptyResponse.mergeFromBuffer(res);
-    return emptyResponse;
+    final responseProto = emptyResponse;
+
+    if (_logRequestLogger != null &&
+        _logRequestLogger.levelImportance <= Level.debug.value) {
+      _logRequestLogger.debug('[rpc] recv: ${msgToString(responseProto)}');
+    }
+
+    return responseProto;
   }
 
   /// Handle RPC response, dispatching it to the appropriate listener if relevant
@@ -152,7 +167,6 @@ Responder rpcRespond(SenderFn send) {
     final message =
         respOrError is! SatErrorResp ? encodeMessage(respOrError) : null;
 
-    print("create response msg=$message error=$error");
     send(
       SatRpcResponse(
         requestId: req.requestId,
@@ -164,7 +178,6 @@ Responder rpcRespond(SenderFn send) {
   };
 }
 
-// TODO(upgrade): Log requests
 /// Wrap an RPC service instance to log decoded RPC request & response
 ///
 /// `proto-ts`-generated server instance passes to and expects to receive from
@@ -174,28 +187,7 @@ Responder rpcRespond(SenderFn send) {
 ///
 /// @param service Service instance to wrap
 /// @returns A proxy around the service instance
-RootApi withRpcRequestLogging(RootApi service, Logger logger) {
-  return service;
-  /* return new Proxy(service, {
-    get(target, p, _receiver) {
-      if (typeof target[p as keyof Root] === 'function') {
-        return new Proxy(target[p as keyof Root], {
-          apply(target, thisArg, argArray) {
-            if (logger.getLevel() <= 1)
-              logger.debug(`[rpc] send: ${msgToString(argArray[0])}`)
-            // All methods on the `RootClientImpl` service return promises that contain the response, so we can do this if we return the value
-            return Reflect.apply(target, thisArg, argArray).then(
-              (x: Awaited<ReturnType<Root[keyof Root]>>) => {
-                if (logger.getLevel() <= 1)
-                  logger.debug(`[rpc] recv: ${msgToString(x)}`)
-                return x
-              }
-            )
-          },
-        })
-      } else {
-        return Reflect.get(target, p)
-      }
-    },
-  }) */
+T withRpcRequestLogging<T extends BaseRpcClient>(T rpcClient, Logger logger) {
+  rpcClient.logRequestsLogger = logger;
+  return rpcClient;
 }
