@@ -89,7 +89,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
 class InitAppLoader extends HookWidget {
   final ValueNotifier<InitData?> initDataVN;
 
-  const InitAppLoader({required this.initDataVN});
+  const InitAppLoader({super.key, required this.initDataVN});
 
   @override
   Widget build(BuildContext context) {
