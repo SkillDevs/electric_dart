@@ -1299,16 +1299,16 @@ void main() {
     final lsn2 = satellite.client.getLastSentLsn();
     expect(lsn2, numberToBytes(2));
 
-    final old_oplog = await satellite.getEntries();
-    final transactions = toTransactions(old_oplog, kTestRelations);
+    final oldOplog = await satellite.getEntries();
+    final transactions = toTransactions(oldOplog, kTestRelations);
 
     final clientId = satellite.authState!.clientId;
     transactions[0].origin = clientId;
 
     // Transaction containing these oplogs is applies, which means we delete them
     await satellite.applyTransaction(transactions[0]);
-    final new_oplog = await satellite.getEntries();
-    expect(new_oplog, isEmpty);
+    final newOplog = await satellite.getEntries();
+    expect(newOplog, isEmpty);
   });
 
   // stub client and make satellite throw the error with option off/succeed with option on
