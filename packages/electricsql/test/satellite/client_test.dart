@@ -163,8 +163,6 @@ void main() {
     await completer.future;
   });
 
-  // TODO: Finish tests
-
   test('replication start failure', () async {
     await connectAndAuth();
 
