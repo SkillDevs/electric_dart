@@ -38,7 +38,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN,
       // final todosDb = TodosDatabase(sqliteRepo);
       // final adapter = SqliteAdapter(sqliteRepo.db);
 
-      const dbName = "todos_db";
+      final dbName = "todos_db_user-$userId";
 
       final DriftElectricClient<AppDatabase> electricClient;
       try {

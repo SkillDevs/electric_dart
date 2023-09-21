@@ -660,14 +660,17 @@ class SatelliteClient extends EventEmitter implements Client {
   void _addUserIdToRelation(SatRelation rel) {
     // TODO(dart): change table
     if (rel.tableName == 'todo') {
-      rel.columns.add(
-        SatRelationColumn(
-          name: 'electric_user_id',
-          type: 'TEXT',
-          primaryKey: false,
-          isNullable: false,
-        ),
-      );
+      final hasColumn = rel.columns.any((c) => c.name == 'electric_user_id');
+      if (!hasColumn) {
+        rel.columns.add(
+          SatRelationColumn(
+            name: 'electric_user_id',
+            type: 'TEXT',
+            primaryKey: false,
+            isNullable: false,
+          ),
+        );
+      }
     }
   }
 
@@ -992,14 +995,17 @@ class SatelliteClient extends EventEmitter implements Client {
 void addUserIdtoRelation(Relation relation) {
   // TODO(dart): change table
   if (relation.table == 'todo') {
-    relation.columns.add(
-      RelationColumn(
-        name: 'electric_user_id',
-        type: 'TEXT',
-        isNullable: false,
-        primaryKey: false,
-      ),
-    );
+    final hasColumn = relation.columns.any((c) => c.name == 'electric_user_id');
+    if (!hasColumn) {
+      relation.columns.add(
+        RelationColumn(
+          name: 'electric_user_id',
+          type: 'TEXT',
+          isNullable: false,
+          primaryKey: false,
+        ),
+      );
+    }
   }
 }
 
@@ -1007,7 +1013,9 @@ SatOpRow serializeRow(Record rec, Relation relation) {
   int recordNumColumn = 0;
   final recordNullBitMask =
       Uint8List(calculateNumBytes(relation.columns.length));
+  
   addUserIdtoRelation(relation);
+  
   final recordValues = relation.columns.fold<List<List<int>>>(
     [],
     (List<List<int>> acc, RelationColumn c) {
