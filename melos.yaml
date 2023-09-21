@@ -21,7 +21,7 @@ scripts:
 
   format:
     run: |
-      dart format .
+      dart format --set-exit-if-changed .
 
   test:all:
     run: |
