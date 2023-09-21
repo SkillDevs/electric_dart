@@ -13,6 +13,7 @@ CREATE TABLE "todo" (
     "listid" TEXT,
     "text" TEXT,
     "completed" INTEGER DEFAULT 0 NOT NULL,
+    "electric_user_id" TEXT NOT NULL,
     PRIMARY KEY ("id")
   );
 COMMIT;

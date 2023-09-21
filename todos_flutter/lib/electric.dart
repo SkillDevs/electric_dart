@@ -15,15 +15,16 @@ final connectivityStateControllerProvider =
 
 Future<DriftElectricClient<AppDatabase>> startElectricDrift(
   String dbName,
-  AppDatabase db,
-) async {
+  AppDatabase db, {
+  required String userId,
+}) async {
   final client = await electrify<AppDatabase>(
     dbName: dbName,
     db: db,
     migrations: kElectricMigrations,
     config: ElectricConfig(
       auth: AuthConfig(
-        token: authToken(),
+        token: authToken(userId),
       ),
       logger: LoggerConfig(
         level: Level.debug,

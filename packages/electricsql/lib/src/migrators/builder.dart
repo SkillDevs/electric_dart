@@ -61,7 +61,7 @@ MetaData parseMetadata(Map<String, Object?> data) {
 /// @returns The corresponding migration.
 Migration makeMigration(MetaData migration) {
   final statements = migration.ops
-      .map((op) => op.stmts.map((stmt) => stmt.sql))
+      .map((op) => op.stmts.map((stmt) => _removeUserIdColumn(stmt.sql)))
       .expand((l) => l);
   final tablesI = migration.ops.map((op) => op.table).toList();
   // remove duplicate tables
@@ -72,12 +72,25 @@ Migration makeMigration(MetaData migration) {
   final triggers = tables
       .map(generateTriggersForTable)
       .expand((l) => l)
-      .map((stmt) => stmt.sql);
+      .map((stmt) => _cleanUserIdFromTrigger(stmt.sql));
 
   return Migration(
     statements: [...statements, ...triggers],
     version: migration.version,
   );
+}
+
+String _cleanUserIdFromTrigger(String sql) {
+  final cleanSql = sql
+      .replaceAll("'electric_user_id',", '')
+      .replaceAll('new.electric_user_id,', '')
+      .replaceAll('old.electric_user_id,', '');
+  return cleanSql;
+}
+
+String _removeUserIdColumn(String sql) {
+  final cleanSql = sql.replaceAll('"electric_user_id" TEXT NOT NULL,\n  ', '');
+  return cleanSql;
 }
 
 /// Decodes a base64-encoded `SatOpMigrate` message.
