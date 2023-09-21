@@ -35,8 +35,8 @@ class TodoLists extends Table {
   TextColumn get editing => text().nullable()();
 }
 
-Future<DriftRepository> initDriftTodosDatabase() async {
-  final db = AppDatabase();
+Future<DriftRepository> initDriftTodosDatabase(String userId) async {
+  final db = AppDatabase(userId: userId);
 
   await db.customSelect("SELECT 1").get();
 
@@ -120,7 +120,9 @@ class DriftRepository implements m.TodosRepository {
 
 @DriftDatabase(tables: [Todos, TodoLists])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(impl.connect());
+  final String userId;
+
+  AppDatabase({required this.userId}) : super(impl.connect(userId));
 
   @override
   int get schemaVersion => 1;
