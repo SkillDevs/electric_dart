@@ -16,6 +16,7 @@ typedef InitData = ({
   TodosDatabase todosDb,
   ElectricClient electricClient,
   ConnectivityStateController connectivityStateController,
+  String userId,
 });
 
 void useInitializeApp(ValueNotifier<InitData?> initDataVN,
@@ -29,7 +30,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN,
     InitData? initData;
 
     Future<void> init() async {
-      final driftRepo = await initDriftTodosDatabase();
+      final driftRepo = await initDriftTodosDatabase(userId);
       if (!mounted) return;
 
       final todosDb = TodosDatabase(driftRepo);
@@ -57,7 +58,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN,
             if (shouldDeleteLocal == true) {
               await driftRepo.close();
 
-              await impl.deleteTodosDbFile();
+              await impl.deleteTodosDbFile(driftRepo.db.userId);
 
               retryVN.value++;
               return;
@@ -77,6 +78,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN,
         todosDb: todosDb,
         electricClient: electricClient,
         connectivityStateController: connectivityStateController,
+        userId: userId,
       );
       initDataVN.value = initData;
     }

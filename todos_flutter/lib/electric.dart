@@ -6,6 +6,8 @@ import 'package:todos_electrified/generated/electric_migrations.dart';
 
 import 'package:electricsql_flutter/drivers/drift.dart';
 
+final Provider<String> userIdProvider = Provider((ref) => throw UnimplementedError());
+
 final Provider<ElectricClient> electricClientProvider =
     Provider((ref) => throw UnimplementedError());
 

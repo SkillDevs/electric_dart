@@ -53,6 +53,7 @@ class _Entrypoint extends HookWidget {
         connectivityStateControllerProvider.overrideWith(
           (ref) => initData.connectivityStateController,
         ),
+        userIdProvider.overrideWithValue(initData.userId),
       ],
       child: const MyApp(),
     );
@@ -159,16 +160,17 @@ class MyHomePage extends HookConsumerWidget {
   }
 }
 
-class _DeleteDbButton extends StatelessWidget {
+class _DeleteDbButton extends ConsumerWidget {
   const _DeleteDbButton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return TextButton.icon(
       style: TextButton.styleFrom(
           foregroundColor: Theme.of(context).colorScheme.error),
       onPressed: () async {
-        await impl.deleteTodosDbFile();
+        final userId = ref.read(userIdProvider);
+        await impl.deleteTodosDbFile(userId);
 
         if (!context.mounted) return;
 
