@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/util.dart' show genUUID;
 import 'package:electricsql/electricsql.dart';
 import 'package:flutter/foundation.dart';
@@ -26,6 +27,10 @@ Future<void> main() async {
   runApp(_Entrypoint());
 }
 
+final logoutActionProvider = Provider<void Function()>((ref) {
+  throw UnimplementedError();
+});
+
 class _Entrypoint extends HookWidget {
   @override
   Widget build(BuildContext context) {
@@ -36,8 +41,15 @@ class _Entrypoint extends HookWidget {
     useEffect(() {
       // Cleanup resources on app unmount
       return () {
-        initData?.connectivityStateController.dispose();
-        initData?.electricClient.dispose();
+        () async {
+          if (initData != null) {
+            initData.electricClient.dispose();
+            await globalRegistry.stopAll();
+            await initData.todosDb.todosRepo.close();
+
+            print("Everything closed");
+          }
+        }();
       };
     }, [initData]);
 
@@ -54,6 +66,9 @@ class _Entrypoint extends HookWidget {
           (ref) => initData.connectivityStateController,
         ),
         userIdProvider.overrideWithValue(initData.userId),
+        logoutActionProvider.overrideWith((ref) => () {
+              initDataVN.value = null;
+            })
       ],
       child: const MyApp(),
     );
@@ -108,6 +123,14 @@ class MyHomePage extends HookConsumerWidget {
             const AnimatedEmoji(
               AnimatedEmojis.electricity,
               size: 24,
+            ),
+            Spacer(),
+            IconButton(
+              onPressed: () {
+                final logoutAction = ref.read(logoutActionProvider);
+                logoutAction();
+              },
+              icon: const Icon(Icons.logout),
             ),
           ],
         ),
