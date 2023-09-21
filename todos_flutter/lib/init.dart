@@ -18,7 +18,8 @@ typedef InitData = ({
   ConnectivityStateController connectivityStateController,
 });
 
-void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
+void useInitializeApp(ValueNotifier<InitData?> initDataVN,
+    {required String userId}) {
   final retryVN = useState(0);
 
   final context = useContext();
@@ -40,7 +41,9 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
 
       final DriftElectricClient<AppDatabase> electricClient;
       try {
-        electricClient = await startElectricDrift(dbName, driftRepo.db);
+        print("Starting electric with userId $userId");
+        electricClient =
+            await startElectricDrift(dbName, driftRepo.db, userId: userId);
       } on SatelliteException catch (e) {
         if (mounted) {
           if (!kIsWeb && e.code == SatelliteErrorCode.unknownSchemaVersion) {
@@ -86,6 +89,41 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
   }, [retryVN.value]);
 }
 
+class LoginScreen extends HookWidget {
+  final ValueNotifier<String?> userVN;
+  const LoginScreen({super.key, required this.userVN});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          UserTile(userId: "1", userVN: userVN),
+          UserTile(userId: "2", userVN: userVN),
+        ],
+      ),
+    );
+  }
+}
+
+class UserTile extends StatelessWidget {
+  final String userId;
+  final ValueNotifier<String?> userVN;
+
+  const UserTile({super.key, required this.userId, required this.userVN});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.arrow_forward),
+      label: Text("User $userId"),
+      onPressed: () {
+        userVN.value = userId;
+      },
+    );
+  }
+}
+
 class InitAppLoader extends HookWidget {
   final ValueNotifier<InitData?> initDataVN;
 
@@ -93,35 +131,38 @@ class InitAppLoader extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userVN = useState<String?>(null);
     return MaterialApp(
       theme: ThemeData.from(
         useMaterial3: true,
         colorScheme: kElectricColorScheme,
       ),
-      home: HookBuilder(builder: (context) {
-        useInitializeApp(initDataVN);
+      home: userVN.value == null
+          ? LoginScreen(userVN: userVN)
+          : HookBuilder(builder: (context) {
+              useInitializeApp(initDataVN, userId: userVN.value!);
 
-        return Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Initializing the app...",
-                    style: Theme.of(context).textTheme.displaySmall,
+              return Scaffold(
+                body: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Initializing the app...",
+                          style: Theme.of(context).textTheme.displaySmall,
+                        ),
+                        const SizedBox(height: 20),
+                        const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }),
+                ),
+              );
+            }),
     );
   }
 }

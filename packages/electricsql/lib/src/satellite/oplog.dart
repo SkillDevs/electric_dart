@@ -515,8 +515,18 @@ DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
   return DataChange(
     type: opTypeToChangeType(entry.optype),
     relation: relation,
-    record: record,
-    oldRecord: oldRecord,
+    record: _addUserId(relation, record),
+    oldRecord: _addUserId(relation, oldRecord),
     tags: decodeTags(entry.clearTags),
   );
+}
+
+// TODO(dart): Read correct user id
+Map<String, Object?>? _addUserId(Relation relation, Map<String, Object?>? row) {
+  if (relation.table == 'todo') {
+    if (row == null) return null;
+    row['electric_user_id'] = '1';
+    // row['listid'] = 'waaaaaaaaaaaat';
+  }
+  return row;
 }

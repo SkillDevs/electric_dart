@@ -38,6 +38,7 @@ services:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/${APP_NAME:-electric}
       LOGICAL_PUBLISHER_HOST: electric
       AUTH_MODE: insecure
+      # LOG_LEVEL: debug
     ports:
       - 5133:5133
     volumes:

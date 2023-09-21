@@ -275,6 +275,8 @@ class SubscriptionsDataCache extends EventEmitter {
     final SatOpInsert(:relationId, :rowData, :tags) = op.insert;
 
     final relation = relations[relationId];
+    relation?.columns
+        .removeWhere((element) => element.name == "electric_user_id");
     if (relation == null) {
       internalError(
         SatelliteErrorCode.protocolViolation,

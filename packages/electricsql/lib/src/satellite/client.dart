@@ -651,9 +651,23 @@ class SatelliteClient extends EventEmitter implements Client {
             ),
           ),
         );
-
+        _addUserIdToRelation(satRelation);
         sendMessage(satRelation);
       }
+    }
+  }
+
+  void _addUserIdToRelation(SatRelation rel) {
+    // TODO(dart): change table
+    if (rel.tableName == 'todo') {
+      rel.columns.add(
+        SatRelationColumn(
+          name: 'electric_user_id',
+          type: 'TEXT',
+          primaryKey: false,
+          isNullable: false,
+        ),
+      );
     }
   }
 
@@ -791,7 +805,10 @@ class SatelliteClient extends EventEmitter implements Client {
   void processOpLogMessage(SatOpLog opLogMessage) {
     final replication = inbound;
 
-    //print("PROCESS! ${opLogMessage.ops.length}");
+    for (final relation in replication.relations.values) {
+      relation.columns
+          .removeWhere((element) => element.name == 'electric_user_id');
+    }
     for (final op in opLogMessage.ops) {
       if (op.hasBegin()) {
         final transaction = Transaction(
@@ -972,10 +989,25 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 }
 
+void addUserIdtoRelation(Relation relation) {
+  // TODO(dart): change table
+  if (relation.table == 'todo') {
+    relation.columns.add(
+      RelationColumn(
+        name: 'electric_user_id',
+        type: 'TEXT',
+        isNullable: false,
+        primaryKey: false,
+      ),
+    );
+  }
+}
+
 SatOpRow serializeRow(Record rec, Relation relation) {
   int recordNumColumn = 0;
   final recordNullBitMask =
       Uint8List(calculateNumBytes(relation.columns.length));
+  addUserIdtoRelation(relation);
   final recordValues = relation.columns.fold<List<List<int>>>(
     [],
     (List<List<int>> acc, RelationColumn c) {
@@ -1005,7 +1037,9 @@ Record? deserializeRow(
     return null;
   }
   return Map.fromEntries(
-    relation.columns.mapIndexed((i, c) {
+    relation.columns
+        .where((c) => c.name != 'electric_user_id')
+        .mapIndexed((i, c) {
       Object? value;
       if (getMaskBit(_row.nullsBitmask, i) == 1) {
         value = null;
