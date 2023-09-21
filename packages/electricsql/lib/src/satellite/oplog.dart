@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/sets.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -525,7 +526,7 @@ DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
 Map<String, Object?>? _addUserId(Relation relation, Map<String, Object?>? row) {
   if (relation.table == 'todo') {
     if (row == null) return null;
-    row['electric_user_id'] = '1';
+    row['electric_user_id'] = SatelliteProcess.userId;
     // row['listid'] = 'waaaaaaaaaaaat';
   }
   return row;

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/bundle.dart';
@@ -56,6 +57,8 @@ const throwErrors = {SatelliteErrorCode.internal};
 class SatelliteProcess implements Satellite {
   @override
   final DbName dbName;
+
+  static String? userId;
 
   @override
   DatabaseAdapter get adapter => _adapter;
@@ -698,6 +701,7 @@ This means there is a notifier subscription leak.`''');
     }
 
     try {
+      setCurrentUser(_authState);
       await client.connect();
       final authResp = await client.authenticate(_authState);
 
@@ -1458,6 +1462,15 @@ This means there is a notifier subscription leak.`''');
       maxSqlParameters = 999;
     }
   }
+}
+
+void setCurrentUser(AuthState authState) {
+  final token = authState.token;
+  final a = JWT.decode(token);
+  final payload = a.payload as Map<String, Object?>;
+
+  SatelliteProcess.userId = payload['user_id']! as String;
+  print('Current user = ${SatelliteProcess.userId}');
 }
 
 Statement _applyDeleteOperation(
