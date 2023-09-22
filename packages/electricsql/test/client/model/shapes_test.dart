@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart' hide Migrator;
-import 'package:drift/native.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
@@ -11,14 +10,11 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/util.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 import '../../satellite/common.dart';
-import '../../util/sqlite.dart';
 import '../generated/database.dart';
 
-late Database conn;
 late DbName dbName;
 late TestsDatabase db;
 late SatelliteProcess satellite;
@@ -121,7 +117,6 @@ void main() {
   tearDown(() async {
     await cleanAndStopSatelliteRaw(dbName: dbName, satellite: satellite);
     await db.close();
-    conn.dispose();
   });
 
   test('promise resolves when subscription starts loading', () async {
@@ -200,8 +195,7 @@ Future<int> runMigrations() async {
 }
 
 Future<void> makeContext() async {
-  conn = openSqliteDbMemory();
-  db = TestsDatabase(NativeDatabase.opened(conn));
+  db = TestsDatabase.memory();
 
   client = MockSatelliteClient();
   final adapter = DriftAdapter(db);

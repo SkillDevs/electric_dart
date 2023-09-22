@@ -21,7 +21,7 @@ Future<void> main() async {
     logger: LoggerConfig(level: Level.debug),
   );
 
-  final db = TestsDatabase(NativeDatabase.opened(conn));
+  final db = TestsDatabase.memory();
 
   final electricClient = await electrify<TestsDatabase>(
     dbName: 'tests_db',

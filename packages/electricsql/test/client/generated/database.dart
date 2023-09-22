@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 
 // assuming that your file is called filename.dart. This will give an error at
 // first, but it's needed for drift to know about the generated code
@@ -58,6 +59,16 @@ class Profiles extends Table {
 @DriftDatabase(tables: [Items, Users, Posts, Profiles])
 class TestsDatabase extends _$TestsDatabase {
   TestsDatabase(super.e);
+
+  factory TestsDatabase.memory() {
+    return TestsDatabase(
+      NativeDatabase.memory(
+        setup: (db) {
+          db.config.doubleQuotedStringLiterals = false;
+        },
+      ),
+    );
+  }
 
   @override
   int get schemaVersion => 1;
