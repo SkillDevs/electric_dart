@@ -18,7 +18,7 @@ import 'package:todos_electrified/theme.dart';
 import 'package:todos_electrified/todos.dart';
 import 'package:animated_emoji/animated_emoji.dart';
 
-const kClientId = "FAKE-CLIENT-ID";
+const kListId = "LIST-ID-SAMPLE";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,12 +29,21 @@ Future<void> main() async {
 class _Entrypoint extends HookWidget {
   @override
   Widget build(BuildContext context) {
-    final initData = useInitData();
+    final initDataVN = useState<InitData?>(null);
+
+    final initData = initDataVN.value;
+
+    useEffect(() {
+      // Cleanup resources on app unmount
+      return () {
+        initData?.connectivityStateController.dispose();
+        initData?.electricClient.dispose();
+      };
+    }, [initData]);
 
     if (initData == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      // This will initialize the app and will update the initData ValueNotifer
+      return InitAppLoader(initDataVN: initDataVN);
     }
 
     return ProviderScope(
@@ -57,7 +66,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Todos Electrified',
       theme: ThemeData.from(
         useMaterial3: true,
         colorScheme: kElectricColorScheme,
@@ -260,7 +269,7 @@ class _TodosLoaded extends HookConsumerWidget {
                     await db.insertTodo(
                       Todo(
                         id: genUUID(),
-                        listId: kClientId,
+                        listId: kListId,
                         text: textController.text,
                         editedAt: DateTime.now(),
                         completed: false,

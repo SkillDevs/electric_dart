@@ -387,9 +387,11 @@ This means there is a notifier subscription leak.`''');
 
   Future<void> _handleSubscriptionData(SubscriptionData subsData) async {
     subscriptions.subscriptionDelivered(subsData);
-    if (subsData.data.isNotEmpty) {
-      await _applySubscriptionData(subsData.data, subsData.lsn);
-    }
+
+    // When data is empty, we will simply store the subscription and lsn state
+    // Not storing this state means that a second open of the app will try to
+    // re-insert rows which will possible trigger a UNIQUE constraint violation
+    await _applySubscriptionData(subsData.data, subsData.lsn);
 
     // Call the `onSuccess` callback for this subscription
     final completer = subscriptionNotifiers[subsData.subscriptionId]!;

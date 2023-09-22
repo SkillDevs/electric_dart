@@ -15,9 +15,10 @@ env:
   OTP_VERSION: "25.3"
   ELIXIR_VERSION: "1.15"
 
+# Only run one E2E workflow at the same time
 concurrency:
-  group: e2e-${{ github.ref }}
-  cancel-in-progress: true
+  group: e2e-${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
   e2e_tests:
@@ -34,6 +35,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+
+      # Make sure that only one E2E workflow is running at the same time
+      # Ports used in the tests are fixed and cannot be reused
+      # - uses: ahmadnassri/action-workflow-queue@v1
+      #   with:
+      #     # milliseconds
+      #     timeout: 900000  # 15 minutes
 
       - name: Inject slug/short variables
         uses: rlespinasse/github-slug-action@v4
