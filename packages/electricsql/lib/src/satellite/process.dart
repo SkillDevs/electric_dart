@@ -1466,8 +1466,20 @@ This means there is a notifier subscription leak.`''');
 
 void setCurrentUser(AuthState authState) {
   final token = authState.token;
-  final a = JWT.decode(token);
+  final a = JWT.tryDecode(token);
+  if (a == null) {
+    logger.warning('Warning not a valid JWT token');
+    return;
+  }
+
+  if (a.payload is! Map<String, Object?>) {
+    return;
+  }
+
   final payload = a.payload as Map<String, Object?>;
+  if (!payload.containsKey('user_id')) {
+    return;
+  }
 
   SatelliteProcess.userId = payload['user_id']! as String;
   print('Current user = ${SatelliteProcess.userId}');
