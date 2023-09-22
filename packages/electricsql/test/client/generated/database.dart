@@ -9,7 +9,7 @@ class Items extends Table {
   IntColumn get nbr => integer().nullable()();
 
   @override
-  String? get tableName => 'Item';
+  String? get tableName => 'Items';
 
   @override
   Set<Column<Object>>? get primaryKey => {value};
@@ -28,10 +28,11 @@ class Users extends Table {
 
 class Posts extends Table {
   IntColumn get id => integer()();
-  TextColumn get name => text().unique()();
+  TextColumn get title => text().unique()();
   TextColumn get contents => text()();
   IntColumn get nbr => integer().nullable()();
-  IntColumn get authorId => integer().references(Users, #id)();
+  IntColumn get authorId =>
+      integer().named('authorId').references(Users, #id)();
 
   @override
   String? get tableName => 'Post';
@@ -44,7 +45,8 @@ class Profiles extends Table {
   IntColumn get id => integer()();
   TextColumn get bio => text()();
   TextColumn get contents => text()();
-  IntColumn get userId => integer().unique().references(Users, #id)();
+  IntColumn get userId =>
+      integer().unique().named('userId').references(Users, #id)();
 
   @override
   String? get tableName => 'Profile';

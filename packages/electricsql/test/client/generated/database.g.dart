@@ -21,9 +21,9 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   @override
   List<GeneratedColumn> get $columns => [value, nbr];
   @override
-  String get aliasedName => _alias ?? 'Item';
+  String get aliasedName => _alias ?? 'Items';
   @override
-  String get actualTableName => 'Item';
+  String get actualTableName => 'Items';
   @override
   VerificationContext validateIntegrity(Insertable<Item> instance,
       {bool isInserting = false}) {
@@ -356,10 +356,10 @@ class $PostsTable extends Posts with TableInfo<$PostsTable, Post> {
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
       'id', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-      'name', aliasedName, false,
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
@@ -378,13 +378,13 @@ class $PostsTable extends Posts with TableInfo<$PostsTable, Post> {
       const VerificationMeta('authorId');
   @override
   late final GeneratedColumn<int> authorId = GeneratedColumn<int>(
-      'author_id', aliasedName, false,
+      'authorId', aliasedName, false,
       type: DriftSqlType.int,
       requiredDuringInsert: true,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES User (id)'));
   @override
-  List<GeneratedColumn> get $columns => [id, name, contents, nbr, authorId];
+  List<GeneratedColumn> get $columns => [id, title, contents, nbr, authorId];
   @override
   String get aliasedName => _alias ?? 'Post';
   @override
@@ -397,11 +397,11 @@ class $PostsTable extends Posts with TableInfo<$PostsTable, Post> {
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    if (data.containsKey('name')) {
+    if (data.containsKey('title')) {
       context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     } else if (isInserting) {
-      context.missing(_nameMeta);
+      context.missing(_titleMeta);
     }
     if (data.containsKey('contents')) {
       context.handle(_contentsMeta,
@@ -413,9 +413,9 @@ class $PostsTable extends Posts with TableInfo<$PostsTable, Post> {
       context.handle(
           _nbrMeta, nbr.isAcceptableOrUnknown(data['nbr']!, _nbrMeta));
     }
-    if (data.containsKey('author_id')) {
+    if (data.containsKey('authorId')) {
       context.handle(_authorIdMeta,
-          authorId.isAcceptableOrUnknown(data['author_id']!, _authorIdMeta));
+          authorId.isAcceptableOrUnknown(data['authorId']!, _authorIdMeta));
     } else if (isInserting) {
       context.missing(_authorIdMeta);
     }
@@ -430,14 +430,14 @@ class $PostsTable extends Posts with TableInfo<$PostsTable, Post> {
     return Post(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      name: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
       contents: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}contents'])!,
       nbr: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}nbr']),
       authorId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}author_id'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}authorId'])!,
     );
   }
 
@@ -449,13 +449,13 @@ class $PostsTable extends Posts with TableInfo<$PostsTable, Post> {
 
 class Post extends DataClass implements Insertable<Post> {
   final int id;
-  final String name;
+  final String title;
   final String contents;
   final int? nbr;
   final int authorId;
   const Post(
       {required this.id,
-      required this.name,
+      required this.title,
       required this.contents,
       this.nbr,
       required this.authorId});
@@ -463,19 +463,19 @@ class Post extends DataClass implements Insertable<Post> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['name'] = Variable<String>(name);
+    map['title'] = Variable<String>(title);
     map['contents'] = Variable<String>(contents);
     if (!nullToAbsent || nbr != null) {
       map['nbr'] = Variable<int>(nbr);
     }
-    map['author_id'] = Variable<int>(authorId);
+    map['authorId'] = Variable<int>(authorId);
     return map;
   }
 
   PostsCompanion toCompanion(bool nullToAbsent) {
     return PostsCompanion(
       id: Value(id),
-      name: Value(name),
+      title: Value(title),
       contents: Value(contents),
       nbr: nbr == null && nullToAbsent ? const Value.absent() : Value(nbr),
       authorId: Value(authorId),
@@ -487,7 +487,7 @@ class Post extends DataClass implements Insertable<Post> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Post(
       id: serializer.fromJson<int>(json['id']),
-      name: serializer.fromJson<String>(json['name']),
+      title: serializer.fromJson<String>(json['title']),
       contents: serializer.fromJson<String>(json['contents']),
       nbr: serializer.fromJson<int?>(json['nbr']),
       authorId: serializer.fromJson<int>(json['authorId']),
@@ -498,7 +498,7 @@ class Post extends DataClass implements Insertable<Post> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'name': serializer.toJson<String>(name),
+      'title': serializer.toJson<String>(title),
       'contents': serializer.toJson<String>(contents),
       'nbr': serializer.toJson<int?>(nbr),
       'authorId': serializer.toJson<int>(authorId),
@@ -507,13 +507,13 @@ class Post extends DataClass implements Insertable<Post> {
 
   Post copyWith(
           {int? id,
-          String? name,
+          String? title,
           String? contents,
           Value<int?> nbr = const Value.absent(),
           int? authorId}) =>
       Post(
         id: id ?? this.id,
-        name: name ?? this.name,
+        title: title ?? this.title,
         contents: contents ?? this.contents,
         nbr: nbr.present ? nbr.value : this.nbr,
         authorId: authorId ?? this.authorId,
@@ -522,7 +522,7 @@ class Post extends DataClass implements Insertable<Post> {
   String toString() {
     return (StringBuffer('Post(')
           ..write('id: $id, ')
-          ..write('name: $name, ')
+          ..write('title: $title, ')
           ..write('contents: $contents, ')
           ..write('nbr: $nbr, ')
           ..write('authorId: $authorId')
@@ -531,13 +531,13 @@ class Post extends DataClass implements Insertable<Post> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, contents, nbr, authorId);
+  int get hashCode => Object.hash(id, title, contents, nbr, authorId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Post &&
           other.id == this.id &&
-          other.name == this.name &&
+          other.title == this.title &&
           other.contents == this.contents &&
           other.nbr == this.nbr &&
           other.authorId == this.authorId);
@@ -545,51 +545,51 @@ class Post extends DataClass implements Insertable<Post> {
 
 class PostsCompanion extends UpdateCompanion<Post> {
   final Value<int> id;
-  final Value<String> name;
+  final Value<String> title;
   final Value<String> contents;
   final Value<int?> nbr;
   final Value<int> authorId;
   const PostsCompanion({
     this.id = const Value.absent(),
-    this.name = const Value.absent(),
+    this.title = const Value.absent(),
     this.contents = const Value.absent(),
     this.nbr = const Value.absent(),
     this.authorId = const Value.absent(),
   });
   PostsCompanion.insert({
     this.id = const Value.absent(),
-    required String name,
+    required String title,
     required String contents,
     this.nbr = const Value.absent(),
     required int authorId,
-  })  : name = Value(name),
+  })  : title = Value(title),
         contents = Value(contents),
         authorId = Value(authorId);
   static Insertable<Post> custom({
     Expression<int>? id,
-    Expression<String>? name,
+    Expression<String>? title,
     Expression<String>? contents,
     Expression<int>? nbr,
     Expression<int>? authorId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (name != null) 'name': name,
+      if (title != null) 'title': title,
       if (contents != null) 'contents': contents,
       if (nbr != null) 'nbr': nbr,
-      if (authorId != null) 'author_id': authorId,
+      if (authorId != null) 'authorId': authorId,
     });
   }
 
   PostsCompanion copyWith(
       {Value<int>? id,
-      Value<String>? name,
+      Value<String>? title,
       Value<String>? contents,
       Value<int?>? nbr,
       Value<int>? authorId}) {
     return PostsCompanion(
       id: id ?? this.id,
-      name: name ?? this.name,
+      title: title ?? this.title,
       contents: contents ?? this.contents,
       nbr: nbr ?? this.nbr,
       authorId: authorId ?? this.authorId,
@@ -602,8 +602,8 @@ class PostsCompanion extends UpdateCompanion<Post> {
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
     if (contents.present) {
       map['contents'] = Variable<String>(contents.value);
@@ -612,7 +612,7 @@ class PostsCompanion extends UpdateCompanion<Post> {
       map['nbr'] = Variable<int>(nbr.value);
     }
     if (authorId.present) {
-      map['author_id'] = Variable<int>(authorId.value);
+      map['authorId'] = Variable<int>(authorId.value);
     }
     return map;
   }
@@ -621,7 +621,7 @@ class PostsCompanion extends UpdateCompanion<Post> {
   String toString() {
     return (StringBuffer('PostsCompanion(')
           ..write('id: $id, ')
-          ..write('name: $name, ')
+          ..write('title: $title, ')
           ..write('contents: $contents, ')
           ..write('nbr: $nbr, ')
           ..write('authorId: $authorId')
@@ -654,7 +654,7 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
   static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
   @override
   late final GeneratedColumn<int> userId = GeneratedColumn<int>(
-      'user_id', aliasedName, false,
+      'userId', aliasedName, false,
       type: DriftSqlType.int,
       requiredDuringInsert: true,
       defaultConstraints:
@@ -685,9 +685,9 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     } else if (isInserting) {
       context.missing(_contentsMeta);
     }
-    if (data.containsKey('user_id')) {
+    if (data.containsKey('userId')) {
       context.handle(_userIdMeta,
-          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+          userId.isAcceptableOrUnknown(data['userId']!, _userIdMeta));
     } else if (isInserting) {
       context.missing(_userIdMeta);
     }
@@ -707,7 +707,7 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
       contents: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}contents'])!,
       userId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}user_id'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}userId'])!,
     );
   }
 
@@ -733,7 +733,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     map['id'] = Variable<int>(id);
     map['bio'] = Variable<String>(bio);
     map['contents'] = Variable<String>(contents);
-    map['user_id'] = Variable<int>(userId);
+    map['userId'] = Variable<int>(userId);
     return map;
   }
 
@@ -826,7 +826,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       if (id != null) 'id': id,
       if (bio != null) 'bio': bio,
       if (contents != null) 'contents': contents,
-      if (userId != null) 'user_id': userId,
+      if (userId != null) 'userId': userId,
     });
   }
 
@@ -856,7 +856,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       map['contents'] = Variable<String>(contents.value);
     }
     if (userId.present) {
-      map['user_id'] = Variable<int>(userId.value);
+      map['userId'] = Variable<int>(userId.value);
     }
     return map;
   }

@@ -173,8 +173,10 @@ class SatelliteTestContext {
   }
 }
 
-Future<void> cleanAndStopSatelliteRaw(
-    {required DbName dbName, required SatelliteProcess satellite}) async {
+Future<void> cleanAndStopSatelliteRaw({
+  required DbName dbName,
+  required SatelliteProcess satellite,
+}) async {
   await satellite.stop();
   await _clean(dbName);
 }
