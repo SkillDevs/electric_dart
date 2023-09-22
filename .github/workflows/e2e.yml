@@ -15,10 +15,6 @@ env:
   OTP_VERSION: "25.3"
   ELIXIR_VERSION: "1.15"
 
-concurrency:
-  group: e2e-${{ github.ref }}
-  cancel-in-progress: true
-
 # Only run one E2E workflow at the same time
 concurrency:
   group: e2e-${{ github.workflow }}
