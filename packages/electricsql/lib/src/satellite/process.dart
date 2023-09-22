@@ -60,6 +60,8 @@ class SatelliteProcess implements Satellite {
 
   static String? userId;
 
+  static Set<String> tablesWithUser = {};
+
   @override
   DatabaseAdapter get adapter => _adapter;
   DatabaseAdapter _adapter;

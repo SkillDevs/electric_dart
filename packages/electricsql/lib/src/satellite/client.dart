@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart' hide Change;
 import 'package:electricsql/src/proto/satellite.pb.dart';
@@ -658,8 +659,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void _addUserIdToRelation(SatRelation rel) {
-    // TODO(dart): change table
-    if (rel.tableName == 'todo') {
+    if (SatelliteProcess.tablesWithUser.contains(rel.tableName)) {
       final hasColumn = rel.columns.any((c) => c.name == 'electric_user_id');
       if (!hasColumn) {
         rel.columns.add(
@@ -993,8 +993,7 @@ class SatelliteClient extends EventEmitter implements Client {
 }
 
 void addUserIdtoRelation(Relation relation) {
-  // TODO(dart): change table
-  if (relation.table == 'todo') {
+  if (SatelliteProcess.tablesWithUser.contains(relation.table)) {
     final hasColumn = relation.columns.any((c) => c.name == 'electric_user_id');
     if (!hasColumn) {
       relation.columns.add(
@@ -1013,9 +1012,9 @@ SatOpRow serializeRow(Record rec, Relation relation) {
   int recordNumColumn = 0;
   final recordNullBitMask =
       Uint8List(calculateNumBytes(relation.columns.length));
-  
+
   addUserIdtoRelation(relation);
-  
+
   final recordValues = relation.columns.fold<List<List<int>>>(
     [],
     (List<List<int>> acc, RelationColumn c) {

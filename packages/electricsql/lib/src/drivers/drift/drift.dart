@@ -1,10 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
-import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 
@@ -14,10 +14,12 @@ Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
   required List<Migration> migrations,
   required ElectricConfig config,
   ElectrifyOptions? opts,
+  required Set<String> tablesWithUser,
 }) async {
   final adapter = opts?.adapter ?? DriftAdapter(db);
   final socketFactory = opts?.socketFactory ?? getDefaultSocketFactory();
 
+  SatelliteProcess.tablesWithUser = tablesWithUser;
   final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
     migrations: migrations,

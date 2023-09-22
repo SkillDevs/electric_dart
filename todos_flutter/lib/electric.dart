@@ -6,7 +6,8 @@ import 'package:todos_electrified/generated/electric_migrations.dart';
 
 import 'package:electricsql_flutter/drivers/drift.dart';
 
-final Provider<String> userIdProvider = Provider((ref) => throw UnimplementedError());
+final Provider<String> userIdProvider =
+    Provider((ref) => throw UnimplementedError());
 
 final Provider<ElectricClient> electricClientProvider =
     Provider((ref) => throw UnimplementedError());
@@ -24,6 +25,7 @@ Future<DriftElectricClient<AppDatabase>> startElectricDrift(
     dbName: dbName,
     db: db,
     migrations: kElectricMigrations,
+    tablesWithUser: {"todo"},
     config: ElectricConfig(
       auth: AuthConfig(
         token: authToken(userId),

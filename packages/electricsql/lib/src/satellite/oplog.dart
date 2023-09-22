@@ -522,12 +522,10 @@ DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
   );
 }
 
-// TODO(dart): Read correct user id
 Map<String, Object?>? _addUserId(Relation relation, Map<String, Object?>? row) {
-  if (relation.table == 'todo') {
+  if (SatelliteProcess.tablesWithUser.contains(relation.table)) {
     if (row == null) return null;
     row['electric_user_id'] = SatelliteProcess.userId;
-    // row['listid'] = 'waaaaaaaaaaaat';
   }
   return row;
 }
