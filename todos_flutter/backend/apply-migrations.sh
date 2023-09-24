@@ -12,4 +12,4 @@ fi
 
 POSTGRES_CONN="postgresql://postgres:password@localhost:5434/${APP_NAME}?sslmode=disable"
 
-migrate -path migrations -database "${POSTGRES_CONN}" up
+dbmate -u "${POSTGRES_CONN}" -d migrations --no-dump-schema up
