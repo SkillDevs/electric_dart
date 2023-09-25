@@ -84,7 +84,11 @@ String _cleanUserIdFromTrigger(String sql) {
   final cleanSql = sql
       .replaceAll("'electric_user_id',", '')
       .replaceAll('new.electric_user_id,', '')
-      .replaceAll('old.electric_user_id,', '');
+      .replaceAll('old.electric_user_id,', '')
+      // Without commas
+      .replaceAll("'electric_user_id'", '')
+      .replaceAll('new.electric_user_id', '')
+      .replaceAll('old.electric_user_id', '');
   return cleanSql;
 }
 
