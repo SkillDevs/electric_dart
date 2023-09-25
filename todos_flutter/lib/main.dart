@@ -47,6 +47,9 @@ class _Entrypoint extends HookWidget {
             await globalRegistry.stopAll();
             await initData.todosDb.todosRepo.close();
 
+            // If wanted the user db could be deleted
+            // await impl.deleteTodosDbFile(initData.userId);
+
             print("Everything closed");
           }
         }();
