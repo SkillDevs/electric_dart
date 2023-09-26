@@ -2,8 +2,6 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:electricsql/src/drivers/drift/converters.dart';
 
-// assuming that your file is called filename.dart. This will give an error at
-// first, but it's needed for drift to know about the generated code
 part 'database.g.dart';
 
 class Items extends Table {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -5,21 +6,24 @@ import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/util.dart';
-import 'package:satellite_dart_client/util/generic_db.dart';
+import 'package:satellite_dart_client/drift/database.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
 import 'package:satellite_dart_client/util/json.dart';
 
 late String dbName;
 
-Future<GenericDb> makeDb(String dbPath) async {
-  final db = await GenericDb.open(NativeDatabase(File(dbPath)));
+typedef MyDriftElectricClient = DriftElectricClient<ClientDatabase>;
+
+Future<ClientDatabase> makeDb(String dbPath) async {
+  final db = ClientDatabase(NativeDatabase(File(dbPath)));
+  await db.customSelect('PRAGMA foreign_keys = ON;').get();
   dbName = dbPath;
   return db;
 }
 
-Future<DriftElectricClient> electrifyDb(
-    GenericDb db, String host, int port, List<dynamic> migrationsJ) async {
+Future<MyDriftElectricClient> electrifyDb(
+    ClientDatabase db, String host, int port, List<dynamic> migrationsJ) async {
   final config = ElectricConfig(
     url: "electric://$host:$port",
     logger: LoggerConfig(level: Level.debug, colored: false),
@@ -29,7 +33,7 @@ Future<DriftElectricClient> electrifyDb(
 
   final migrations = migrationsFromJson(migrationsJ);
 
-  final result = await electrify<GenericDb>(
+  final result = await electrify<ClientDatabase>(
     dbName: dbName,
     db: db,
     migrations: migrations,
@@ -97,6 +101,87 @@ Future<Rows> getRows(DriftElectricClient electric, String table) async {
       )
       .get();
   return _toRows(rows);
+}
+
+Future<void> getTimestamps(MyDriftElectricClient electric) async {
+  throw UnimplementedError();
+  //await electric.db.timestamps.findMany();
+}
+
+Future<void> writeTimestamp(
+    MyDriftElectricClient electric, Map<String, Object?> timestampMap) async {
+  final companion = TimestampsCompanion.insert(
+    id: timestampMap['id'] as String,
+    createdAt: DateTime.parse(timestampMap['created_at'] as String),
+    updatedAt: DateTime.parse(timestampMap['updated_at'] as String),
+  );
+  await electric.db.timestamps.insert().insert(companion);
+}
+
+Future<void> writeDatetime(
+    MyDriftElectricClient electric, Map<String, Object?> datetimeMap) async {
+  final companion = DatetimesCompanion.insert(
+    id: datetimeMap['id'] as String,
+    d: DateTime.parse(datetimeMap['d'] as String),
+    t: DateTime.parse(datetimeMap['t'] as String),
+  );
+  await electric.db.datetimes.insert().insert(companion);
+}
+
+Future<Timestamp?> getTimestamp(
+    MyDriftElectricClient electric, String id) async {
+  final timestamp = await (electric.db.timestamps.select()
+        ..where((tbl) => tbl.id.equals(id)))
+      .getSingleOrNull();
+  return timestamp;
+}
+
+Future<Datetime?> getDatetime(MyDriftElectricClient electric, String id) async {
+  final datetime = await (electric.db.datetimes.select()
+        ..where((tbl) => tbl.id.equals(id)))
+      .getSingleOrNull();
+  final rowJ = JsonEncoder.withIndent('  ').convert(toColumns(datetime));
+  print('Found date time?:\n$rowJ');
+  return datetime;
+}
+
+Future<bool> readTimestamp(MyDriftElectricClient electric, String id,
+    String expectedCreatedAt, String expectedUpdatedAt) async {
+  final timestamp = await getTimestamp(electric, id);
+  final matches =
+      checkTimestamp(timestamp, expectedCreatedAt, expectedUpdatedAt);
+  return matches;
+}
+
+Future<bool> readDatetime(MyDriftElectricClient electric, String id,
+    String expectedDate, String expectedTime) async {
+  final datetime = await getDatetime(electric, id);
+  final matches = checkDatetime(datetime, expectedDate, expectedTime);
+  return matches;
+}
+
+bool checkTimestamp(
+    Timestamp? timestamp, String expectedCreatedAt, String expectedUpdatedAt) {
+  if (timestamp == null) return false;
+
+  return timestamp.createdAt.millisecondsSinceEpoch ==
+          DateTime.parse(expectedCreatedAt).millisecondsSinceEpoch &&
+      timestamp.updatedAt.millisecondsSinceEpoch ==
+          DateTime.parse(expectedUpdatedAt).millisecondsSinceEpoch;
+}
+
+bool checkDatetime(
+    Datetime? datetime, String expectedDate, String expectedTime) {
+  if (datetime == null) return false;
+  return datetime.d.millisecondsSinceEpoch ==
+          DateTime.parse(expectedDate).millisecondsSinceEpoch &&
+      datetime.t.millisecondsSinceEpoch ==
+          DateTime.parse(expectedTime).millisecondsSinceEpoch;
+}
+
+Future<void> getDatetimes(MyDriftElectricClient electric) async {
+  // final rows = await electric.db.datetimes.select().get();
+  throw UnimplementedError();
 }
 
 Future<Rows> getItems(DriftElectricClient electric) async {
@@ -322,4 +407,10 @@ class Rows {
     buffer.writeln("]");
     return buffer.toString();
   }
+}
+
+Map<String, Object?>? toColumns(Insertable? o) {
+  if (o == null) return null;
+  final cols = o.toColumns(false);
+  return cols.map((key, value) => MapEntry(key, (value as Variable).value));
 }

@@ -5,7 +5,7 @@ import 'package:electricsql/drivers/drift.dart';
 import 'package:satellite_dart_client/client_commands.dart';
 import 'package:satellite_dart_client/cli/reader.dart';
 import 'package:satellite_dart_client/cli/tokens.dart';
-import 'package:satellite_dart_client/util/generic_db.dart';
+import 'package:satellite_dart_client/drift/database.dart';
 import 'package:satellite_dart_client/cli/state.dart';
 
 const promptChar = "> ";
@@ -37,7 +37,7 @@ Future<void> start() async {
         });
       } else if (name == "make_db") {
         final dbPath = command.arguments[0] as String;
-        await processCommand<GenericDb>(state, command, () async {
+        await processCommand<ClientDatabase>(state, command, () async {
           return await makeDb(dbPath);
         });
       } else if (name == "assignVar") {
@@ -52,7 +52,7 @@ Future<void> start() async {
         });
       } else if (name == "electrify_db") {
         await processCommand<DriftElectricClient>(state, command, () async {
-          final db = command.arguments[0] as GenericDb;
+          final db = command.arguments[0] as ClientDatabase;
           final host = command.arguments[1] as String;
           final port = command.arguments[2] as int;
           final migrationsJ = command.arguments[3] as List<dynamic>;
@@ -86,6 +86,40 @@ Future<void> start() async {
         final table = command.arguments[1] as String;
         await processCommand<Rows>(state, command, () async {
           return await getRows(electric, table);
+        });
+      } else if (name == "get_timestamps") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        await processCommand<void>(state, command, () async {
+          return await getTimestamps(electric);
+        });
+      } else if (name == "read_timestamp") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        final expectedCreatedAt = command.arguments[2] as String;
+        final expectedUpdatedAt = command.arguments[3] as String;
+        await processCommand<bool>(state, command, () async {
+          return await readTimestamp(
+              electric, id, expectedCreatedAt, expectedUpdatedAt);
+        });
+      } else if (name == "write_timestamp") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final values = command.arguments[1] as Map<String, Object?>;
+        await processCommand<void>(state, command, () async {
+          return await writeTimestamp(electric, values);
+        });
+      } else if (name == "write_datetime") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final values = command.arguments[1] as Map<String, Object?>;
+        await processCommand<void>(state, command, () async {
+          return await writeDatetime(electric, values);
+        });
+      } else if (name == "read_datetime") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        final expectedDate = command.arguments[2] as String;
+        final expectedTime = command.arguments[3] as String;
+        await processCommand<bool>(state, command, () async {
+          return await readDatetime(electric, id, expectedDate, expectedTime);
         });
       } else if (name == "get_items") {
         final electric = command.arguments[0] as DriftElectricClient;
