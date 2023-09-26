@@ -1,16 +1,19 @@
+import 'dart:convert';
+
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/sockets/mock.dart';
+import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
-// String encodeSatOpMigrateMsg(SatOpMigrate request) {
-//   final msgEncoded = encodeMessage(request);
-//   return base64.encode(msgEncoded);
-// }
+String encodeSatOpMigrateMsg(SatOpMigrate request) {
+  final msgEncoded = encodeMessage(request);
+  return base64.encode(msgEncoded);
+}
 
 void main() {
   final MetaData metaData = MetaData(
@@ -94,6 +97,32 @@ void main() {
       migration.statements[3],
       "\n    CREATE TRIGGER update_ensure_main_stars_primarykey\n      BEFORE UPDATE ON main.stars\n    BEGIN\n      SELECT\n        CASE\n          WHEN old.id != new.id THEN\n\t\tRAISE (ABORT, 'cannot change the value of column id as it belongs to the primary key')\n        END;\n    END;\n    ",
     );
+  });
+
+  test('generate index creation migration from meta data', () {
+    final metaData = parseMetadata({
+      'format': 'SatOpMigrate',
+      'ops': [
+        encodeSatOpMigrateMsg(
+          SatOpMigrate(
+            version: '20230613112725_814',
+            stmts: [
+              SatOpMigrate_Stmt(
+                type: SatOpMigrate_Type.CREATE_INDEX,
+                sql: 'CREATE INDEX idx_stars_username ON stars(username);',
+              ),
+            ],
+          ),
+        ),
+      ],
+      'protocol_version': 'Electric.Satellite',
+      'version': '20230613112725_814',
+    });
+    final migration = makeMigration(metaData);
+    expect(migration.version == metaData.version, isTrue);
+    expect(migration.statements, [
+      'CREATE INDEX idx_stars_username ON stars(username);',
+    ]);
   });
 
   test('load migration from meta data', () async {
