@@ -73,7 +73,8 @@ class DataTypes extends Table {
   IntColumn get id => integer()();
   TextColumn get date => text().map(const ElectricDateConverter()).nullable()();
   TextColumn get time => text().map(const ElectricTimeConverter()).nullable()();
-  TextColumn get timetz => text().map(const ElectricTimeTZConverter()).nullable()();
+  TextColumn get timetz =>
+      text().map(const ElectricTimeTZConverter()).nullable()();
   TextColumn get timestamp =>
       text().map(const ElectricTimestampConverter()).nullable()();
   TextColumn get timestamptz =>
