@@ -38,6 +38,7 @@ export ELECTRIC_REPO := $(abspath $(E2E_ROOT)/electric_repo)
 clone_electric:
 	git clone https://github.com/electric-sql/electric ${ELECTRIC_REPO} || true
 	cd ${ELECTRIC_REPO} && \
+	git fetch origin && \
 	git checkout --force ${ELECTRIC_COMMIT}
 
 lux: ${LUX}
