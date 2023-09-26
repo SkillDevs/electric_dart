@@ -981,7 +981,7 @@ SatOpRow serializeRow(Record rec, Relation relation) {
     (List<List<int>> acc, RelationColumn c) {
       final Object? value = rec[c.name];
       if (value != null) {
-        acc.add(serializeColumnData(value, c.type));
+        acc.add(serializeColumnData(value, c));
       } else {
         acc.add(serializeNullData());
         setMaskBit(recordNullBitMask, recordNumColumn);
@@ -1035,11 +1035,11 @@ Object deserializeColumnData(
     case 'CHAR':
     case 'DATE':
     case 'TEXT':
+    case 'UUID':
+    case 'VARCHAR':
     case 'TIME':
     case 'TIMESTAMP':
     case 'TIMESTAMPTZ':
-    case 'UUID':
-    case 'VARCHAR':
       return TypeDecoder.text(column);
     case 'BOOL':
       return TypeDecoder.boolean(column);
@@ -1051,6 +1051,8 @@ Object deserializeColumnData(
     case 'INT8':
     case 'INTEGER':
       return num.parse(TypeDecoder.text(column));
+    case 'TIMETZ':
+      return TypeDecoder.timetz(column);
   }
   throw SatelliteException(
     SatelliteErrorCode.unknownDataType,
@@ -1059,10 +1061,13 @@ Object deserializeColumnData(
 }
 
 // All values serialized as textual representation
-List<int> serializeColumnData(Object columnValue, String colType) {
-  switch (colType.toUpperCase()) {
+List<int> serializeColumnData(Object columnValue, RelationColumn columnInfo) {
+  final columnType = columnInfo.type.toUpperCase();
+  switch (columnType) {
     case 'BOOL':
       return TypeEncoder.boolean(columnValue as int);
+    case 'TIMETZ':
+      return TypeEncoder.timetz(columnValue as String);
     default:
       return TypeEncoder.text(columnValue.toString());
   }

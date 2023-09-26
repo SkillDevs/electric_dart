@@ -13,7 +13,7 @@ import 'package:electricsql/util.dart';
 import 'package:test/test.dart';
 
 import '../../satellite/common.dart';
-import '../generated/database.dart';
+import '../drift/database.dart';
 
 late DbName dbName;
 late TestsDatabase db;

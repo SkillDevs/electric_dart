@@ -49,6 +49,10 @@ class TypeEncoder {
   static List<int> boolean(int b) {
     return boolToBytes(b);
   }
+
+  static List<int> timetz(String s) {
+    return TypeEncoder.text(stringToTimetzString(s));
+  }
 }
 
 class TypeDecoder {
@@ -62,6 +66,10 @@ class TypeDecoder {
 
   static int boolean(List<int> bytes) {
     return bytesToBool(bytes);
+  }
+
+  static String timetz(List<int> bytes) {
+    return bytesToTimetzString(bytes);
   }
 }
 
@@ -102,6 +110,23 @@ int bytesToNumber(List<int> bytes) {
 
 String bytesToString(List<int> bytes) {
   return utf8.decode(bytes);
+}
+
+/// Converts a PG string of type `timetz` to its equivalent SQLite string.
+/// e.g. '18:28:35.42108+00' -> '18:28:35.42108'
+/// @param bytes Data for this `timetz` column.
+/// @returns The SQLite string.
+String bytesToTimetzString(List<int> bytes) {
+  final str = bytesToString(bytes);
+  return str.replaceAll('+00', '');
+}
+
+/// Converts a SQLite string representing a `timetz` value to a PG string.
+/// e.g. '18:28:35.42108' -> '18:28:35.42108+00'
+/// @param str The SQLite string representing a `timetz` value.
+/// @returns The PG string.
+String stringToTimetzString(String str) {
+  return '$str+00';
 }
 
 class Waiter {
