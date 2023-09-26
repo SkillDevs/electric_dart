@@ -7,6 +7,7 @@ import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:meta/meta.dart';
 
 Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
   required String dbName,
@@ -32,7 +33,7 @@ Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
   );
 
   final driftClient = DriftElectricClient(namespace, db);
-  driftClient._init();
+  driftClient.init();
 
   return driftClient;
 }
@@ -47,7 +48,8 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
 
   DriftElectricClient(this._baseClient, this.db);
 
-  void _init() {
+  @visibleForTesting
+  void init() {
     assert(_disposeHook == null, 'Already initialized');
 
     _disposeHook = _hookToNotifier();
