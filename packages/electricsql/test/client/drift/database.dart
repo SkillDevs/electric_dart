@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:electricsql/src/drivers/drift/converters.dart';
 
 // assuming that your file is called filename.dart. This will give an error at
 // first, but it's needed for drift to know about the generated code
@@ -56,7 +57,38 @@ class Profiles extends Table {
   Set<Column<Object>>? get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Items, Users, Posts, Profiles])
+class Dummy extends Table {
+  IntColumn get id => integer()();
+  TextColumn get timestamp =>
+      text().map(const ElectricTimestampConverter()).nullable()();
+
+  @override
+  String? get tableName => 'Dummy';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+class DataTypes extends Table {
+  IntColumn get id => integer()();
+  TextColumn get date => text().map(const ElectricDateConverter()).nullable()();
+  TextColumn get time => text().map(const ElectricTimeConverter()).nullable()();
+  TextColumn get timetz => text().map(const ElectricTimeTZConverter()).nullable()();
+  TextColumn get timestamp =>
+      text().map(const ElectricTimestampConverter()).nullable()();
+  TextColumn get timestamptz =>
+      text().map(const ElectricTimestampTZConverter()).nullable()();
+  IntColumn get relatedId =>
+      integer().nullable().named('relatedId').references(Dummy, #id)();
+
+  @override
+  String? get tableName => 'DataTypes';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Items, Users, Posts, Profiles, Dummy, DataTypes])
 class TestsDatabase extends _$TestsDatabase {
   TestsDatabase(super.e);
 

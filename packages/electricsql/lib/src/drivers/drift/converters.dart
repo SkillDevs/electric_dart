@@ -1,45 +1,42 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/util/converters/helpers.dart';
 
-class ElectricTimestampConverter extends TypeConverter<DateTime, String> {
-  const ElectricTimestampConverter();
-
-  @override
-  DateTime fromSql(String fromDb) {
-    return TypeConverters.timestamp.decode(fromDb);
-  }
-
-  @override
-  String toSql(DateTime value) {
-    return TypeConverters.timestamp.encode(value);
-  }
+class ElectricTimestampConverter extends _ElectricDateTypeConverter {
+  const ElectricTimestampConverter() : super(codec: TypeConverters.timestamp);
 }
 
-class ElectricDateConverter extends TypeConverter<DateTime, String> {
-  const ElectricDateConverter();
-
-  @override
-  DateTime fromSql(String fromDb) {
-    return DateTime.parse(fromDb).toUtc();
-  }
-
-  @override
-  String toSql(DateTime value) {
-    return value.toISOStringUTC();
-  }
+class ElectricTimestampTZConverter extends _ElectricDateTypeConverter {
+  const ElectricTimestampTZConverter()
+      : super(codec: TypeConverters.timestampTZ);
 }
 
-class ElectricTimeConverter extends TypeConverter<DateTime, String> {
-  const ElectricTimeConverter();
+class ElectricDateConverter extends _ElectricDateTypeConverter {
+  const ElectricDateConverter() : super(codec: TypeConverters.date);
+}
+
+class ElectricTimeConverter extends _ElectricDateTypeConverter {
+  const ElectricTimeConverter() : super(codec: TypeConverters.time);
+}
+
+class ElectricTimeTZConverter extends _ElectricDateTypeConverter {
+  const ElectricTimeTZConverter() : super(codec: TypeConverters.timeTZ);
+}
+
+abstract class _ElectricDateTypeConverter
+    extends TypeConverter<DateTime, String> {
+  final Codec<DateTime, String> codec;
+
+  const _ElectricDateTypeConverter({required this.codec});
 
   @override
   DateTime fromSql(String fromDb) {
-    return DateTime.parse(fromDb).toUtc();
+    return codec.decode(fromDb);
   }
 
   @override
   String toSql(DateTime value) {
-    return value.toISOStringUTC();
+    return codec.encode(value);
   }
 }

@@ -31,19 +31,27 @@ extension DateExtension on DateTime {
     return '$h:$min:$sec.$ms$us';
   }
 
+  // Gets the ISO8601 string in UTC time. It removes the microseconds.
   String toISOStringUTC() {
     return toUtc().copyWith(microsecond: 0).toIso8601String();
   }
 
-  DateTime asUtc() {
-    if (isUtc) return this;
+  /// Corrects the provided `Date` such that
+  /// the current date is set as UTC date.
+  /// e.g. if it is 3PM in GMT+2 then it is 1PM UTC.
+  ///      This function would return a date in which it is 3PM UTC.
+  DateTime ignoreTimeZone() {
+    if (isUtc) {
+      return this;
+    }
 
-    final date = DateTime.fromMillisecondsSinceEpoch(
-      millisecondsSinceEpoch + timeZoneOffset.inMilliseconds,
-      isUtc: true,
+    // `v.toISOString` returns the UTC time but we want the time in this timezone
+    // so we get the timezone offset and subtract it from the current time in order to
+    // compensate for the timezone correction done by `toISOString`
+    final offsetInMs = timeZoneOffset.inMilliseconds;
+    return DateTime.fromMillisecondsSinceEpoch(
+      millisecondsSinceEpoch + offsetInMs,
     );
-
-    return date;
   }
 }
 
@@ -73,4 +81,17 @@ String _sixDigits(int n) {
   final String sign = n < 0 ? '-' : '+';
   if (absN >= 100000) return '$sign$absN';
   return '${sign}0$absN';
+}
+
+typedef ExtractedDateTime = ({String date, String time});
+
+ExtractedDateTime extractDateAndTime(DateTime v) {
+  final regex = RegExp('([0-9-]*)T([0-9:.]*)Z');
+  final match = regex.firstMatch(v.toISOStringUTC());
+  if (match == null) {
+    throw Exception('Could not extract date and time from $v');
+  }
+  final date = match.group(1)!;
+  final time = match.group(2)!;
+  return (date: date, time: time);
 }

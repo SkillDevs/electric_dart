@@ -873,16 +873,578 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   }
 }
 
+class $DummyTable extends Dummy with TableInfo<$DummyTable, DummyData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DummyTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _timestampMeta =
+      const VerificationMeta('timestamp');
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime?, String> timestamp =
+      GeneratedColumn<String>('timestamp', aliasedName, true,
+              type: DriftSqlType.string, requiredDuringInsert: false)
+          .withConverter<DateTime?>($DummyTable.$convertertimestampn);
+  @override
+  List<GeneratedColumn> get $columns => [id, timestamp];
+  @override
+  String get aliasedName => _alias ?? 'Dummy';
+  @override
+  String get actualTableName => 'Dummy';
+  @override
+  VerificationContext validateIntegrity(Insertable<DummyData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    context.handle(_timestampMeta, const VerificationResult.success());
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DummyData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DummyData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      timestamp: $DummyTable.$convertertimestampn.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}timestamp'])),
+    );
+  }
+
+  @override
+  $DummyTable createAlias(String alias) {
+    return $DummyTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, String> $convertertimestamp =
+      const ElectricTimestampConverter();
+  static TypeConverter<DateTime?, String?> $convertertimestampn =
+      NullAwareTypeConverter.wrap($convertertimestamp);
+}
+
+class DummyData extends DataClass implements Insertable<DummyData> {
+  final int id;
+  final DateTime? timestamp;
+  const DummyData({required this.id, this.timestamp});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || timestamp != null) {
+      final converter = $DummyTable.$convertertimestampn;
+      map['timestamp'] = Variable<String>(converter.toSql(timestamp));
+    }
+    return map;
+  }
+
+  DummyCompanion toCompanion(bool nullToAbsent) {
+    return DummyCompanion(
+      id: Value(id),
+      timestamp: timestamp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timestamp),
+    );
+  }
+
+  factory DummyData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DummyData(
+      id: serializer.fromJson<int>(json['id']),
+      timestamp: serializer.fromJson<DateTime?>(json['timestamp']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'timestamp': serializer.toJson<DateTime?>(timestamp),
+    };
+  }
+
+  DummyData copyWith(
+          {int? id, Value<DateTime?> timestamp = const Value.absent()}) =>
+      DummyData(
+        id: id ?? this.id,
+        timestamp: timestamp.present ? timestamp.value : this.timestamp,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DummyData(')
+          ..write('id: $id, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, timestamp);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DummyData &&
+          other.id == this.id &&
+          other.timestamp == this.timestamp);
+}
+
+class DummyCompanion extends UpdateCompanion<DummyData> {
+  final Value<int> id;
+  final Value<DateTime?> timestamp;
+  const DummyCompanion({
+    this.id = const Value.absent(),
+    this.timestamp = const Value.absent(),
+  });
+  DummyCompanion.insert({
+    this.id = const Value.absent(),
+    this.timestamp = const Value.absent(),
+  });
+  static Insertable<DummyData> custom({
+    Expression<int>? id,
+    Expression<String>? timestamp,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (timestamp != null) 'timestamp': timestamp,
+    });
+  }
+
+  DummyCompanion copyWith({Value<int>? id, Value<DateTime?>? timestamp}) {
+    return DummyCompanion(
+      id: id ?? this.id,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (timestamp.present) {
+      final converter = $DummyTable.$convertertimestampn;
+      map['timestamp'] = Variable<String>(converter.toSql(timestamp.value));
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DummyCompanion(')
+          ..write('id: $id, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DataTypesTable extends DataTypes
+    with TableInfo<$DataTypesTable, DataType> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DataTypesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime?, String> date =
+      GeneratedColumn<String>('date', aliasedName, true,
+              type: DriftSqlType.string, requiredDuringInsert: false)
+          .withConverter<DateTime?>($DataTypesTable.$converterdaten);
+  static const VerificationMeta _timeMeta = const VerificationMeta('time');
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime?, String> time =
+      GeneratedColumn<String>('time', aliasedName, true,
+              type: DriftSqlType.string, requiredDuringInsert: false)
+          .withConverter<DateTime?>($DataTypesTable.$convertertimen);
+  static const VerificationMeta _timetzMeta = const VerificationMeta('timetz');
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime?, String> timetz =
+      GeneratedColumn<String>('timetz', aliasedName, true,
+              type: DriftSqlType.string, requiredDuringInsert: false)
+          .withConverter<DateTime?>($DataTypesTable.$convertertimetzn);
+  static const VerificationMeta _timestampMeta =
+      const VerificationMeta('timestamp');
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime?, String> timestamp =
+      GeneratedColumn<String>('timestamp', aliasedName, true,
+              type: DriftSqlType.string, requiredDuringInsert: false)
+          .withConverter<DateTime?>($DataTypesTable.$convertertimestampn);
+  static const VerificationMeta _timestamptzMeta =
+      const VerificationMeta('timestamptz');
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime?, String> timestamptz =
+      GeneratedColumn<String>('timestamptz', aliasedName, true,
+              type: DriftSqlType.string, requiredDuringInsert: false)
+          .withConverter<DateTime?>($DataTypesTable.$convertertimestamptzn);
+  static const VerificationMeta _relatedIdMeta =
+      const VerificationMeta('relatedId');
+  @override
+  late final GeneratedColumn<int> relatedId = GeneratedColumn<int>(
+      'relatedId', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES Dummy (id)'));
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, date, time, timetz, timestamp, timestamptz, relatedId];
+  @override
+  String get aliasedName => _alias ?? 'DataTypes';
+  @override
+  String get actualTableName => 'DataTypes';
+  @override
+  VerificationContext validateIntegrity(Insertable<DataType> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    context.handle(_dateMeta, const VerificationResult.success());
+    context.handle(_timeMeta, const VerificationResult.success());
+    context.handle(_timetzMeta, const VerificationResult.success());
+    context.handle(_timestampMeta, const VerificationResult.success());
+    context.handle(_timestamptzMeta, const VerificationResult.success());
+    if (data.containsKey('relatedId')) {
+      context.handle(_relatedIdMeta,
+          relatedId.isAcceptableOrUnknown(data['relatedId']!, _relatedIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DataType map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DataType(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      date: $DataTypesTable.$converterdaten.fromSql(attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}date'])),
+      time: $DataTypesTable.$convertertimen.fromSql(attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}time'])),
+      timetz: $DataTypesTable.$convertertimetzn.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}timetz'])),
+      timestamp: $DataTypesTable.$convertertimestampn.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}timestamp'])),
+      timestamptz: $DataTypesTable.$convertertimestamptzn.fromSql(
+          attachedDatabase.typeMapping.read(
+              DriftSqlType.string, data['${effectivePrefix}timestamptz'])),
+      relatedId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}relatedId']),
+    );
+  }
+
+  @override
+  $DataTypesTable createAlias(String alias) {
+    return $DataTypesTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, String> $converterdate =
+      const ElectricDateConverter();
+  static TypeConverter<DateTime?, String?> $converterdaten =
+      NullAwareTypeConverter.wrap($converterdate);
+  static TypeConverter<DateTime, String> $convertertime =
+      const ElectricTimeConverter();
+  static TypeConverter<DateTime?, String?> $convertertimen =
+      NullAwareTypeConverter.wrap($convertertime);
+  static TypeConverter<DateTime, String> $convertertimetz =
+      const ElectricTimeTZConverter();
+  static TypeConverter<DateTime?, String?> $convertertimetzn =
+      NullAwareTypeConverter.wrap($convertertimetz);
+  static TypeConverter<DateTime, String> $convertertimestamp =
+      const ElectricTimestampConverter();
+  static TypeConverter<DateTime?, String?> $convertertimestampn =
+      NullAwareTypeConverter.wrap($convertertimestamp);
+  static TypeConverter<DateTime, String> $convertertimestamptz =
+      const ElectricTimestampTZConverter();
+  static TypeConverter<DateTime?, String?> $convertertimestamptzn =
+      NullAwareTypeConverter.wrap($convertertimestamptz);
+}
+
+class DataType extends DataClass implements Insertable<DataType> {
+  final int id;
+  final DateTime? date;
+  final DateTime? time;
+  final DateTime? timetz;
+  final DateTime? timestamp;
+  final DateTime? timestamptz;
+  final int? relatedId;
+  const DataType(
+      {required this.id,
+      this.date,
+      this.time,
+      this.timetz,
+      this.timestamp,
+      this.timestamptz,
+      this.relatedId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || date != null) {
+      final converter = $DataTypesTable.$converterdaten;
+      map['date'] = Variable<String>(converter.toSql(date));
+    }
+    if (!nullToAbsent || time != null) {
+      final converter = $DataTypesTable.$convertertimen;
+      map['time'] = Variable<String>(converter.toSql(time));
+    }
+    if (!nullToAbsent || timetz != null) {
+      final converter = $DataTypesTable.$convertertimetzn;
+      map['timetz'] = Variable<String>(converter.toSql(timetz));
+    }
+    if (!nullToAbsent || timestamp != null) {
+      final converter = $DataTypesTable.$convertertimestampn;
+      map['timestamp'] = Variable<String>(converter.toSql(timestamp));
+    }
+    if (!nullToAbsent || timestamptz != null) {
+      final converter = $DataTypesTable.$convertertimestamptzn;
+      map['timestamptz'] = Variable<String>(converter.toSql(timestamptz));
+    }
+    if (!nullToAbsent || relatedId != null) {
+      map['relatedId'] = Variable<int>(relatedId);
+    }
+    return map;
+  }
+
+  DataTypesCompanion toCompanion(bool nullToAbsent) {
+    return DataTypesCompanion(
+      id: Value(id),
+      date: date == null && nullToAbsent ? const Value.absent() : Value(date),
+      time: time == null && nullToAbsent ? const Value.absent() : Value(time),
+      timetz:
+          timetz == null && nullToAbsent ? const Value.absent() : Value(timetz),
+      timestamp: timestamp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timestamp),
+      timestamptz: timestamptz == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timestamptz),
+      relatedId: relatedId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(relatedId),
+    );
+  }
+
+  factory DataType.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DataType(
+      id: serializer.fromJson<int>(json['id']),
+      date: serializer.fromJson<DateTime?>(json['date']),
+      time: serializer.fromJson<DateTime?>(json['time']),
+      timetz: serializer.fromJson<DateTime?>(json['timetz']),
+      timestamp: serializer.fromJson<DateTime?>(json['timestamp']),
+      timestamptz: serializer.fromJson<DateTime?>(json['timestamptz']),
+      relatedId: serializer.fromJson<int?>(json['relatedId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'date': serializer.toJson<DateTime?>(date),
+      'time': serializer.toJson<DateTime?>(time),
+      'timetz': serializer.toJson<DateTime?>(timetz),
+      'timestamp': serializer.toJson<DateTime?>(timestamp),
+      'timestamptz': serializer.toJson<DateTime?>(timestamptz),
+      'relatedId': serializer.toJson<int?>(relatedId),
+    };
+  }
+
+  DataType copyWith(
+          {int? id,
+          Value<DateTime?> date = const Value.absent(),
+          Value<DateTime?> time = const Value.absent(),
+          Value<DateTime?> timetz = const Value.absent(),
+          Value<DateTime?> timestamp = const Value.absent(),
+          Value<DateTime?> timestamptz = const Value.absent(),
+          Value<int?> relatedId = const Value.absent()}) =>
+      DataType(
+        id: id ?? this.id,
+        date: date.present ? date.value : this.date,
+        time: time.present ? time.value : this.time,
+        timetz: timetz.present ? timetz.value : this.timetz,
+        timestamp: timestamp.present ? timestamp.value : this.timestamp,
+        timestamptz: timestamptz.present ? timestamptz.value : this.timestamptz,
+        relatedId: relatedId.present ? relatedId.value : this.relatedId,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DataType(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('time: $time, ')
+          ..write('timetz: $timetz, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('timestamptz: $timestamptz, ')
+          ..write('relatedId: $relatedId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, date, time, timetz, timestamp, timestamptz, relatedId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DataType &&
+          other.id == this.id &&
+          other.date == this.date &&
+          other.time == this.time &&
+          other.timetz == this.timetz &&
+          other.timestamp == this.timestamp &&
+          other.timestamptz == this.timestamptz &&
+          other.relatedId == this.relatedId);
+}
+
+class DataTypesCompanion extends UpdateCompanion<DataType> {
+  final Value<int> id;
+  final Value<DateTime?> date;
+  final Value<DateTime?> time;
+  final Value<DateTime?> timetz;
+  final Value<DateTime?> timestamp;
+  final Value<DateTime?> timestamptz;
+  final Value<int?> relatedId;
+  const DataTypesCompanion({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.time = const Value.absent(),
+    this.timetz = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.timestamptz = const Value.absent(),
+    this.relatedId = const Value.absent(),
+  });
+  DataTypesCompanion.insert({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.time = const Value.absent(),
+    this.timetz = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.timestamptz = const Value.absent(),
+    this.relatedId = const Value.absent(),
+  });
+  static Insertable<DataType> custom({
+    Expression<int>? id,
+    Expression<String>? date,
+    Expression<String>? time,
+    Expression<String>? timetz,
+    Expression<String>? timestamp,
+    Expression<String>? timestamptz,
+    Expression<int>? relatedId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (date != null) 'date': date,
+      if (time != null) 'time': time,
+      if (timetz != null) 'timetz': timetz,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (timestamptz != null) 'timestamptz': timestamptz,
+      if (relatedId != null) 'relatedId': relatedId,
+    });
+  }
+
+  DataTypesCompanion copyWith(
+      {Value<int>? id,
+      Value<DateTime?>? date,
+      Value<DateTime?>? time,
+      Value<DateTime?>? timetz,
+      Value<DateTime?>? timestamp,
+      Value<DateTime?>? timestamptz,
+      Value<int?>? relatedId}) {
+    return DataTypesCompanion(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      time: time ?? this.time,
+      timetz: timetz ?? this.timetz,
+      timestamp: timestamp ?? this.timestamp,
+      timestamptz: timestamptz ?? this.timestamptz,
+      relatedId: relatedId ?? this.relatedId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (date.present) {
+      final converter = $DataTypesTable.$converterdaten;
+      map['date'] = Variable<String>(converter.toSql(date.value));
+    }
+    if (time.present) {
+      final converter = $DataTypesTable.$convertertimen;
+      map['time'] = Variable<String>(converter.toSql(time.value));
+    }
+    if (timetz.present) {
+      final converter = $DataTypesTable.$convertertimetzn;
+      map['timetz'] = Variable<String>(converter.toSql(timetz.value));
+    }
+    if (timestamp.present) {
+      final converter = $DataTypesTable.$convertertimestampn;
+      map['timestamp'] = Variable<String>(converter.toSql(timestamp.value));
+    }
+    if (timestamptz.present) {
+      final converter = $DataTypesTable.$convertertimestamptzn;
+      map['timestamptz'] = Variable<String>(converter.toSql(timestamptz.value));
+    }
+    if (relatedId.present) {
+      map['relatedId'] = Variable<int>(relatedId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DataTypesCompanion(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('time: $time, ')
+          ..write('timetz: $timetz, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('timestamptz: $timestamptz, ')
+          ..write('relatedId: $relatedId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$TestsDatabase extends GeneratedDatabase {
   _$TestsDatabase(QueryExecutor e) : super(e);
   late final $ItemsTable items = $ItemsTable(this);
   late final $UsersTable users = $UsersTable(this);
   late final $PostsTable posts = $PostsTable(this);
   late final $ProfilesTable profiles = $ProfilesTable(this);
+  late final $DummyTable dummy = $DummyTable(this);
+  late final $DataTypesTable dataTypes = $DataTypesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [items, users, posts, profiles];
+      [items, users, posts, profiles, dummy, dataTypes];
 }
