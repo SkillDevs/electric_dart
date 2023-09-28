@@ -38,5 +38,5 @@ cp -rf "$DART_E2E_BAK"/electric_repo e2e/electric_repo
 
 pushd "$ROOT_DIR/e2e"
 # Apply patch ignoring first level from the diff (electric and dart subfolders)
-patch -p1  < "$ROOT_DIR"/patch/e2e.patch
+patch -p1 --merge < "$ROOT_DIR"/patch/e2e.patch
 popd
