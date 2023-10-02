@@ -1,3 +1,9 @@
+## 0.2.1
+
+* Code based on official Typescript client [v0.6.4](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.6.4)
+* Fix edge case condition after initial sync
+
+
 ## 0.2.0
 
 * Code based on official Typescript client [v0.6.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.6.3)
