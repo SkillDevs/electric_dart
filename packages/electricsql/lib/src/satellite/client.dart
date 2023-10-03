@@ -811,6 +811,7 @@ class SatelliteClient extends EventEmitter implements Client {
           lsn: lastTx.lsn,
           changes: lastTx.changes,
           origin: lastTx.origin,
+          migrationVersion: lastTx.migrationVersion,
         );
         emit<TransactionEvent>(
           'transaction',

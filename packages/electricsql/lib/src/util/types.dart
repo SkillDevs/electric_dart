@@ -175,7 +175,7 @@ enum ChangeType {
   ddl, // Schema
 }
 
-class SchemaChange extends Change {
+class SchemaChange extends Change with EquatableMixin {
   final MigrationTable table; // table affected by the schema change
   final SatOpMigrate_Type migrationType;
   final String sql;
@@ -185,6 +185,9 @@ class SchemaChange extends Change {
     required this.migrationType,
     required this.sql,
   });
+
+  @override
+  List<Object?> get props => [table, migrationType, sql];
 }
 
 class DataChange extends Change with EquatableMixin {

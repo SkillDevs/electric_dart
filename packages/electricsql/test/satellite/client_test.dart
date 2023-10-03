@@ -295,6 +295,102 @@ void main() {
     await completer.future;
   });
 
+  test('migration transaction contains all information', () async {
+    await connectAndAuth();
+
+    final newTableRelation = SatRelation(
+      relationId: 2001, // doesn't matter
+      schemaName: 'public',
+      tableName: 'NewTable',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        SatRelationColumn(
+          name: 'id',
+          type: 'TEXT',
+          isNullable: false,
+          primaryKey: true,
+        ),
+      ],
+    );
+
+    final start = SatInStartReplicationResp();
+    final relation = newTableRelation;
+    final begin = SatOpBegin(
+      commitTimestamp: Int64.ZERO,
+      isMigration: true,
+    );
+    const migrationVersion = '123_456';
+    final migrate = SatOpMigrate(
+      version: migrationVersion,
+      stmts: [
+        SatOpMigrate_Stmt(
+          type: SatOpMigrate_Type.CREATE_TABLE,
+          sql:
+              'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n) WITHOUT ROWID;\n',
+        ),
+      ],
+      table: SatOpMigrate_Table(
+        name: 'foo',
+        columns: [
+          SatOpMigrate_Column(
+            name: 'value',
+            sqliteType: 'TEXT',
+            pgType: SatOpMigrate_PgColumnType(
+              name: 'VARCHAR',
+              array: [],
+              size: [],
+            ),
+          ),
+        ],
+        fks: [],
+        pks: ['value'],
+      ),
+    );
+    final commit = SatOpCommit();
+
+    final opLogMsg = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(migrate: migrate),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    final stop = SatInStopReplicationResp();
+
+    server.nextRpcResponse('startReplication', [start, relation, opLogMsg]);
+    server.nextRpcResponse('stopReplication', [stop]);
+
+    final completer = Completer<void>();
+
+    client.on('transaction', (TransactionEvent event) {
+      final transaction = event.transaction;
+      expect(transaction.migrationVersion, migrationVersion);
+      expect(
+        transaction,
+        Transaction(
+          commitTimestamp: commit.commitTimestamp,
+          lsn: begin.lsn,
+          changes: [
+            SchemaChange(
+              migrationType: SatOpMigrate_Type.CREATE_TABLE,
+              table: migrate.table,
+              sql:
+                  'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n) WITHOUT ROWID;\n',
+            ),
+          ],
+          origin: begin.origin,
+          migrationVersion: migrationVersion,
+        ),
+      );
+      completer.complete();
+    });
+
+    await client.startReplication(null, null, null);
+
+    await completer.future;
+  });
+
   test('acknowledge lsn', () async {
     await connectAndAuth();
 

@@ -115,11 +115,29 @@ class MockSatelliteClient extends EventEmitter implements Client {
   List<Timer> timeouts = [];
 
   RelationsCache relations = {};
+  void Function(Relation relation)? relationsCb;
+  void Function(Transaction tx)? transactionsCb;
 
   Map<String, List<DataRecord>> relationData = {};
 
   void setRelations(RelationsCache relations) {
     this.relations = relations;
+
+    final _relationsCb = relationsCb;
+    if (_relationsCb != null) {
+      for (final rel in relations.values) {
+        _relationsCb(rel);
+      }
+    }
+  }
+
+  void setTransactions(List<Transaction> transactions) {
+    final _transactionsCb = transactionsCb;
+    if (_transactionsCb != null) {
+      for (final tx in transactions) {
+        _transactionsCb(tx);
+      }
+    }
   }
 
   void setRelationData(String tablename, DataRecord record) {
@@ -320,12 +338,16 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToRelations(void Function(Relation relation) callback) {}
+  void subscribeToRelations(void Function(Relation relation) callback) {
+    relationsCb = callback;
+  }
 
   @override
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
-  ) {}
+  ) {
+    transactionsCb = callback;
+  }
 
   @override
   void enqueueTransaction(
