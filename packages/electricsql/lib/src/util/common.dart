@@ -49,6 +49,10 @@ class TypeEncoder {
   static List<int> boolean(int b) {
     return boolToBytes(b);
   }
+
+  static List<int> real(num columnValue) {
+    return realToBytes(columnValue);
+  }
 }
 
 class TypeDecoder {
@@ -90,6 +94,15 @@ List<int> numberToBytes(int i) {
     (i & 0x0000ff00) >> 8,
     (i & 0x000000ff) >> 0,
   ];
+}
+
+List<int> realToBytes(num n) {
+  String numStr = n.toString();
+  if (n.truncate() == n) {
+    // n is an integer, we need to explicitly append the ".0" to it.
+    numStr = '${n.truncate()}.0';
+  }
+  return utf8.encode(numStr);
 }
 
 int bytesToNumber(List<int> bytes) {
