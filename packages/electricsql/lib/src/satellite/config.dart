@@ -1,15 +1,36 @@
 import 'package:electricsql/src/util/tablename.dart';
 
-// TODO(update): Expose more options
 class ConnectionBackoffOptions {
-  final int numOfAttempts;
+  /// Delay factor to double after every connection attempt.
+  ///
+  /// Defaults to 1 second, which results in the following delays:
+  ///  1. 1 s
+  ///  2. 2 s
+  ///  3. 4 s
+  ///  4. 8 s
+  ///  5. 10 s
+  ///
+  /// Before application of [randomizationFactor].
   final Duration startingDelay;
+
+  /// Percentage the delay should be randomized, given as fraction between
+  /// 0 and 1.
+  ///
+  /// If [randomizationFactor] is `0.25` (default) this indicates 25 % of the
+  /// delay should be increased or decreased by 25 %.
+  final double randomizationFactor;
+
+  /// Maximum delay between retries, defaults to 10 seconds.
   final Duration maxDelay;
+
+  /// Maximum number of attempts before giving up, defaults to 50.
+  final int numOfAttempts;
 
   const ConnectionBackoffOptions({
     required this.numOfAttempts,
     required this.startingDelay,
     required this.maxDelay,
+    required this.randomizationFactor,
   });
 }
 
@@ -26,6 +47,7 @@ const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
     numOfAttempts: 50,
     startingDelay: Duration(milliseconds: 1000),
     maxDelay: Duration(seconds: 10000),
+    randomizationFactor: 0.25, // Taken from `retry` package defaults
   ),
 );
 

@@ -675,6 +675,7 @@ This means there is a notifier subscription leak.`''');
         maxAttempts: backoffOpts.numOfAttempts,
         maxDelay: backoffOpts.maxDelay,
         delayFactor: backoffOpts.startingDelay,
+        randomizationFactor: backoffOpts.randomizationFactor,
         retryIf: (e) {
           return connectRetryHandler(e, retryAttempt);
         },
