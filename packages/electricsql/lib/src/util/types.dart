@@ -54,6 +54,7 @@ enum SatelliteErrorCode {
   unknownDataType,
   socketError,
   unrecognized,
+  fatalError,
 
   // auth errors
   authError,
@@ -324,5 +325,4 @@ enum ConnectivityState {
   available,
   connected,
   disconnected,
-  error,
 }

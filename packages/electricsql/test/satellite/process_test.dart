@@ -207,7 +207,8 @@ void main() {
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
 
-    await satellite.start(authConfig);
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
 
     await Future<void>.delayed(opts.pollingInterval);
 
@@ -225,13 +226,14 @@ void main() {
     await Future<void>.delayed(opts.pollingInterval);
 
     // no txn notified
-    expect(notifier.notifications.length, 3);
+    expect(notifier.notifications.length, 4);
 
-    await satellite.start(authConfig);
-    await Future<void>.delayed(Duration.zero);
+    final conn1 = await satellite.start(authConfig);
+    await conn1.connectionFuture;
+    await Future<void>.delayed(opts.pollingInterval);
 
     // connect, 4th txn
-    expect(notifier.notifications.length, 5);
+    expect(notifier.notifications.length, 6);
   });
 
   test('snapshots on potential data change', () async {
@@ -1251,7 +1253,8 @@ void main() {
     final sentLsn = satellite.client.getLastSentLsn();
     expect(sentLsn, numberToBytes(1));
 
-    await satellite.connectivityStateChanged(ConnectivityState.disconnected);
+    await satellite
+        .handleConnectivityStateChange(ConnectivityState.disconnected);
 
     await adapter.run(
       Statement(
@@ -1266,7 +1269,7 @@ void main() {
     expect(lsn1, sentLsn);
 
     // Once connectivity is restored, we will immediately run a snapshot to send pending rows
-    await satellite.connectivityStateChanged(ConnectivityState.available);
+    await satellite.handleConnectivityStateChange(ConnectivityState.available);
     // Wait for snapshot to run
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final lsn2 = satellite.client.getLastSentLsn();
@@ -1344,7 +1347,6 @@ void main() {
         conn.connectionFuture,
       ].map(
         (f) => f.onError<SatelliteException>((e, st) {
-          //console.log(`error ${e}`)
           numExpects++;
           expect(e.code, SatelliteErrorCode.internal);
         }),

@@ -1,5 +1,18 @@
 import 'package:electricsql/src/util/tablename.dart';
 
+// TODO(update): Expose more options
+class ConnectionBackoffOptions {
+  final int numOfAttempts;
+  final Duration startingDelay;
+  final Duration maxDelay;
+
+  const ConnectionBackoffOptions({
+    required this.numOfAttempts,
+    required this.startingDelay,
+    required this.maxDelay,
+  });
+}
+
 const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   metaTable: QualifiedTablename('main', '_electric_meta'),
   migrationsTable: QualifiedTablename('main', '_electric_migrations'),
@@ -9,6 +22,11 @@ const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   pollingInterval: Duration(milliseconds: 2000),
   minSnapshotWindow: Duration(milliseconds: 40),
   clearOnBehindWindow: true,
+  connectionBackoffOptions: ConnectionBackoffOptions(
+    numOfAttempts: 50,
+    startingDelay: Duration(milliseconds: 1000),
+    maxDelay: Duration(seconds: 10000),
+  ),
 );
 
 const kDefaultSatelliteTimeout = 3000;
@@ -56,6 +74,9 @@ class SatelliteOpts {
   /// On reconnect, clear client's state if cannot catch up with Electric buffered WAL
   final bool clearOnBehindWindow;
 
+  /// Backoff options for connecting with Electric
+  final ConnectionBackoffOptions connectionBackoffOptions;
+
   const SatelliteOpts({
     required this.metaTable,
     required this.migrationsTable,
@@ -65,6 +86,7 @@ class SatelliteOpts {
     required this.pollingInterval,
     required this.minSnapshotWindow,
     required this.clearOnBehindWindow,
+    required this.connectionBackoffOptions,
   });
 
   SatelliteOpts copyWith({
@@ -76,6 +98,7 @@ class SatelliteOpts {
     Duration? pollingInterval,
     Duration? minSnapshotWindow,
     bool? clearOnBehindWindow,
+    ConnectionBackoffOptions? connectionBackoffOptions,
   }) {
     return SatelliteOpts(
       metaTable: metaTable ?? this.metaTable,
@@ -86,6 +109,8 @@ class SatelliteOpts {
       pollingInterval: pollingInterval ?? this.pollingInterval,
       minSnapshotWindow: minSnapshotWindow ?? this.minSnapshotWindow,
       clearOnBehindWindow: clearOnBehindWindow ?? this.clearOnBehindWindow,
+      connectionBackoffOptions:
+          connectionBackoffOptions ?? this.connectionBackoffOptions,
     );
   }
 

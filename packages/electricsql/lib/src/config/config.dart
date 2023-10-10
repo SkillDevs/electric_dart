@@ -1,4 +1,5 @@
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/satellite/config.dart';
 
 class ElectricConfig {
   final AuthConfig auth;
@@ -21,20 +22,26 @@ class ElectricConfig {
   /// Optional logger configuration.
   final LoggerConfig? logger;
 
+  /// Optional backoff options for connecting with Electric
+  final ConnectionBackoffOptions? connectionBackoffOptions;
+
   ElectricConfig({
     required this.auth,
     this.url,
     this.logger,
+    this.connectionBackoffOptions,
   });
 }
 
 class HydratedConfig {
   final AuthConfig auth;
   final ReplicationConfig replication;
+  final ConnectionBackoffOptions connectionBackoffOptions;
 
   HydratedConfig({
     required this.auth,
     required this.replication,
+    required this.connectionBackoffOptions,
   });
 }
 
@@ -69,9 +76,13 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
     ssl: sslEnabled,
   );
 
+  final connectionBackoffOptions = config.connectionBackoffOptions ??
+      kSatelliteDefaults.connectionBackoffOptions;
+
   return HydratedConfig(
     auth: auth,
     replication: replication,
     //debug: debug,
+    connectionBackoffOptions: connectionBackoffOptions,
   );
 }

@@ -187,13 +187,18 @@ class GlobalRegistry extends BaseRegistry {
       notifier: notifier,
       opts: satelliteClientOpts,
     );
+
+    final SatelliteOpts satelliteOpts = kSatelliteDefaults.copyWith(
+      connectionBackoffOptions: config.connectionBackoffOptions,
+    );
+
     final satellite = SatelliteProcess(
       dbName: dbName,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
       client: client,
-      opts: kSatelliteDefaults,
+      opts: satelliteOpts,
     );
     await satellite.start(config.auth);
 
