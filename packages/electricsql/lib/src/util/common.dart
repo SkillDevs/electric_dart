@@ -53,7 +53,7 @@ class TypeEncoder {
   static List<int> real(num columnValue) {
     return realToBytes(columnValue);
   }
-  
+
   static List<int> timetz(String s) {
     return TypeEncoder.text(stringToTimetzString(s));
   }
