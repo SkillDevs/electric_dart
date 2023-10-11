@@ -8,19 +8,25 @@
 
 #### 🛠️ WORK IN PROGRESS 🛠️
 
+[Electric](https://electric-sql.com/) is currently in **public alpha** phase, and the Dart client is currently being developed introducing the new features from the official client as they come out.
 For development updates make sure to check out the official [ElectricSQL Discord](https://discord.gg/B7kHGwDcbj) server, as well as the official [Javascript client](https://www.npmjs.com/package/electric-sql)  
 
 ---
 
 Unofficial Dart client implementation for [Electric](https://electric-sql.com/).
 
-Client based on the typescript client from the `clients/typescript` subfolder from [electric git repository](https://github.com/electric-sql/electric) 
+Client based on the Typescript client from the `clients/typescript` subfolder from [electric git repository](https://github.com/electric-sql/electric) 
 
 ### Reference implementation: 
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
-* Version `v0.6.3-dev`
+* Version `v0.6.4-dev`
 * Commit: `09f510b42ca7ba51551e4cbf47016a5715326813`
+
+
+### What's Electric?
+
+ElectricSQL is a local-first software platform. Use it to build super fast, collaborative, offline-capable apps directly on Postgres. [Introduction & Live Demos](https://electric-sql.com/docs/intro/local-first)
 
 
 ### Run the Todos example

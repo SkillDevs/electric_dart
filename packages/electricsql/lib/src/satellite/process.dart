@@ -4,12 +4,12 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
-import 'package:electricsql/src/migrators/bundle.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/proto/satellite.pbenum.dart';
 import 'package:electricsql/src/satellite/config.dart';
+import 'package:electricsql/src/satellite/error.dart';
 import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
@@ -20,6 +20,7 @@ import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
@@ -45,14 +46,13 @@ typedef SubscriptionNotifier = ({
 typedef ConnectRetryHandler = bool Function(Object error, int attempt);
 
 // ignore: prefer_function_declarations_over_variables
-final ConnectRetryHandler defaultConnectRetryHandler = (_error, _attempts) {
-  // for simplicity, always retry
+final ConnectRetryHandler defaultConnectRetryHandler = (error, _attempts) {
+  if (error is! SatelliteException || isThrowable(error) || isFatal(error)) {
+    logger.debug('connectAndStartRetryHandler was cancelled: $error');
+    return false;
+  }
   return true;
 };
-
-const connectionRetryPolicy = ConnectionRetryPolicy();
-
-const throwErrors = {SatelliteErrorCode.internal};
 
 class SatelliteProcess implements Satellite {
   @override
@@ -90,6 +90,7 @@ class SatelliteProcess implements Satellite {
 
   RelationsCache relations = {};
 
+  final List<ClientShapeDefinition> previousShapeSubscriptions = [];
   late SubscriptionsManager subscriptions;
   final Map<String, Completer<void>> subscriptionNotifiers = {};
   late String Function() subscriptionIdGenerator;
@@ -185,7 +186,7 @@ This means there is a notifier subscription leak.`''');
         // chance to handle the change before actually handling it internally in the process
         await Future<void>.delayed(Duration.zero);
 
-        await connectivityStateChanged(notification.connectivityState);
+        await handleConnectivityStateChange(notification.connectivityState);
       },
     );
 
@@ -219,8 +220,7 @@ This means there is a notifier subscription leak.`''');
       subscriptions.setState(subscriptionsState);
     }
 
-    final connectionFuture =
-        connectWithBackoff().then((_) => _startReplication());
+    final connectionFuture = connectWithBackoff();
     return ConnectionWrapper(
       connectionFuture: connectionFuture,
     );
@@ -306,7 +306,7 @@ This means there is a notifier subscription leak.`''');
       _potentialDataChangeSubscription = null;
     }
 
-    return connectivityStateChanged(ConnectivityState.disconnected);
+    _disconnect();
   }
 
   @override
@@ -519,16 +519,22 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  // maintains subscriptions
-  Future<List<ClientShapeDefinition>> _resetClientState() async {
-    await connectivityStateChanged(ConnectivityState.disconnected);
-
+  Future<void> _resetClientState({
+    bool keepSubscribedShapes = false,
+  }) async {
+    logger.warning('resetting client state');
+    _disconnect();
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
-    final List<ClientShapeDefinition> shapeDefs = subscriptionIds
-        .map((subId) => subscriptions.shapesForActiveSubscription(subId))
-        .whereNotNull()
-        .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
-        .toList();
+
+    if (keepSubscribedShapes) {
+      final List<ClientShapeDefinition> shapeDefs = subscriptionIds
+          .map((subId) => subscriptions.shapesForActiveSubscription(subId))
+          .whereNotNull()
+          .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
+          .toList();
+
+      previousShapeSubscriptions.addAll(shapeDefs);
+    }
 
     _lsn = null;
 
@@ -541,23 +547,6 @@ This means there is a notifier subscription leak.`''');
       _setMetaStatement('lsn', null),
       _setMetaStatement('subscriptions', subscriptions.serialize()),
     ]);
-
-    return shapeDefs;
-  }
-
-  Future<void> _reconnect(List<ClientShapeDefinition> shapeDefs) async {
-    logger.warning('reconnecting to server');
-    await connectWithBackoff();
-    await _startReplication();
-
-    if (shapeDefs.isNotEmpty) {
-      unawaited(subscribe(shapeDefs));
-    }
-  }
-
-  Future<void> _resetClientStateAndReconnect() async {
-    final shapes = await _resetClientState();
-    await _reconnect(shapes);
   }
 
   Future<void> _handleSubscriptionError(
@@ -593,7 +582,7 @@ This means there is a notifier subscription leak.`''');
       if (satelliteError.code == SatelliteErrorCode.authRequired) {
         // TODO: should stop retrying
         logger.warning(
-          'a fatal error occurred while initializing: ${satelliteError.message}',
+          'an authentication error occurred while connecting to server: ${satelliteError.message}',
         );
         return;
       }
@@ -606,31 +595,46 @@ This means there is a notifier subscription leak.`''');
       'an error occurred in satellite: ${satelliteError.message}',
     );
 
-    // all other errors are handled by closing the client (if not yet) and retrying
-    unawaited(
-      connectivityStateChanged(ConnectivityState.disconnected)
-          .then((_) => connectivityStateChanged(ConnectivityState.available)),
-    );
+    unawaited(_handleOrThrowClientError(satelliteError));
+  }
+
+  Future<void> _handleOrThrowClientError(SatelliteException error) {
+    _disconnect();
+
+    // TODO(dart): Should we handle this case? When can it happen?
+    /*  if (!error) {
+      final e = new SatelliteError(
+        SatelliteErrorCode.INTERNAL,
+        'received an error event without an error code'
+      )
+      throw wrapFatalError(e)
+    } */
+
+    if (isThrowable(error)) {
+      throw error;
+    }
+    if (isFatal(error)) {
+      throw wrapFatalError(error);
+    }
+
+    logger.warning('Client disconnected with a non fatal error, reconnecting');
+    return connectWithBackoff();
   }
 
   @visibleForTesting
-  Future<void> connectivityStateChanged(
+  Future<void> handleConnectivityStateChange(
     ConnectivityState status,
   ) async {
-    connectivityState = status;
-    logger.debug('connectivity state changed $status');
+    logger.debug('Connectivity state changed: $status');
 
-    // TODO: no op if state is the same
     switch (status) {
       case ConnectivityState.available:
         {
           logger.warning('checking network availability and reconnecting');
-          return connectWithBackoff().then((_) => _startReplication());
+          return connectWithBackoff();
         }
-      case ConnectivityState.error:
       case ConnectivityState.disconnected:
         {
-          logger.warning('client disconnected from server');
           client.close();
           return;
         }
@@ -645,7 +649,6 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  // we might just move starting replication into the retrier, which might be more simple to manage
   @visibleForTesting
   Future<void> connectWithBackoff() async {
     final _initializing = initializing;
@@ -655,8 +658,14 @@ This means there is a notifier subscription leak.`''');
 
     Future<void> _attemptBody() async {
       await _connect();
+      await _startReplication();
+      _subscribePreviousShapeRequests();
+
+      _notifyConnectivityState(ConnectivityState.connected);
+      initializing?.complete();
     }
 
+    final backoffOpts = opts.connectionBackoffOptions;
     int retryAttempt = 0;
     try {
       await retry_lib.retry(
@@ -664,9 +673,10 @@ This means there is a notifier subscription leak.`''');
           retryAttempt++;
           return _attemptBody();
         },
-        maxAttempts: connectionRetryPolicy.numOfAttempts,
-        maxDelay: connectionRetryPolicy.maxDelay,
-        delayFactor: connectionRetryPolicy.startingDelay,
+        maxAttempts: backoffOpts.numOfAttempts,
+        maxDelay: backoffOpts.maxDelay,
+        delayFactor: backoffOpts.startingDelay,
+        randomizationFactor: backoffOpts.randomizationFactor,
         retryIf: (e) {
           return connectRetryHandler(e, retryAttempt);
         },
@@ -675,17 +685,34 @@ This means there is a notifier subscription leak.`''');
       // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 
-      final error = SatelliteException(
-        SatelliteErrorCode.connectionFailedAfterRetry,
-        'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
-      );
+      final error = !connectRetryHandler(e, 0)
+          ? e
+          : SatelliteException(
+              SatelliteErrorCode.connectionFailedAfterRetry,
+              'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
+            );
 
-      initializing?.completeError(e);
-      notifier.connectivityStateChanged(
-        dbName,
-        ConnectivityState.disconnected,
-      );
+      _disconnect();
+      initializing?.completeError(error);
       throw error;
+    }
+  }
+
+  void _subscribePreviousShapeRequests() {
+    try {
+      if (previousShapeSubscriptions.isNotEmpty) {
+        logger.warning('Subscribing previous shape definitions');
+        subscribe(
+          previousShapeSubscriptions.splice(
+            0,
+            previousShapeSubscriptions.length,
+          ),
+        );
+      }
+    } catch (error) {
+      final message =
+          'Client was unable to subscribe previously subscribed shapes: $error';
+      throw SatelliteException(SatelliteErrorCode.internal, message);
     }
   }
 
@@ -713,6 +740,11 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
+  void _disconnect() {
+    client.close();
+    _notifyConnectivityState(ConnectivityState.disconnected);
+  }
+
   Future<void> _startReplication() async {
     try {
       final schemaVersion = await migrator.querySchemaVersion();
@@ -728,52 +760,35 @@ This means there is a notifier subscription leak.`''');
         subscriptionIds.isNotEmpty ? subscriptionIds : null,
       );
       if (error != null) {
-        if ((error.code == SatelliteErrorCode.invalidPosition ||
-                error.code == SatelliteErrorCode.behindWindow ||
-                error.code == SatelliteErrorCode.subscriptionNotFound) &&
-            opts.clearOnBehindWindow) {
-          logger.warning(
-            'server error: ${error.message}. resetting client state and retrying connection',
-          );
-          // restart reconnection loop
-          return await _resetClientStateAndReconnect();
-        }
         throw error;
       }
-
-      notifier.connectivityStateChanged(dbName, ConnectivityState.connected);
-      initializing?.complete();
     } catch (error) {
-      if (error is SatelliteException &&
-          error.code == SatelliteErrorCode.unknownSchemaVersion) {
-        logger.warning(kSchemaVersionErrorMsg);
+      logger.warning("Couldn't start replication: $error");
 
-        // FIXME: I think at this point it's clear the client needs to be re-generated
-        initializing?.completeError(
-          SatelliteException(error.code, kSchemaVersionErrorMsg),
-        );
-        notifier.connectivityStateChanged(
-          dbName,
-          ConnectivityState.disconnected,
-        );
-        return;
-      } else {
-        initializing?.completeError(error);
-        if (error is! SatelliteException) {
-          rethrow;
-        }
-        if (throwErrors.contains(error.code)) {
-          rethrow;
-        }
-
-        logger.warning(
-          "Couldn't start replication with reason: ${error.message}. resetting client state and retrying",
-        );
-        return _resetClientStateAndReconnect();
+      if (error is! SatelliteException) {
+        throw SatelliteException(SatelliteErrorCode.internal, error.toString());
       }
-    } finally {
-      initializing = null;
+
+      if (isOutOfSyncError(error) && opts.clearOnBehindWindow) {
+        await _resetClientState(keepSubscribedShapes: true);
+        rethrow;
+      }
+
+      // Some errors could be fixed by dropping local database entirely
+      // We propagate throwable and fatal errors for the app to decide
+      if (isThrowable(error)) {
+        rethrow;
+      }
+
+      if (isFatal(error)) {
+        throw wrapFatalError(error);
+      }
     }
+  }
+
+  void _notifyConnectivityState(ConnectivityState connectivityState) {
+    this.connectivityState = connectivityState;
+    notifier.connectivityStateChanged(dbName, this.connectivityState!);
   }
 
   Future<bool> _verifyTableStructure() async {
@@ -1582,17 +1597,5 @@ class ApplyIncomingResult {
   ApplyIncomingResult({
     required this.tableNames,
     required this.statements,
-  });
-}
-
-class ConnectionRetryPolicy {
-  final int numOfAttempts;
-  final Duration startingDelay;
-  final Duration maxDelay;
-
-  const ConnectionRetryPolicy({
-    this.numOfAttempts = 100,
-    this.startingDelay = const Duration(milliseconds: 100),
-    this.maxDelay = const Duration(milliseconds: 5000),
   });
 }

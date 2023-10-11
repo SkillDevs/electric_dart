@@ -4,12 +4,24 @@ A new Flutter project.
 
 ## Prerequisites
 
-* Flutter 3.10.x
+* Flutter 3.13.x
 * Postgres migrations tool - [dbmate](https://github.com/amacneil/dbmate/releases)
 * Docker Compose - In order to run Electric locally
 
 
 ## Setup
+
+### 0. Prepare the project in the electric_dart monorepo.
+
+Because the example is running against local dependencies in the monorepo Melos is required to bootstrap the project correctly.
+
+```sh
+# Install melos
+dart pub global activate melos
+
+# Bootstrap the project
+melos bs
+```
 
 ### 1. Start backend
 
@@ -29,7 +41,7 @@ In this demo we used [dbmate](https://github.com/amacneil/dbmate) to apply the m
 
 ```sh
 cd backend
-./apply_migrations.sh # Under the hood this runs `dbmate` as follows:
+./apply-migrations.sh # Under the hood this runs `dbmate` as follows:
 
 # > POSTGRES_URL="postgres://postgres:password@localhost:5432/{dbname}?sslmode=disable"
 # > dbmate -d migrations -u "$POSTGRES_URL" up

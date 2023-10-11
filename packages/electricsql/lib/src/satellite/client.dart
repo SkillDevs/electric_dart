@@ -811,6 +811,7 @@ class SatelliteClient extends EventEmitter implements Client {
           lsn: lastTx.lsn,
           changes: lastTx.changes,
           origin: lastTx.origin,
+          migrationVersion: lastTx.migrationVersion,
         );
         emit<TransactionEvent>(
           'transaction',
@@ -1043,6 +1044,7 @@ Object deserializeColumnData(
       return TypeDecoder.text(column);
     case 'BOOL':
       return TypeDecoder.boolean(column);
+    case 'REAL':
     case 'FLOAT4':
     case 'FLOAT8':
     case 'INT':
@@ -1066,6 +1068,10 @@ List<int> serializeColumnData(Object columnValue, RelationColumn columnInfo) {
   switch (columnType) {
     case 'BOOL':
       return TypeEncoder.boolean(columnValue as int);
+    case 'REAL':
+    case 'FLOAT4':
+    case 'FLOAT8':
+      return TypeEncoder.real(columnValue as num);
     case 'TIMETZ':
       return TypeEncoder.timetz(columnValue as String);
     default:

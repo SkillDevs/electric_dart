@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -16,7 +18,7 @@ void main() {
         RelationColumn(name: 'name3', type: 'TEXT', isNullable: true),
         RelationColumn(name: 'int1', type: 'INTEGER', isNullable: true),
         RelationColumn(name: 'int2', type: 'INTEGER', isNullable: true),
-        RelationColumn(name: 'float1', type: 'FLOAT4', isNullable: true),
+        RelationColumn(name: 'float1', type: 'REAL', isNullable: true),
         RelationColumn(name: 'float2', type: 'FLOAT4', isNullable: true),
         RelationColumn(name: 'bool1', type: 'BOOL', isNullable: true),
         RelationColumn(name: 'bool2', type: 'BOOL', isNullable: true),
@@ -30,13 +32,17 @@ void main() {
       'name3': null,
       'int1': 1,
       'int2': -30,
-      'float1': 1.1,
+      'float1': 1.0,
       'float2': -30.3,
       'bool1': 1,
       'bool2': 0,
       'bool3': null,
     };
     final sRow = serializeRow(record, rel);
+    expect(
+      sRow.values.map((bytes) => utf8.decode(bytes)),
+      ['Hello', 'World!', '', '1', '-30', '1.0', '-30.3', 't', 'f', ''],
+    );
     final dRow = deserializeRow(sRow, rel);
 
     expect(record, dRow);
