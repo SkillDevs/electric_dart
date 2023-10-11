@@ -11,6 +11,18 @@ A new Flutter project.
 
 ## Setup
 
+### 0. Prepare the project in the electric_dart monorepo.
+
+Because the example is running against local dependencies in the monorepo Melos is required to bootstrap the project correctly.
+
+```sh
+# Install melos
+dart pub global activate melos
+
+# Bootstrap the project
+melos bs
+```
+
 ### 1. Start backend
 
 Before starting the app, we need to start the Electric service and a Postgres database.
