@@ -41,7 +41,7 @@ In this demo we used [dbmate](https://github.com/amacneil/dbmate) to apply the m
 
 ```sh
 cd backend
-./apply_migrations.sh # Under the hood this runs `dbmate` as follows:
+./apply-migrations.sh # Under the hood this runs `dbmate` as follows:
 
 # > POSTGRES_URL="postgres://postgres:password@localhost:5432/{dbname}?sslmode=disable"
 # > dbmate -d migrations -u "$POSTGRES_URL" up
