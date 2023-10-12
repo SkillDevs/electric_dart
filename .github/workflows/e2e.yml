@@ -88,6 +88,9 @@ jobs:
       - run: make lux
       - run: make deps pull
       # - run: make test_only
+      
+      # Avoid e2e flakiness by running only the Dart client e2e tests
+      # We assume that the electric service e2e tests work on upstream
       - run: make test_client_only
         id: tests
         env:
