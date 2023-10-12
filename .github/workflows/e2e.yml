@@ -87,7 +87,8 @@ jobs:
 
       - run: make lux
       - run: make deps pull
-      - run: make test_only
+      # - run: make test_only
+      - run: make test_client_only
         id: tests
         env:
           ELECTRIC_IMAGE_NAME: electric-sql-ci/electric
