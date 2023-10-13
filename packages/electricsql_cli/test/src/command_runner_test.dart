@@ -1,5 +1,4 @@
 import 'package:args/command_runner.dart';
-import 'package:cli_completion/cli_completion.dart';
 import 'package:electricsql_cli/src/command_runner.dart';
 import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
@@ -25,7 +24,7 @@ void main() {
         () {
       final commandRunner = ElectricCliCommandRunner();
       expect(commandRunner, isNotNull);
-      expect(commandRunner, isA<CompletionCommandRunner<int>>());
+      expect(commandRunner, isA<CommandRunner<int>>());
     });
 
     test('handles FormatException', () async {
