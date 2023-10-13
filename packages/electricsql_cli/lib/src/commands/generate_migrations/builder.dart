@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:code_builder/code_builder.dart';
+import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:path/path.dart' as path;
 
@@ -28,7 +30,7 @@ Future<List<Migration>> loadMigrations(Directory migrationsFolder) async {
         File(path.join(migrationsFolder.path, dirName, 'metadata.json')),
   );
   final migrationsMetadatas = await Future.wait(
-    migrationFiles.map(readMetadataFile),
+    migrationFiles.map(_readMetadataFile),
   );
   return migrationsMetadatas.map(makeMigration).toList();
 }
@@ -36,7 +38,7 @@ Future<List<Migration>> loadMigrations(Directory migrationsFolder) async {
 /// Reads the specified metadata file.
 /// @param path Path to the metadata file.
 /// @returns A promise that resolves with the metadata.
-Future<MetaData> readMetadataFile(File file) async {
+Future<MetaData> _readMetadataFile(File file) async {
   try {
     final data = await file.readAsString();
     final jsonData = json.decode(data);
@@ -67,41 +69,55 @@ Future<List<String>> getMigrationNames(Directory migrationsFolder) async {
   return dirNames;
 }
 
-const _kTab = '  ';
-
 String generateMigrationsDartCode(List<Migration> migrations) {
-  final migrationLines =
-      migrations.map((m) => '${generateSingleMigrationDartCode(m, _kTab)},');
-  final migrationsStr = migrationLines.join('\n');
-  return '''
-// GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: prefer_single_quotes, lines_longer_than_80_chars, avoid_escaping_inner_quotes, depend_on_referenced_packages
-import 'package:electricsql/electricsql.dart';
+  const kElectricSqlImport = 'package:electricsql/electricsql.dart';
 
-final kElectricMigrations = [
-$migrationsStr
-];
-''';
-}
+  final migrationReference = refer('Migration', kElectricSqlImport);
 
-String generateSingleMigrationDartCode(
-  Migration migration,
-  String indent,
-) {
-  final stmtIndent = '$indent$_kTab$_kTab';
-  final statments = migration.statements.map((stmt) {
-    final singleLineStmt = stmt
-        .replaceAll('\n', r'\n')
-        .replaceAll('"', r'\"')
-        .replaceAll('\t', r'\t');
-    return '$stmtIndent"$singleLineStmt",';
-  });
-  final statementsString = statments.join('\n');
-  return '''
-${indent}Migration(
-$indent${_kTab}statements: [
-$statementsString
-$indent$_kTab],
-$indent${_kTab}version: "${migration.version}",
-$indent)''';
+  // Migrations
+  final List<Expression> migrationExpressions = migrations.map((m) {
+    final stmts = m.statements.map((stmt) => literal(stmt)).toList();
+    final stmtsList = literalList(stmts);
+    return migrationReference.newInstance([], {
+      'statements': stmtsList,
+      'version': literal(m.version),
+    });
+  }).toList();
+
+  // UnmodifiableListView<Migration>
+  final unmodifListReference = TypeReference(
+    (b) => b
+      ..url = 'dart:collection'
+      ..symbol = 'UnmodifiableListView'
+      ..types.add(migrationReference.type),
+  );
+
+  // global final immutable field for the migrations
+  final electricMigrationsField = Field(
+    (b) => b
+      ..name = 'kElectricMigrations'
+      ..modifier = FieldModifier.final$
+      ..assignment = unmodifListReference.newInstance([
+        literalList(migrationExpressions, migrationReference),
+      ]).code,
+  );
+
+  final library = Library(
+    (b) => b
+      ..comments.add('GENERATED CODE - DO NOT MODIFY BY HAND')
+      ..ignoreForFile.addAll([
+        'depend_on_referenced_packages',
+        'prefer_double_quotes',
+      ])
+      ..body.add(electricMigrationsField),
+  );
+
+  final emitter = DartEmitter(
+    allocator: Allocator(),
+    useNullSafetySyntax: true,
+  );
+  final codeStr = DartFormatter().format(
+    '${library.accept(emitter)}',
+  );
+  return codeStr;
 }
