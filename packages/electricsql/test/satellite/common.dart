@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
@@ -17,6 +18,10 @@ import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 import '../util/sqlite.dart';
+
+DBSchema kTestDbDescription = DBSchemaCustom(
+  migrations: [],
+);
 
 Map<String, Relation> kTestRelations = {
   'child': Relation(

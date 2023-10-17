@@ -1,3 +1,4 @@
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
@@ -27,8 +28,9 @@ class SubscriptionsDataCache extends EventEmitter {
   Set<RequestId> remainingShapes = {};
   RequestId? currentShapeRequestId;
   SubscriptionDataInternal? inDelivery;
+  DBSchema dbDescription;
 
-  SubscriptionsDataCache();
+  SubscriptionsDataCache(this.dbDescription);
 
   bool isDelivering() {
     return inDelivery != null;
@@ -282,7 +284,7 @@ class SubscriptionsDataCache extends EventEmitter {
       );
     }
 
-    final record = deserializeRow(rowData, relation);
+    final record = deserializeRow(rowData, relation, dbDescription);
 
     if (record == null) {
       internalError(

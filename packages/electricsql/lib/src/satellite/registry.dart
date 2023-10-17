@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
@@ -18,6 +19,7 @@ abstract class BaseRegistry implements Registry {
 
   Future<Satellite> startProcess({
     required DbName dbName,
+    required DBSchema dbDescription,
     required DatabaseAdapter adapter,
     required Migrator migrator,
     required Notifier notifier,
@@ -29,6 +31,7 @@ abstract class BaseRegistry implements Registry {
   @override
   Future<Satellite> ensureStarted({
     required DbName dbName,
+    required DBSchema dbDescription,
     required DatabaseAdapter adapter,
     required Migrator migrator,
     required Notifier notifier,
@@ -45,6 +48,7 @@ abstract class BaseRegistry implements Registry {
       return stopping.then(
         (_) => ensureStarted(
           dbName: dbName,
+          dbDescription: dbDescription,
           adapter: adapter,
           migrator: migrator,
           notifier: notifier,
@@ -77,6 +81,7 @@ abstract class BaseRegistry implements Registry {
     // Otherwise we need to fire it up!
     final startingPromise = startProcess(
       dbName: dbName,
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -162,6 +167,7 @@ class GlobalRegistry extends BaseRegistry {
   @override
   Future<Satellite> startProcess({
     required DbName dbName,
+    required DBSchema dbDescription,
     required DatabaseAdapter adapter,
     required Migrator migrator,
     required Notifier notifier,
@@ -183,6 +189,7 @@ class GlobalRegistry extends BaseRegistry {
 
     final client = SatelliteClient(
       dbName: dbName,
+      dbDescription: dbDescription,
       socketFactory: socketFactory,
       notifier: notifier,
       opts: satelliteClientOpts,

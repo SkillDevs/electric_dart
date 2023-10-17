@@ -75,6 +75,10 @@ class TypeDecoder {
   static String timetz(List<int> bytes) {
     return bytesToTimetzString(bytes);
   }
+
+  static Object float(List<int> bytes) {
+    return bytesToFloat(bytes);
+  }
 }
 
 final trueByte = 't'.codeUnitAt(0);
@@ -106,7 +110,7 @@ List<int> numberToBytes(int i) {
 
 List<int> realToBytes(num n) {
   String numStr = n.toString();
-  if (n.truncate() == n) {
+  if (n.isFinite && n.truncate() == n) {
     // n is an integer, we need to explicitly append the ".0" to it.
     numStr = '${n.truncate()}.0';
   }
@@ -132,6 +136,20 @@ String bytesToString(List<int> bytes) {
 String bytesToTimetzString(List<int> bytes) {
   final str = bytesToString(bytes);
   return str.replaceAll('+00', '');
+}
+
+/// Converts a PG string of type `float4` or `float8` to an equivalent SQLite number.
+/// Since SQLite does not recognise `NaN` we turn it into the string `'NaN'` instead.
+/// cf. https://github.com/WiseLibs/better-sqlite3/issues/1088
+/// @param bytes Data for this `float4` or `float8` column.
+/// @returns The SQLite value.
+Object bytesToFloat(List<int> bytes) {
+  final text = TypeDecoder.text(bytes);
+  if (text == 'NaN') {
+    return 'NaN';
+  } else {
+    return num.parse(text);
+  }
 }
 
 /// Converts a SQLite string representing a `timetz` value to a PG string.

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
@@ -78,6 +79,7 @@ class MockRegistry extends BaseRegistry {
   @override
   Future<Satellite> startProcess({
     required DbName dbName,
+    required DBSchema dbDescription,
     required DatabaseAdapter adapter,
     required Migrator migrator,
     required Notifier notifier,

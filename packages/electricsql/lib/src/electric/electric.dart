@@ -4,6 +4,7 @@ import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/sockets.dart';
 import 'package:electricsql/src/client/model/client.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/util.dart';
 
@@ -52,9 +53,9 @@ Future<void> defaultPrepare(DatabaseAdapter connection) async {
 /// call once they've constructed their implementations. This function can
 /// also be called directly by tests that don't want to go via the adapter
 /// entrypoints in order to avoid loading the environment dependencies.
-Future<ElectricClient> electrifyBase({
+Future<ElectricClient> electrifyBase<DB extends DBSchema>({
   required DbName dbName,
-  required List<Migration> migrations,
+  required DB dbDescription,
   required ElectricConfig config,
   required DatabaseAdapter adapter,
   required SocketFactory socketFactory,
@@ -72,12 +73,13 @@ Future<ElectricClient> electrifyBase({
 
   final configWithDefaults = hydrateConfig(config);
   final migrator =
-      opts.migrator ?? BundleMigrator(adapter: adapter, migrations: migrations);
+      opts.migrator ?? BundleMigrator(adapter: adapter, migrations: dbDescription.migrations);
   final notifier = opts.notifier ?? EventNotifier(dbName: dbName);
   final registry = opts.registry ?? globalRegistry;
 
   final satellite = await registry.ensureStarted(
     dbName: dbName,
+    dbDescription: dbDescription,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,

@@ -1,14 +1,16 @@
 import 'package:electricsql/drivers/sqlite3.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+// TODO(update): Consider removing support for raw sqlite3 electrification
 Future<ElectricClient> electrify({
   required String dbName,
   required Database db,
-  required List<Migration> migrations,
+  required DBSchema dbDescription,
   required ElectricConfig config,
   ElectrifyOptions? opts,
 }) async {
@@ -17,7 +19,7 @@ Future<ElectricClient> electrify({
 
   final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
-    migrations: migrations,
+    dbDescription: dbDescription,
     config: config,
     adapter: adapter,
     socketFactory: socketFactory,

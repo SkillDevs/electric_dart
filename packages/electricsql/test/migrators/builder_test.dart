@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/sockets/mock.dart';
@@ -132,7 +133,7 @@ void main() {
     final electric = await electrify(
       db: db,
       dbName: dbName,
-      migrations: [migration],
+      dbDescription: DBSchemaCustom(migrations: [migration]),
       config: ElectricConfig(
         auth: const AuthConfig(
           token: 'test-token',

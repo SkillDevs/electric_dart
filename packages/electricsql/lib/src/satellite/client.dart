@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/conversions/types.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart' hide Change;
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -19,6 +21,7 @@ import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
+import 'package:meta/meta.dart';
 import 'package:synchronized/synchronized.dart';
 
 typedef IncomingHandler = void Function(Object?);
@@ -49,8 +52,8 @@ class SatelliteClient extends EventEmitter implements Client {
   late Replication<DataTransaction> outbound;
 
   // can only handle a single subscription at a time
-  final SubscriptionsDataCache _subscriptionsDataCache =
-      SubscriptionsDataCache();
+  late final SubscriptionsDataCache _subscriptionsDataCache =
+      SubscriptionsDataCache(_dbDescription);
 
   void Function(Uint8List bytes)? socketHandler;
   Throttle<void>? throttledPushTransaction;
@@ -61,6 +64,14 @@ class SatelliteClient extends EventEmitter implements Client {
 
   List<String> allowedMutexedRpcResponses = [];
 
+  DBSchema _dbDescription;
+
+  @visibleForTesting
+  void debugSetDbDescription(DBSchema value) {
+    _dbDescription = value;
+    _subscriptionsDataCache.dbDescription = value;
+  }
+
   late final Map<String, Future<Object> Function(Object)>
       handlerForRpcRequests = {
     'startReplication': (o) => handleStartReq(o as SatInStartReplicationReq),
@@ -70,11 +81,12 @@ class SatelliteClient extends EventEmitter implements Client {
   SatelliteClient({
     // ignore: avoid_unused_constructor_parameters
     required DbName dbName,
+    required DBSchema dbDescription,
     required this.socketFactory,
     // ignore: avoid_unused_constructor_parameters
     required Notifier notifier,
     required this.opts,
-  }) {
+  }) : _dbDescription = dbDescription {
     inbound = resetReplication<Transaction>(null, null);
     outbound = resetReplication<DataTransaction>(null, null);
 
@@ -836,7 +848,8 @@ class SatelliteClient extends EventEmitter implements Client {
         final change = DataChange(
           relation: rel,
           type: DataChangeType.insert,
-          record: deserializeRow(op.insert.getNullableRowData(), rel),
+          record: deserializeRow(
+              op.insert.getNullableRowData(), rel, _dbDescription),
           tags: op.insert.tags,
         );
 
@@ -859,8 +872,8 @@ class SatelliteClient extends EventEmitter implements Client {
         final change = DataChange(
           relation: rel,
           type: DataChangeType.update,
-          record: deserializeRow(rowData, rel),
-          oldRecord: deserializeRow(oldRowData, rel),
+          record: deserializeRow(rowData, rel, _dbDescription),
+          oldRecord: deserializeRow(oldRowData, rel, _dbDescription),
           tags: op.update.tags,
         );
 
@@ -882,7 +895,7 @@ class SatelliteClient extends EventEmitter implements Client {
         final change = DataChange(
           relation: rel,
           type: DataChangeType.delete,
-          oldRecord: deserializeRow(oldRowData, rel),
+          oldRecord: deserializeRow(oldRowData, rel, _dbDescription),
           tags: op.delete.tags,
         );
         replication.transactions[lastTxnIdx].changes.add(change);
@@ -931,10 +944,10 @@ class SatelliteClient extends EventEmitter implements Client {
       SatOpRow? record;
 
       if (change.oldRecord != null && change.oldRecord!.isNotEmpty) {
-        oldRecord = serializeRow(change.oldRecord!, relation);
+        oldRecord = serializeRow(change.oldRecord!, relation, _dbDescription);
       }
       if (change.record != null && change.record!.isNotEmpty) {
-        record = serializeRow(change.record!, relation);
+        record = serializeRow(change.record!, relation, _dbDescription);
       }
 
       late final SatTransOp changeOp;
@@ -973,7 +986,40 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 }
 
-SatOpRow serializeRow(Record rec, Relation relation) {
+/// Fetches the PG type of the given column in the given table.
+/// @param dbDescription Database description object
+/// @param table Name of the table
+/// @param column Name of the column
+/// @returns The PG type of the column
+PgType _getColumnType(
+  DBSchema dbDescription,
+  String table,
+  RelationColumn column,
+) {
+  return pgTypeFromColumnType(column.type);
+
+  // TODO(update): Review
+  /* if (
+    dbDescription.hasTable(table) &&
+    dbDescription.getFields(table).has(column.name)
+  ) {
+    // The table and column are known in the DB description
+    return dbDescription.getFields(table).get(column.name)!
+  } else {
+    // The table or column is not known.
+    // There must have been a migration that added it to the DB while the app was running.
+    // i.e., it was not known at the time the Electric client for this app was generated
+    //       so it is not present in the bundled DB description.
+    // Thus, we return the column type that is stored in the relation.
+    // Note that it is fine to fetch the column type from the relation
+    // because it was received at runtime and thus will have the PG type
+    // (which would not be the case for bundled relations fetched
+    //  from the endpoint because the endpoint maps PG types to SQLite types).
+    return column.type.toUpperCase() as PgType
+  } */
+}
+
+SatOpRow serializeRow(Record rec, Relation relation, DBSchema dbDescription) {
   int recordNumColumn = 0;
   final recordNullBitMask =
       Uint8List(calculateNumBytes(relation.columns.length));
@@ -982,7 +1028,8 @@ SatOpRow serializeRow(Record rec, Relation relation) {
     (List<List<int>> acc, RelationColumn c) {
       final Object? value = rec[c.name];
       if (value != null) {
-        acc.add(serializeColumnData(value, c));
+        final pgColumnType = _getColumnType(dbDescription, relation.table, c);
+        acc.add(serializeColumnData(value, pgColumnType));
       } else {
         acc.add(serializeNullData());
         setMaskBit(recordNullBitMask, recordNumColumn);
@@ -1000,6 +1047,7 @@ SatOpRow serializeRow(Record rec, Relation relation) {
 Record? deserializeRow(
   SatOpRow? row,
   Relation relation,
+  DBSchema dbDescription,
 ) {
   final _row = row;
   if (_row == null) {
@@ -1011,7 +1059,8 @@ Record? deserializeRow(
       if (getMaskBit(_row.nullsBitmask, i) == 1) {
         value = null;
       } else {
-        value = deserializeColumnData(_row.values[i], c);
+        final pgColumnType = _getColumnType(dbDescription, relation.table, c);
+        value = deserializeColumnData(_row.values[i], pgColumnType);
       }
       return MapEntry(c.name, value);
     }),
@@ -1029,50 +1078,45 @@ int calculateNumBytes(int columnNum) {
 
 Object deserializeColumnData(
   List<int> column,
-  RelationColumn columnInfo,
+  PgType columnType,
 ) {
-  final columnType = columnInfo.type.toUpperCase();
   switch (columnType) {
-    case 'CHAR':
-    case 'DATE':
-    case 'TEXT':
-    case 'UUID':
-    case 'VARCHAR':
-    case 'TIME':
-    case 'TIMESTAMP':
-    case 'TIMESTAMPTZ':
+    case PgType.char:
+    case PgType.text:
+    case PgType.uuid:
+    case PgType.varchar:
+    case PgType.date:
+    case PgType.time:
+    case PgType.timestamp:
+    case PgType.timestampTz:
       return TypeDecoder.text(column);
-    case 'BOOL':
+    case PgType.bool:
       return TypeDecoder.boolean(column);
-    case 'REAL':
-    case 'FLOAT4':
-    case 'FLOAT8':
-    case 'INT':
-    case 'INT2':
-    case 'INT4':
-    case 'INT8':
-    case 'INTEGER':
+    case PgType.real:
+    case PgType.int:
+    case PgType.int2:
+    case PgType.int4:
+    case PgType.int8:
+    case PgType.integer:
       return num.parse(TypeDecoder.text(column));
-    case 'TIMETZ':
+    case PgType.float4:
+    case PgType.float8:
+      return TypeDecoder.float(column);
+    case PgType.timeTz:
       return TypeDecoder.timetz(column);
   }
-  throw SatelliteException(
-    SatelliteErrorCode.unknownDataType,
-    "can't deserialize ${columnInfo.type}",
-  );
 }
 
 // All values serialized as textual representation
-List<int> serializeColumnData(Object columnValue, RelationColumn columnInfo) {
-  final columnType = columnInfo.type.toUpperCase();
+List<int> serializeColumnData(Object columnValue, PgType columnType) {
   switch (columnType) {
-    case 'BOOL':
+    case PgType.bool:
       return TypeEncoder.boolean(columnValue as int);
-    case 'REAL':
-    case 'FLOAT4':
-    case 'FLOAT8':
+    case PgType.real:
+    case PgType.float4:
+    case PgType.float8:
       return TypeEncoder.real(columnValue as num);
-    case 'TIMETZ':
+    case PgType.timeTz:
       return TypeEncoder.timetz(columnValue as String);
     default:
       return TypeEncoder.text(columnValue.toString());

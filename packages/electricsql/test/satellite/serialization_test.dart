@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -26,6 +27,10 @@ void main() {
       ],
     );
 
+    final dbDescription = DBSchemaCustom(
+      migrations: [],
+    );
+
     final record = <String, Object?>{
       'name1': 'Hello',
       'name2': 'World!',
@@ -38,12 +43,12 @@ void main() {
       'bool2': 0,
       'bool3': null,
     };
-    final sRow = serializeRow(record, rel);
+    final sRow = serializeRow(record, rel, dbDescription);
     expect(
       sRow.values.map((bytes) => utf8.decode(bytes)),
       ['Hello', 'World!', '', '1', '-30', '1.0', '-30.3', 't', 'f', ''],
     );
-    final dRow = deserializeRow(sRow, rel);
+    final dRow = deserializeRow(sRow, rel, dbDescription);
 
     expect(record, dRow);
   });
@@ -67,6 +72,10 @@ void main() {
       ],
     );
 
+    final dbDescription = DBSchemaCustom(
+      migrations: [],
+    );
+
     final record = {
       'bit0': null,
       'bit1': null,
@@ -78,7 +87,7 @@ void main() {
       'bit7': 'Filled',
       'bit8': null,
     };
-    final sRow = serializeRow(record, rel);
+    final sRow = serializeRow(record, rel, dbDescription);
 
     final mask = [...sRow.nullsBitmask].map((x) => x.toRadixString(2)).join('');
 
