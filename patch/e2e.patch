@@ -287,6 +287,82 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.14_node_satell
      [invoke node_await_assert_datetime "004" "1999-12-31" "1970-01-01 14:46:05.42"]
      [invoke node_await_assert_datetime "005" "2023-09-26" "1970-01-01 00:00:00.000"]
  
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.15_node_satellite_can_sync_booleans.lux dart/tests/03.15_node_satellite_can_sync_booleans.lux
+--- electric/tests/03.15_node_satellite_can_sync_booleans.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.15_node_satellite_can_sync_booleans.lux	2023-10-19 00:23:14.303326421 +0200
+@@ -30,7 +30,7 @@
+     [invoke node_await_get_bool "002" "false"]
+     [invoke node_await_get_bool "003" "null"]
+ 
+-    !await client.write_bool(db, '004', true)
++    !write_bool db '004' true
+     ?{ id: '004', b: true }
+     ?$node
+ 
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.16_node_satellite_can_sync_uuids.lux dart/tests/03.16_node_satellite_can_sync_uuids.lux
+--- electric/tests/03.16_node_satellite_can_sync_uuids.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.16_node_satellite_can_sync_uuids.lux	2023-10-19 00:44:28.988260744 +0200
+@@ -32,7 +32,7 @@
+     [invoke node_get_uuid "67b2db7d-7a4e-4ead-8883-01bf4946fec2"]
+ 
+     # Can write valid uuids to the DB
+-    !await client.write_uuid(db, '09e3e433-e9f1-46b4-a18f-1e4e0b6c6278')
++    !write_uuid db '09e3e433-e9f1-46b4-a18f-1e4e0b6c6278'
+     ?{ id: '09e3e433-e9f1-46b4-a18f-1e4e0b6c6278' }
+     ?$node
+ 
+@@ -61,21 +61,8 @@
+     -
+     # Can't write invalid uuids to the DB
+     # the uuid below has one digit too much in the last part
+-    !await client.write_uuid(db, '09e3e433-e9f1-46b4-a18f-1e4e0b6c62789')
+-    """?
+-    Uncaught:
+-    \[
+-      \{
+-        "validation": "uuid",
+-        "code": "invalid_string",
+-        "message": "Invalid uuid",
+-        "path": \[
+-          "data",
+-          "id"
+-        ]
+-      }
+-    ]
+-    """
++    !write_uuid db '09e3e433-e9f1-46b4-a18f-1e4e0b6c62789'
++    ?Uncaught error: FormatException: The provided UUID is invalid.
+ 
+ [cleanup]
+   [invoke teardown]
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.17_node_satellite_can_sync_ints.lux dart/tests/03.17_node_satellite_can_sync_ints.lux
+--- electric/tests/03.17_node_satellite_can_sync_ints.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.17_node_satellite_can_sync_ints.lux	2023-10-19 00:49:25.063279902 +0200
+@@ -34,7 +34,7 @@
+     [invoke node_get_int "row2" 32767 2147483647]
+ 
+     # Can write valid ints to the DB
+-    !await client.write_int(db, 'row3', 0, 0)
++    !write_int db 'row3' 0 0
+     ?{ id: 'row3', i2: 0, i4: 0 }
+     ?$node
+ 
+@@ -63,11 +63,11 @@
+     # Reset the failure pattern because we don't want it to match the errors below
+     -
+     # Can't write invalid ints to the DB
+-    !await client.write_int(db, 'row4', 32768, 5)
+-    ?Number must be less than or equal to 32767
++    !write_int db 'row4' 32768 5
++    ?RangeError: Invalid value: Not in inclusive range -32768..32767: 32768
+ 
+-    !await client.write_int(db, 'row4', 5, 2147483648)
+-    ?Number must be less than or equal to 2147483647
++    !write_int db 'row4' 5 2147483648
++    ?RangeError: Invalid value: Not in inclusive range -2147483648..2147483647: 2147483648
+ 
+ [cleanup]
+   [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
 --- electric/tests/_satellite_macros.luxinc	2023-10-18 20:10:55.685478772 +0200
 +++ dart/tests/_satellite_macros.luxinc	2023-10-18 20:14:27.143191571 +0200
