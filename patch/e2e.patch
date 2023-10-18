@@ -1,7 +1,7 @@
 diff -x lux -x satellite_client -x lux_logs -ur electric/common.mk dart/common.mk
---- electric/common.mk	2023-09-26 21:02:55.411429686 +0200
-+++ dart/common.mk	2023-09-26 19:48:49.869125348 +0200
-@@ -31,6 +31,16 @@
+--- electric/common.mk	2023-10-18 20:10:55.681478759 +0200
++++ dart/common.mk	2023-10-18 19:51:19.174612997 +0200
+@@ -35,6 +35,16 @@
  	export ELECTRIC_CLIENT_IMAGE=${ELECTRIC_CLIENT_IMAGE_NAME}:${ELECTRIC_IMAGE_TAG}
  endif
  
@@ -20,8 +20,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/common.mk dart/common.m
  ${LUX}:
 Only in dart: electric_repo
 diff -x lux -x satellite_client -x lux_logs -ur electric/elixir_client/Makefile dart/elixir_client/Makefile
---- electric/elixir_client/Makefile	2023-09-26 21:02:55.412429689 +0200
-+++ dart/elixir_client/Makefile	2023-09-26 19:48:49.869125348 +0200
+--- electric/elixir_client/Makefile	2023-10-18 20:10:55.681478759 +0200
++++ dart/elixir_client/Makefile	2023-10-18 19:51:19.175613000 +0200
 @@ -7,7 +7,7 @@
  export DOCKER_REPO ?= europe-docker.pkg.dev/vaxine/ci
  export ELECTRIC_CLIENT_IMAGE_NAME ?= electric-ws-client
@@ -32,8 +32,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/elixir_client/Makefile 
  build:
  	make -C ${ELECTRIC_DIR} docker-build-ws-client
 diff -x lux -x satellite_client -x lux_logs -ur electric/.gitignore dart/.gitignore
---- electric/.gitignore	2023-09-26 21:02:55.411429686 +0200
-+++ dart/.gitignore	2023-09-26 19:48:49.870125351 +0200
+--- electric/.gitignore	2023-10-18 20:10:55.680478755 +0200
++++ dart/.gitignore	2023-10-18 19:51:19.175613000 +0200
 @@ -4,3 +4,4 @@
  lux_logs
  .pull
@@ -41,8 +41,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/.gitignore dart/.gitign
 +electric_repo
 \ No newline at end of file
 diff -x lux -x satellite_client -x lux_logs -ur electric/Makefile dart/Makefile
---- electric/Makefile	2023-09-26 21:02:55.411429686 +0200
-+++ dart/Makefile	2023-09-26 19:48:49.870125351 +0200
+--- electric/Makefile	2023-10-18 20:10:55.680478755 +0200
++++ dart/Makefile	2023-10-18 20:15:20.625371854 +0200
 @@ -1,6 +1,7 @@
  include common.mk
  
@@ -50,11 +50,21 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/Makefile dart/Makefile
 +	make clone_electric
  	make -C satellite_client build
  	make -C elixir_client build
+ 	make -C prisma_example build
+@@ -8,6 +9,9 @@
+ test_only:
+ 	${LUX} --junit tests
  
++test_client_only:
++	${LUX} --junit tests/03*
++
+ test: deps pull test_only
+ 
+ pull:
 diff -x lux -x satellite_client -x lux_logs -ur electric/services_templates.yaml dart/services_templates.yaml
---- electric/services_templates.yaml	2023-09-26 21:02:55.413429692 +0200
-+++ dart/services_templates.yaml	2023-09-26 19:48:49.870125351 +0200
-@@ -40,7 +40,7 @@
+--- electric/services_templates.yaml	2023-10-18 20:10:55.683478765 +0200
++++ dart/services_templates.yaml	2023-10-18 19:51:19.175613000 +0200
+@@ -42,7 +42,7 @@
        - "host.docker.internal:host-gateway"
  
    satellite_client:
@@ -64,8 +74,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/services_templates.yaml
        AUTH_JWT_ALG: HS256
        AUTH_JWT_KEY: integration-tests-signing-key-example
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.03_node_satellite_sends_and_recieves_data.lux dart/tests/03.03_node_satellite_sends_and_recieves_data.lux
---- electric/tests/03.03_node_satellite_sends_and_recieves_data.lux	2023-09-26 21:02:55.413429692 +0200
-+++ dart/tests/03.03_node_satellite_sends_and_recieves_data.lux	2023-09-26 19:48:49.870125351 +0200
+--- electric/tests/03.03_node_satellite_sends_and_recieves_data.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.03_node_satellite_sends_and_recieves_data.lux	2023-10-18 19:51:19.176613004 +0200
 @@ -36,10 +36,10 @@
  
  [invoke log "Verify that satellite inserts reached each other"]
@@ -80,8 +90,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.03_node_satell
  [shell pg_1]
      [invoke log "Insert a row on PG side"]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.06_node_satellite_does_sync_on_subscribe.lux dart/tests/03.06_node_satellite_does_sync_on_subscribe.lux
---- electric/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2023-09-26 21:02:55.413429692 +0200
-+++ dart/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2023-09-26 19:48:49.870125351 +0200
+--- electric/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2023-10-18 19:51:19.176613004 +0200
 @@ -24,7 +24,7 @@
      -$fail_pattern
      [invoke node_sync_table "items"]
@@ -101,8 +111,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.06_node_satell
  
  [shell pg_1]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux dart/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux
---- electric/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2023-09-26 21:02:55.413429692 +0200
-+++ dart/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2023-09-26 19:48:49.870125351 +0200
+--- electric/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2023-10-18 19:51:19.176613004 +0200
 @@ -28,9 +28,9 @@
      -$fail_pattern
      [invoke node_sync_table "items"]
@@ -116,8 +126,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.07_node_satell
  
  [shell pg_1]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux dart/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux
---- electric/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2023-09-26 21:02:55.414429694 +0200
-+++ dart/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2023-09-26 19:48:49.870125351 +0200
+--- electric/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2023-10-18 19:51:19.176613004 +0200
 @@ -24,7 +24,7 @@
      -$fail_pattern
      [invoke node_sync_table "items"]
@@ -146,8 +156,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.08_node_satell
      [progress resuming client]
      [invoke electrify_db "originalDb" "electric_1" 5133 "[]"]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux dart/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux
---- electric/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2023-09-26 21:02:55.414429694 +0200
-+++ dart/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2023-09-26 19:48:49.871125353 +0200
+--- electric/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2023-10-18 19:51:19.176613004 +0200
 @@ -24,7 +24,7 @@
    ?\[proto\] recv: #SatOpLog\{.*#Migrate\{vsn: $migration2_vsn, for: bar
  
@@ -158,8 +168,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.10_node_satell
  
    # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satellite_compensations_work.lux dart/tests/03.11_node_satellite_compensations_work.lux
---- electric/tests/03.11_node_satellite_compensations_work.lux	2023-09-26 21:02:55.414429694 +0200
-+++ dart/tests/03.11_node_satellite_compensations_work.lux	2023-09-26 19:48:49.871125353 +0200
+--- electric/tests/03.11_node_satellite_compensations_work.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.11_node_satellite_compensations_work.lux	2023-10-18 19:51:19.176613004 +0200
 @@ -34,22 +34,17 @@
      [invoke node_await_table "other_items"]
      [invoke node_sync_table "other_items"]
@@ -211,8 +221,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satell
      ??[proto] recv: #SatOpLog
  
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.12_server_correctly_continues_the_replication.lux dart/tests/03.12_server_correctly_continues_the_replication.lux
---- electric/tests/03.12_server_correctly_continues_the_replication.lux	2023-09-26 21:02:55.414429694 +0200
-+++ dart/tests/03.12_server_correctly_continues_the_replication.lux	2023-09-26 19:48:49.871125353 +0200
+--- electric/tests/03.12_server_correctly_continues_the_replication.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.12_server_correctly_continues_the_replication.lux	2023-10-18 19:51:19.177613007 +0200
 @@ -48,7 +48,7 @@
  
  [shell satellite_1]
@@ -232,11 +242,11 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.12_server_corr
  
    # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.13_node_satellite_can_sync_timestamps.lux dart/tests/03.13_node_satellite_can_sync_timestamps.lux
---- electric/tests/03.13_node_satellite_can_sync_timestamps.lux	2023-09-26 21:02:55.414429694 +0200
-+++ dart/tests/03.13_node_satellite_can_sync_timestamps.lux	2023-09-26 20:00:11.500992724 +0200
+--- electric/tests/03.13_node_satellite_can_sync_timestamps.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.13_node_satellite_can_sync_timestamps.lux	2023-10-18 19:51:19.177613007 +0200
 @@ -41,11 +41,11 @@
      # check that 2nd satellite also reads the row
-     [invoke node_await_read_timestamp "00000000-0000-0000-0000-000000000001" "2023-09-21 14:39:53.000" "2023-09-21T14:39:53.001Z"]
+     [invoke node_await_assert_timestamp "00000000-0000-0000-0000-000000000001" "2023-09-21 14:39:53.000" "2023-09-21T14:39:53.001Z"]
      # then insert a row containing timestamps
 -    !await client.write_timestamp(db, {\
 +    !write_timestamp db {\
@@ -249,52 +259,52 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.13_node_satell
 +     }
      ?$node
      # check that we can now read that row
-     [invoke node_await_read_timestamp "00000000-0000-0000-0000-000000000002" "2023-08-23 09:10:11.000" "2023-08-23T09:10:11.001Z"]
+     [invoke node_await_assert_timestamp "00000000-0000-0000-0000-000000000002" "2023-08-23 09:10:11.000" "2023-08-23T09:10:11.001Z"]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.14_node_satellite_can_sync_dates_and_times.lux dart/tests/03.14_node_satellite_can_sync_dates_and_times.lux
---- electric/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2023-09-26 21:02:55.414429694 +0200
-+++ dart/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2023-09-26 21:00:37.695046347 +0200
+--- electric/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2023-10-18 20:10:55.684478769 +0200
++++ dart/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2023-10-18 20:01:23.369592192 +0200
 @@ -31,11 +31,11 @@
  [shell satellite_1]
-     [invoke node_await_read_datetime "001" "2023-08-23" "1970-01-01 11:00:59"]
-     [invoke node_await_read_datetime "002" "0001-01-01" "1970-01-01 00:59:03.110"]
--    [invoke node_await_read_datetime "003" "Feb 29 6000" "1970-01-01 23:05:17.999999"]
-+    [invoke node_await_read_datetime "003" "6000-02-29" "1970-01-01 23:05:17.999999"]
+     [invoke node_await_assert_datetime "001" "2023-08-23" "1970-01-01 11:00:59"]
+     [invoke node_await_assert_datetime "002" "0001-01-01" "1970-01-01 00:59:03.110"]
+-    [invoke node_await_assert_datetime "003" "Feb 29 6000" "1970-01-01 23:05:17.999999"]
++    [invoke node_await_assert_datetime "003" "6000-02-29" "1970-01-01 23:05:17.999999"]
  
--    !await client.write_datetime(db, { id: '004', d: new Date('1999-12-31'), t: new Date('1999-12-31 14:46:05.42') })
-+    !write_datetime db { id: '004', d: '1999-12-31', t: '1999-12-31 14:46:05.42' }
+-    !await client.write_datetime(db, { id: '004', d: new Date('1999-12-31'), t: new Date('1996-02-23 14:46:05.42') })
++    !write_datetime db { id: '004', d: '1999-12-31', t: '1996-02-23 14:46:05.42' }
      ?$node
--    !await client.write_datetime(db, { id: '005', d: new Date('2023-09-26'), t: new Date('2023-09-26 00:00:00.000') })
-+    !write_datetime db { id: '005', d: '2023-09-26', t: '2023-09-26 00:00:00.000' }
+-    !await client.write_datetime(db, { id: '005', d: new Date('2023-09-26'), t: new Date('2022-11-12 00:00:00.000') })
++    !write_datetime db { id: '005', d: '2023-09-26', t: '2022-11-12 00:00:00.000' }
      ?$node
  
  [shell pg_1]
 @@ -57,7 +57,7 @@
  
-     [invoke node_await_read_datetime "001" "2023-08-23" "1970-01-01 11:00:59"]
-     [invoke node_await_read_datetime "002" "0001-01-01" "1970-01-01 00:59:03.11"]
--    [invoke node_await_read_datetime "003" "Feb 29 6000" "1970-01-01 23:05:17.999999"]
-+    [invoke node_await_read_datetime "003" "6000-02-29" "1970-01-01 23:05:17.999999"]
-     [invoke node_await_read_datetime "004" "1999-12-31" "1970-01-01 14:46:05.42"]
-     [invoke node_await_read_datetime "005" "2023-09-26" "1970-01-01 00:00:00.000"]
+     [invoke node_await_assert_datetime "001" "2023-08-23" "1970-01-01 11:00:59"]
+     [invoke node_await_assert_datetime "002" "0001-01-01" "1970-01-01 00:59:03.11"]
+-    [invoke node_await_assert_datetime "003" "Feb 29 6000" "1970-01-01 23:05:17.999999"]
++    [invoke node_await_assert_datetime "003" "6000-02-29" "1970-01-01 23:05:17.999999"]
+     [invoke node_await_assert_datetime "004" "1999-12-31" "1970-01-01 14:46:05.42"]
+     [invoke node_await_assert_datetime "005" "2023-09-26" "1970-01-01 00:00:00.000"]
  
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
---- electric/tests/_satellite_macros.luxinc	2023-09-26 21:02:55.414429694 +0200
-+++ dart/tests/_satellite_macros.luxinc	2023-09-26 19:55:33.681230787 +0200
+--- electric/tests/_satellite_macros.luxinc	2023-10-18 20:10:55.685478772 +0200
++++ dart/tests/_satellite_macros.luxinc	2023-10-18 20:14:27.143191571 +0200
 @@ -1,23 +1,20 @@
  [global node=>]
  
  [macro connect_to_electric host port migrations]
 -    !client = await import('./dist/client.js')
--    ?$node
+-    ??$node
      # !migrations = await client.read_migrations(process.env.MIGRATION_DIRS + "/index.js")
      # ?$node
      !migrations = $migrations
-     ?$node
+     ??$node
 -    !originalDb = client.make_db(process.env.SATELLITE_DB_PATH + "/$LUX_SHELLNAME")
 +    !shell_db_path = get_shell_db_path "$LUX_SHELLNAME"
-+    ?$node
++    ??$node
 +    !originalDb = make_db shell_db_path
-     ?$node
+     ??$node
      [invoke electrify_db "originalDb" $host $port $migrations]
      ??(in electrify_db) config:
  [endmacro]
@@ -308,7 +318,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [endmacro]
  
  [macro setup_client_with_migrations satellite_number electric port migrations]
-@@ -32,61 +29,61 @@
+@@ -32,102 +29,102 @@
  [endmacro]
  
  [macro node_await_get match]
@@ -318,7 +328,56 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  
  [macro node_await_get_from_table table match]
 -    [invoke wait-for "await client.get_rows(db, '${table}')" "${match}" 10 $node]
-+    [invoke wait-for "get_rows db '${table}'"  "${match}" 10 $node]
++    [invoke wait-for "get_rows db '${table}'" "${match}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_get_bool id expected_bool]
+-    [invoke wait-for "await client.get_bool(db, '${id}')" "${expected_bool}" 10 $node]
++    [invoke wait-for "get_bool db '${id}'" "${expected_bool}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_get_uuid id]
+-    [invoke wait-for "await client.get_uuid(db, '${id}')" "${id}" 10 $node]
++    [invoke wait-for "get_uuid db '${id}'" "${id}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_get_int id]
+-    [invoke wait-for "await client.get_int(db, '${id}')" "${id}" 10 $node]
++    [invoke wait-for "get_int db '${id}'" "${id}" 10 $node]
+ [endmacro]
+ 
+ [macro node_await_get_float id]
+-    [invoke wait-for "await client.get_float(db, '${id}')" "${id}" 10 $node]
++    [invoke wait-for "get_float db '${id}'" "${id}" 10 $node]
+ [endmacro]
+ 
+ [macro node_write_float id value]
+     # Can write valid floats to the DB
+-    !await client.write_float(db, '${id}', ${value})
++    !write_float db '${id}' ${value}
+     ??{ id: '${id}', f8:
+     ??$node
+ [endmacro]
+ 
+ [macro node_get_uuid id]
+-    !await client.get_uuid(db, '${id}')
++    !get_uuid db '${id}'
+     ??{ id: '${id}' }
+     ??$node
+ [endmacro]
+ 
+ [macro node_get_int id expected_int2 expected_int4]
+-    !await client.get_int(db, '${id}')
++    !get_int db '${id}'
+     ??{ id: '${id}', i2: ${expected_int2}, i4: ${expected_int4} }
+     ??$node
+ [endmacro]
+ 
+ [macro node_get_float id expected_float8]
+-    !await client.get_float(db, '${id}')
++    !get_float db '${id}'
+     ??{ id: '${id}', f8: ${expected_float8} }
+     ??$node
  [endmacro]
  
  [macro node_await_get_timestamps match]
@@ -326,14 +385,14 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
 +    [invoke wait-for "get_timestamps db" "${match}" 10 $node]
  [endmacro]
  
- [macro node_await_read_timestamp id timestamp timestamptz]
--    [invoke wait-for "await client.read_timestamp(db, '${id}', '${timestamp}', '${timestamptz}')" "true" 10 $node]
-+    [invoke wait-for "read_timestamp db '${id}' '${timestamp}' '${timestamptz}'" "true" 10 $node]
+ [macro node_await_assert_timestamp id timestamp timestamptz]
+-    [invoke wait-for "await client.assert_timestamp(db, '${id}', '${timestamp}', '${timestamptz}')" "true" 10 $node]
++    [invoke wait-for "assert_timestamp db '${id}' '${timestamp}' '${timestamptz}'" "true" 10 $node]
  [endmacro]
  
- [macro node_await_read_datetime id date time]
--    [invoke wait-for "await client.read_datetime(db, '${id}', '${date}', '${time}')" "true" 10 $node]
-+    [invoke wait-for "read_datetime db '${id}' '${date}' '${time}'" "true" 10 $node]
+ [macro node_await_assert_datetime id date time]
+-    [invoke wait-for "await client.assert_datetime(db, '${id}', '${date}', '${time}')" "true" 10 $node]
++    [invoke wait-for "assert_datetime db '${id}' '${date}' '${time}'" "true" 10 $node]
  [endmacro]
  
  [macro node_await_table match]
@@ -354,19 +413,19 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [macro node_await_insert keys]
 -    !await client.insert_item(db, ${keys})
 +    !insert_item db ${keys}
-     ?$node
+     ??$node
  [endmacro]
  
  [macro node_await_insert_extended keys]
 -    !await client.insert_extended_item(db, ${keys})
 +    !insert_extended_item db ${keys}
-     ?$node
+     ??$node
  [endmacro]
  
  [macro node_await_insert_extended_into table keys]
 -    !await client.insert_extended_into(db, '${table}', ${keys})
 +    !insert_extended_into db '${table}' ${keys}
-     ?$node
+     ??$node
  [endmacro]
  
  [macro node_await_get_other match]
@@ -377,7 +436,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [macro node_await_insert_other keys]
 -    !client.insert_other_item(db, ${keys})
 +    !insert_other_item db ${keys}
-     ?$node
+     ??$node
  [endmacro]
  
  [macro node_sync_table table]
