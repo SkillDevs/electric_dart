@@ -98,7 +98,7 @@ Future<void> start() async {
         final expectedCreatedAt = command.arguments[2] as String;
         final expectedUpdatedAt = command.arguments[3] as String;
         await processCommand<bool>(state, command, () async {
-          return await readTimestamp(
+          return await assertTimestamp(
               electric, id, expectedCreatedAt, expectedUpdatedAt);
         });
       } else if (name == "write_timestamp") {
@@ -119,7 +119,7 @@ Future<void> start() async {
         final expectedDate = command.arguments[2] as String;
         final expectedTime = command.arguments[3] as String;
         await processCommand<bool>(state, command, () async {
-          return await readDatetime(electric, id, expectedDate, expectedTime);
+          return await assertDatetime(electric, id, expectedDate, expectedTime);
         });
       } else if (name == "get_items") {
         final electric = command.arguments[0] as DriftElectricClient;

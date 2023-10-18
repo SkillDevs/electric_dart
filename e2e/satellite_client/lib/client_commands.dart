@@ -145,7 +145,7 @@ Future<Datetime?> getDatetime(MyDriftElectricClient electric, String id) async {
   return datetime;
 }
 
-Future<bool> readTimestamp(MyDriftElectricClient electric, String id,
+Future<bool> assertTimestamp(MyDriftElectricClient electric, String id,
     String expectedCreatedAt, String expectedUpdatedAt) async {
   final timestamp = await getTimestamp(electric, id);
   final matches =
@@ -153,7 +153,7 @@ Future<bool> readTimestamp(MyDriftElectricClient electric, String id,
   return matches;
 }
 
-Future<bool> readDatetime(MyDriftElectricClient electric, String id,
+Future<bool> assertDatetime(MyDriftElectricClient electric, String id,
     String expectedDate, String expectedTime) async {
   final datetime = await getDatetime(electric, id);
   final matches = checkDatetime(datetime, expectedDate, expectedTime);
@@ -179,6 +179,22 @@ bool checkDatetime(
           DateTime.parse(expectedTime).millisecondsSinceEpoch;
 }
 
+Future<void> writeBool(
+    MyDriftElectricClient electric, String id, bool b) async {
+  await electric.db.bools.insertOne(
+    BoolsCompanion.insert(
+      id: id,
+      b: Value(b),
+    ),
+  );
+}
+
+Future<bool?> getBool(MyDriftElectricClient electric, String id) async {
+  final row = await (electric.db.bools.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  return row.b;
+}
+
 Future<void> getDatetimes(MyDriftElectricClient electric) async {
   // final rows = await electric.db.datetimes.select().get();
   throw UnimplementedError();
@@ -200,6 +216,62 @@ Future<Rows> getItemIds(DriftElectricClient electric) async {
       )
       .get();
   return _toRows(rows);
+}
+
+Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
+  final row = await (electric.db.uuids.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  return SingleRow(toColumns(row)!);
+}
+
+Future<Rows> getUUIDs(MyDriftElectricClient electric) async {
+  final rows = await electric.db
+      .customSelect(
+        "SELECT * FROM Uuids;",
+      )
+      .get();
+  return _toRows(rows);
+}
+
+Future<void> writeUUID(MyDriftElectricClient electric, String id) async {
+  await electric.db.uuids.insertOne(
+    UuidsCompanion.insert(
+      id: id,
+    ),
+  );
+}
+
+Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
+  final row = await (electric.db.ints.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  return SingleRow(toColumns(row)!);
+}
+
+Future<void> writeInt(
+    MyDriftElectricClient electric, String id, int i2, int i4) async {
+  await electric.db.ints.insertOne(
+    IntsCompanion.insert(
+      id: id,
+      i2: Value(i2),
+      i4: Value(i4),
+    ),
+  );
+}
+
+Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
+  final row = await (electric.db.floats.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  return SingleRow(toColumns(row)!);
+}
+
+Future<void> writeFloat(
+    MyDriftElectricClient electric, String id, double f8) async {
+  await electric.db.floats.insertOne(
+    FloatsCompanion.insert(
+      id: id,
+      f8: Value(f8),
+    ),
+  );
 }
 
 Future<Rows> getItemColumns(
@@ -345,7 +417,7 @@ Rows _toRows(List<QueryRow> rows) {
   );
 }
 
-typedef Row = Map<String, String>;
+typedef Row = Map<String, Object?>;
 
 List<Variable> dynamicArgsToVariables(List<Object?>? args) {
   return (args ?? const [])
@@ -391,22 +463,39 @@ class Rows {
     buffer.writeln("[");
     for (final row in rows) {
       buffer.write("  ");
-      buffer.write("{ ");
-      final entries = row.entries.toList();
-      for (var i = 0; i < entries.length; i++) {
-        final entry = entries[i];
-        buffer.write("${entry.key}: ${entry.value}");
-
-        if (i != entries.length - 1) {
-          buffer.write(", ");
-        }
-      }
-      buffer.write(" }");
+      buffer.write(_rowToPrettyStr(row));
       buffer.writeln(",");
     }
     buffer.writeln("]");
     return buffer.toString();
   }
+}
+
+class SingleRow {
+  final Row row;
+
+  SingleRow(this.row);
+
+  @override
+  String toString() {
+    return _rowToPrettyStr(row);
+  }
+}
+
+String _rowToPrettyStr(Row row) {
+  final buffer = StringBuffer();
+  buffer.write("{ ");
+  final entries = row.entries.toList();
+  for (var i = 0; i < entries.length; i++) {
+    final entry = entries[i];
+    buffer.write("${entry.key}: ${entry.value}");
+
+    if (i != entries.length - 1) {
+      buffer.write(", ");
+    }
+  }
+  buffer.write(" }");
+  return buffer.toString();
 }
 
 Map<String, Object?>? toColumns(Insertable? o) {

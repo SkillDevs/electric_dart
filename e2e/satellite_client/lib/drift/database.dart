@@ -61,7 +61,63 @@ class Datetimes extends Table {
   Set<Column<Object>>? get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Items, OtherItems, Timestamps, Datetimes])
+class Bools extends Table {
+  TextColumn get id => text()();
+  BoolColumn get b => boolean().nullable()();
+
+  @override
+  String? get tableName => 'Bools';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+class Uuids extends Table {
+  TextColumn get id => text().map(const ElectricUUIDConverter())();
+
+  @override
+  String? get tableName => 'Uuids';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+class Ints extends Table {
+  TextColumn get id => text()();
+  IntColumn get i2 =>
+      integer().map(const ElectricInt2Converter()).nullable()();
+  IntColumn get i4 =>
+      integer().map(const ElectricInt4Converter()).nullable()();
+
+  @override
+  String? get tableName => 'Ints';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+class Floats extends Table {
+  TextColumn get id => text()();
+  RealColumn get f8 =>
+      real().map(const ElectricFloat8Converter()).nullable()();
+
+  @override
+  String? get tableName => 'Floats';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [
+  Items,
+  OtherItems,
+  Timestamps,
+  Datetimes,
+  Bools,
+  Uuids,
+  Ints,
+  Floats,
+])
 class ClientDatabase extends _$ClientDatabase {
   ClientDatabase(super.e);
 
