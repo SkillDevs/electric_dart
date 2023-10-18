@@ -34,7 +34,7 @@
     [invoke node_get_int "row2" 32767 2147483647]
 
     # Can write valid ints to the DB
-    !await client.write_int(db, 'row3', 0, 0)
+    !write_int db 'row3' 0 0
     ?{ id: 'row3', i2: 0, i4: 0 }
     ?$node
 
@@ -63,11 +63,11 @@
     # Reset the failure pattern because we don't want it to match the errors below
     -
     # Can't write invalid ints to the DB
-    !await client.write_int(db, 'row4', 32768, 5)
-    ?Number must be less than or equal to 32767
+    !write_int db 'row4' 32768 5
+    ?RangeError: Invalid value: Not in inclusive range -32768..32767: 32768
 
-    !await client.write_int(db, 'row4', 5, 2147483648)
-    ?Number must be less than or equal to 2147483647
+    !write_int db 'row4' 5 2147483648
+    ?RangeError: Invalid value: Not in inclusive range -2147483648..2147483647: 2147483648
 
 [cleanup]
   [invoke teardown]

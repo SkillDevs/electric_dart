@@ -92,7 +92,7 @@ Future<void> start() async {
         await processCommand<void>(state, command, () async {
           return await getTimestamps(electric);
         });
-      } else if (name == "read_timestamp") {
+      } else if (name == "assert_timestamp") {
         final electric = command.arguments[0] as MyDriftElectricClient;
         final id = command.arguments[1] as String;
         final expectedCreatedAt = command.arguments[2] as String;
@@ -113,13 +113,52 @@ Future<void> start() async {
         await processCommand<void>(state, command, () async {
           return await writeDatetime(electric, values);
         });
-      } else if (name == "read_datetime") {
+      } else if (name == "assert_datetime") {
         final electric = command.arguments[0] as MyDriftElectricClient;
         final id = command.arguments[1] as String;
         final expectedDate = command.arguments[2] as String;
         final expectedTime = command.arguments[3] as String;
         await processCommand<bool>(state, command, () async {
           return await assertDatetime(electric, id, expectedDate, expectedTime);
+        });
+      } else if (name == "write_bool") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        final b = command.arguments[2] as bool;
+        await processCommand<SingleRow>(state, command, () async {
+          return await writeBool(electric, id, b);
+        });
+      } else if (name == "get_bool") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        await processCommand<bool?>(state, command, () async {
+          return await getBool(electric, id);
+        });
+      } else if (name == "write_uuid") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        await processCommand<SingleRow>(state, command, () async {
+          return await writeUUID(electric, id);
+        });
+      } else if (name == "get_uuid") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        await processCommand<SingleRow>(state, command, () async {
+          return await getUUID(electric, id);
+        });
+        } else if (name == "write_int") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        final i2 = command.arguments[2] as int;
+        final i4 = command.arguments[3] as int;
+        await processCommand<SingleRow>(state, command, () async {
+          return await writeInt(electric, id, i2, i4);
+        });
+      } else if (name == "get_int") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        await processCommand<SingleRow>(state, command, () async {
+          return await getInt(electric, id);
         });
       } else if (name == "get_items") {
         final electric = command.arguments[0] as DriftElectricClient;
@@ -197,9 +236,9 @@ Future<void> start() async {
 
       return NextAction.goOn;
     } catch (e, st) {
-      print("ERROR: $e\n$st");
+      print("Uncaught error: $e\n$st");
 
-      exit(1);
+      return NextAction.goOn;
     }
   });
 }

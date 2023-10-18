@@ -30,7 +30,7 @@
     [invoke node_await_get_bool "002" "false"]
     [invoke node_await_get_bool "003" "null"]
 
-    !await client.write_bool(db, '004', true)
+    !write_bool db '004' true
     ?{ id: '004', b: true }
     ?$node
 

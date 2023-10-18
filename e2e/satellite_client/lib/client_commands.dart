@@ -179,14 +179,15 @@ bool checkDatetime(
           DateTime.parse(expectedTime).millisecondsSinceEpoch;
 }
 
-Future<void> writeBool(
+Future<SingleRow> writeBool(
     MyDriftElectricClient electric, String id, bool b) async {
-  await electric.db.bools.insertOne(
+  final row = await electric.db.bools.insertReturning(
     BoolsCompanion.insert(
       id: id,
       b: Value(b),
     ),
   );
+  return SingleRow.fromItem(row);
 }
 
 Future<bool?> getBool(MyDriftElectricClient electric, String id) async {
@@ -221,7 +222,7 @@ Future<Rows> getItemIds(DriftElectricClient electric) async {
 Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
   final row = await (electric.db.uuids.select()..where((t) => t.id.equals(id)))
       .getSingle();
-  return SingleRow(toColumns(row)!);
+  return SingleRow.fromItem(row);
 }
 
 Future<Rows> getUUIDs(MyDriftElectricClient electric) async {
@@ -233,35 +234,37 @@ Future<Rows> getUUIDs(MyDriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<void> writeUUID(MyDriftElectricClient electric, String id) async {
-  await electric.db.uuids.insertOne(
+Future<SingleRow> writeUUID(MyDriftElectricClient electric, String id) async {
+  final item = await electric.db.uuids.insertReturning(
     UuidsCompanion.insert(
       id: id,
     ),
   );
+  return SingleRow.fromItem(item);
 }
 
 Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
-  final row = await (electric.db.ints.select()..where((t) => t.id.equals(id)))
+  final item = await (electric.db.ints.select()..where((t) => t.id.equals(id)))
       .getSingle();
-  return SingleRow(toColumns(row)!);
+  return SingleRow.fromItem(item);
 }
 
-Future<void> writeInt(
+Future<SingleRow> writeInt(
     MyDriftElectricClient electric, String id, int i2, int i4) async {
-  await electric.db.ints.insertOne(
+  final item = await electric.db.ints.insertReturning(
     IntsCompanion.insert(
       id: id,
       i2: Value(i2),
       i4: Value(i4),
     ),
   );
+  return SingleRow.fromItem(item);
 }
 
 Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
   final row = await (electric.db.floats.select()..where((t) => t.id.equals(id)))
       .getSingle();
-  return SingleRow(toColumns(row)!);
+  return SingleRow.fromItem(row);
 }
 
 Future<void> writeFloat(
@@ -404,20 +407,24 @@ Rows _toRows(List<QueryRow> rows) {
   return Rows(
     rows.map((r) {
       final data = r.data;
-      return data.map((key, value) {
-        final String newVal;
-        if (value is String) {
-          newVal = "'$value'";
-        } else {
-          newVal = value.toString();
-        }
-        return MapEntry(key, newVal);
-      });
+      return _mapToRow(data);
     }).toList(),
   );
 }
 
-typedef Row = Map<String, Object?>;
+Row _mapToRow(Map<String, Object?> map) {
+  return map.map((key, value) {
+    final String newVal;
+    if (value is String) {
+      newVal = "'$value'";
+    } else {
+      newVal = value.toString();
+    }
+    return MapEntry(key, newVal);
+  });
+}
+
+typedef Row = Map<String, String>;
 
 List<Variable> dynamicArgsToVariables(List<Object?>? args) {
   return (args ?? const [])
@@ -475,6 +482,10 @@ class SingleRow {
   final Row row;
 
   SingleRow(this.row);
+
+  factory SingleRow.fromItem(Insertable item) {
+    return SingleRow(_mapToRow(toColumns(item)!));
+  }
 
   @override
   String toString() {
