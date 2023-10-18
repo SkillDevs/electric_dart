@@ -1,8 +1,7 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
-import 'package:cli_completion/cli_completion.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
-import 'package:electricsql_cli/src/commands/generate_migrations_command.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations/command.dart';
 import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 
@@ -17,7 +16,7 @@ const description = 'A Very Good Project created by Very Good CLI.';
 /// $ electricsql_cli --version
 /// ```
 /// {@endtemplate}
-class ElectricCliCommandRunner extends CompletionCommandRunner<int> {
+class ElectricCliCommandRunner extends CommandRunner<int> {
   /// {@macro electric_cli_command_runner}
   ElectricCliCommandRunner({
     Logger? logger,

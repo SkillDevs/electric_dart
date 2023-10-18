@@ -9,6 +9,9 @@ deps: lux
 test_only:
 	${LUX} --junit tests
 
+test_client_only:
+	${LUX} --junit tests/03*
+
 test: deps pull test_only
 
 pull:
