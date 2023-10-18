@@ -38,6 +38,10 @@ class ElectricInt4Converter extends _ElectricTypeConverter<int, int> {
   const ElectricInt4Converter() : super(codec: TypeConverters.int4);
 }
 
+class ElectricFloat8Converter extends _ElectricTypeConverter<double, double> {
+  const ElectricFloat8Converter() : super(codec: TypeConverters.float8);
+}
+
 abstract class _ElectricTypeConverter<T, Raw> extends TypeConverter<T, Raw> {
   final Codec<T, Raw> codec;
 

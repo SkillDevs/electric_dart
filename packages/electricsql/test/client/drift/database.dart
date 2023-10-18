@@ -83,9 +83,9 @@ class DataTypes extends Table {
       integer().map(const ElectricInt2Converter()).nullable()();
   IntColumn get int4 =>
       integer().map(const ElectricInt4Converter()).nullable()();
-  // int2        Int?      @db.SmallInt /// @zod.number.int().gte(-32768).lte(32767)
-  // int4        Int?                   /// @zod.number.int().gte(-2147483648).lte(2147483647)
-  // float8      Float?    @db.DoublePrecision /// @zod.custom.use(z.number().or(z.nan()))
+  RealColumn get float8 =>
+      real().map(const ElectricFloat8Converter()).nullable()();
+
   IntColumn get relatedId =>
       integer().nullable().named('relatedId').references(Dummy, #id)();
 

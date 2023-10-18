@@ -402,87 +402,63 @@ void main() async {
     expect(fetchRes.int4, null);
   });
 
-/*
-test.serial('support float8 type', async (t) => {
-  const validFloat1 = 1.7976931348623157e308
-  const validFloat2 = -1.7976931348623157e308
-  const floats = [
-    {
-      id: 1,
-      float8: validFloat1,
-    },
-    {
-      id: 2,
-      float8: validFloat2,
-    },
-    {
-      id: 3,
-      float8: +Infinity,
-    },
-    {
-      id: 4,
-      float8: -Infinity,
-    },
-    {
-      id: 5,
-      float8: NaN,
-    },
-  ]
+  test('support float8 type', () async {
+    const validFloat1 = 1.7976931348623157e308;
+    const validFloat2 = -1.7976931348623157e308;
 
-  const res = await tbl.createMany({
-    data: floats,
-  })
+    const List<({int id, double float8})> floats = [
+      (
+        id: 1,
+        float8: validFloat1,
+      ),
+      (
+        id: 2,
+        float8: validFloat2,
+      ),
+      (
+        id: 3,
+        float8: double.infinity,
+      ),
+      (
+        id: 4,
+        float8: double.negativeInfinity,
+      ),
+      // TODO(dart): Support nan
+      // (
+      //   id: 5,
+      //   float8: double.nan,
+      // ),
+    ];
 
-  t.deepEqual(res, {
-    count: 5,
-  })
+    for (final floatEntry in floats) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(floatEntry.id),
+              float8: Value(floatEntry.float8),
+            ),
+          );
+    }
 
-  // Check that we can read the floats back
-  const fetchRes = await tbl.findMany({
-    select: {
-      id: true,
-      float8: true,
-    },
-    orderBy: {
-      id: 'asc',
-    },
-  })
+    // Check that we can read the floats back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records = fetchRes.map((r) => (id: r.id, float8: r.float8)).toList();
+    expect(records, floats);
+  });
 
-  t.deepEqual(fetchRes, floats)
-})
+  test('support null values for float8 type', () async {
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            float8: const Value(null),
+          ),
+        );
 
+    expect(res.id, 1);
+    expect(res.float8, null);
 
-test.serial('support null values for float8 type', async (t) => {
-  const expectedRes = {
-    id: 1,
-    float8: null,
-  }
-
-  const res = await tbl.create({
-    data: {
-      id: 1,
-      float8: null,
-    },
-    select: {
-      id: true,
-      float8: true,
-    },
-  })
-
-  t.deepEqual(res, expectedRes)
-
-  const fetchRes = await tbl.findUnique({
-    where: {
-      id: 1,
-    },
-    select: {
-      id: true,
-      float8: true,
-    },
-  })
-
-  t.deepEqual(fetchRes, expectedRes)
-})
-
-  */
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.float8, null);
+  });
 }
