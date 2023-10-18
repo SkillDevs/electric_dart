@@ -38,10 +38,6 @@ class Throttle<T> {
 }
 
 class TypeEncoder {
-  static List<int> number(int n) {
-    return numberToBytes(n);
-  }
-
   static List<int> text(String text) {
     return utf8.encode(text);
   }
@@ -50,20 +46,12 @@ class TypeEncoder {
     return boolToBytes(b);
   }
 
-  static List<int> real(num columnValue) {
-    return realToBytes(columnValue);
-  }
-
   static List<int> timetz(String s) {
     return TypeEncoder.text(stringToTimetzString(s));
   }
 }
 
 class TypeDecoder {
-  static int number(List<int> bytes) {
-    return bytesToNumber(bytes);
-  }
-
   static String text(List<int> bytes) {
     return bytesToString(bytes);
   }
@@ -106,15 +94,6 @@ List<int> numberToBytes(int i) {
     (i & 0x0000ff00) >> 8,
     (i & 0x000000ff) >> 0,
   ];
-}
-
-List<int> realToBytes(num n) {
-  String numStr = n.toString();
-  if (n.isFinite && n.truncate() == n) {
-    // n is an integer, we need to explicitly append the ".0" to it.
-    numStr = '${n.truncate()}.0';
-  }
-  return utf8.encode(numStr);
 }
 
 int bytesToNumber(List<int> bytes) {

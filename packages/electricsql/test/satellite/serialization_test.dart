@@ -46,7 +46,7 @@ void main() {
     final sRow = serializeRow(record, rel, dbDescription);
     expect(
       sRow.values.map((bytes) => utf8.decode(bytes)),
-      ['Hello', 'World!', '', '1', '-30', '1.0', '-30.3', 't', 'f', ''],
+      ['Hello', 'World!', '', '1', '-30', '1', '-30.3', 't', 'f', ''],
     );
     final dRow = deserializeRow(sRow, rel, dbDescription);
 

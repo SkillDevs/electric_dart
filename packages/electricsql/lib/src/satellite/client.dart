@@ -1095,13 +1095,13 @@ Object deserializeColumnData(
       return TypeDecoder.text(column);
     case PgType.bool:
       return TypeDecoder.boolean(column);
-    case PgType.real:
     case PgType.int:
     case PgType.int2:
     case PgType.int4:
     case PgType.int8:
     case PgType.integer:
       return num.parse(TypeDecoder.text(column));
+    case PgType.real:
     case PgType.float4:
     case PgType.float8:
       return TypeDecoder.float(column);
@@ -1115,15 +1115,21 @@ List<int> serializeColumnData(Object columnValue, PgType columnType) {
   switch (columnType) {
     case PgType.bool:
       return TypeEncoder.boolean(columnValue as int);
-    case PgType.real:
-    case PgType.float4:
-    case PgType.float8:
-      return TypeEncoder.real(columnValue as num);
     case PgType.timeTz:
       return TypeEncoder.timetz(columnValue as String);
     default:
-      return TypeEncoder.text(columnValue.toString());
+      return TypeEncoder.text(_getDefaultStringToSerialize(columnValue));
   }
+}
+
+String _getDefaultStringToSerialize(Object value) {
+  if (value is double) {
+    final int truncated = value.truncate();
+    if (truncated == value) {
+      return truncated.toString();
+    }
+  }
+  return value.toString();
 }
 
 List<int> serializeNullData() {
