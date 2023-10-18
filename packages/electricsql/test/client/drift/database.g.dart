@@ -1093,6 +1093,33 @@ class $DataTypesTable extends DataTypes
       GeneratedColumn<String>('timestamptz', aliasedName, true,
               type: DriftSqlType.string, requiredDuringInsert: false)
           .withConverter<DateTime?>($DataTypesTable.$convertertimestamptzn);
+  static const VerificationMeta _boolColMeta =
+      const VerificationMeta('boolCol');
+  @override
+  late final GeneratedColumn<bool> boolCol = GeneratedColumn<bool>(
+      'bool', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("bool" IN (0, 1))'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumnWithTypeConverter<String?, String> uuid =
+      GeneratedColumn<String>('uuid', aliasedName, true,
+              type: DriftSqlType.string, requiredDuringInsert: false)
+          .withConverter<String?>($DataTypesTable.$converteruuidn);
+  static const VerificationMeta _int2Meta = const VerificationMeta('int2');
+  @override
+  late final GeneratedColumnWithTypeConverter<int?, int> int2 =
+      GeneratedColumn<int>('int2', aliasedName, true,
+              type: DriftSqlType.int, requiredDuringInsert: false)
+          .withConverter<int?>($DataTypesTable.$converterint2n);
+  static const VerificationMeta _int4Meta = const VerificationMeta('int4');
+  @override
+  late final GeneratedColumnWithTypeConverter<int?, int> int4 =
+      GeneratedColumn<int>('int4', aliasedName, true,
+              type: DriftSqlType.int, requiredDuringInsert: false)
+          .withConverter<int?>($DataTypesTable.$converterint4n);
   static const VerificationMeta _relatedIdMeta =
       const VerificationMeta('relatedId');
   @override
@@ -1103,8 +1130,19 @@ class $DataTypesTable extends DataTypes
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES Dummy (id)'));
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, date, time, timetz, timestamp, timestamptz, relatedId];
+  List<GeneratedColumn> get $columns => [
+        id,
+        date,
+        time,
+        timetz,
+        timestamp,
+        timestamptz,
+        boolCol,
+        uuid,
+        int2,
+        int4,
+        relatedId
+      ];
   @override
   String get aliasedName => _alias ?? 'DataTypes';
   @override
@@ -1122,6 +1160,13 @@ class $DataTypesTable extends DataTypes
     context.handle(_timetzMeta, const VerificationResult.success());
     context.handle(_timestampMeta, const VerificationResult.success());
     context.handle(_timestamptzMeta, const VerificationResult.success());
+    if (data.containsKey('bool')) {
+      context.handle(_boolColMeta,
+          boolCol.isAcceptableOrUnknown(data['bool']!, _boolColMeta));
+    }
+    context.handle(_uuidMeta, const VerificationResult.success());
+    context.handle(_int2Meta, const VerificationResult.success());
+    context.handle(_int4Meta, const VerificationResult.success());
     if (data.containsKey('relatedId')) {
       context.handle(_relatedIdMeta,
           relatedId.isAcceptableOrUnknown(data['relatedId']!, _relatedIdMeta));
@@ -1150,6 +1195,14 @@ class $DataTypesTable extends DataTypes
       timestamptz: $DataTypesTable.$convertertimestamptzn.fromSql(
           attachedDatabase.typeMapping.read(
               DriftSqlType.string, data['${effectivePrefix}timestamptz'])),
+      boolCol: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}bool']),
+      uuid: $DataTypesTable.$converteruuidn.fromSql(attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])),
+      int2: $DataTypesTable.$converterint2n.fromSql(attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}int2'])),
+      int4: $DataTypesTable.$converterint4n.fromSql(attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}int4'])),
       relatedId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}relatedId']),
     );
@@ -1180,6 +1233,16 @@ class $DataTypesTable extends DataTypes
       const ElectricTimestampTZConverter();
   static TypeConverter<DateTime?, String?> $convertertimestamptzn =
       NullAwareTypeConverter.wrap($convertertimestamptz);
+  static TypeConverter<String, String> $converteruuid =
+      const ElectricUUIDConverter();
+  static TypeConverter<String?, String?> $converteruuidn =
+      NullAwareTypeConverter.wrap($converteruuid);
+  static TypeConverter<int, int> $converterint2 = const ElectricInt2Converter();
+  static TypeConverter<int?, int?> $converterint2n =
+      NullAwareTypeConverter.wrap($converterint2);
+  static TypeConverter<int, int> $converterint4 = const ElectricInt4Converter();
+  static TypeConverter<int?, int?> $converterint4n =
+      NullAwareTypeConverter.wrap($converterint4);
 }
 
 class DataType extends DataClass implements Insertable<DataType> {
@@ -1189,6 +1252,10 @@ class DataType extends DataClass implements Insertable<DataType> {
   final DateTime? timetz;
   final DateTime? timestamp;
   final DateTime? timestamptz;
+  final bool? boolCol;
+  final String? uuid;
+  final int? int2;
+  final int? int4;
   final int? relatedId;
   const DataType(
       {required this.id,
@@ -1197,6 +1264,10 @@ class DataType extends DataClass implements Insertable<DataType> {
       this.timetz,
       this.timestamp,
       this.timestamptz,
+      this.boolCol,
+      this.uuid,
+      this.int2,
+      this.int4,
       this.relatedId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1222,6 +1293,21 @@ class DataType extends DataClass implements Insertable<DataType> {
       final converter = $DataTypesTable.$convertertimestamptzn;
       map['timestamptz'] = Variable<String>(converter.toSql(timestamptz));
     }
+    if (!nullToAbsent || boolCol != null) {
+      map['bool'] = Variable<bool>(boolCol);
+    }
+    if (!nullToAbsent || uuid != null) {
+      final converter = $DataTypesTable.$converteruuidn;
+      map['uuid'] = Variable<String>(converter.toSql(uuid));
+    }
+    if (!nullToAbsent || int2 != null) {
+      final converter = $DataTypesTable.$converterint2n;
+      map['int2'] = Variable<int>(converter.toSql(int2));
+    }
+    if (!nullToAbsent || int4 != null) {
+      final converter = $DataTypesTable.$converterint4n;
+      map['int4'] = Variable<int>(converter.toSql(int4));
+    }
     if (!nullToAbsent || relatedId != null) {
       map['relatedId'] = Variable<int>(relatedId);
     }
@@ -1241,6 +1327,12 @@ class DataType extends DataClass implements Insertable<DataType> {
       timestamptz: timestamptz == null && nullToAbsent
           ? const Value.absent()
           : Value(timestamptz),
+      boolCol: boolCol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(boolCol),
+      uuid: uuid == null && nullToAbsent ? const Value.absent() : Value(uuid),
+      int2: int2 == null && nullToAbsent ? const Value.absent() : Value(int2),
+      int4: int4 == null && nullToAbsent ? const Value.absent() : Value(int4),
       relatedId: relatedId == null && nullToAbsent
           ? const Value.absent()
           : Value(relatedId),
@@ -1257,6 +1349,10 @@ class DataType extends DataClass implements Insertable<DataType> {
       timetz: serializer.fromJson<DateTime?>(json['timetz']),
       timestamp: serializer.fromJson<DateTime?>(json['timestamp']),
       timestamptz: serializer.fromJson<DateTime?>(json['timestamptz']),
+      boolCol: serializer.fromJson<bool?>(json['boolCol']),
+      uuid: serializer.fromJson<String?>(json['uuid']),
+      int2: serializer.fromJson<int?>(json['int2']),
+      int4: serializer.fromJson<int?>(json['int4']),
       relatedId: serializer.fromJson<int?>(json['relatedId']),
     );
   }
@@ -1270,6 +1366,10 @@ class DataType extends DataClass implements Insertable<DataType> {
       'timetz': serializer.toJson<DateTime?>(timetz),
       'timestamp': serializer.toJson<DateTime?>(timestamp),
       'timestamptz': serializer.toJson<DateTime?>(timestamptz),
+      'boolCol': serializer.toJson<bool?>(boolCol),
+      'uuid': serializer.toJson<String?>(uuid),
+      'int2': serializer.toJson<int?>(int2),
+      'int4': serializer.toJson<int?>(int4),
       'relatedId': serializer.toJson<int?>(relatedId),
     };
   }
@@ -1281,6 +1381,10 @@ class DataType extends DataClass implements Insertable<DataType> {
           Value<DateTime?> timetz = const Value.absent(),
           Value<DateTime?> timestamp = const Value.absent(),
           Value<DateTime?> timestamptz = const Value.absent(),
+          Value<bool?> boolCol = const Value.absent(),
+          Value<String?> uuid = const Value.absent(),
+          Value<int?> int2 = const Value.absent(),
+          Value<int?> int4 = const Value.absent(),
           Value<int?> relatedId = const Value.absent()}) =>
       DataType(
         id: id ?? this.id,
@@ -1289,6 +1393,10 @@ class DataType extends DataClass implements Insertable<DataType> {
         timetz: timetz.present ? timetz.value : this.timetz,
         timestamp: timestamp.present ? timestamp.value : this.timestamp,
         timestamptz: timestamptz.present ? timestamptz.value : this.timestamptz,
+        boolCol: boolCol.present ? boolCol.value : this.boolCol,
+        uuid: uuid.present ? uuid.value : this.uuid,
+        int2: int2.present ? int2.value : this.int2,
+        int4: int4.present ? int4.value : this.int4,
         relatedId: relatedId.present ? relatedId.value : this.relatedId,
       );
   @override
@@ -1300,14 +1408,18 @@ class DataType extends DataClass implements Insertable<DataType> {
           ..write('timetz: $timetz, ')
           ..write('timestamp: $timestamp, ')
           ..write('timestamptz: $timestamptz, ')
+          ..write('boolCol: $boolCol, ')
+          ..write('uuid: $uuid, ')
+          ..write('int2: $int2, ')
+          ..write('int4: $int4, ')
           ..write('relatedId: $relatedId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, date, time, timetz, timestamp, timestamptz, relatedId);
+  int get hashCode => Object.hash(id, date, time, timetz, timestamp,
+      timestamptz, boolCol, uuid, int2, int4, relatedId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1318,6 +1430,10 @@ class DataType extends DataClass implements Insertable<DataType> {
           other.timetz == this.timetz &&
           other.timestamp == this.timestamp &&
           other.timestamptz == this.timestamptz &&
+          other.boolCol == this.boolCol &&
+          other.uuid == this.uuid &&
+          other.int2 == this.int2 &&
+          other.int4 == this.int4 &&
           other.relatedId == this.relatedId);
 }
 
@@ -1328,6 +1444,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
   final Value<DateTime?> timetz;
   final Value<DateTime?> timestamp;
   final Value<DateTime?> timestamptz;
+  final Value<bool?> boolCol;
+  final Value<String?> uuid;
+  final Value<int?> int2;
+  final Value<int?> int4;
   final Value<int?> relatedId;
   const DataTypesCompanion({
     this.id = const Value.absent(),
@@ -1336,6 +1456,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.timetz = const Value.absent(),
     this.timestamp = const Value.absent(),
     this.timestamptz = const Value.absent(),
+    this.boolCol = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.int2 = const Value.absent(),
+    this.int4 = const Value.absent(),
     this.relatedId = const Value.absent(),
   });
   DataTypesCompanion.insert({
@@ -1345,6 +1469,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.timetz = const Value.absent(),
     this.timestamp = const Value.absent(),
     this.timestamptz = const Value.absent(),
+    this.boolCol = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.int2 = const Value.absent(),
+    this.int4 = const Value.absent(),
     this.relatedId = const Value.absent(),
   });
   static Insertable<DataType> custom({
@@ -1354,6 +1482,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     Expression<String>? timetz,
     Expression<String>? timestamp,
     Expression<String>? timestamptz,
+    Expression<bool>? boolCol,
+    Expression<String>? uuid,
+    Expression<int>? int2,
+    Expression<int>? int4,
     Expression<int>? relatedId,
   }) {
     return RawValuesInsertable({
@@ -1363,6 +1495,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       if (timetz != null) 'timetz': timetz,
       if (timestamp != null) 'timestamp': timestamp,
       if (timestamptz != null) 'timestamptz': timestamptz,
+      if (boolCol != null) 'bool': boolCol,
+      if (uuid != null) 'uuid': uuid,
+      if (int2 != null) 'int2': int2,
+      if (int4 != null) 'int4': int4,
       if (relatedId != null) 'relatedId': relatedId,
     });
   }
@@ -1374,6 +1510,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       Value<DateTime?>? timetz,
       Value<DateTime?>? timestamp,
       Value<DateTime?>? timestamptz,
+      Value<bool?>? boolCol,
+      Value<String?>? uuid,
+      Value<int?>? int2,
+      Value<int?>? int4,
       Value<int?>? relatedId}) {
     return DataTypesCompanion(
       id: id ?? this.id,
@@ -1382,6 +1522,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       timetz: timetz ?? this.timetz,
       timestamp: timestamp ?? this.timestamp,
       timestamptz: timestamptz ?? this.timestamptz,
+      boolCol: boolCol ?? this.boolCol,
+      uuid: uuid ?? this.uuid,
+      int2: int2 ?? this.int2,
+      int4: int4 ?? this.int4,
       relatedId: relatedId ?? this.relatedId,
     );
   }
@@ -1412,6 +1556,21 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       final converter = $DataTypesTable.$convertertimestamptzn;
       map['timestamptz'] = Variable<String>(converter.toSql(timestamptz.value));
     }
+    if (boolCol.present) {
+      map['bool'] = Variable<bool>(boolCol.value);
+    }
+    if (uuid.present) {
+      final converter = $DataTypesTable.$converteruuidn;
+      map['uuid'] = Variable<String>(converter.toSql(uuid.value));
+    }
+    if (int2.present) {
+      final converter = $DataTypesTable.$converterint2n;
+      map['int2'] = Variable<int>(converter.toSql(int2.value));
+    }
+    if (int4.present) {
+      final converter = $DataTypesTable.$converterint4n;
+      map['int4'] = Variable<int>(converter.toSql(int4.value));
+    }
     if (relatedId.present) {
       map['relatedId'] = Variable<int>(relatedId.value);
     }
@@ -1427,6 +1586,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
           ..write('timetz: $timetz, ')
           ..write('timestamp: $timestamp, ')
           ..write('timestamptz: $timestamptz, ')
+          ..write('boolCol: $boolCol, ')
+          ..write('uuid: $uuid, ')
+          ..write('int2: $int2, ')
+          ..write('int4: $int4, ')
           ..write('relatedId: $relatedId')
           ..write(')'))
         .toString();

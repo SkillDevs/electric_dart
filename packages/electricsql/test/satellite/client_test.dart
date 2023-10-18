@@ -263,13 +263,23 @@ void main() {
     final updateOp = SatOpUpdate(
       relationId: 1,
       rowData: serializeRow(
-          {'name1': 'Hello', 'name2': 'World!'}, rel, dbDescription),
-      oldRowData: serializeRow({'name1': '', 'name2': ''}, rel, dbDescription),
+        {'name1': 'Hello', 'name2': 'World!'},
+        rel,
+        dbDescription,
+      ),
+      oldRowData: serializeRow(
+        {'name1': '', 'name2': ''},
+        rel,
+        dbDescription,
+      ),
     );
     final deleteOp = SatOpDelete(
       relationId: 1,
       oldRowData: serializeRow(
-          {'name1': 'Hello', 'name2': 'World!'}, rel, dbDescription),
+        {'name1': 'Hello', 'name2': 'World!'},
+        rel,
+        dbDescription,
+      ),
     );
 
     final firstOpLogMessage = SatOpLog(

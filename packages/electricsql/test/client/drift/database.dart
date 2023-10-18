@@ -77,6 +77,15 @@ class DataTypes extends Table {
       text().map(const ElectricTimestampConverter()).nullable()();
   TextColumn get timestamptz =>
       text().map(const ElectricTimestampTZConverter()).nullable()();
+  BoolColumn get boolCol => boolean().named('bool').nullable()();
+  TextColumn get uuid => text().map(const ElectricUUIDConverter()).nullable()();
+  IntColumn get int2 =>
+      integer().map(const ElectricInt2Converter()).nullable()();
+  IntColumn get int4 =>
+      integer().map(const ElectricInt4Converter()).nullable()();
+  // int2        Int?      @db.SmallInt /// @zod.number.int().gte(-32768).lte(32767)
+  // int4        Int?                   /// @zod.number.int().gte(-2147483648).lte(2147483647)
+  // float8      Float?    @db.DoublePrecision /// @zod.custom.use(z.number().or(z.nan()))
   IntColumn get relatedId =>
       integer().nullable().named('relatedId').references(Dummy, #id)();
 

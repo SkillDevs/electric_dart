@@ -72,8 +72,8 @@ Future<ElectricClient> electrifyBase<DB extends DBSchema>({
   await prepare(adapter);
 
   final configWithDefaults = hydrateConfig(config);
-  final migrator =
-      opts.migrator ?? BundleMigrator(adapter: adapter, migrations: dbDescription.migrations);
+  final migrator = opts.migrator ??
+      BundleMigrator(adapter: adapter, migrations: dbDescription.migrations);
   final notifier = opts.notifier ?? EventNotifier(dbName: dbName);
   final registry = opts.registry ?? globalRegistry;
 

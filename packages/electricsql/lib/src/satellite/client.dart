@@ -849,7 +849,10 @@ class SatelliteClient extends EventEmitter implements Client {
           relation: rel,
           type: DataChangeType.insert,
           record: deserializeRow(
-              op.insert.getNullableRowData(), rel, _dbDescription),
+            op.insert.getNullableRowData(),
+            rel,
+            _dbDescription,
+          ),
           tags: op.insert.tags,
         );
 
