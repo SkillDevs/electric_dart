@@ -79,12 +79,10 @@ class DataTypes extends Table {
       text().map(const ElectricTimestampTZConverter()).nullable()();
   BoolColumn get boolCol => boolean().named('bool').nullable()();
   TextColumn get uuid => text().map(const ElectricUUIDConverter()).nullable()();
-  IntColumn get int2 =>
-      integer().map(const ElectricInt2Converter()).nullable()();
+  IntColumn get int2 => customType(const Int2Type()).nullable()();
   IntColumn get int4 =>
       integer().map(const ElectricInt4Converter()).nullable()();
-  RealColumn get float8 =>
-      real().map(const ElectricFloat8Converter()).nullable()();
+  RealColumn get float8 => customType(const Float8Type()).nullable()();
 
   IntColumn get relatedId =>
       integer().nullable().named('relatedId').references(Dummy, #id)();

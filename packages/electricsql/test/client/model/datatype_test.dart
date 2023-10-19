@@ -406,6 +406,8 @@ void main() async {
     const validFloat1 = 1.7976931348623157e308;
     const validFloat2 = -1.7976931348623157e308;
 
+    const nanId = 5;
+
     const List<({int id, double float8})> floats = [
       (
         id: 1,
@@ -423,11 +425,10 @@ void main() async {
         id: 4,
         float8: double.negativeInfinity,
       ),
-      // TODO(dart): Support nan
-      // (
-      //   id: 5,
-      //   float8: double.nan,
-      // ),
+      (
+        id: nanId,
+        float8: double.nan,
+      ),
     ];
 
     for (final floatEntry in floats) {
@@ -442,7 +443,15 @@ void main() async {
     // Check that we can read the floats back
     final fetchRes = await db.select(db.dataTypes).get();
     final records = fetchRes.map((r) => (id: r.id, float8: r.float8)).toList();
-    expect(records, floats);
+
+    // NaN != NaN, so we need to filter it out and check it separately
+    final recordsNoNaN = records.where((r) => r.id != nanId).toList();
+    final floatsNoNaN = floats.where((r) => r.id != nanId).toList();
+    expect(recordsNoNaN, floatsNoNaN);
+
+    // Expect NaN entry
+    final nanEntry = records.firstWhere((r) => r.id == nanId);
+    expect(nanEntry.float8!.isNaN, isTrue);
   });
 
   test('support null values for float8 type', () async {

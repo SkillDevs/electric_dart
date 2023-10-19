@@ -53,9 +53,10 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         intValueNullDefault
       ];
   @override
-  String get aliasedName => _alias ?? 'Items';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Items';
+  String get actualTableName => $name;
+  static const String $name = 'Items';
   @override
   VerificationContext validateIntegrity(Insertable<Item> instance,
       {bool isInserting = false}) {
@@ -399,9 +400,10 @@ class $OtherItemsTable extends OtherItems
   @override
   List<GeneratedColumn> get $columns => [id, content, itemId];
   @override
-  String get aliasedName => _alias ?? 'OtherItems';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'OtherItems';
+  String get actualTableName => $name;
+  static const String $name = 'OtherItems';
   @override
   VerificationContext validateIntegrity(Insertable<OtherItem> instance,
       {bool isInserting = false}) {
@@ -623,9 +625,10 @@ class $TimestampsTable extends Timestamps
   @override
   List<GeneratedColumn> get $columns => [id, createdAt, updatedAt];
   @override
-  String get aliasedName => _alias ?? 'Timestamps';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Timestamps';
+  String get actualTableName => $name;
+  static const String $name = 'Timestamps';
   @override
   VerificationContext validateIntegrity(Insertable<Timestamp> instance,
       {bool isInserting = false}) {
@@ -798,10 +801,12 @@ class TimestampsCompanion extends UpdateCompanion<Timestamp> {
     }
     if (createdAt.present) {
       final converter = $TimestampsTable.$convertercreatedAt;
+
       map['created_at'] = Variable<String>(converter.toSql(createdAt.value));
     }
     if (updatedAt.present) {
       final converter = $TimestampsTable.$converterupdatedAt;
+
       map['updated_at'] = Variable<String>(converter.toSql(updatedAt.value));
     }
     if (rowid.present) {
@@ -848,9 +853,10 @@ class $DatetimesTable extends Datetimes
   @override
   List<GeneratedColumn> get $columns => [id, d, t];
   @override
-  String get aliasedName => _alias ?? 'Datetimes';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Datetimes';
+  String get actualTableName => $name;
+  static const String $name = 'Datetimes';
   @override
   VerificationContext validateIntegrity(Insertable<Datetime> instance,
       {bool isInserting = false}) {
@@ -1019,10 +1025,12 @@ class DatetimesCompanion extends UpdateCompanion<Datetime> {
     }
     if (d.present) {
       final converter = $DatetimesTable.$converterd;
+
       map['d'] = Variable<String>(converter.toSql(d.value));
     }
     if (t.present) {
       final converter = $DatetimesTable.$convertert;
+
       map['t'] = Variable<String>(converter.toSql(t.value));
     }
     if (rowid.present) {
@@ -1064,9 +1072,10 @@ class $BoolsTable extends Bools with TableInfo<$BoolsTable, Bool> {
   @override
   List<GeneratedColumn> get $columns => [id, b];
   @override
-  String get aliasedName => _alias ?? 'Bools';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Bools';
+  String get actualTableName => $name;
+  static const String $name = 'Bools';
   @override
   VerificationContext validateIntegrity(Insertable<Bool> instance,
       {bool isInserting = false}) {
@@ -1236,9 +1245,10 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   @override
   List<GeneratedColumn> get $columns => [id];
   @override
-  String get aliasedName => _alias ?? 'Uuids';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Uuids';
+  String get actualTableName => $name;
+  static const String $name = 'Uuids';
   @override
   VerificationContext validateIntegrity(Insertable<Uuid> instance,
       {bool isInserting = false}) {
@@ -1353,6 +1363,7 @@ class UuidsCompanion extends UpdateCompanion<Uuid> {
     final map = <String, Expression>{};
     if (id.present) {
       final converter = $UuidsTable.$converterid;
+
       map['id'] = Variable<String>(converter.toSql(id.value));
     }
     if (rowid.present) {
@@ -1396,9 +1407,10 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   @override
   List<GeneratedColumn> get $columns => [id, i2, i4];
   @override
-  String get aliasedName => _alias ?? 'Ints';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Ints';
+  String get actualTableName => $name;
+  static const String $name = 'Ints';
   @override
   VerificationContext validateIntegrity(Insertable<Int> instance,
       {bool isInserting = false}) {
@@ -1571,10 +1583,12 @@ class IntsCompanion extends UpdateCompanion<Int> {
     }
     if (i2.present) {
       final converter = $IntsTable.$converteri2n;
+
       map['i2'] = Variable<int>(converter.toSql(i2.value));
     }
     if (i4.present) {
       final converter = $IntsTable.$converteri4n;
+
       map['i4'] = Variable<int>(converter.toSql(i4.value));
     }
     if (rowid.present) {
@@ -1607,16 +1621,16 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _f8Meta = const VerificationMeta('f8');
   @override
-  late final GeneratedColumnWithTypeConverter<double?, double> f8 =
-      GeneratedColumn<double>('f8', aliasedName, true,
-              type: DriftSqlType.double, requiredDuringInsert: false)
-          .withConverter<double?>($FloatsTable.$converterf8n);
+  late final GeneratedColumn<double> f8 = GeneratedColumn<double>(
+      'f8', aliasedName, true,
+      type: const Float8Type(), requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [id, f8];
   @override
-  String get aliasedName => _alias ?? 'Floats';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Floats';
+  String get actualTableName => $name;
+  static const String $name = 'Floats';
   @override
   VerificationContext validateIntegrity(Insertable<Float> instance,
       {bool isInserting = false}) {
@@ -1627,7 +1641,9 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    context.handle(_f8Meta, const VerificationResult.success());
+    if (data.containsKey('f8')) {
+      context.handle(_f8Meta, f8.isAcceptableOrUnknown(data['f8']!, _f8Meta));
+    }
     return context;
   }
 
@@ -1639,8 +1655,8 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
     return Float(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      f8: $FloatsTable.$converterf8n.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.double, data['${effectivePrefix}f8'])),
+      f8: attachedDatabase.typeMapping
+          .read(const Float8Type(), data['${effectivePrefix}f8']),
     );
   }
 
@@ -1648,11 +1664,6 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   $FloatsTable createAlias(String alias) {
     return $FloatsTable(attachedDatabase, alias);
   }
-
-  static TypeConverter<double, double> $converterf8 =
-      const ElectricFloat8Converter();
-  static TypeConverter<double?, double?> $converterf8n =
-      NullAwareTypeConverter.wrap($converterf8);
 }
 
 class Float extends DataClass implements Insertable<Float> {
@@ -1664,8 +1675,7 @@ class Float extends DataClass implements Insertable<Float> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || f8 != null) {
-      final converter = $FloatsTable.$converterf8n;
-      map['f8'] = Variable<double>(converter.toSql(f8));
+      map['f8'] = Variable<double>(f8);
     }
     return map;
   }
@@ -1758,8 +1768,7 @@ class FloatsCompanion extends UpdateCompanion<Float> {
       map['id'] = Variable<String>(id.value);
     }
     if (f8.present) {
-      final converter = $FloatsTable.$converterf8n;
-      map['f8'] = Variable<double>(converter.toSql(f8.value));
+      map['f8'] = Variable<double>(f8.value, const Float8Type());
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);

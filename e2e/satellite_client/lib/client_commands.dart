@@ -262,19 +262,21 @@ Future<SingleRow> writeInt(
 }
 
 Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
-  final row = await (electric.db.floats.select()..where((t) => t.id.equals(id)))
+  final item = await (electric.db.floats.select()
+        ..where((t) => t.id.equals(id)))
       .getSingle();
-  return SingleRow.fromItem(row);
+  return SingleRow.fromItem(item);
 }
 
-Future<void> writeFloat(
+Future<SingleRow> writeFloat(
     MyDriftElectricClient electric, String id, double f8) async {
-  await electric.db.floats.insertOne(
+  final item = await electric.db.floats.insertReturning(
     FloatsCompanion.insert(
       id: id,
       f8: Value(f8),
     ),
   );
+  return SingleRow.fromItem(item);
 }
 
 Future<Rows> getItemColumns(

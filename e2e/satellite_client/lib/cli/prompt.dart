@@ -27,6 +27,11 @@ Future<void> start() async {
 
       if (name == "exit") {
         return NextAction.stop;
+      } else if (name == "echo") {
+        final Object? variable = command.arguments[0];
+        await processCommand<String>(state, command, () async {
+          return "var=$variable  type=${variable.runtimeType}";
+        });
       } else if (name == "get_shell_db_path") {
         final luxShellName = command.arguments[0] as String;
 
@@ -146,7 +151,7 @@ Future<void> start() async {
         await processCommand<SingleRow>(state, command, () async {
           return await getUUID(electric, id);
         });
-        } else if (name == "write_int") {
+      } else if (name == "write_int") {
         final electric = command.arguments[0] as MyDriftElectricClient;
         final id = command.arguments[1] as String;
         final i2 = command.arguments[2] as int;
@@ -159,6 +164,19 @@ Future<void> start() async {
         final id = command.arguments[1] as String;
         await processCommand<SingleRow>(state, command, () async {
           return await getInt(electric, id);
+        });
+      } else if (name == "write_float") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        final f8 = command.arguments[2] as num;
+        await processCommand<SingleRow>(state, command, () async {
+          return await writeFloat(electric, id, f8.toDouble());
+        });
+      } else if (name == "get_float") {
+        final electric = command.arguments[0] as MyDriftElectricClient;
+        final id = command.arguments[1] as String;
+        await processCommand<SingleRow>(state, command, () async {
+          return await getFloat(electric, id);
         });
       } else if (name == "get_items") {
         final electric = command.arguments[0] as DriftElectricClient;

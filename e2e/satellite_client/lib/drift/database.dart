@@ -84,10 +84,8 @@ class Uuids extends Table {
 
 class Ints extends Table {
   TextColumn get id => text()();
-  IntColumn get i2 =>
-      integer().map(const ElectricInt2Converter()).nullable()();
-  IntColumn get i4 =>
-      integer().map(const ElectricInt4Converter()).nullable()();
+  IntColumn get i2 => integer().map(const ElectricInt2Converter()).nullable()();
+  IntColumn get i4 => integer().map(const ElectricInt4Converter()).nullable()();
 
   @override
   String? get tableName => 'Ints';
@@ -98,8 +96,7 @@ class Ints extends Table {
 
 class Floats extends Table {
   TextColumn get id => text()();
-  RealColumn get f8 =>
-      real().map(const ElectricFloat8Converter()).nullable()();
+  RealColumn get f8 => customType(const Float8Type()).nullable()();
 
   @override
   String? get tableName => 'Floats';
