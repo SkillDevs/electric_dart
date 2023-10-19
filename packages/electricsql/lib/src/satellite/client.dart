@@ -52,8 +52,7 @@ class SatelliteClient extends EventEmitter implements Client {
   late Replication<DataTransaction> outbound;
 
   // can only handle a single subscription at a time
-  late final SubscriptionsDataCache _subscriptionsDataCache =
-      SubscriptionsDataCache(_dbDescription);
+  late final SubscriptionsDataCache _subscriptionsDataCache;
 
   void Function(Uint8List bytes)? socketHandler;
   Throttle<void>? throttledPushTransaction;
@@ -87,6 +86,10 @@ class SatelliteClient extends EventEmitter implements Client {
     required Notifier notifier,
     required this.opts,
   }) : _dbDescription = dbDescription {
+    // This cannot be lazyly instantiated in the 'late final' property, otherwise
+    // it won't be properly ready to emit events at the right time
+    _subscriptionsDataCache = SubscriptionsDataCache(_dbDescription);
+
     inbound = resetReplication<Transaction>(null, null);
     outbound = resetReplication<DataTransaction>(null, null);
 
