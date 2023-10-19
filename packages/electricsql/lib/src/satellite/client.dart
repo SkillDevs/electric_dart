@@ -1127,9 +1127,17 @@ List<int> serializeColumnData(Object columnValue, PgType columnType) {
 
 String _getDefaultStringToSerialize(Object value) {
   if (value is double) {
-    final int truncated = value.truncate();
-    if (truncated == value) {
-      return truncated.toString();
+    if (value.isNaN) {
+      return 'NaN';
+    } else if (value == double.infinity) {
+      return 'Infinity';
+    } else if (value == double.negativeInfinity) {
+      return '-Infinity';
+    } else {
+      final int truncated = value.truncate();
+      if (truncated == value) {
+        return truncated.toString();
+      }
     }
   }
   return value.toString();

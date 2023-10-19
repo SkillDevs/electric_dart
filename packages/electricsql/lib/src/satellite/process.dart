@@ -148,6 +148,10 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+    final sqliteVersionRow =
+        await adapter.query(Statement('SELECT sqlite_version() AS version'));
+    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
+
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();

@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:satellite_dart_client/cli/prompt.dart';
 // ignore: depend_on_referenced_packages
@@ -11,5 +12,9 @@ Future<void> main(List<String> arguments) async {
 }
 
 DynamicLibrary _openOnLinux() {
+  const usrLocalLib = '/usr/local/lib/libsqlite3.so';
+  if (File(usrLocalLib).existsSync()) {
+    return DynamicLibrary.open(usrLocalLib);
+  }
   return DynamicLibrary.open('libsqlite3.so.0');
 }

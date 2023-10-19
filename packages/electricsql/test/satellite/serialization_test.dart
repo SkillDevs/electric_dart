@@ -21,6 +21,8 @@ void main() {
         RelationColumn(name: 'int2', type: 'INTEGER', isNullable: true),
         RelationColumn(name: 'float1', type: 'REAL', isNullable: true),
         RelationColumn(name: 'float2', type: 'FLOAT4', isNullable: true),
+        RelationColumn(name: 'float3', type: 'FLOAT8', isNullable: true),
+        RelationColumn(name: 'float4', type: 'FLOAT8', isNullable: true),
         RelationColumn(name: 'bool1', type: 'BOOL', isNullable: true),
         RelationColumn(name: 'bool2', type: 'BOOL', isNullable: true),
         RelationColumn(name: 'bool3', type: 'BOOL', isNullable: true),
@@ -39,6 +41,8 @@ void main() {
       'int2': -30,
       'float1': 1.0,
       'float2': -30.3,
+      'float3': double.infinity,
+      'float4': double.negativeInfinity,
       'bool1': 1,
       'bool2': 0,
       'bool3': null,
@@ -46,7 +50,7 @@ void main() {
     final sRow = serializeRow(record, rel, dbDescription);
     expect(
       sRow.values.map((bytes) => utf8.decode(bytes)),
-      ['Hello', 'World!', '', '1', '-30', '1', '-30.3', 't', 'f', ''],
+      ['Hello', 'World!', '', '1', '-30', '1', '-30.3', 'Infinity', '-Infinity', 't', 'f', ''],
     );
     final dRow = deserializeRow(sRow, rel, dbDescription);
 

@@ -149,11 +149,26 @@ List<OplogEntry> fromTransaction(
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         transaction.commitTimestamp.toInt(),
       ).toISOStringUTC(), // TODO: check precision
-      newRow: t.record == null ? null : json.encode(t.record),
-      oldRow: t.oldRecord == null ? null : json.encode(t.oldRecord),
+      newRow: t.record == null ? null : _customJsonEncode(t.record!),
+      oldRow: t.oldRecord == null ? null : _customJsonEncode(t.oldRecord!),
       clearTags: encodeTags(t.tags),
     );
   }).toList();
+}
+
+// TODO(dart): Infinite is not compliant with JSON spec
+// Javascript JSON.stringify() will convert Infinity to null, so
+// we are doing the same while we wait for a better solution
+String _customJsonEncode(Map<String, Object?> o) {
+  // Remove infinites
+  final filtered = o.map((key, value) {
+    if (value is double && value.isInfinite) {
+      return MapEntry(key, null);
+    }
+    return MapEntry(key, value);
+  });
+
+  return json.encode(filtered);
 }
 
 List<DataTransaction> toTransactions(

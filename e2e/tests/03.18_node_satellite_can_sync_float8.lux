@@ -47,7 +47,7 @@
     [invoke node_get_float "row6" NaN]
 
     [invoke node_write_float "row7" -0]
-    [invoke node_get_float "row7" 0]
+    [invoke node_get_float "row7" 0.0]
 
 [shell pg_1]
     [invoke wait-for "SELECT * FROM public.floats;" "row7" 10 $psql]
@@ -77,7 +77,7 @@
     [invoke node_get_float "row4" Infinity]
     [invoke node_get_float "row5" -Infinity]
     [invoke node_get_float "row6" NaN]
-    [invoke node_get_float "row7" 0]
+    [invoke node_get_float "row7" 0.0]
 
 [cleanup]
   [invoke teardown]

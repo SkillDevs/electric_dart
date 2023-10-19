@@ -1,3 +1,7 @@
+FROM homebrew/brew:latest AS brew
+RUN brew update
+RUN brew install sqlite
+
 FROM ubuntu:22.04 as base
 
 # Node is necessary because the client can interpret JS objects as arguments in the CLI
@@ -30,5 +34,9 @@ RUN dart compile exe bin/satellite_dart_client.dart -o bin/satellite_dart_client
 
 FROM base
 COPY --from=build /repo/e2e/satellite_client/bin/satellite_dart_client /app/bin/
+
+# Homebrew files
+COPY --from=brew /home/linuxbrew/.linuxbrew/lib/libsqlite3.so /usr/local/lib
+
 
 CMD ["/app/bin/satellite_dart_client"]
