@@ -8,9 +8,9 @@
     [local sql=
         """
         CREATE TABLE public.timestamps (
-            id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            created_at TIMESTAMP NOT NULL DEFAULT now(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMPTZ NOT NULL
         );
         CALL electric.electrify('public.timestamps');
         """]
