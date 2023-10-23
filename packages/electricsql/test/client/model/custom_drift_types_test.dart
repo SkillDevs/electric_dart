@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:electricsql/src/drivers/drift/converters.dart';
+import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
@@ -129,7 +129,7 @@ Future<void> _testDate(TestsDatabase db, DateTime value) async {
     insertCol: (c, v) => c.copyWith(
       date: Value(v),
     ),
-    customT: const DateType(),
+    customT: ElectricTypes.date,
   );
 }
 
@@ -154,7 +154,7 @@ Future<void> _testInt2(TestsDatabase db, int value) async {
     insertCol: (c, v) => c.copyWith(
       int2: Value(v),
     ),
-    customT: const Int2Type(),
+    customT: ElectricTypes.int2,
   );
 }
 
@@ -166,9 +166,7 @@ Future<void> _testInt4(TestsDatabase db, int value) async {
     insertCol: (c, v) => c.copyWith(
       int4: Value(v),
     ),
-    // TODO(update)
-    customT: null,
-    //customT: const Int4Type(),
+    customT: ElectricTypes.int4,
   );
 }
 
@@ -180,7 +178,7 @@ Future<void> _testFloat8(TestsDatabase db, double value) async {
     insertCol: (c, v) => c.copyWith(
       float8: Value(v),
     ),
-    customT: const Float8Type(),
+    customT: ElectricTypes.float8,
   );
 }
 

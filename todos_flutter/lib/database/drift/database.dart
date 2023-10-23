@@ -5,6 +5,8 @@ import 'connection/connection.dart' as impl;
 
 part 'database.g.dart';
 
+// TODO(dart): Remove dependency_overrides
+
 class Todos extends Table {
   @override
   bool get withoutRowId => true;
@@ -18,7 +20,7 @@ class Todos extends Table {
   TextColumn get id => text()();
   TextColumn get listid => text().nullable()();
   TextColumn get textCol => text().named("text").nullable()();
-  TextColumn get editedAt => text().map(const ElectricTimestampConverter())();
+  Column<DateTime> get editedAt => customType(ElectricTypes.timestamp)();
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
 }
 

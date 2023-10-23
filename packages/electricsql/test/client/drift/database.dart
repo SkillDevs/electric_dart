@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:electricsql/src/drivers/drift/converters.dart';
+import 'package:electricsql/src/client/conversions/custom_types.dart';
 
 part 'database.g.dart';
 
@@ -57,8 +57,8 @@ class Profiles extends Table {
 
 class Dummy extends Table {
   IntColumn get id => integer()();
-  TextColumn get timestamp =>
-      text().map(const ElectricTimestampConverter()).nullable()();
+  Column<DateTime> get timestamp =>
+      customType(ElectricTypes.timestamp).nullable()();
 
   @override
   String? get tableName => 'Dummy';
@@ -69,20 +69,18 @@ class Dummy extends Table {
 
 class DataTypes extends Table {
   IntColumn get id => integer()();
-  Column<DateTime> get date => customType(const DateType()).nullable()();
-  TextColumn get time => text().map(const ElectricTimeConverter()).nullable()();
-  TextColumn get timetz =>
-      text().map(const ElectricTimeTZConverter()).nullable()();
-  TextColumn get timestamp =>
-      text().map(const ElectricTimestampConverter()).nullable()();
-  TextColumn get timestamptz =>
-      text().map(const ElectricTimestampTZConverter()).nullable()();
+  Column<DateTime> get date => customType(ElectricTypes.date).nullable()();
+  Column<DateTime> get time => customType(ElectricTypes.time).nullable()();
+  Column<DateTime> get timetz => customType(ElectricTypes.timeTZ).nullable()();
+  Column<DateTime> get timestamp =>
+      customType(ElectricTypes.timestamp).nullable()();
+  Column<DateTime> get timestamptz =>
+      customType(ElectricTypes.timestampTZ).nullable()();
   BoolColumn get boolCol => boolean().named('bool').nullable()();
-  TextColumn get uuid => text().map(const ElectricUUIDConverter()).nullable()();
-  IntColumn get int2 => customType(const Int2Type()).nullable()();
-  IntColumn get int4 =>
-      integer().map(const ElectricInt4Converter()).nullable()();
-  RealColumn get float8 => customType(const Float8Type()).nullable()();
+  TextColumn get uuid => customType(ElectricTypes.uuid).nullable()();
+  IntColumn get int2 => customType(ElectricTypes.int2).nullable()();
+  IntColumn get int4 => customType(ElectricTypes.int4).nullable()();
+  RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
 
   IntColumn get relatedId =>
       integer().nullable().named('relatedId').references(Dummy, #id)();

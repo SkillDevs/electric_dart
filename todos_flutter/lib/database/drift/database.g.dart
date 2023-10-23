@@ -27,10 +27,9 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   static const VerificationMeta _editedAtMeta =
       const VerificationMeta('editedAt');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime, String> editedAt =
-      GeneratedColumn<String>('edited_at', aliasedName, false,
-              type: DriftSqlType.string, requiredDuringInsert: true)
-          .withConverter<DateTime>($TodosTable.$convertereditedAt);
+  late final GeneratedColumn<DateTime> editedAt = GeneratedColumn<DateTime>(
+      'edited_at', aliasedName, false,
+      type: ElectricTypes.timestamp, requiredDuringInsert: true);
   static const VerificationMeta _completedMeta =
       const VerificationMeta('completed');
   @override
@@ -45,9 +44,10 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   List<GeneratedColumn> get $columns =>
       [id, listid, textCol, editedAt, completed];
   @override
-  String get aliasedName => _alias ?? 'todo';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'todo';
+  String get actualTableName => $name;
+  static const String $name = 'todo';
   @override
   VerificationContext validateIntegrity(Insertable<Todo> instance,
       {bool isInserting = false}) {
@@ -66,7 +66,12 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
       context.handle(_textColMeta,
           textCol.isAcceptableOrUnknown(data['text']!, _textColMeta));
     }
-    context.handle(_editedAtMeta, const VerificationResult.success());
+    if (data.containsKey('edited_at')) {
+      context.handle(_editedAtMeta,
+          editedAt.isAcceptableOrUnknown(data['edited_at']!, _editedAtMeta));
+    } else if (isInserting) {
+      context.missing(_editedAtMeta);
+    }
     if (data.containsKey('completed')) {
       context.handle(_completedMeta,
           completed.isAcceptableOrUnknown(data['completed']!, _completedMeta));
@@ -86,9 +91,8 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
           .read(DriftSqlType.string, data['${effectivePrefix}listid']),
       textCol: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}text']),
-      editedAt: $TodosTable.$convertereditedAt.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}edited_at'])!),
+      editedAt: attachedDatabase.typeMapping
+          .read(ElectricTypes.timestamp, data['${effectivePrefix}edited_at'])!,
       completed: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}completed'])!,
     );
@@ -99,8 +103,6 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
     return $TodosTable(attachedDatabase, alias);
   }
 
-  static TypeConverter<DateTime, String> $convertereditedAt =
-      const ElectricTimestampConverter();
   @override
   bool get withoutRowId => true;
 }
@@ -127,10 +129,7 @@ class Todo extends DataClass implements Insertable<Todo> {
     if (!nullToAbsent || textCol != null) {
       map['text'] = Variable<String>(textCol);
     }
-    {
-      final converter = $TodosTable.$convertereditedAt;
-      map['edited_at'] = Variable<String>(converter.toSql(editedAt));
-    }
+    map['edited_at'] = Variable<DateTime>(editedAt);
     map['completed'] = Variable<bool>(completed);
     return map;
   }
@@ -234,7 +233,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     Expression<String>? id,
     Expression<String>? listid,
     Expression<String>? textCol,
-    Expression<String>? editedAt,
+    Expression<DateTime>? editedAt,
     Expression<bool>? completed,
   }) {
     return RawValuesInsertable({
@@ -274,8 +273,8 @@ class TodosCompanion extends UpdateCompanion<Todo> {
       map['text'] = Variable<String>(textCol.value);
     }
     if (editedAt.present) {
-      final converter = $TodosTable.$convertereditedAt;
-      map['edited_at'] = Variable<String>(converter.toSql(editedAt.value));
+      map['edited_at'] =
+          Variable<DateTime>(editedAt.value, ElectricTypes.timestamp);
     }
     if (completed.present) {
       map['completed'] = Variable<bool>(completed.value);
@@ -321,9 +320,10 @@ class $TodoListsTable extends TodoLists
   @override
   List<GeneratedColumn> get $columns => [id, filter, editing];
   @override
-  String get aliasedName => _alias ?? 'todolist';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'todolist';
+  String get actualTableName => $name;
+  static const String $name = 'todolist';
   @override
   VerificationContext validateIntegrity(Insertable<TodoList> instance,
       {bool isInserting = false}) {

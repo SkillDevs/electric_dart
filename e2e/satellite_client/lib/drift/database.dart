@@ -37,10 +37,10 @@ class OtherItems extends Table {
 
 class Timestamps extends Table {
   TextColumn get id => text()();
-  TextColumn get createdAt =>
-      text().map(const ElectricTimestampConverter()).named('created_at')();
-  TextColumn get updatedAt =>
-      text().map(const ElectricTimestampTZConverter()).named('updated_at')();
+  Column<DateTime> get createdAt =>
+      customType(ElectricTypes.timestamp).named('created_at')();
+  Column<DateTime> get updatedAt =>
+      customType(ElectricTypes.timestampTZ).named('updated_at')();
 
   @override
   String? get tableName => 'Timestamps';
@@ -51,8 +51,8 @@ class Timestamps extends Table {
 
 class Datetimes extends Table {
   TextColumn get id => text()();
-  TextColumn get d => text().map(const ElectricDateConverter())();
-  TextColumn get t => text().map(const ElectricTimeConverter())();
+  Column<DateTime> get d => customType(ElectricTypes.date)();
+  Column<DateTime> get t => customType(ElectricTypes.time)();
 
   @override
   String? get tableName => 'Datetimes';
@@ -73,7 +73,7 @@ class Bools extends Table {
 }
 
 class Uuids extends Table {
-  TextColumn get id => text().map(const ElectricUUIDConverter())();
+  TextColumn get id => customType(ElectricTypes.uuid)();
 
   @override
   String? get tableName => 'Uuids';
@@ -84,8 +84,8 @@ class Uuids extends Table {
 
 class Ints extends Table {
   TextColumn get id => text()();
-  IntColumn get i2 => integer().map(const ElectricInt2Converter()).nullable()();
-  IntColumn get i4 => integer().map(const ElectricInt4Converter()).nullable()();
+  IntColumn get i2 => customType(ElectricTypes.int2).nullable()();
+  IntColumn get i4 => customType(ElectricTypes.int4).nullable()();
 
   @override
   String? get tableName => 'Ints';
@@ -96,7 +96,7 @@ class Ints extends Table {
 
 class Floats extends Table {
   TextColumn get id => text()();
-  RealColumn get f8 => customType(const Float8Type()).nullable()();
+  RealColumn get f8 => customType(ElectricTypes.float8).nullable()();
 
   @override
   String? get tableName => 'Floats';

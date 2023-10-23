@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:electricsql/src/util/converters/helpers.dart';
-
 final class Float8Codec extends Codec<double, Object> {
   const Float8Codec();
   @override

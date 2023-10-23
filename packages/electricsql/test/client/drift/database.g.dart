@@ -890,10 +890,9 @@ class $DummyTable extends Dummy with TableInfo<$DummyTable, DummyData> {
   static const VerificationMeta _timestampMeta =
       const VerificationMeta('timestamp');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, String> timestamp =
-      GeneratedColumn<String>('timestamp', aliasedName, true,
-              type: DriftSqlType.string, requiredDuringInsert: false)
-          .withConverter<DateTime?>($DummyTable.$convertertimestampn);
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+      'timestamp', aliasedName, true,
+      type: ElectricTypes.timestamp, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [id, timestamp];
   @override
@@ -909,7 +908,10 @@ class $DummyTable extends Dummy with TableInfo<$DummyTable, DummyData> {
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    context.handle(_timestampMeta, const VerificationResult.success());
+    if (data.containsKey('timestamp')) {
+      context.handle(_timestampMeta,
+          timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta));
+    }
     return context;
   }
 
@@ -921,9 +923,8 @@ class $DummyTable extends Dummy with TableInfo<$DummyTable, DummyData> {
     return DummyData(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      timestamp: $DummyTable.$convertertimestampn.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}timestamp'])),
+      timestamp: attachedDatabase.typeMapping
+          .read(ElectricTypes.timestamp, data['${effectivePrefix}timestamp']),
     );
   }
 
@@ -931,11 +932,6 @@ class $DummyTable extends Dummy with TableInfo<$DummyTable, DummyData> {
   $DummyTable createAlias(String alias) {
     return $DummyTable(attachedDatabase, alias);
   }
-
-  static TypeConverter<DateTime, String> $convertertimestamp =
-      const ElectricTimestampConverter();
-  static TypeConverter<DateTime?, String?> $convertertimestampn =
-      NullAwareTypeConverter.wrap($convertertimestamp);
 }
 
 class DummyData extends DataClass implements Insertable<DummyData> {
@@ -947,8 +943,7 @@ class DummyData extends DataClass implements Insertable<DummyData> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     if (!nullToAbsent || timestamp != null) {
-      final converter = $DummyTable.$convertertimestampn;
-      map['timestamp'] = Variable<String>(converter.toSql(timestamp));
+      map['timestamp'] = Variable<DateTime>(timestamp);
     }
     return map;
   }
@@ -1017,7 +1012,7 @@ class DummyCompanion extends UpdateCompanion<DummyData> {
   });
   static Insertable<DummyData> custom({
     Expression<int>? id,
-    Expression<String>? timestamp,
+    Expression<DateTime>? timestamp,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1039,9 +1034,8 @@ class DummyCompanion extends UpdateCompanion<DummyData> {
       map['id'] = Variable<int>(id.value);
     }
     if (timestamp.present) {
-      final converter = $DummyTable.$convertertimestampn;
-
-      map['timestamp'] = Variable<String>(converter.toSql(timestamp.value));
+      map['timestamp'] =
+          Variable<DateTime>(timestamp.value, ElectricTypes.timestamp);
     }
     return map;
   }
@@ -1071,33 +1065,29 @@ class $DataTypesTable extends DataTypes
   @override
   late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
       'date', aliasedName, true,
-      type: const DateType(), requiredDuringInsert: false);
+      type: ElectricTypes.date, requiredDuringInsert: false);
   static const VerificationMeta _timeMeta = const VerificationMeta('time');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, String> time =
-      GeneratedColumn<String>('time', aliasedName, true,
-              type: DriftSqlType.string, requiredDuringInsert: false)
-          .withConverter<DateTime?>($DataTypesTable.$convertertimen);
+  late final GeneratedColumn<DateTime> time = GeneratedColumn<DateTime>(
+      'time', aliasedName, true,
+      type: ElectricTypes.time, requiredDuringInsert: false);
   static const VerificationMeta _timetzMeta = const VerificationMeta('timetz');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, String> timetz =
-      GeneratedColumn<String>('timetz', aliasedName, true,
-              type: DriftSqlType.string, requiredDuringInsert: false)
-          .withConverter<DateTime?>($DataTypesTable.$convertertimetzn);
+  late final GeneratedColumn<DateTime> timetz = GeneratedColumn<DateTime>(
+      'timetz', aliasedName, true,
+      type: ElectricTypes.timeTZ, requiredDuringInsert: false);
   static const VerificationMeta _timestampMeta =
       const VerificationMeta('timestamp');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, String> timestamp =
-      GeneratedColumn<String>('timestamp', aliasedName, true,
-              type: DriftSqlType.string, requiredDuringInsert: false)
-          .withConverter<DateTime?>($DataTypesTable.$convertertimestampn);
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+      'timestamp', aliasedName, true,
+      type: ElectricTypes.timestamp, requiredDuringInsert: false);
   static const VerificationMeta _timestamptzMeta =
       const VerificationMeta('timestamptz');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, String> timestamptz =
-      GeneratedColumn<String>('timestamptz', aliasedName, true,
-              type: DriftSqlType.string, requiredDuringInsert: false)
-          .withConverter<DateTime?>($DataTypesTable.$convertertimestamptzn);
+  late final GeneratedColumn<DateTime> timestamptz = GeneratedColumn<DateTime>(
+      'timestamptz', aliasedName, true,
+      type: ElectricTypes.timestampTZ, requiredDuringInsert: false);
   static const VerificationMeta _boolColMeta =
       const VerificationMeta('boolCol');
   @override
@@ -1109,26 +1099,24 @@ class $DataTypesTable extends DataTypes
           GeneratedColumn.constraintIsAlways('CHECK ("bool" IN (0, 1))'));
   static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
   @override
-  late final GeneratedColumnWithTypeConverter<String?, String> uuid =
-      GeneratedColumn<String>('uuid', aliasedName, true,
-              type: DriftSqlType.string, requiredDuringInsert: false)
-          .withConverter<String?>($DataTypesTable.$converteruuidn);
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, true,
+      type: ElectricTypes.uuid, requiredDuringInsert: false);
   static const VerificationMeta _int2Meta = const VerificationMeta('int2');
   @override
   late final GeneratedColumn<int> int2 = GeneratedColumn<int>(
       'int2', aliasedName, true,
-      type: const Int2Type(), requiredDuringInsert: false);
+      type: ElectricTypes.int2, requiredDuringInsert: false);
   static const VerificationMeta _int4Meta = const VerificationMeta('int4');
   @override
-  late final GeneratedColumnWithTypeConverter<int?, int> int4 =
-      GeneratedColumn<int>('int4', aliasedName, true,
-              type: DriftSqlType.int, requiredDuringInsert: false)
-          .withConverter<int?>($DataTypesTable.$converterint4n);
+  late final GeneratedColumn<int> int4 = GeneratedColumn<int>(
+      'int4', aliasedName, true,
+      type: ElectricTypes.int4, requiredDuringInsert: false);
   static const VerificationMeta _float8Meta = const VerificationMeta('float8');
   @override
   late final GeneratedColumn<double> float8 = GeneratedColumn<double>(
       'float8', aliasedName, true,
-      type: const Float8Type(), requiredDuringInsert: false);
+      type: ElectricTypes.float8, requiredDuringInsert: false);
   static const VerificationMeta _relatedIdMeta =
       const VerificationMeta('relatedId');
   @override
@@ -1170,20 +1158,40 @@ class $DataTypesTable extends DataTypes
       context.handle(
           _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
     }
-    context.handle(_timeMeta, const VerificationResult.success());
-    context.handle(_timetzMeta, const VerificationResult.success());
-    context.handle(_timestampMeta, const VerificationResult.success());
-    context.handle(_timestamptzMeta, const VerificationResult.success());
+    if (data.containsKey('time')) {
+      context.handle(
+          _timeMeta, time.isAcceptableOrUnknown(data['time']!, _timeMeta));
+    }
+    if (data.containsKey('timetz')) {
+      context.handle(_timetzMeta,
+          timetz.isAcceptableOrUnknown(data['timetz']!, _timetzMeta));
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(_timestampMeta,
+          timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta));
+    }
+    if (data.containsKey('timestamptz')) {
+      context.handle(
+          _timestamptzMeta,
+          timestamptz.isAcceptableOrUnknown(
+              data['timestamptz']!, _timestamptzMeta));
+    }
     if (data.containsKey('bool')) {
       context.handle(_boolColMeta,
           boolCol.isAcceptableOrUnknown(data['bool']!, _boolColMeta));
     }
-    context.handle(_uuidMeta, const VerificationResult.success());
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    }
     if (data.containsKey('int2')) {
       context.handle(
           _int2Meta, int2.isAcceptableOrUnknown(data['int2']!, _int2Meta));
     }
-    context.handle(_int4Meta, const VerificationResult.success());
+    if (data.containsKey('int4')) {
+      context.handle(
+          _int4Meta, int4.isAcceptableOrUnknown(data['int4']!, _int4Meta));
+    }
     if (data.containsKey('float8')) {
       context.handle(_float8Meta,
           float8.isAcceptableOrUnknown(data['float8']!, _float8Meta));
@@ -1204,28 +1212,25 @@ class $DataTypesTable extends DataTypes
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       date: attachedDatabase.typeMapping
-          .read(const DateType(), data['${effectivePrefix}date']),
-      time: $DataTypesTable.$convertertimen.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}time'])),
-      timetz: $DataTypesTable.$convertertimetzn.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}timetz'])),
-      timestamp: $DataTypesTable.$convertertimestampn.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}timestamp'])),
-      timestamptz: $DataTypesTable.$convertertimestamptzn.fromSql(
-          attachedDatabase.typeMapping.read(
-              DriftSqlType.string, data['${effectivePrefix}timestamptz'])),
+          .read(ElectricTypes.date, data['${effectivePrefix}date']),
+      time: attachedDatabase.typeMapping
+          .read(ElectricTypes.time, data['${effectivePrefix}time']),
+      timetz: attachedDatabase.typeMapping
+          .read(ElectricTypes.timeTZ, data['${effectivePrefix}timetz']),
+      timestamp: attachedDatabase.typeMapping
+          .read(ElectricTypes.timestamp, data['${effectivePrefix}timestamp']),
+      timestamptz: attachedDatabase.typeMapping.read(
+          ElectricTypes.timestampTZ, data['${effectivePrefix}timestamptz']),
       boolCol: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}bool']),
-      uuid: $DataTypesTable.$converteruuidn.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])),
+      uuid: attachedDatabase.typeMapping
+          .read(ElectricTypes.uuid, data['${effectivePrefix}uuid']),
       int2: attachedDatabase.typeMapping
-          .read(const Int2Type(), data['${effectivePrefix}int2']),
-      int4: $DataTypesTable.$converterint4n.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}int4'])),
+          .read(ElectricTypes.int2, data['${effectivePrefix}int2']),
+      int4: attachedDatabase.typeMapping
+          .read(ElectricTypes.int4, data['${effectivePrefix}int4']),
       float8: attachedDatabase.typeMapping
-          .read(const Float8Type(), data['${effectivePrefix}float8']),
+          .read(ElectricTypes.float8, data['${effectivePrefix}float8']),
       relatedId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}relatedId']),
     );
@@ -1235,30 +1240,6 @@ class $DataTypesTable extends DataTypes
   $DataTypesTable createAlias(String alias) {
     return $DataTypesTable(attachedDatabase, alias);
   }
-
-  static TypeConverter<DateTime, String> $convertertime =
-      const ElectricTimeConverter();
-  static TypeConverter<DateTime?, String?> $convertertimen =
-      NullAwareTypeConverter.wrap($convertertime);
-  static TypeConverter<DateTime, String> $convertertimetz =
-      const ElectricTimeTZConverter();
-  static TypeConverter<DateTime?, String?> $convertertimetzn =
-      NullAwareTypeConverter.wrap($convertertimetz);
-  static TypeConverter<DateTime, String> $convertertimestamp =
-      const ElectricTimestampConverter();
-  static TypeConverter<DateTime?, String?> $convertertimestampn =
-      NullAwareTypeConverter.wrap($convertertimestamp);
-  static TypeConverter<DateTime, String> $convertertimestamptz =
-      const ElectricTimestampTZConverter();
-  static TypeConverter<DateTime?, String?> $convertertimestamptzn =
-      NullAwareTypeConverter.wrap($convertertimestamptz);
-  static TypeConverter<String, String> $converteruuid =
-      const ElectricUUIDConverter();
-  static TypeConverter<String?, String?> $converteruuidn =
-      NullAwareTypeConverter.wrap($converteruuid);
-  static TypeConverter<int, int> $converterint4 = const ElectricInt4Converter();
-  static TypeConverter<int?, int?> $converterint4n =
-      NullAwareTypeConverter.wrap($converterint4);
 }
 
 class DataType extends DataClass implements Insertable<DataType> {
@@ -1295,34 +1276,28 @@ class DataType extends DataClass implements Insertable<DataType> {
       map['date'] = Variable<DateTime>(date);
     }
     if (!nullToAbsent || time != null) {
-      final converter = $DataTypesTable.$convertertimen;
-      map['time'] = Variable<String>(converter.toSql(time));
+      map['time'] = Variable<DateTime>(time);
     }
     if (!nullToAbsent || timetz != null) {
-      final converter = $DataTypesTable.$convertertimetzn;
-      map['timetz'] = Variable<String>(converter.toSql(timetz));
+      map['timetz'] = Variable<DateTime>(timetz);
     }
     if (!nullToAbsent || timestamp != null) {
-      final converter = $DataTypesTable.$convertertimestampn;
-      map['timestamp'] = Variable<String>(converter.toSql(timestamp));
+      map['timestamp'] = Variable<DateTime>(timestamp);
     }
     if (!nullToAbsent || timestamptz != null) {
-      final converter = $DataTypesTable.$convertertimestamptzn;
-      map['timestamptz'] = Variable<String>(converter.toSql(timestamptz));
+      map['timestamptz'] = Variable<DateTime>(timestamptz);
     }
     if (!nullToAbsent || boolCol != null) {
       map['bool'] = Variable<bool>(boolCol);
     }
     if (!nullToAbsent || uuid != null) {
-      final converter = $DataTypesTable.$converteruuidn;
-      map['uuid'] = Variable<String>(converter.toSql(uuid));
+      map['uuid'] = Variable<String>(uuid);
     }
     if (!nullToAbsent || int2 != null) {
       map['int2'] = Variable<int>(int2);
     }
     if (!nullToAbsent || int4 != null) {
-      final converter = $DataTypesTable.$converterint4n;
-      map['int4'] = Variable<int>(converter.toSql(int4));
+      map['int4'] = Variable<int>(int4);
     }
     if (!nullToAbsent || float8 != null) {
       map['float8'] = Variable<double>(float8);
@@ -1508,10 +1483,10 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
   static Insertable<DataType> custom({
     Expression<int>? id,
     Expression<DateTime>? date,
-    Expression<String>? time,
-    Expression<String>? timetz,
-    Expression<String>? timestamp,
-    Expression<String>? timestamptz,
+    Expression<DateTime>? time,
+    Expression<DateTime>? timetz,
+    Expression<DateTime>? timestamp,
+    Expression<DateTime>? timestamptz,
     Expression<bool>? boolCol,
     Expression<String>? uuid,
     Expression<int>? int2,
@@ -1571,46 +1546,36 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       map['id'] = Variable<int>(id.value);
     }
     if (date.present) {
-      map['date'] = Variable<DateTime>(date.value, const DateType());
+      map['date'] = Variable<DateTime>(date.value, ElectricTypes.date);
     }
     if (time.present) {
-      final converter = $DataTypesTable.$convertertimen;
-
-      map['time'] = Variable<String>(converter.toSql(time.value));
+      map['time'] = Variable<DateTime>(time.value, ElectricTypes.time);
     }
     if (timetz.present) {
-      final converter = $DataTypesTable.$convertertimetzn;
-
-      map['timetz'] = Variable<String>(converter.toSql(timetz.value));
+      map['timetz'] = Variable<DateTime>(timetz.value, ElectricTypes.timeTZ);
     }
     if (timestamp.present) {
-      final converter = $DataTypesTable.$convertertimestampn;
-
-      map['timestamp'] = Variable<String>(converter.toSql(timestamp.value));
+      map['timestamp'] =
+          Variable<DateTime>(timestamp.value, ElectricTypes.timestamp);
     }
     if (timestamptz.present) {
-      final converter = $DataTypesTable.$convertertimestamptzn;
-
-      map['timestamptz'] = Variable<String>(converter.toSql(timestamptz.value));
+      map['timestamptz'] =
+          Variable<DateTime>(timestamptz.value, ElectricTypes.timestampTZ);
     }
     if (boolCol.present) {
       map['bool'] = Variable<bool>(boolCol.value);
     }
     if (uuid.present) {
-      final converter = $DataTypesTable.$converteruuidn;
-
-      map['uuid'] = Variable<String>(converter.toSql(uuid.value));
+      map['uuid'] = Variable<String>(uuid.value, ElectricTypes.uuid);
     }
     if (int2.present) {
-      map['int2'] = Variable<int>(int2.value, const Int2Type());
+      map['int2'] = Variable<int>(int2.value, ElectricTypes.int2);
     }
     if (int4.present) {
-      final converter = $DataTypesTable.$converterint4n;
-
-      map['int4'] = Variable<int>(converter.toSql(int4.value));
+      map['int4'] = Variable<int>(int4.value, ElectricTypes.int4);
     }
     if (float8.present) {
-      map['float8'] = Variable<double>(float8.value, const Float8Type());
+      map['float8'] = Variable<double>(float8.value, ElectricTypes.float8);
     }
     if (relatedId.present) {
       map['relatedId'] = Variable<int>(relatedId.value);

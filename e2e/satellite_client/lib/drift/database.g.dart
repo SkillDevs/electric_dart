@@ -611,17 +611,15 @@ class $TimestampsTable extends Timestamps
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime, String> createdAt =
-      GeneratedColumn<String>('created_at', aliasedName, false,
-              type: DriftSqlType.string, requiredDuringInsert: true)
-          .withConverter<DateTime>($TimestampsTable.$convertercreatedAt);
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: ElectricTypes.timestamp, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime, String> updatedAt =
-      GeneratedColumn<String>('updated_at', aliasedName, false,
-              type: DriftSqlType.string, requiredDuringInsert: true)
-          .withConverter<DateTime>($TimestampsTable.$converterupdatedAt);
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: ElectricTypes.timestampTZ, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [id, createdAt, updatedAt];
   @override
@@ -639,8 +637,18 @@ class $TimestampsTable extends Timestamps
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    context.handle(_createdAtMeta, const VerificationResult.success());
-    context.handle(_updatedAtMeta, const VerificationResult.success());
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
     return context;
   }
 
@@ -652,12 +660,10 @@ class $TimestampsTable extends Timestamps
     return Timestamp(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      createdAt: $TimestampsTable.$convertercreatedAt.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!),
-      updatedAt: $TimestampsTable.$converterupdatedAt.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}updated_at'])!),
+      createdAt: attachedDatabase.typeMapping
+          .read(ElectricTypes.timestamp, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping.read(
+          ElectricTypes.timestampTZ, data['${effectivePrefix}updated_at'])!,
     );
   }
 
@@ -665,11 +671,6 @@ class $TimestampsTable extends Timestamps
   $TimestampsTable createAlias(String alias) {
     return $TimestampsTable(attachedDatabase, alias);
   }
-
-  static TypeConverter<DateTime, String> $convertercreatedAt =
-      const ElectricTimestampConverter();
-  static TypeConverter<DateTime, String> $converterupdatedAt =
-      const ElectricTimestampTZConverter();
 }
 
 class Timestamp extends DataClass implements Insertable<Timestamp> {
@@ -682,14 +683,8 @@ class Timestamp extends DataClass implements Insertable<Timestamp> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    {
-      final converter = $TimestampsTable.$convertercreatedAt;
-      map['created_at'] = Variable<String>(converter.toSql(createdAt));
-    }
-    {
-      final converter = $TimestampsTable.$converterupdatedAt;
-      map['updated_at'] = Variable<String>(converter.toSql(updatedAt));
-    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
@@ -768,8 +763,8 @@ class TimestampsCompanion extends UpdateCompanion<Timestamp> {
         updatedAt = Value(updatedAt);
   static Insertable<Timestamp> custom({
     Expression<String>? id,
-    Expression<String>? createdAt,
-    Expression<String>? updatedAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -800,14 +795,12 @@ class TimestampsCompanion extends UpdateCompanion<Timestamp> {
       map['id'] = Variable<String>(id.value);
     }
     if (createdAt.present) {
-      final converter = $TimestampsTable.$convertercreatedAt;
-
-      map['created_at'] = Variable<String>(converter.toSql(createdAt.value));
+      map['created_at'] =
+          Variable<DateTime>(createdAt.value, ElectricTypes.timestamp);
     }
     if (updatedAt.present) {
-      final converter = $TimestampsTable.$converterupdatedAt;
-
-      map['updated_at'] = Variable<String>(converter.toSql(updatedAt.value));
+      map['updated_at'] =
+          Variable<DateTime>(updatedAt.value, ElectricTypes.timestampTZ);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -840,16 +833,14 @@ class $DatetimesTable extends Datetimes
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _dMeta = const VerificationMeta('d');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime, String> d =
-      GeneratedColumn<String>('d', aliasedName, false,
-              type: DriftSqlType.string, requiredDuringInsert: true)
-          .withConverter<DateTime>($DatetimesTable.$converterd);
+  late final GeneratedColumn<DateTime> d = GeneratedColumn<DateTime>(
+      'd', aliasedName, false,
+      type: ElectricTypes.date, requiredDuringInsert: true);
   static const VerificationMeta _tMeta = const VerificationMeta('t');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime, String> t =
-      GeneratedColumn<String>('t', aliasedName, false,
-              type: DriftSqlType.string, requiredDuringInsert: true)
-          .withConverter<DateTime>($DatetimesTable.$convertert);
+  late final GeneratedColumn<DateTime> t = GeneratedColumn<DateTime>(
+      't', aliasedName, false,
+      type: ElectricTypes.time, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [id, d, t];
   @override
@@ -867,8 +858,16 @@ class $DatetimesTable extends Datetimes
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    context.handle(_dMeta, const VerificationResult.success());
-    context.handle(_tMeta, const VerificationResult.success());
+    if (data.containsKey('d')) {
+      context.handle(_dMeta, d.isAcceptableOrUnknown(data['d']!, _dMeta));
+    } else if (isInserting) {
+      context.missing(_dMeta);
+    }
+    if (data.containsKey('t')) {
+      context.handle(_tMeta, t.isAcceptableOrUnknown(data['t']!, _tMeta));
+    } else if (isInserting) {
+      context.missing(_tMeta);
+    }
     return context;
   }
 
@@ -880,10 +879,10 @@ class $DatetimesTable extends Datetimes
     return Datetime(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      d: $DatetimesTable.$converterd.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}d'])!),
-      t: $DatetimesTable.$convertert.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}t'])!),
+      d: attachedDatabase.typeMapping
+          .read(ElectricTypes.date, data['${effectivePrefix}d'])!,
+      t: attachedDatabase.typeMapping
+          .read(ElectricTypes.time, data['${effectivePrefix}t'])!,
     );
   }
 
@@ -891,11 +890,6 @@ class $DatetimesTable extends Datetimes
   $DatetimesTable createAlias(String alias) {
     return $DatetimesTable(attachedDatabase, alias);
   }
-
-  static TypeConverter<DateTime, String> $converterd =
-      const ElectricDateConverter();
-  static TypeConverter<DateTime, String> $convertert =
-      const ElectricTimeConverter();
 }
 
 class Datetime extends DataClass implements Insertable<Datetime> {
@@ -907,14 +901,8 @@ class Datetime extends DataClass implements Insertable<Datetime> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    {
-      final converter = $DatetimesTable.$converterd;
-      map['d'] = Variable<String>(converter.toSql(d));
-    }
-    {
-      final converter = $DatetimesTable.$convertert;
-      map['t'] = Variable<String>(converter.toSql(t));
-    }
+    map['d'] = Variable<DateTime>(d);
+    map['t'] = Variable<DateTime>(t);
     return map;
   }
 
@@ -992,8 +980,8 @@ class DatetimesCompanion extends UpdateCompanion<Datetime> {
         t = Value(t);
   static Insertable<Datetime> custom({
     Expression<String>? id,
-    Expression<String>? d,
-    Expression<String>? t,
+    Expression<DateTime>? d,
+    Expression<DateTime>? t,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1024,14 +1012,10 @@ class DatetimesCompanion extends UpdateCompanion<Datetime> {
       map['id'] = Variable<String>(id.value);
     }
     if (d.present) {
-      final converter = $DatetimesTable.$converterd;
-
-      map['d'] = Variable<String>(converter.toSql(d.value));
+      map['d'] = Variable<DateTime>(d.value, ElectricTypes.date);
     }
     if (t.present) {
-      final converter = $DatetimesTable.$convertert;
-
-      map['t'] = Variable<String>(converter.toSql(t.value));
+      map['t'] = Variable<DateTime>(t.value, ElectricTypes.time);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1238,10 +1222,9 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   $UuidsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumnWithTypeConverter<String, String> id =
-      GeneratedColumn<String>('id', aliasedName, false,
-              type: DriftSqlType.string, requiredDuringInsert: true)
-          .withConverter<String>($UuidsTable.$converterid);
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: ElectricTypes.uuid, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [id];
   @override
@@ -1254,7 +1237,11 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    context.handle(_idMeta, const VerificationResult.success());
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
     return context;
   }
 
@@ -1264,8 +1251,8 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   Uuid map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Uuid(
-      id: $UuidsTable.$converterid.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!),
+      id: attachedDatabase.typeMapping
+          .read(ElectricTypes.uuid, data['${effectivePrefix}id'])!,
     );
   }
 
@@ -1273,9 +1260,6 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   $UuidsTable createAlias(String alias) {
     return $UuidsTable(attachedDatabase, alias);
   }
-
-  static TypeConverter<String, String> $converterid =
-      const ElectricUUIDConverter();
 }
 
 class Uuid extends DataClass implements Insertable<Uuid> {
@@ -1284,10 +1268,7 @@ class Uuid extends DataClass implements Insertable<Uuid> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    {
-      final converter = $UuidsTable.$converterid;
-      map['id'] = Variable<String>(converter.toSql(id));
-    }
+    map['id'] = Variable<String>(id);
     return map;
   }
 
@@ -1362,9 +1343,7 @@ class UuidsCompanion extends UpdateCompanion<Uuid> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      final converter = $UuidsTable.$converterid;
-
-      map['id'] = Variable<String>(converter.toSql(id.value));
+      map['id'] = Variable<String>(id.value, ElectricTypes.uuid);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1394,16 +1373,14 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _i2Meta = const VerificationMeta('i2');
   @override
-  late final GeneratedColumnWithTypeConverter<int?, int> i2 =
-      GeneratedColumn<int>('i2', aliasedName, true,
-              type: DriftSqlType.int, requiredDuringInsert: false)
-          .withConverter<int?>($IntsTable.$converteri2n);
+  late final GeneratedColumn<int> i2 = GeneratedColumn<int>(
+      'i2', aliasedName, true,
+      type: ElectricTypes.int2, requiredDuringInsert: false);
   static const VerificationMeta _i4Meta = const VerificationMeta('i4');
   @override
-  late final GeneratedColumnWithTypeConverter<int?, int> i4 =
-      GeneratedColumn<int>('i4', aliasedName, true,
-              type: DriftSqlType.int, requiredDuringInsert: false)
-          .withConverter<int?>($IntsTable.$converteri4n);
+  late final GeneratedColumn<int> i4 = GeneratedColumn<int>(
+      'i4', aliasedName, true,
+      type: ElectricTypes.int4, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [id, i2, i4];
   @override
@@ -1421,8 +1398,12 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    context.handle(_i2Meta, const VerificationResult.success());
-    context.handle(_i4Meta, const VerificationResult.success());
+    if (data.containsKey('i2')) {
+      context.handle(_i2Meta, i2.isAcceptableOrUnknown(data['i2']!, _i2Meta));
+    }
+    if (data.containsKey('i4')) {
+      context.handle(_i4Meta, i4.isAcceptableOrUnknown(data['i4']!, _i4Meta));
+    }
     return context;
   }
 
@@ -1434,10 +1415,10 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
     return Int(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      i2: $IntsTable.$converteri2n.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}i2'])),
-      i4: $IntsTable.$converteri4n.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}i4'])),
+      i2: attachedDatabase.typeMapping
+          .read(ElectricTypes.int2, data['${effectivePrefix}i2']),
+      i4: attachedDatabase.typeMapping
+          .read(ElectricTypes.int4, data['${effectivePrefix}i4']),
     );
   }
 
@@ -1445,13 +1426,6 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   $IntsTable createAlias(String alias) {
     return $IntsTable(attachedDatabase, alias);
   }
-
-  static TypeConverter<int, int> $converteri2 = const ElectricInt2Converter();
-  static TypeConverter<int?, int?> $converteri2n =
-      NullAwareTypeConverter.wrap($converteri2);
-  static TypeConverter<int, int> $converteri4 = const ElectricInt4Converter();
-  static TypeConverter<int?, int?> $converteri4n =
-      NullAwareTypeConverter.wrap($converteri4);
 }
 
 class Int extends DataClass implements Insertable<Int> {
@@ -1464,12 +1438,10 @@ class Int extends DataClass implements Insertable<Int> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || i2 != null) {
-      final converter = $IntsTable.$converteri2n;
-      map['i2'] = Variable<int>(converter.toSql(i2));
+      map['i2'] = Variable<int>(i2);
     }
     if (!nullToAbsent || i4 != null) {
-      final converter = $IntsTable.$converteri4n;
-      map['i4'] = Variable<int>(converter.toSql(i4));
+      map['i4'] = Variable<int>(i4);
     }
     return map;
   }
@@ -1582,14 +1554,10 @@ class IntsCompanion extends UpdateCompanion<Int> {
       map['id'] = Variable<String>(id.value);
     }
     if (i2.present) {
-      final converter = $IntsTable.$converteri2n;
-
-      map['i2'] = Variable<int>(converter.toSql(i2.value));
+      map['i2'] = Variable<int>(i2.value, ElectricTypes.int2);
     }
     if (i4.present) {
-      final converter = $IntsTable.$converteri4n;
-
-      map['i4'] = Variable<int>(converter.toSql(i4.value));
+      map['i4'] = Variable<int>(i4.value, ElectricTypes.int4);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1623,7 +1591,7 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   @override
   late final GeneratedColumn<double> f8 = GeneratedColumn<double>(
       'f8', aliasedName, true,
-      type: const Float8Type(), requiredDuringInsert: false);
+      type: ElectricTypes.float8, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [id, f8];
   @override
@@ -1656,7 +1624,7 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       f8: attachedDatabase.typeMapping
-          .read(const Float8Type(), data['${effectivePrefix}f8']),
+          .read(ElectricTypes.float8, data['${effectivePrefix}f8']),
     );
   }
 
@@ -1768,7 +1736,7 @@ class FloatsCompanion extends UpdateCompanion<Float> {
       map['id'] = Variable<String>(id.value);
     }
     if (f8.present) {
-      map['f8'] = Variable<double>(f8.value, const Float8Type());
+      map['f8'] = Variable<double>(f8.value, ElectricTypes.float8);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
