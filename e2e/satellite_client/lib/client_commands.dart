@@ -140,8 +140,19 @@ Future<Datetime?> getDatetime(MyDriftElectricClient electric, String id) async {
   final datetime = await (electric.db.datetimes.select()
         ..where((tbl) => tbl.id.equals(id)))
       .getSingleOrNull();
-  final rowJ = JsonEncoder.withIndent('  ').convert(toColumns(datetime));
+
+  final rowJ = JsonEncoder.withIndent('  ')
+      .convert(toColumns(datetime)?.map((key, value) {
+    final Object? effectiveValue;
+    if (value is DateTime) {
+      effectiveValue = value.toIso8601String();
+    } else {
+      effectiveValue = value;
+    }
+    return MapEntry(key, effectiveValue);
+  }));
   print('Found date time?:\n$rowJ');
+
   return datetime;
 }
 
