@@ -22,7 +22,7 @@ dependencies:
   hooks_riverpod: ^2.3.10
   path_provider: ^2.0.14
   logging: ^1.2.0
-  drift: ^2.10.0
+  drift: ^2.13.0
   animated_emoji: ^2.0.0
   material_design_icons_flutter: ^7.0.7296
   flutter_hooks: ^0.20.1
@@ -30,7 +30,7 @@ dependencies:
   flutter_svg: ^2.0.7
 
 dev_dependencies:
-  drift_dev: ^2.8.2
+  drift_dev: ^2.13.0
   build_runner: ^2.4.4
   electricsql_cli:
     path: ../packages/electricsql_cli
@@ -45,20 +45,3 @@ flutter:
   assets:
     - packages/animated_emoji/lottie/electricity.json
     - assets/electric.svg
-
-dependency_overrides:
-  drift:
-    git:
-      url: https://github.com/simolus3/drift.git
-      ref: develop
-      path: drift
-  drift_dev:
-    git:
-      url: https://github.com/simolus3/drift.git
-      ref: develop
-      path: drift_dev
-  sqlparser:
-    git:
-      url: https://github.com/simolus3/drift.git
-      ref: develop
-      path: sqlparser

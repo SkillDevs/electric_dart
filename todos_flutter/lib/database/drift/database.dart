@@ -5,8 +5,6 @@ import 'connection/connection.dart' as impl;
 
 part 'database.g.dart';
 
-// TODO(dart): Remove dependency_overrides
-
 class Todos extends Table {
   @override
   bool get withoutRowId => true;
