@@ -1069,10 +1069,9 @@ class $DataTypesTable extends DataTypes
       type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, String> date =
-      GeneratedColumn<String>('date', aliasedName, true,
-              type: DriftSqlType.string, requiredDuringInsert: false)
-          .withConverter<DateTime?>($DataTypesTable.$converterdaten);
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+      'date', aliasedName, true,
+      type: const DateType(), requiredDuringInsert: false);
   static const VerificationMeta _timeMeta = const VerificationMeta('time');
   @override
   late final GeneratedColumnWithTypeConverter<DateTime?, String> time =
@@ -1167,7 +1166,10 @@ class $DataTypesTable extends DataTypes
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    context.handle(_dateMeta, const VerificationResult.success());
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    }
     context.handle(_timeMeta, const VerificationResult.success());
     context.handle(_timetzMeta, const VerificationResult.success());
     context.handle(_timestampMeta, const VerificationResult.success());
@@ -1201,8 +1203,8 @@ class $DataTypesTable extends DataTypes
     return DataType(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      date: $DataTypesTable.$converterdaten.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}date'])),
+      date: attachedDatabase.typeMapping
+          .read(const DateType(), data['${effectivePrefix}date']),
       time: $DataTypesTable.$convertertimen.fromSql(attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}time'])),
       timetz: $DataTypesTable.$convertertimetzn.fromSql(attachedDatabase
@@ -1234,10 +1236,6 @@ class $DataTypesTable extends DataTypes
     return $DataTypesTable(attachedDatabase, alias);
   }
 
-  static TypeConverter<DateTime, String> $converterdate =
-      const ElectricDateConverter();
-  static TypeConverter<DateTime?, String?> $converterdaten =
-      NullAwareTypeConverter.wrap($converterdate);
   static TypeConverter<DateTime, String> $convertertime =
       const ElectricTimeConverter();
   static TypeConverter<DateTime?, String?> $convertertimen =
@@ -1294,8 +1292,7 @@ class DataType extends DataClass implements Insertable<DataType> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     if (!nullToAbsent || date != null) {
-      final converter = $DataTypesTable.$converterdaten;
-      map['date'] = Variable<String>(converter.toSql(date));
+      map['date'] = Variable<DateTime>(date);
     }
     if (!nullToAbsent || time != null) {
       final converter = $DataTypesTable.$convertertimen;
@@ -1510,7 +1507,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
   });
   static Insertable<DataType> custom({
     Expression<int>? id,
-    Expression<String>? date,
+    Expression<DateTime>? date,
     Expression<String>? time,
     Expression<String>? timetz,
     Expression<String>? timestamp,
@@ -1574,9 +1571,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       map['id'] = Variable<int>(id.value);
     }
     if (date.present) {
-      final converter = $DataTypesTable.$converterdaten;
-
-      map['date'] = Variable<String>(converter.toSql(date.value));
+      map['date'] = Variable<DateTime>(date.value, const DateType());
     }
     if (time.present) {
       final converter = $DataTypesTable.$convertertimen;

@@ -3,53 +3,41 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
 
-class Int2Type implements CustomSqlType<int> {
-  const Int2Type();
-
-  @override
-  String mapToSqlLiteral(int dartValue) {
-    TypeConverters.int2.encode(dartValue);
-
-    return '$dartValue';
-  }
-
-  @override
-  Object mapToSqlParameter(int dartValue) {
-    TypeConverters.int2.encode(dartValue);
-
-    return dartValue;
-  }
-
-  @override
-  int read(Object fromSql) {
-    return fromSql as int;
-  }
-
-  @override
-  String sqlTypeName(GenerationContext context) => 'int2';
+class DateType extends CustomElectricType<DateTime, String> {
+  const DateType()
+      : super(
+          codec: TypeConverters.date,
+          typeName: 'date',
+        );
 }
 
-class Float8Type implements CustomSqlType<double> {
-  const Float8Type();
+class Int2Type extends CustomElectricType<int, int> {
+  const Int2Type()
+      : super(
+          codec: TypeConverters.int2,
+          typeName: 'int2',
+        );
+}
+
+class Float8Type extends CustomElectricType<double, Object> {
+  const Float8Type()
+      : super(
+          codec: TypeConverters.float8,
+          typeName: 'float8',
+        );
 
   @override
   String mapToSqlLiteral(double dartValue) {
-    final encoded = TypeConverters.float8.encode(dartValue);
+    final encoded = codec.encode(dartValue);
+
+    if (encoded is double && encoded.isInfinite) {
+      return encoded.isNegative ? '-9e999' : '9e999';
+    } else if (encoded is String) {
+      return "'$encoded'";
+    }
+
     return '$encoded';
   }
-
-  @override
-  Object mapToSqlParameter(double dartValue) {
-    return TypeConverters.float8.encode(dartValue);
-  }
-
-  @override
-  double read(Object fromSql) {
-    return TypeConverters.float8.decode(fromSql);
-  }
-
-  @override
-  String sqlTypeName(GenerationContext context) => 'int2';
 }
 
 class ElectricTimestampConverter
@@ -91,6 +79,7 @@ class ElectricInt4Converter extends _ElectricTypeConverter<int, int> {
 //   const ElectricFloat8Converter() : super(codec: TypeConverters.float8);
 // }
 
+@Deprecated("use customType")
 abstract class _ElectricTypeConverter<T, Raw> extends TypeConverter<T, Raw> {
   final Codec<T, Raw> codec;
 
@@ -105,4 +94,34 @@ abstract class _ElectricTypeConverter<T, Raw> extends TypeConverter<T, Raw> {
   Raw toSql(T value) {
     return codec.encode(value);
   }
+}
+
+abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
+    implements CustomSqlType<DartT> {
+  final Codec<DartT, SQLType> codec;
+  final String typeName;
+
+  const CustomElectricType({required this.codec, required this.typeName});
+
+  @override
+  String mapToSqlLiteral(DartT dartValue) {
+    final encoded = codec.encode(dartValue);
+    if (encoded is String) {
+      return "'$encoded'";
+    }
+    return '$encoded';
+  }
+
+  @override
+  Object mapToSqlParameter(DartT dartValue) {
+    return codec.encode(dartValue);
+  }
+
+  @override
+  DartT read(Object fromSql) {
+    return codec.decode(fromSql as SQLType);
+  }
+
+  @override
+  String sqlTypeName(GenerationContext context) => typeName;
 }

@@ -69,7 +69,7 @@ class Dummy extends Table {
 
 class DataTypes extends Table {
   IntColumn get id => integer()();
-  TextColumn get date => text().map(const ElectricDateConverter()).nullable()();
+  Column<DateTime> get date => customType(const DateType()).nullable()();
   TextColumn get time => text().map(const ElectricTimeConverter()).nullable()();
   TextColumn get timetz =>
       text().map(const ElectricTimeTZConverter()).nullable()();
@@ -104,6 +104,7 @@ class TestsDatabase extends _$TestsDatabase {
         setup: (db) {
           db.config.doubleQuotedStringLiterals = false;
         },
+        // logStatements: true,
       ),
     );
   }
