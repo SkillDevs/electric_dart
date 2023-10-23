@@ -1,33 +1,16 @@
 import 'package:drift/drift.dart';
-import 'package:electricsql/drivers/drift.dart';
-import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/satellite/mock.dart';
 import 'package:test/test.dart';
 
+import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 
 void main() async {
   final db = TestsDatabase.memory();
 
-  final electric = await electrify(
-    dbName: 'test-db',
-    db: db,
-    migrations: [],
-    config: ElectricConfig(auth: const AuthConfig(token: 'test-token')),
-    opts: ElectrifyOptions(
-      registry: MockRegistry(),
-    ),
-  );
-
-  // Sync all shapes such that we don't get warnings on every query
-  await electric.syncTables(['DataTypes']);
+  await electrifyTestDatabase(db);
 
   setUp(() async {
-    await db.customStatement('DROP TABLE IF EXISTS DataTypes');
-    await db.customStatement(
-      "CREATE TABLE DataTypes('id' int PRIMARY KEY, 'date' varchar, 'time' varchar, 'timetz' varchar, 'timestamp' varchar, "
-      "'timestamptz' varchar, 'bool' int, 'uuid' varchar, 'int2' int2, 'int4' int4, 'float8' real, 'relatedId' int);",
-    );
+    await initClientTestsDb(db);
   });
 
   /*
@@ -47,7 +30,7 @@ void main() async {
           ),
         );
 
-    final rawRes = await electric.db.customSelect(
+    final rawRes = await db.customSelect(
       'SELECT date FROM DataTypes WHERE id = ?',
       variables: [const Variable(1)],
     ).get();
@@ -65,7 +48,7 @@ void main() async {
           ),
         );
 
-    final rawRes = await electric.db.customSelect(
+    final rawRes = await db.customSelect(
       'SELECT time FROM DataTypes WHERE id = ?',
       variables: [const Variable(1)],
     ).get();
@@ -89,7 +72,7 @@ void main() async {
           ),
         );
 
-    final rawRes1 = await electric.db.customSelect(
+    final rawRes1 = await db.customSelect(
       'SELECT timetz FROM DataTypes WHERE id = ?',
       variables: [const Variable(1)],
     ).get();
@@ -98,7 +81,7 @@ void main() async {
       '16:28:35.421',
     ); // time must have been converted to UTC time
 
-    final rawRes2 = await electric.db.customSelect(
+    final rawRes2 = await db.customSelect(
       'SELECT timetz FROM DataTypes WHERE id = ?',
       variables: [const Variable(2)],
     ).get();
@@ -114,7 +97,7 @@ void main() async {
           ),
         );
 
-    final rawRes = await electric.db.customSelect(
+    final rawRes = await db.customSelect(
       'SELECT timestamp FROM DataTypes WHERE id = ?',
       variables: [const Variable(1)],
     ).get();
@@ -140,7 +123,7 @@ void main() async {
           ),
         );
 
-    final rawRes1 = await electric.db.customSelect(
+    final rawRes1 = await db.customSelect(
       'SELECT timestamptz FROM DataTypes WHERE id = ?',
       variables: [const Variable(1)],
     ).get();
@@ -149,7 +132,7 @@ void main() async {
       '2023-08-07 16:28:35.421Z',
     ); // timestamp must have been converted to UTC timestamp
 
-    final rawRes2 = await electric.db.customSelect(
+    final rawRes2 = await db.customSelect(
       'SELECT timestamptz FROM DataTypes WHERE id = ?',
       variables: [const Variable(2)],
     ).get();

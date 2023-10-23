@@ -40,10 +40,7 @@ class Float8Type implements CustomSqlType<double> {
 
   @override
   Object mapToSqlParameter(double dartValue) {
-    print("ENCODE: $dartValue");
     return TypeConverters.float8.encode(dartValue);
-
-    return dartValue;
   }
 
   @override

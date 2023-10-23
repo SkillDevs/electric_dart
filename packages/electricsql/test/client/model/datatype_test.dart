@@ -1,32 +1,16 @@
 import 'package:drift/drift.dart';
-import 'package:electricsql/drivers/drift.dart';
-import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/satellite/mock.dart';
 import 'package:test/test.dart';
 
+import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 
 void main() async {
   final db = TestsDatabase.memory();
 
-  final electric = await electrify(
-    dbName: 'test-db',
-    db: db,
-    migrations: [],
-    config: ElectricConfig(auth: const AuthConfig(token: 'test-token')),
-    opts: ElectrifyOptions(
-      registry: MockRegistry(),
-    ),
-  );
-
-  // Sync all shapes such that we don't get warnings on every query
-  await electric.syncTables(['DataTypes']);
+  await electrifyTestDatabase(db);
 
   setUp(() async {
-    await db.customStatement('DROP TABLE IF EXISTS DataTypes');
-    await db.customStatement(
-      "CREATE TABLE DataTypes('id' int PRIMARY KEY, 'date' varchar, 'time' varchar, 'timetz' varchar, 'timestamp' varchar, 'timestamptz' varchar, 'bool' int, 'uuid' varchar, 'int2' int2, 'int4' int4, 'float8' real, 'relatedId' int);",
-    );
+    await initClientTestsDb(db);
   });
 
   /*
