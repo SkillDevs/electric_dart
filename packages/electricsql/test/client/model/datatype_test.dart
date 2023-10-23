@@ -184,8 +184,6 @@ void main() async {
     expect(fetchRes.timestamptz, null);
   });
 
-// TODO(update): Tests
-
   test('support boolean type', () async {
     // Check that we can store booleans
     await db.into(db.dataTypes).insert(
