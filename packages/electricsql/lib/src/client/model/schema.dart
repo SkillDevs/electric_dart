@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/migrators/index.dart';
+import 'package:meta/meta.dart';
 
 abstract interface class DBSchema {
   List<Migration> get migrations;
@@ -17,11 +18,12 @@ class DBSchemaDrift implements DBSchema {
   });
 }
 
-class DBSchemaCustom implements DBSchema {
+@visibleForTesting
+class DBSchemaRaw implements DBSchema {
   @override
   final List<Migration> migrations;
 
-  DBSchemaCustom({
+  DBSchemaRaw({
     required this.migrations,
   });
 }

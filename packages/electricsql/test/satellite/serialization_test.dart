@@ -29,7 +29,7 @@ void main() {
       ],
     );
 
-    final dbDescription = DBSchemaCustom(
+    final dbDescription = DBSchemaRaw(
       migrations: [],
     );
 
@@ -89,7 +89,7 @@ void main() {
       ],
     );
 
-    final dbDescription = DBSchemaCustom(
+    final dbDescription = DBSchemaRaw(
       migrations: [],
     );
 

@@ -222,7 +222,7 @@ void main() {
   test('receive transaction over multiple messages', () async {
     await connectAndAuth();
 
-    final dbDescription = DBSchemaCustom(
+    final dbDescription = DBSchemaRaw(
       migrations: [],
     );
 
@@ -644,7 +644,7 @@ void main() {
       ],
     );
 
-    final dbDescription = DBSchemaCustom(
+    final dbDescription = DBSchemaRaw(
       migrations: [],
     );
     client.debugSetDbDescription(dbDescription);
@@ -984,7 +984,7 @@ void main() {
 
     const tablename = 'THE_TABLE_ID';
 
-    final dbDescription = DBSchemaCustom(
+    final dbDescription = DBSchemaRaw(
       migrations: [],
     );
     client.debugSetDbDescription(dbDescription);

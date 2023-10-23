@@ -19,7 +19,7 @@ import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 import '../util/sqlite.dart';
 
-DBSchema kTestDbDescription = DBSchemaCustom(
+DBSchema kTestDbDescription = DBSchemaRaw(
   migrations: [],
 );
 
