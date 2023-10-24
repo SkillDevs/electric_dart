@@ -1088,13 +1088,13 @@ Object deserializeColumnData(
 ) {
   switch (columnType) {
     case PgType.char:
-    case PgType.text:
-    case PgType.uuid:
-    case PgType.varchar:
     case PgType.date:
+    case PgType.text:
     case PgType.time:
     case PgType.timestamp:
     case PgType.timestampTz:
+    case PgType.uuid:
+    case PgType.varchar:
       return TypeDecoder.text(column);
     case PgType.bool:
       return TypeDecoder.boolean(column);
@@ -1104,9 +1104,9 @@ Object deserializeColumnData(
     case PgType.int8:
     case PgType.integer:
       return num.parse(TypeDecoder.text(column));
-    case PgType.real:
     case PgType.float4:
     case PgType.float8:
+    case PgType.real:
       return TypeDecoder.float(column);
     case PgType.timeTz:
       return TypeDecoder.timetz(column);

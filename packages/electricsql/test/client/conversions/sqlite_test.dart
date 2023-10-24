@@ -138,4 +138,72 @@ void main() async {
     ).get();
     expect(rawRes2[0].read<String>('timestamptz'), '2023-08-07 15:28:35.421Z');
   });
+
+  test('booleans are converted correctly to SQLite', () async {
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            boolCol: const Value(true),
+          ),
+        );
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(2),
+            boolCol: const Value(false),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT id, bool FROM DataTypes ORDER BY id ASC',
+      variables: [],
+    ).get();
+
+    final row1 = rawRes[0].data;
+    expect(row1['id'], 1);
+    expect(row1['bool'], 1);
+
+    final row2 = rawRes[1].data;
+    expect(row2['id'], 2);
+    expect(row2['bool'], 0);
+  });
+
+  test('floats are converted correctly to SQLite', () async {
+    final List<(int id, double value)> values = [
+      (1, 1.234),
+      (2, double.nan),
+      (3, double.infinity),
+      (4, double.negativeInfinity),
+    ];
+
+    for (final entry in values) {
+      final (id, value) = entry;
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(id),
+              float8: Value(value),
+            ),
+          );
+    }
+
+    final rawRes = await db.customSelect(
+      'SELECT id, float8 FROM DataTypes ORDER BY id ASC',
+      variables: [],
+    ).get();
+
+    final List<(int id, Object value)> expected = [
+      (1, 1.234),
+      (2, 'NaN'),
+      (3, double.infinity),
+      (4, double.negativeInfinity),
+    ];
+
+    final List<(int id, Object value)> rowsRecords = rawRes.map((row) {
+      final data = row.data;
+      final id = data['id'] as int;
+      final Object value = data['float8'] as Object;
+      return (id, value);
+    }).toList();
+
+    expect(rowsRecords, expected);
+  });
 }
