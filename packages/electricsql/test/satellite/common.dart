@@ -84,6 +84,26 @@ Map<String, Relation> kTestRelations = {
       ),
     ],
   ),
+  'floatTable': Relation(
+    id: 3,
+    schema: 'public',
+    table: 'floatTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'id',
+        type: 'INTEGER',
+        isNullable: false,
+        primaryKey: true,
+      ),
+      RelationColumn(
+        name: 'value',
+        type: 'REAL',
+        isNullable: true,
+        primaryKey: false,
+      ),
+    ],
+  ),
 };
 
 // Speed up the intervals for testing.

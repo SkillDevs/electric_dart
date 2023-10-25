@@ -267,9 +267,13 @@ void main() {
     final entries = await satellite.getEntries();
     final clientId = satellite.authState!.clientId;
 
-    final merged = localOperationsToTableChanges(entries, (DateTime timestamp) {
-      return generateTag(clientId, timestamp);
-    });
+    final merged = localOperationsToTableChanges(
+      entries,
+      (DateTime timestamp) {
+        return generateTag(clientId, timestamp);
+      },
+      kTestRelations,
+    );
     final opLogTableChange = merged['main.parent']!['{"id":1}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
@@ -308,7 +312,13 @@ void main() {
     final local = await satellite.getEntries();
     final localTimestamp =
         DateTime.parse(local[0].timestamp).millisecondsSinceEpoch;
-    final merged = mergeEntries(clientId, local, 'remote', [incomingEntry]);
+    final merged = mergeEntries(
+      clientId,
+      local,
+      'remote',
+      [incomingEntry],
+      kTestRelations,
+    );
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -373,7 +383,13 @@ void main() {
       oldValues: {},
     );
 
-    final merged = mergeEntries(clientId, local, 'remote', [incomingEntry]);
+    final merged = mergeEntries(
+      clientId,
+      local,
+      'remote',
+      [incomingEntry],
+      kTestRelations,
+    );
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -580,6 +596,10 @@ void main() {
       },
       oldValues: {},
     );
+
+    // satellite must be aware of the relations in order to deserialise oplog entries
+    satellite.relations = kTestRelations;
+
     await satellite.setAuthState(authState);
     await satellite.apply([incomingEntry], 'remote');
 
@@ -728,7 +748,8 @@ void main() {
       ),
     ];
 
-    final merged = mergeEntries(clientId, local, 'remote', incoming);
+    final merged =
+        mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -812,7 +833,8 @@ void main() {
       ),
     ];
 
-    final merged = mergeEntries(clientId, local, 'remote', incoming);
+    final merged =
+        mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
     final item = merged['main.parent']!['{"id":1}']!;
 
     // The incoming entry modified the value of the `value` column to `'remote'`
@@ -869,7 +891,8 @@ void main() {
     ];
 
     final local = <OplogEntry>[];
-    final merged = mergeEntries(clientId, local, 'remote', incoming);
+    final merged =
+        mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -1118,6 +1141,9 @@ void main() {
         },
       ),
     ];
+
+    // satellite must be aware of the relations in order to deserialise oplog entries
+    satellite.relations = kTestRelations;
 
     // Should not throw
     await satellite.apply(incoming, 'remote');

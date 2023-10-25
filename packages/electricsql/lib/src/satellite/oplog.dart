@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/sets.dart';
@@ -149,26 +150,11 @@ List<OplogEntry> fromTransaction(
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         transaction.commitTimestamp.toInt(),
       ).toISOStringUTC(), // TODO: check precision
-      newRow: t.record == null ? null : _customJsonEncode(t.record!),
-      oldRow: t.oldRecord == null ? null : _customJsonEncode(t.oldRecord!),
+      newRow: t.record == null ? null : serialiseRow(t.record!),
+      oldRow: t.oldRecord == null ? null : serialiseRow(t.oldRecord!),
       clearTags: encodeTags(t.tags),
     );
   }).toList();
-}
-
-// TODO(dart): Infinite is not compliant with JSON spec
-// Javascript JSON.stringify() will convert Infinity to null, so
-// we are doing the same while we wait for a better solution
-String _customJsonEncode(Map<String, Object?> o) {
-  // Remove infinites
-  final filtered = o.map((key, value) {
-    if (value is double && value.isInfinite) {
-      return MapEntry(key, null);
-    }
-    return MapEntry(key, value);
-  });
-
-  return json.encode(filtered);
 }
 
 List<DataTransaction> toTransactions(
@@ -233,12 +219,16 @@ ShadowEntry newShadowEntry(OplogEntry oplogEntry) {
 OplogTableChanges localOperationsToTableChanges(
   List<OplogEntry> operations,
   Tag Function(DateTime timestamp) genTag,
+  RelationsCache relations,
 ) {
   final OplogTableChanges initialValue = {};
 
   return operations.fold(initialValue, (acc, entry) {
-    final entryChanges =
-        localEntryToChanges(entry, genTag(DateTime.parse(entry.timestamp)));
+    final entryChanges = localEntryToChanges(
+      entry,
+      genTag(DateTime.parse(entry.timestamp)),
+      relations,
+    );
 
     // Sort for deterministic key generation.
     final primaryKeyStr = primaryKeyToStr(entryChanges.primaryKeyCols);
@@ -284,11 +274,14 @@ OplogTableChanges localOperationsToTableChanges(
   });
 }
 
-PendingChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
+PendingChanges remoteOperationsToTableChanges(
+  List<OplogEntry> operations,
+  RelationsCache relations,
+) {
   final PendingChanges initialValue = {};
 
   return operations.fold<PendingChanges>(initialValue, (acc, entry) {
-    final entryChanges = remoteEntryToChanges(entry);
+    final entryChanges = remoteEntryToChanges(entry, relations);
 
     // Sort for deterministic key generation.
     final primaryKeyStr = primaryKeyToStr(entryChanges.primaryKeyCols);
@@ -311,6 +304,53 @@ PendingChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
     }
 
     return acc;
+  });
+}
+
+/// Serialises a row that is represented by a record.
+/// `NaN`, `+Inf`, and `-Inf` are transformed to their string equivalent.
+/// @param record The row to serialise.
+String serialiseRow(Row row) {
+  final convertedToSpec = row.map((key, value) {
+    if (value is double) {
+      if (value.isNaN) {
+        return MapEntry(key, 'NaN');
+      } else if (value.isInfinite) {
+        return MapEntry(key, value.isNegative ? '-Inf' : '+Inf');
+      }
+    }
+    return MapEntry(key, value);
+  });
+
+  return json.encode(convertedToSpec);
+}
+
+/// Deserialises a row back into a record.
+/// `"NaN"`, `"+Inf"`, and `"-Inf"` are transformed back into their numeric equivalent
+/// iff the column type is a float.
+/// @param str The row to deserialise.
+/// @param rel The relation for the table to which this row belongs.
+Row deserialiseRow(String str, Relation rel) {
+  final parsed = json.decode(str) as Map<String, Object?>;
+
+  return parsed.map((key, value) {
+    final columnType = rel.columns
+        .firstWhereOrNull((c) => c.name == key)
+        ?.type
+        .toUpperCase()
+        .replaceAll(' ', '');
+    if (columnType == 'FLOAT4' ||
+        columnType == 'FLOAT8' ||
+        columnType == 'REAL') {
+      if (value == 'NaN') {
+        return MapEntry(key, double.nan);
+      } else if (value == '+Inf') {
+        return MapEntry(key, double.infinity);
+      } else if (value == '-Inf') {
+        return MapEntry(key, double.negativeInfinity);
+      }
+    }
+    return MapEntry(key, value);
   });
 }
 
@@ -361,7 +401,11 @@ class ShadowEntry with EquatableMixin {
 
 // Convert an `OplogEntry` to an `OplogEntryChanges` structure,
 // parsing out the changed columns from the oldRow and the newRow.
-OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
+OplogEntryChanges localEntryToChanges(
+  OplogEntry entry,
+  Tag tag,
+  RelationsCache relations,
+) {
   final OplogEntryChanges result = OplogEntryChanges(
     namespace: entry.namespace,
     tablename: entry.tablename,
@@ -375,10 +419,12 @@ OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
     clearTags: (json.decode(entry.clearTags) as List<dynamic>).cast<String>(),
   );
 
+  final relation = relations[entry.tablename]!;
+
   final Row oldRow =
-      entry.oldRow != null ? json.decode(entry.oldRow!) as Row : {};
+      entry.oldRow != null ? deserialiseRow(entry.oldRow!, relation) : {};
   final Row newRow =
-      entry.newRow != null ? json.decode(entry.newRow!) as Row : {};
+      entry.newRow != null ? deserialiseRow(entry.newRow!, relation) : {};
 
   final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
 
@@ -394,9 +440,15 @@ OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
 
 // Convert an `OplogEntry` to a `ShadowEntryChanges` structure,
 // parsing out the changed columns from the oldRow and the newRow.
-ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
-  final Row oldRow = _decodeRow(entry.oldRow);
-  final Row newRow = _decodeRow(entry.newRow);
+ShadowEntryChanges remoteEntryToChanges(
+  OplogEntry entry,
+  RelationsCache relations,
+) {
+  final relation = relations[entry.tablename]!;
+  final Row oldRow =
+      entry.oldRow != null ? deserialiseRow(entry.oldRow!, relation) : {};
+  final Row newRow =
+      entry.newRow != null ? deserialiseRow(entry.newRow!, relation) : {};
 
   final result = ShadowEntryChanges(
     namespace: entry.namespace,
@@ -421,16 +473,6 @@ ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
   }
 
   return result;
-}
-
-Row _decodeRow(String? row) {
-  if (row == null) {
-    return {};
-  }
-
-  final decoded = json.decode(row) as Row?;
-
-  return decoded ?? {};
 }
 
 class ShadowEntryChanges with EquatableMixin {
@@ -512,20 +554,20 @@ List<Tag> decodeTags(String tags) {
 }
 
 DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
-  Map<String, Object?>? record;
-  Map<String, Object?>? oldRecord;
-  if (entry.newRow != null) {
-    record = json.decode(entry.newRow!) as Map<String, Object?>;
-  }
-
-  if (entry.oldRow != null) {
-    oldRecord = json.decode(entry.oldRow!) as Map<String, Object?>;
-  }
-
   final relation = relations[entry.tablename];
 
   if (relation == null) {
     throw Exception('Could not find relation for ${entry.tablename}');
+  }
+
+  Map<String, Object?>? record;
+  Map<String, Object?>? oldRecord;
+  if (entry.newRow != null) {
+    record = deserialiseRow(entry.newRow!, relation);
+  }
+
+  if (entry.oldRow != null) {
+    oldRecord = deserialiseRow(entry.oldRow!, relation);
   }
 
   return DataChange(

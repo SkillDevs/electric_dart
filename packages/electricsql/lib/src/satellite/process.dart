@@ -1029,8 +1029,13 @@ This means there is a notifier subscription leak.`''');
     String incomingOrigin,
   ) async {
     final local = await getEntries();
-    final merged =
-        mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
+    final merged = mergeEntries(
+      authState!.clientId,
+      local,
+      incomingOrigin,
+      incoming,
+      relations,
+    );
 
     final List<Statement> stmts = [];
 
