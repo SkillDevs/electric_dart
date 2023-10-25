@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
@@ -59,18 +60,16 @@ void main() async {
     final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
     final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
 
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timetz: Value(date1),
-          ),
-        );
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            timetz: Value(date2),
-          ),
-        );
+    await db.dataTypes.insertAll([
+      DataTypesCompanion.insert(
+        id: const Value(1),
+        timetz: Value(date1),
+      ),
+      DataTypesCompanion.insert(
+        id: const Value(2),
+        timetz: Value(date2),
+      ),
+    ]);
 
     final rawRes1 = await db.customSelect(
       'SELECT timetz FROM DataTypes WHERE id = ?',
@@ -90,6 +89,8 @@ void main() async {
 
   test('timestamp is converted correctly to SQLite', () async {
     final date = DateTime.parse('2023-08-07 18:28:35.421');
+    expect(date.isUtc, isFalse);
+
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
             id: const Value(1),
@@ -107,21 +108,55 @@ void main() async {
     ); // time must have been converted to UTC time
   });
 
-  test('timestamptz is converted correctly to SQLite', () async {
-    final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
-    final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
+  test('timestamp is converted correctly to SQLite - UTC', () async {
+    final dateUTC = DateTime.parse('2023-08-07 18:28:35.421+00');
+    expect(dateUTC.isUtc, isTrue);
+
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
             id: const Value(1),
-            timestamptz: Value(date1),
+            timestamp: Value(dateUTC),
           ),
         );
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            timestamptz: Value(date2),
-          ),
-        );
+
+    final rawRes = await db.customSelect(
+      'SELECT timestamp FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+
+    // The local date is stored as String, without the T and Z characters
+    final localDate = dateUTC.toLocal();
+    final expectedLocalStr = DateTime.utc(
+      localDate.year,
+      localDate.month,
+      localDate.day,
+      localDate.hour,
+      localDate.minute,
+      localDate.second,
+      localDate.millisecond,
+      localDate.microsecond,
+    ).toISOStringUTC().replaceAll('T', ' ').replaceAll('Z', '');
+
+    expect(
+      rawRes[0].read<String>('timestamp'),
+      expectedLocalStr,
+    );
+  });
+
+  test('timestamptz is converted correctly to SQLite', () async {
+    final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
+    final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
+
+    await db.dataTypes.insertAll([
+      DataTypesCompanion.insert(
+        id: const Value(1),
+        timestamptz: Value(date1),
+      ),
+      DataTypesCompanion.insert(
+        id: const Value(2),
+        timestamptz: Value(date2),
+      ),
+    ]);
 
     final rawRes1 = await db.customSelect(
       'SELECT timestamptz FROM DataTypes WHERE id = ?',
@@ -140,18 +175,16 @@ void main() async {
   });
 
   test('booleans are converted correctly to SQLite', () async {
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            boolCol: const Value(true),
-          ),
-        );
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            boolCol: const Value(false),
-          ),
-        );
+    await db.dataTypes.insertAll([
+      DataTypesCompanion.insert(
+        id: const Value(1),
+        boolCol: const Value(true),
+      ),
+      DataTypesCompanion.insert(
+        id: const Value(2),
+        boolCol: const Value(false),
+      ),
+    ]);
 
     final rawRes = await db.customSelect(
       'SELECT id, bool FROM DataTypes ORDER BY id ASC',

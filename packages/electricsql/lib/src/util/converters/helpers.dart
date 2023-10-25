@@ -41,14 +41,12 @@ extension DateExtension on DateTime {
   /// e.g. if it is 3PM in GMT+2 then it is 1PM UTC.
   ///      This function would return a date in which it is 3PM UTC.
   DateTime ignoreTimeZone() {
-    if (isUtc) {
-      return this;
-    }
+    final local = toLocal();
 
     // `v.toISOString` returns the UTC time but we want the time in this timezone
     // so we get the timezone offset and subtract it from the current time in order to
     // compensate for the timezone correction done by `toISOString`
-    final offsetInMs = timeZoneOffset.inMilliseconds;
+    final offsetInMs = local.timeZoneOffset.inMilliseconds;
     return DateTime.fromMillisecondsSinceEpoch(
       millisecondsSinceEpoch + offsetInMs,
     );

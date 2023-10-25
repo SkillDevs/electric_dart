@@ -96,6 +96,7 @@ void main() async {
 
   test('support timestamp type', () async {
     final date = DateTime.parse('2023-08-07 18:28:35.421');
+    expect(date.isUtc, isFalse);
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
@@ -111,6 +112,27 @@ void main() async {
         .getSingleOrNull();
 
     expect(fetchRes?.timestamp, DateTime.parse('2023-08-07 18:28:35.421'));
+  });
+
+  test('support timestamp type - input date with offset', () async {
+    final dateUTC = DateTime.parse('2023-08-07 18:28:35.421+05');
+    expect(dateUTC.isUtc, isTrue);
+    final localDate = dateUTC.toLocal();
+
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            timestamp: Value(dateUTC),
+          ),
+        );
+
+    expect(res.timestamp, localDate);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+
+    expect(fetchRes?.timestamp, localDate);
   });
 
   test('support timestamptz type', () async {
