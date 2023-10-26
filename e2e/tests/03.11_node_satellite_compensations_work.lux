@@ -8,26 +8,19 @@
 
 # PREPARATION: Set up dependent tables and add a row that will be referenced
 
-[shell pg_1]
+[shell proxy_1]
+    [invoke migrate_items_table 001]
+
     [local sql=
         """
-        CREATE TABLE public.items (
-            id TEXT PRIMARY KEY,
-            content TEXT NOT NULL,
-            content_text_null TEXT,
-            content_text_null_default TEXT DEFAULT '',
-            intvalue_null integer,
-            intvalue_null_default integer DEFAULT 10
-        );
         CREATE TABLE public.other_items (
             id TEXT PRIMARY KEY,
             content TEXT NOT NULL,
-            item_id TEXT REFERENCES public.items(id)
+            item_id UUID REFERENCES public.items(id)
         );
-        CALL electric.electrify('public.items');
-        CALL electric.electrify('public.other_items');
+        ALTER TABLE public.other_items ENABLE ELECTRIC;
         """]
-    [invoke migrate_pg 11111 $sql]
+    [invoke migrate_pg 002 $sql]
 
 [shell satellite_1]
     ??[rpc] recv: #SatInStartReplicationResp
@@ -37,7 +30,7 @@
     !raw_statement db "UPDATE _electric_meta SET value = 1 WHERE key = 'compensations' RETURNING *"
     ?$node
 
-    [invoke node_await_insert_extended "{id: 'test_id_1', content: 'hello world'}"]
+    [invoke node_await_insert_extended "{id: '00000000-0000-0000-0000-000000000001', content: 'hello world'}"]
     ?$node
     ??[proto] send: #SatOpLog
     ??[proto] recv: #SatOpLog
@@ -48,13 +41,13 @@
 
 [shell pg_1]
     # Concurrently, update and then delete the referenced row on the server
-    !DELETE FROM public.items WHERE id = 'test_id_1';
+    !DELETE FROM public.items WHERE id = '00000000-0000-0000-0000-000000000001';
     ?$psql
 
 [shell satellite_1]
     # On a disconnected client, insert a dependent row
     ?$node
-    !raw_statement db "INSERT INTO other_items(id, content, item_id) VALUES('other_test_id_1', '', 'test_id_1')"
+    !raw_statement db "INSERT INTO other_items(id, content, item_id) VALUES('other_test_id_1', '', '00000000-0000-0000-0000-000000000001')"
     ?$node
 
 
