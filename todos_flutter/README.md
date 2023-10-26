@@ -85,7 +85,7 @@ dbmate -d migrations new <migration_name>
 
 To apply the migrations using the Postgres connection:
 ```sh
-dbmate -d migrations -u "postgres://postgres:password@localhost:5434/todos-electrified?sslmode=disable" up
+dbmate -d migrations -u "postgres://postgres:proxy_password@localhost:65432/todos-electrified?sslmode=disable" up
 ```
 
 Every time the schema changes in Postgres, we need to update the client bundling the required migrations. You can do that following the next section, although in this example they have already been generated.

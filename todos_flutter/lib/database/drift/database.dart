@@ -17,7 +17,7 @@ class Todos extends Table {
   TextColumn get id => text()();
   TextColumn get listid => text().nullable()();
   TextColumn get textCol => text().named("text").nullable()();
-  BoolColumn get completed => boolean().withDefault(const Constant(false))();
+  BoolColumn get completed => boolean()();
 }
 
 class TodoLists extends Table {
@@ -74,7 +74,7 @@ class DriftRepository implements m.TodosRepository {
     await db.todos.insertOne(
       TodosCompanion.insert(
         id: todo.id,
-        completed: Value(todo.completed),
+        completed: todo.completed,
         listid: Value(todo.listId),
         textCol: Value(todo.text),
       ),

@@ -83,11 +83,11 @@ abstract class BaseRegistry implements Registry {
       socketFactory: socketFactory,
       config: config,
     ).then((satellite) {
-      startingPromises.remove(dbName);
-
       satellites[dbName] = satellite;
 
       return satellite;
+    }).whenComplete(() {
+      startingPromises.remove(dbName);
     });
 
     startingPromises[dbName] = startingPromise;
