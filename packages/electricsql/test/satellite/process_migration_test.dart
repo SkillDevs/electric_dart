@@ -539,7 +539,7 @@ void main() {
     ''',
       table: SatOpMigrate_Table(
         name: 'test_items',
-        columns: [SatOpMigrate_Column(name: 'id')],
+        columns: [SatOpMigrate_Column(name: 'id', sqliteType: 'TEXT')],
         fks: [],
         pks: ['id'],
       ),
@@ -557,8 +557,8 @@ void main() {
       table: SatOpMigrate_Table(
         name: 'test_other_items',
         columns: [
-          SatOpMigrate_Column(name: 'id'),
-          SatOpMigrate_Column(name: 'item_id'),
+          SatOpMigrate_Column(name: 'id', sqliteType: 'TEXT'),
+          SatOpMigrate_Column(name: 'item_id', sqliteType: 'TEXT'),
         ],
         fks: [
           SatOpMigrate_ForeignKey(
@@ -649,9 +649,9 @@ final createTable = SchemaChange(
   table: SatOpMigrate_Table(
     name: 'NewTable',
     columns: [
-      SatOpMigrate_Column(name: 'id'),
-      SatOpMigrate_Column(name: 'foo'),
-      SatOpMigrate_Column(name: 'bar'),
+      SatOpMigrate_Column(name: 'id', sqliteType: 'TEXT'),
+      SatOpMigrate_Column(name: 'foo', sqliteType: 'INTEGER'),
+      SatOpMigrate_Column(name: 'bar', sqliteType: 'TEXT'),
     ],
     fks: [],
     pks: ['id'],
@@ -670,10 +670,10 @@ final addColumn = SchemaChange(
   table: SatOpMigrate_Table(
     name: 'parent',
     columns: [
-      SatOpMigrate_Column(name: 'id'),
-      SatOpMigrate_Column(name: 'value'),
-      SatOpMigrate_Column(name: 'other'),
-      SatOpMigrate_Column(name: 'baz'),
+      SatOpMigrate_Column(name: 'id', sqliteType: 'INTEGER'),
+      SatOpMigrate_Column(name: 'value', sqliteType: 'TEXT'),
+      SatOpMigrate_Column(name: 'other', sqliteType: 'INTEGER'),
+      SatOpMigrate_Column(name: 'baz', sqliteType: 'TEXT'),
     ],
     fks: [],
     pks: ['id'],

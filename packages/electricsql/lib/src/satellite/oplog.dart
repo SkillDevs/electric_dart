@@ -199,18 +199,6 @@ List<DataTransaction> toTransactions(
   );
 }
 
-ShadowEntry newShadowEntry(OplogEntry oplogEntry) {
-  return ShadowEntry(
-    namespace: oplogEntry.namespace,
-    tablename: oplogEntry.tablename,
-    primaryKey: primaryKeyToStr(
-      (json.decode(oplogEntry.primaryKey) as Map<String, dynamic>)
-          .cast<String, Object>(),
-    ),
-    tags: shadowTagsDefault,
-  );
-}
-
 // Convert a list of `OplogEntry`s into a nested `OplogTableChanges` map of
 // `{tableName: {primaryKey: entryChanges}}` where the entryChanges has the
 // most recent `optype` and column `value`` from all of the operations.
@@ -316,7 +304,7 @@ String serialiseRow(Row row) {
       if (value.isNaN) {
         return MapEntry(key, 'NaN');
       } else if (value.isInfinite) {
-        return MapEntry(key, value.isNegative ? '-Inf' : '+Inf');
+        return MapEntry(key, value.isNegative ? '-Inf' : 'Inf');
       }
     }
     return MapEntry(key, value);
@@ -339,15 +327,18 @@ Row deserialiseRow(String str, Relation rel) {
         ?.type
         .toUpperCase()
         .replaceAll(' ', '');
-    if (columnType == 'FLOAT4' ||
-        columnType == 'FLOAT8' ||
-        columnType == 'REAL') {
+    if ((columnType == 'FLOAT4' ||
+            columnType == 'FLOAT8' ||
+            columnType == 'REAL') &&
+        value is String) {
       if (value == 'NaN') {
         return MapEntry(key, double.nan);
-      } else if (value == '+Inf') {
+      } else if (value == 'Inf') {
         return MapEntry(key, double.infinity);
       } else if (value == '-Inf') {
         return MapEntry(key, double.negativeInfinity);
+      } else {
+        return MapEntry(key, double.parse(value));
       }
     }
     return MapEntry(key, value);
@@ -406,11 +397,13 @@ OplogEntryChanges localEntryToChanges(
   Tag tag,
   RelationsCache relations,
 ) {
+  final relation = relations[entry.tablename]!;
+
   final OplogEntryChanges result = OplogEntryChanges(
     namespace: entry.namespace,
     tablename: entry.tablename,
-    primaryKeyCols: (json.decode(entry.primaryKey) as Map<String, dynamic>)
-        .cast<String, Object>(),
+    primaryKeyCols:
+        deserialiseRow(entry.primaryKey, relation).cast<String, Object>(),
     optype: entry.optype == OpType.delete
         ? ChangesOpType.delete
         : ChangesOpType.upsert,
@@ -418,8 +411,6 @@ OplogEntryChanges localEntryToChanges(
     tag: entry.optype == OpType.delete ? null : tag,
     clearTags: (json.decode(entry.clearTags) as List<dynamic>).cast<String>(),
   );
-
-  final relation = relations[entry.tablename]!;
 
   final Row oldRow =
       entry.oldRow != null ? deserialiseRow(entry.oldRow!, relation) : {};
@@ -453,8 +444,8 @@ ShadowEntryChanges remoteEntryToChanges(
   final result = ShadowEntryChanges(
     namespace: entry.namespace,
     tablename: entry.tablename,
-    primaryKeyCols: (json.decode(entry.primaryKey) as Map<String, dynamic>)
-        .cast<String, Object>(),
+    primaryKeyCols:
+        deserialiseRow(entry.primaryKey, relation).cast<String, Object>(),
     optype: entry.optype == OpType.delete
         ? ChangesOpType.delete
         : ChangesOpType.upsert,
@@ -508,22 +499,13 @@ class ShadowEntryChanges with EquatableMixin {
 /// @returns a stringified JSON with stable sorting on column names
 String primaryKeyToStr(Map<String, Object> primaryKeyObj) {
   final keys = primaryKeyObj.keys.toList()..sort();
-  if (keys.isEmpty) return '{}';
 
-  final jsonStr = StringBuffer('{');
-  for (var i = 0; i < keys.length; i++) {
-    final key = keys[i];
-    jsonStr.write(json.encode(key));
-    jsonStr.write(':');
-    jsonStr.write(json.encode(primaryKeyObj[key]));
-
-    if (i < keys.length - 1) {
-      jsonStr.write(',');
-    }
+  final sortedObj = <String, Object>{};
+  for (final key in keys) {
+    sortedObj[key] = primaryKeyObj[key]!;
   }
 
-  jsonStr.write('}');
-  return jsonStr.toString();
+  return serialiseRow(sortedObj);
 }
 
 ShadowKey getShadowPrimaryKey(

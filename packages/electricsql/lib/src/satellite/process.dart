@@ -942,7 +942,7 @@ This means there is a notifier subscription leak.`''');
               q3,
               (tx, _) => tx.run(
                 q4,
-                (_, __) => setResult(res.map(_opLogEntryFromRow).toList()),
+                (_, __) => setResult(res.map(opLogEntryFromRow).toList()),
               ),
             ),
           );
@@ -1082,7 +1082,7 @@ This means there is a notifier subscription leak.`''');
         ORDER BY rowid ASC
     ''';
     final rows = await adapter.query(Statement(selectEntries, [since]));
-    return rows.map(_opLogEntryFromRow).toList();
+    return rows.map(opLogEntryFromRow).toList();
   }
 
   Statement _deleteShadowTagsStatement(ShadowEntry shadow) {
@@ -1566,6 +1566,11 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
         parentKey: fk.pkCols[0],
       );
     }).toList(),
+    columnTypes: Map.fromEntries(
+      tbl.columns.map(
+        (col) => MapEntry(col.name, col.sqliteType.toUpperCase()),
+      ),
+    ),
   );
   final fullTableName = '${table.namespace}.${table.tableName}';
   return generateTableTriggers(fullTableName, table);
@@ -1585,7 +1590,8 @@ class ShadowEntryLookup {
   ShadowEntryLookup({required this.cached, required this.entry});
 }
 
-OplogEntry _opLogEntryFromRow(Map<String, Object?> row) {
+@visibleForTesting
+OplogEntry opLogEntryFromRow(Map<String, Object?> row) {
   return OplogEntry(
     namespace: row['namespace']! as String,
     tablename: row['tablename']! as String,

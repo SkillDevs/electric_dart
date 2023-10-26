@@ -5,6 +5,8 @@ import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
+import 'package:electricsql/src/migrators/schema.dart';
+import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -98,6 +100,38 @@ Map<String, Relation> kTestRelations = {
       ),
       RelationColumn(
         name: 'value',
+        type: 'REAL',
+        isNullable: true,
+        primaryKey: false,
+      ),
+    ],
+  ),
+  'personTable': Relation(
+    id: 4,
+    schema: 'public',
+    table: 'personTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'id',
+        type: 'REAL',
+        isNullable: false,
+        primaryKey: true,
+      ),
+      RelationColumn(
+        name: 'name',
+        type: 'TEXT',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'age',
+        type: 'INTEGER',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'bmi',
         type: 'REAL',
         isNullable: true,
         primaryKey: false,
@@ -210,3 +244,37 @@ Future<void> _clean(DbName dbName) async {
   await removeFile(dbName);
   await removeFile('$dbName-journal');
 }
+
+void migrateDb(Database db, Table table) {
+  final tableName = table.tableName;
+  // Create the table in the database
+  final createTableSQL =
+      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL)';
+  db.execute(createTableSQL);
+
+  // Apply the initial migration on the database
+  final migration = kBaseMigrations[0].statements;
+  for (final stmt in migration) {
+    db.execute(stmt);
+  }
+  final triggers = generateTableTriggers(tableName, table);
+
+  // Apply the triggers on the database
+  for (final trigger in triggers) {
+    db.execute(trigger.sql);
+  }
+}
+
+final kPersonTable = Table(
+  namespace: 'main',
+  tableName: 'personTable',
+  columns: ['id', 'name', 'age', 'bmi'],
+  primary: ['id'],
+  foreignKeys: [],
+  columnTypes: {
+    'id': 'REAL',
+    'name': 'TEXT',
+    'age': 'INTEGER',
+    'bmi': 'REAL',
+  },
+);
