@@ -108,21 +108,10 @@ void main() async {
     ); // time must have been converted to UTC time
   });
 
-  test('timestamp is converted correctly to SQLite - UTC', () async {
-    final dateUTC = DateTime.parse('2023-08-07 18:28:35.421+00');
+  test('timestamp is converted correctly to SQLite - input date utc', () async {
+    // 2023-08-07 18:28:35.421 UTC
+    final dateUTC = DateTime.utc(2023, 8, 7, 18, 28, 35, 421);
     expect(dateUTC.isUtc, isTrue);
-
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timestamp: Value(dateUTC),
-          ),
-        );
-
-    final rawRes = await db.customSelect(
-      'SELECT timestamp FROM DataTypes WHERE id = ?',
-      variables: [const Variable(1)],
-    ).get();
 
     // The local date is stored as String, without the T and Z characters
     final localDate = dateUTC.toLocal();
@@ -136,6 +125,18 @@ void main() async {
       localDate.millisecond,
       localDate.microsecond,
     ).toISOStringUTC().replaceAll('T', ' ').replaceAll('Z', '');
+
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            timestamp: Value(dateUTC),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT timestamp FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
 
     expect(
       rawRes[0].read<String>('timestamp'),

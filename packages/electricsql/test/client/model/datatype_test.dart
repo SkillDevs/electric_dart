@@ -114,10 +114,10 @@ void main() async {
     expect(fetchRes?.timestamp, DateTime.parse('2023-08-07 18:28:35.421'));
   });
 
-  test('support timestamp type - input date with offset', () async {
-    final dateUTC = DateTime.parse('2023-08-07 18:28:35.421+05');
+  test('support timestamp type - input date utc', () async {
+    // 2023-08-07 18:28:35.421 UTC
+    final dateUTC = DateTime.utc(2023, 8, 7, 18, 28, 35, 421);
     expect(dateUTC.isUtc, isTrue);
-    final localDate = dateUTC.toLocal();
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
@@ -126,13 +126,16 @@ void main() async {
           ),
         );
 
-    expect(res.timestamp, localDate);
+    final expectedLocalDate = dateUTC.toLocal();
+
+    expect(res.timestamp, expectedLocalDate);
+    expect(res.timestamp!.isUtc, isFalse);
 
     final fetchRes = await (db.select(db.dataTypes)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
 
-    expect(fetchRes?.timestamp, localDate);
+    expect(fetchRes?.timestamp, expectedLocalDate);
   });
 
   test('support timestamptz type', () async {
@@ -159,6 +162,9 @@ void main() async {
     expect(res1.timestamptz, date1);
     expect(res2.timestamptz, date2);
 
+    expect(res1.timestamptz!.isUtc, isTrue);
+    expect(res2.timestamptz!.isUtc, isTrue);
+
     final fetchRes1 = await (db.select(db.dataTypes)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
@@ -169,6 +175,27 @@ void main() async {
 
     expect(fetchRes1?.timestamptz, date1);
     expect(fetchRes2?.timestamptz, date2);
+  });
+
+  test('support timestamptz type - local date', () async {
+    final dateLocal = DateTime.parse('2023-08-07 18:28:35.421');
+    expect(dateLocal.isUtc, isFalse);
+    final dateUtc = dateLocal.toUtc();
+
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            timestamptz: Value(dateLocal),
+          ),
+        );
+
+    expect(res.timestamptz, dateUtc);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+
+    expect(fetchRes?.timestamptz, dateUtc);
   });
 
   test('support null value for timestamptz type', () async {
