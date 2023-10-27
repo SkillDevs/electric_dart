@@ -100,6 +100,9 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   DatabaseAdapter get adapter => _baseClient.adapter;
 
   @override
+  DBSchema get dbDescription => _baseClient.dbDescription;
+
+  @override
   bool get isConnected => _baseClient.isConnected;
 
   @override

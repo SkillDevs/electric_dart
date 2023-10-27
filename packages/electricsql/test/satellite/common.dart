@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/schema.dart';
@@ -22,6 +23,20 @@ import '../util/io.dart';
 import '../util/sqlite.dart';
 
 DBSchema kTestDbDescription = DBSchemaRaw(
+  fields: {
+    'child': {
+      'id': PgType.integer,
+      'parent': PgType.integer,
+    },
+    'parent': {
+      'id': PgType.integer,
+      'value': PgType.text,
+      'other': PgType.integer,
+    },
+    'another': {
+      'id': PgType.integer,
+    },
+  },
   migrations: [],
 );
 

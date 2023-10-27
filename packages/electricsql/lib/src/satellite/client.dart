@@ -1002,15 +1002,10 @@ PgType _getColumnType(
   String table,
   RelationColumn column,
 ) {
-  return pgTypeFromColumnType(column.type);
-
-  // TODO(update): Review
-  /* if (
-    dbDescription.hasTable(table) &&
-    dbDescription.getFields(table).has(column.name)
-  ) {
+  if (dbDescription.hasTable(table) &&
+      dbDescription.getFields(table).containsKey(column.name)) {
     // The table and column are known in the DB description
-    return dbDescription.getFields(table).get(column.name)!
+    return dbDescription.getFields(table)[column.name]!;
   } else {
     // The table or column is not known.
     // There must have been a migration that added it to the DB while the app was running.
@@ -1021,8 +1016,8 @@ PgType _getColumnType(
     // because it was received at runtime and thus will have the PG type
     // (which would not be the case for bundled relations fetched
     //  from the endpoint because the endpoint maps PG types to SQLite types).
-    return column.type.toUpperCase() as PgType
-  } */
+    return pgTypeFromColumnType(column.type);
+  }
 }
 
 SatOpRow serializeRow(Record rec, Relation relation, DBSchema dbDescription) {

@@ -91,6 +91,7 @@ Future<ElectricClient> electrifyBase<DB extends DBSchema>({
     adapter: adapter,
     notifier: notifier,
     satellite: satellite,
+    dbDescription: dbDescription,
   );
 
   if (satellite.connectivityState != null) {

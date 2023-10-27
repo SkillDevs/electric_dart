@@ -4,6 +4,7 @@ import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/model/client.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -213,10 +214,16 @@ Future<void> makeContext() async {
     opts: kSatelliteDefaults,
   );
 
+  final dbSchema = DBSchemaDrift(
+    db: db,
+    migrations: migrations,
+  );
+
   final baseElectricClient = ElectricClientImpl.create(
     adapter: adapter,
     notifier: notifier,
     satellite: satellite,
+    dbDescription: dbSchema,
   );
   electric = DriftElectricClient(baseElectricClient, db);
 

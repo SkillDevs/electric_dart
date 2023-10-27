@@ -133,7 +133,7 @@ void main() {
     final electric = await electrify(
       db: db,
       dbName: dbName,
-      dbDescription: DBSchemaRaw(migrations: [migration]),
+      dbDescription: DBSchemaRaw(fields: {}, migrations: [migration]),
       config: ElectricConfig(
         auth: const AuthConfig(
           token: 'test-token',

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
@@ -30,6 +31,22 @@ void main() {
     );
 
     final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': {
+          'name1': PgType.text,
+          'name2': PgType.text,
+          'name3': PgType.text,
+          'int1': PgType.integer,
+          'int2': PgType.integer,
+          'float1': PgType.real,
+          'float2': PgType.float4,
+          'float3': PgType.float4,
+          'float4': PgType.float8,
+          'bool1': PgType.bool,
+          'bool2': PgType.bool,
+          'bool3': PgType.bool,
+        },
+      },
       migrations: [],
     );
 
@@ -90,6 +107,19 @@ void main() {
     );
 
     final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': {
+          'bit0': PgType.text,
+          'bit1': PgType.text,
+          'bit2': PgType.text,
+          'bit3': PgType.text,
+          'bit4': PgType.text,
+          'bit5': PgType.text,
+          'bit6': PgType.text,
+          'bit7': PgType.text,
+          'bit8': PgType.text,
+        },
+      },
       migrations: [],
     );
 

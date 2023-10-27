@@ -16,7 +16,7 @@ import 'package:test/test.dart';
 const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
-final DBSchema dbDescription = DBSchemaRaw(migrations: []);
+final DBSchema dbDescription = DBSchemaRaw(fields: {}, migrations: []);
 final Migrator migrator = MockMigrator();
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);

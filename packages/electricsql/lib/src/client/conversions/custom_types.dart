@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/converters/type_converters.dart';
 
 class ElectricTypes {
@@ -19,8 +20,13 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
     implements CustomSqlType<DartT> {
   final Codec<DartT, SQLType> codec;
   final String typeName;
+  final PgType pgType;
 
-  const CustomElectricType({required this.codec, required this.typeName});
+  const CustomElectricType({
+    required this.codec,
+    required this.typeName,
+    required this.pgType,
+  });
 
   @override
   String mapToSqlLiteral(DartT dartValue) {
@@ -50,6 +56,7 @@ class TimestampType extends CustomElectricType<DateTime, String> {
       : super(
           codec: TypeConverters.timestamp,
           typeName: 'timestamp',
+          pgType: PgType.timestamp,
         );
 }
 
@@ -58,6 +65,7 @@ class TimestampTZType extends CustomElectricType<DateTime, String> {
       : super(
           codec: TypeConverters.timestampTZ,
           typeName: 'timestamptz',
+          pgType: PgType.timestampTz,
         );
 }
 
@@ -66,6 +74,7 @@ class DateType extends CustomElectricType<DateTime, String> {
       : super(
           codec: TypeConverters.date,
           typeName: 'date',
+          pgType: PgType.date,
         );
 }
 
@@ -74,6 +83,7 @@ class TimeType extends CustomElectricType<DateTime, String> {
       : super(
           codec: TypeConverters.time,
           typeName: 'time',
+          pgType: PgType.time,
         );
 }
 
@@ -82,6 +92,7 @@ class TimeTZType extends CustomElectricType<DateTime, String> {
       : super(
           codec: TypeConverters.timeTZ,
           typeName: 'timetz',
+          pgType: PgType.timeTz,
         );
 }
 
@@ -90,6 +101,7 @@ class UUIDType extends CustomElectricType<String, String> {
       : super(
           codec: TypeConverters.uuid,
           typeName: 'uuid',
+          pgType: PgType.uuid,
         );
 }
 
@@ -98,6 +110,7 @@ class Int2Type extends CustomElectricType<int, int> {
       : super(
           codec: TypeConverters.int2,
           typeName: 'int2',
+          pgType: PgType.int2,
         );
 }
 
@@ -106,6 +119,7 @@ class Int4Type extends CustomElectricType<int, int> {
       : super(
           codec: TypeConverters.int4,
           typeName: 'int4',
+          pgType: PgType.int4,
         );
 }
 
@@ -114,6 +128,7 @@ class Float8Type extends CustomElectricType<double, Object> {
       : super(
           codec: TypeConverters.float8,
           typeName: 'float8',
+          pgType: PgType.float8,
         );
 
   @override

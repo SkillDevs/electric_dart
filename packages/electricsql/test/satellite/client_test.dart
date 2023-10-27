@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
@@ -223,6 +224,12 @@ void main() {
     await connectAndAuth();
 
     final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': {
+          'name1': PgType.text,
+          'name2': PgType.text,
+        },
+      },
       migrations: [],
     );
 
@@ -644,7 +651,20 @@ void main() {
       ],
     );
 
+    final Fields tblFields = {
+      'id': PgType.uuid,
+      'content': PgType.varchar,
+      'text_null': PgType.text,
+      'text_null_default': PgType.text,
+      'intvalue_null': PgType.int4,
+      'intvalue_null_default': PgType.int4,
+    };
+
     final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': tblFields,
+        'Items': tblFields,
+      },
       migrations: [],
     );
     client.debugSetDbDescription(dbDescription);
@@ -984,7 +1004,16 @@ void main() {
 
     const tablename = 'THE_TABLE_ID';
 
+    final Fields tblFields = {
+      'name1': PgType.text,
+      'name2': PgType.text,
+    };
+
     final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': tblFields,
+        tablename: tblFields,
+      },
       migrations: [],
     );
     client.debugSetDbDescription(dbDescription);
