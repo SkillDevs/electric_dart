@@ -29,7 +29,7 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   @override
   late final GeneratedColumn<DateTime> editedAt = GeneratedColumn<DateTime>(
       'edited_at', aliasedName, false,
-      type: ElectricTypes.timestamp, requiredDuringInsert: true);
+      type: ElectricTypes.timestampTZ, requiredDuringInsert: true);
   static const VerificationMeta _completedMeta =
       const VerificationMeta('completed');
   @override
@@ -91,8 +91,8 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
           .read(DriftSqlType.string, data['${effectivePrefix}listid']),
       textCol: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}text']),
-      editedAt: attachedDatabase.typeMapping
-          .read(ElectricTypes.timestamp, data['${effectivePrefix}edited_at'])!,
+      editedAt: attachedDatabase.typeMapping.read(
+          ElectricTypes.timestampTZ, data['${effectivePrefix}edited_at'])!,
       completed: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}completed'])!,
     );
@@ -274,7 +274,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     }
     if (editedAt.present) {
       map['edited_at'] =
-          Variable<DateTime>(editedAt.value, ElectricTypes.timestamp);
+          Variable<DateTime>(editedAt.value, ElectricTypes.timestampTZ);
     }
     if (completed.present) {
       map['completed'] = Variable<bool>(completed.value);

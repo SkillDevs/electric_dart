@@ -31,7 +31,7 @@ class TodosRepositorySqlite implements TodosRepository {
         id: row['id'],
         listId: row['listid'],
         text: row['text'] as String,
-        editedAt: TypeConverters.timestamp.decode(row['edited_at'] as String),
+        editedAt: TypeConverters.timestampTZ.decode(row['edited_at'] as String),
         completed: row['completed'] == 1,
       );
     }).toList();

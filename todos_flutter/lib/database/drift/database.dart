@@ -18,7 +18,8 @@ class Todos extends Table {
   TextColumn get id => text()();
   TextColumn get listid => text().nullable()();
   TextColumn get textCol => text().named("text").nullable()();
-  Column<DateTime> get editedAt => customType(ElectricTypes.timestamp)();
+  Column<DateTime> get editedAt =>
+      customType(ElectricTypes.timestampTZ).named('edited_at')();
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
 }
 
@@ -81,7 +82,7 @@ class DriftRepository implements m.TodosRepository {
         completed: Value(todo.completed),
         listid: Value(todo.listId),
         textCol: Value(todo.text),
-        editedAt: DateTime.now(),
+        editedAt: todo.editedAt,
       ),
     );
   }
@@ -102,6 +103,7 @@ class DriftRepository implements m.TodosRepository {
         completed: Value(todo.completed),
         listid: Value(todo.listId),
         textCol: Value(todo.text),
+        editedAt: Value(DateTime.now()),
       ),
     );
   }
