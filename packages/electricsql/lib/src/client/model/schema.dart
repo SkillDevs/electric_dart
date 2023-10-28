@@ -44,7 +44,10 @@ class DBSchemaDrift implements DBSchema {
     };
   }
 
-  Fields _buildFieldsForTable(TableInfo<dynamic, dynamic> table, GeneratedDatabase genDb) {
+  Fields _buildFieldsForTable(
+    TableInfo<dynamic, dynamic> table,
+    GeneratedDatabase genDb,
+  ) {
     final Map<FieldName, PgType> fields = {};
 
     for (final column in table.$columns) {
