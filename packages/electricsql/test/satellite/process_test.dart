@@ -1956,7 +1956,7 @@ void main() {
     expect(boolColumn.name, 'b');
     expect(boolColumn.type, 'INTEGER');
 
-    // Db schama holds the correct Postgres types
+    // Db schema holds the correct Postgres types
     final boolsDbDescription = DBSchemaRaw(
       fields: {
         'bools': {
