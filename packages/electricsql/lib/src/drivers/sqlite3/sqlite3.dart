@@ -6,7 +6,7 @@ import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:sqlite3/sqlite3.dart';
 
-// TODO(update): Consider removing support for raw sqlite3 electrification
+// TODO(dart): Consider removing support for raw sqlite3 electrification
 Future<ElectricClient> electrify({
   required String dbName,
   required Database db,
