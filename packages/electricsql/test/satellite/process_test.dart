@@ -2,18 +2,14 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:electricsql/src/auth/auth.dart';
-import 'package:electricsql/src/client/conversions/types.dart';
-import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
     show SqliteAdapter;
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
-import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
@@ -1938,54 +1934,6 @@ void main() {
     );
 
     expect(numExpects, 3);
-  });
-
-  test('serialize correctly to the satellite protocol using pg types',
-      () async {
-    await adapter.run(
-      Statement('CREATE TABLE bools (id INTEGER PRIMARY KEY, b INTEGER)'),
-    );
-
-    await satellite.start(authConfig);
-
-    final sqliteInferredRelations = satellite.relations;
-    final boolsInferredRelation = sqliteInferredRelations['bools']!;
-
-    // Inferred types only support SQLite types, so the bool column is INTEGER
-    final boolColumn = boolsInferredRelation.columns[1];
-    expect(boolColumn.name, 'b');
-    expect(boolColumn.type, 'INTEGER');
-
-    // Db schema holds the correct Postgres types
-    final boolsDbDescription = DBSchemaRaw(
-      fields: {
-        'bools': {
-          'id': PgType.integer,
-          'b': PgType.bool,
-        },
-      },
-      migrations: [],
-    );
-
-    final satOpRow = serializeRow(
-      {'id': 5, 'b': 1},
-      boolsInferredRelation,
-      boolsDbDescription,
-    );
-
-    // Encoded values ["5", "t"]
-    expect(
-      satOpRow.values,
-      [
-        Uint8List.fromList(['5'.codeUnitAt(0)]),
-        Uint8List.fromList(['t'.codeUnitAt(0)]),
-      ],
-    );
-
-    final deserializedRow =
-        deserializeRow(satOpRow, boolsInferredRelation, boolsDbDescription);
-
-    expect(deserializedRow, {'id': 5, 'b': 1});
   });
 }
 

@@ -1,11 +1,17 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
+import 'package:electricsql/src/satellite/config.dart';
+import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:test/test.dart';
+
+import '../util/sqlite.dart';
 
 void main() {
   test('serialize/deserialize row data', () {
@@ -175,5 +181,104 @@ void main() {
     final mask = [...sRow.nullsBitmask].map((x) => x.toRadixString(2)).join('');
 
     expect(mask, '1101000010000000');
+  });
+
+  test('Prioritize PG types in the schema before inferred SQLite types',
+      () async {
+    final db = openSqliteDbMemory();
+    addTearDown(() => db.dispose());
+
+    final adapter = SqliteAdapter(db);
+    await adapter.run(
+      Statement('CREATE TABLE bools (id INTEGER PRIMARY KEY, b INTEGER)'),
+    );
+
+    final sqliteInferredRelations =
+        await inferRelationsFromSQLite(adapter, kSatelliteDefaults);
+    final boolsInferredRelation = sqliteInferredRelations['bools']!;
+
+    // Inferred types only support SQLite types, so the bool column is INTEGER
+    final boolColumn = boolsInferredRelation.columns[1];
+    expect(boolColumn.name, 'b');
+    expect(boolColumn.type, 'INTEGER');
+
+    // Db schema holds the correct Postgres types
+    final boolsDbDescription = DBSchemaRaw(
+      fields: {
+        'bools': {
+          'id': PgType.integer,
+          'b': PgType.bool,
+        },
+      },
+      migrations: [],
+    );
+
+    final satOpRow = serializeRow(
+      {'id': 5, 'b': 1},
+      boolsInferredRelation,
+      boolsDbDescription,
+    );
+
+    // Encoded values ["5", "t"]
+    expect(
+      satOpRow.values,
+      [
+        Uint8List.fromList(['5'.codeUnitAt(0)]),
+        Uint8List.fromList(['t'.codeUnitAt(0)]),
+      ],
+    );
+
+    final deserializedRow =
+        deserializeRow(satOpRow, boolsInferredRelation, boolsDbDescription);
+
+    expect(deserializedRow, {'id': 5, 'b': 1});
+  });
+
+  test('Use incoming Relation types if not found in the schema', () async {
+    final db = openSqliteDbMemory();
+    addTearDown(() => db.dispose());
+
+    final adapter = SqliteAdapter(db);
+
+    final sqliteInferredRelations =
+        await inferRelationsFromSQLite(adapter, kSatelliteDefaults);
+
+    // Empty database
+    expect(sqliteInferredRelations.length, 0);
+
+    // Empty Db schema
+    final testDbDescription = DBSchemaRaw(
+      fields: {},
+      migrations: [],
+    );
+
+    final newTableRelation = Relation(
+      id: 1,
+      schema: 'schema',
+      table: 'new_table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        RelationColumn(name: 'value', type: 'INTEGER', isNullable: true),
+      ],
+    );
+
+    final satOpRow = serializeRow(
+      {'value': 6},
+      newTableRelation,
+      testDbDescription,
+    );
+
+    // Encoded values ["6"]
+    expect(
+      satOpRow.values,
+      [
+        Uint8List.fromList(['6'.codeUnitAt(0)]),
+      ],
+    );
+
+    final deserializedRow =
+        deserializeRow(satOpRow, newTableRelation, testDbDescription);
+
+    expect(deserializedRow, {'value': 6});
   });
 }
