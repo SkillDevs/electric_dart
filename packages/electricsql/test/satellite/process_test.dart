@@ -7,6 +7,8 @@ import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
     show SqliteAdapter;
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
+import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart' as adp
+    show Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
@@ -1909,17 +1911,39 @@ void main() {
 
     expect(numExpects, 3);
   });
+
+  // check that performing snapshot doesn't throw without resetting the performing snapshot assertions
+  test('(regression) performSnapshot handles exceptions gracefully', () async {
+    await runMigrations();
+    await satellite.setAuthState(authState);
+
+    satellite.updateDatabaseAdapter(
+      ReplaceTxDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+    );
+
+    const error = 'FAKE TRANSACTION';
+
+    final customAdapter = satellite.adapter as ReplaceTxDatabaseAdapter;
+
+    customAdapter.customTxFun = (_) {
+      throw Exception(error);
+    };
+
+    try {
+      await satellite.performSnapshot();
+      fail('Should throw');
+    } on Exception catch (e) {
+      expect(e.toString(), 'Exception: $error');
+
+      // Restore default tx behavior
+      customAdapter.customTxFun = null;
+    }
+
+    await satellite.performSnapshot();
+
+    // Doesn't throw
+  });
 }
-
-// TODO: implement reconnect protocol
-
-// test('resume out of window clears subscriptions and clears oplog after ack', async (t) => {})
-
-// test('not possible to subscribe while oplog is not pushed', async (t) => {})
-
-// test('process restart loads previous subscriptions', async (t) => {})
-
-// test('oplog messages allowed between SatSubsRep and SatSubsDataBegin', async (t) => {})
 
 class SlowDatabaseAdapter extends SqliteAdapter {
   SlowDatabaseAdapter(
@@ -1933,5 +1957,26 @@ class SlowDatabaseAdapter extends SqliteAdapter {
   Future<RunResult> run(Statement statement) async {
     await Future<void>.delayed(delay);
     return super.run(statement);
+  }
+}
+
+typedef _TxFun<T> = Future<T> Function(
+  void Function(adp.Transaction tx, void Function(T res) setResult) f,
+);
+
+class ReplaceTxDatabaseAdapter extends SqliteAdapter {
+  ReplaceTxDatabaseAdapter(
+    super.db,
+  );
+
+  _TxFun<dynamic>? customTxFun;
+
+  @override
+  Future<T> transaction<T>(
+    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+  ) {
+    return customTxFun != null
+        ? (customTxFun! as _TxFun<T>).call(f)
+        : super.transaction(f);
   }
 }
