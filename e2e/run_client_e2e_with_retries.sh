@@ -2,7 +2,7 @@
 
 set -x
 
-ATTEMPTS=2
+ATTEMPTS=3
 MAKE_COMMAND=test_client_only
 
 for i in $(seq 1 $ATTEMPTS); do
