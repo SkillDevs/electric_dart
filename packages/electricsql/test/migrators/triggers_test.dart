@@ -2,15 +2,12 @@ import 'dart:convert';
 
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/satellite/config.dart';
-import 'package:electricsql/src/util/random.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 import '../satellite/common.dart';
 import '../util/sqlite.dart';
 
-// ignore: unreachable_from_main
-final dbName = 'triggers-test-${randomValue()}.db';
 late Database db;
 
 void migratePersonTable() {

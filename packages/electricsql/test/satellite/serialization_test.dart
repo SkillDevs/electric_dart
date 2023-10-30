@@ -23,7 +23,6 @@ void main() {
         RelationColumn(name: 'float1', type: 'REAL', isNullable: true),
         RelationColumn(name: 'float2', type: 'FLOAT4', isNullable: true),
         RelationColumn(name: 'float3', type: 'FLOAT8', isNullable: true),
-        RelationColumn(name: 'float4', type: 'FLOAT8', isNullable: true),
         RelationColumn(name: 'bool1', type: 'BOOL', isNullable: true),
         RelationColumn(name: 'bool2', type: 'BOOL', isNullable: true),
         RelationColumn(name: 'bool3', type: 'BOOL', isNullable: true),
@@ -41,7 +40,6 @@ void main() {
           'float1': PgType.real,
           'float2': PgType.float4,
           'float3': PgType.float4,
-          'float4': PgType.float8,
           'bool1': PgType.bool,
           'bool2': PgType.bool,
           'bool3': PgType.bool,
@@ -58,8 +56,7 @@ void main() {
       'int2': -30,
       'float1': 1.0,
       'float2': -30.3,
-      'float3': double.infinity,
-      'float4': double.negativeInfinity,
+      'float3': 5e234,
       'bool1': 1,
       'bool2': 0,
       'bool3': null,
@@ -75,8 +72,7 @@ void main() {
         '-30',
         '1',
         '-30.3',
-        'Infinity',
-        '-Infinity',
+        '5e+234',
         't',
         'f',
         '',
@@ -84,7 +80,47 @@ void main() {
     );
     final dRow = deserializeRow(sRow, rel, dbDescription);
 
-    expect(record, dRow);
+    expect(dRow, record);
+
+    // Test edge cases for floats such as NaN, Infinity, -Infinity
+    final record2 = <String, Object?>{
+      'name1': 'Edge cases for Floats',
+      'name2': null,
+      'name3': null,
+      'int1': null,
+      'int2': null,
+      'float1': double.nan,
+      'float2': double.infinity,
+      'float3': double.negativeInfinity,
+      'bool1': null,
+      'bool2': null,
+      'bool3': null,
+    };
+
+    final sRow2 = serializeRow(record2, rel, dbDescription);
+    expect(
+      sRow2.values.map((bytes) => utf8.decode(bytes)),
+      [
+        'Edge cases for Floats',
+        '',
+        '',
+        '',
+        '',
+        'NaN',
+        'Infinity',
+        '-Infinity',
+        '',
+        '',
+        '',
+      ],
+    );
+    final dRow2 = deserializeRow(sRow2, rel, dbDescription);
+
+    expect(dRow2, {
+      ...record2,
+      // SQLite does not support NaN so we deserialise it into the string 'NaN'
+      'float1': 'NaN',
+    });
   });
 
   test('Null mask uses bits as if they were a list', () {
