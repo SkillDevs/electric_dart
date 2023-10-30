@@ -266,6 +266,7 @@ class _TodosLoaded extends HookConsumerWidget {
                         id: genUUID(),
                         listId: kListId,
                         text: textController.text,
+                        editedAt: DateTime.now(),
                         completed: false,
                       ),
                     );
@@ -333,6 +334,9 @@ class TodoTile extends ConsumerWidget {
           decoration: todo.completed ? TextDecoration.lineThrough : null,
           color: todo.completed ? Colors.grey : null,
         ),
+      ),
+      subtitle: Text(
+        todo.editedAt.toIso8601String(),
       ),
       trailing: IconButton(
         onPressed: () async {

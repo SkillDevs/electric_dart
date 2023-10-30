@@ -38,10 +38,6 @@ class Throttle<T> {
 }
 
 class TypeEncoder {
-  static List<int> number(int n) {
-    return numberToBytes(n);
-  }
-
   static List<int> text(String text) {
     return utf8.encode(text);
   }
@@ -50,22 +46,26 @@ class TypeEncoder {
     return boolToBytes(b);
   }
 
-  static List<int> real(num columnValue) {
-    return realToBytes(columnValue);
+  static List<int> timetz(String s) {
+    return TypeEncoder.text(stringToTimetzString(s));
   }
 }
 
 class TypeDecoder {
-  static int number(List<int> bytes) {
-    return bytesToNumber(bytes);
-  }
-
   static String text(List<int> bytes) {
     return bytesToString(bytes);
   }
 
   static int boolean(List<int> bytes) {
     return bytesToBool(bytes);
+  }
+
+  static String timetz(List<int> bytes) {
+    return bytesToTimetzString(bytes);
+  }
+
+  static Object float(List<int> bytes) {
+    return bytesToFloat(bytes);
   }
 }
 
@@ -96,15 +96,6 @@ List<int> numberToBytes(int i) {
   ];
 }
 
-List<int> realToBytes(num n) {
-  String numStr = n.toString();
-  if (n.truncate() == n) {
-    // n is an integer, we need to explicitly append the ".0" to it.
-    numStr = '${n.truncate()}.0';
-  }
-  return utf8.encode(numStr);
-}
-
 int bytesToNumber(List<int> bytes) {
   int n = 0;
   for (final byte in bytes) {
@@ -117,10 +108,35 @@ String bytesToString(List<int> bytes) {
   return utf8.decode(bytes);
 }
 
-extension DateExtension on DateTime {
-  String toISOStringUTC() {
-    return toUtc().copyWith(microsecond: 0).toIso8601String();
+/// Converts a PG string of type `timetz` to its equivalent SQLite string.
+/// e.g. '18:28:35.42108+00' -> '18:28:35.42108'
+/// @param bytes Data for this `timetz` column.
+/// @returns The SQLite string.
+String bytesToTimetzString(List<int> bytes) {
+  final str = bytesToString(bytes);
+  return str.replaceAll('+00', '');
+}
+
+/// Converts a PG string of type `float4` or `float8` to an equivalent SQLite number.
+/// Since SQLite does not recognise `NaN` we turn it into the string `'NaN'` instead.
+/// cf. https://github.com/WiseLibs/better-sqlite3/issues/1088
+/// @param bytes Data for this `float4` or `float8` column.
+/// @returns The SQLite value.
+Object bytesToFloat(List<int> bytes) {
+  final text = TypeDecoder.text(bytes);
+  if (text == 'NaN') {
+    return 'NaN';
+  } else {
+    return num.parse(text);
   }
+}
+
+/// Converts a SQLite string representing a `timetz` value to a PG string.
+/// e.g. '18:28:35.42108' -> '18:28:35.42108+00'
+/// @param str The SQLite string representing a `timetz` value.
+/// @returns The PG string.
+String stringToTimetzString(String str) {
+  return '$str+00';
 }
 
 class Waiter {

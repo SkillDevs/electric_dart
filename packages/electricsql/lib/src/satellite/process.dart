@@ -18,8 +18,10 @@ import 'package:electricsql/src/satellite/shapes/shapes.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
+import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
@@ -147,6 +149,10 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+    final sqliteVersionRow =
+        await adapter.query(Statement('SELECT sqlite_version() AS version'));
+    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
+
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -937,7 +943,7 @@ This means there is a notifier subscription leak.`''');
                 q3,
                 (tx, _) => tx.run(
                   q4,
-                  (_, __) => setResult(res.map(_opLogEntryFromRow).toList()),
+                  (_, __) => setResult(res.map(opLogEntryFromRow).toList()),
                 ),
               ),
             );
@@ -1029,8 +1035,13 @@ This means there is a notifier subscription leak.`''');
     String incomingOrigin,
   ) async {
     final local = await getEntries();
-    final merged =
-        mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
+    final merged = mergeEntries(
+      authState!.clientId,
+      local,
+      incomingOrigin,
+      incoming,
+      relations,
+    );
 
     final List<Statement> stmts = [];
 
@@ -1077,7 +1088,7 @@ This means there is a notifier subscription leak.`''');
         ORDER BY rowid ASC
     ''';
     final rows = await adapter.query(Statement(selectEntries, [since]));
-    return rows.map(_opLogEntryFromRow).toList();
+    return rows.map(opLogEntryFromRow).toList();
   }
 
   Statement _deleteShadowTagsStatement(ShadowEntry shadow) {
@@ -1369,65 +1380,9 @@ This means there is a notifier subscription leak.`''');
     return clientId;
   }
 
-  Future<List<({String name})>> _getLocalTableNames() async {
-    final notIn = <String>[
-      opts.metaTable.tablename,
-      opts.migrationsTable.tablename,
-      opts.oplogTable.tablename,
-      opts.triggersTable.tablename,
-      opts.shadowTable.tablename,
-      'sqlite_schema',
-      'sqlite_sequence',
-      'sqlite_temp_schema',
-    ];
-
-    final tables = '''
-      SELECT name FROM sqlite_master
-        WHERE type = 'table'
-          AND name NOT IN (${notIn.map((_) => '?').join(',')})
-    ''';
-    final tableNames = await adapter.query(Statement(tables, notIn));
-    return tableNames.map((row) => (name: row['name']! as String)).toList();
-  }
-
-  // Fetch primary keys from local store and use them to identify incoming ops.
-  // TODO: Improve this code once with Migrator and consider simplifying oplog.
   @visibleForTesting
   Future<RelationsCache> getLocalRelations() async {
-    final tableNames = await _getLocalTableNames();
-    final RelationsCache relations = {};
-
-    int id = 0;
-    const schema = 'public'; // TODO
-    for (final table in tableNames) {
-      final tableName = table.name;
-      const sql = 'SELECT * FROM pragma_table_info(?)';
-      final args = [tableName];
-      final columnsForTable = await adapter.query(Statement(sql, args));
-      if (columnsForTable.isEmpty) {
-        continue;
-      }
-      final Relation relation = Relation(
-        id: id++,
-        schema: schema,
-        table: tableName,
-        tableType: SatRelation_RelationType.TABLE,
-        columns: [],
-      );
-      for (final c in columnsForTable) {
-        relation.columns.add(
-          RelationColumn(
-            name: c['name']! as String,
-            type: c['type']! as String,
-            isNullable: (c['notnull']! as int) == 0,
-            primaryKey: (c['pk']! as int) > 0,
-          ),
-        );
-      }
-      relations[tableName] = relation;
-    }
-
-    return relations;
+    return inferRelationsFromSQLite(adapter, opts);
   }
 
   String _generateTag(DateTime timestamp) {
@@ -1561,6 +1516,11 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
         parentKey: fk.pkCols[0],
       );
     }).toList(),
+    columnTypes: Map.fromEntries(
+      tbl.columns.map(
+        (col) => MapEntry(col.name, col.sqliteType.toUpperCase()),
+      ),
+    ),
   );
   final fullTableName = '${table.namespace}.${table.tableName}';
   return generateTableTriggers(fullTableName, table);
@@ -1580,7 +1540,8 @@ class ShadowEntryLookup {
   ShadowEntryLookup({required this.cached, required this.entry});
 }
 
-OplogEntry _opLogEntryFromRow(Map<String, Object?> row) {
+@visibleForTesting
+OplogEntry opLogEntryFromRow(Map<String, Object?> row) {
   return OplogEntry(
     namespace: row['namespace']! as String,
     tablename: row['tablename']! as String,

@@ -2,7 +2,7 @@
 // so that the last write wins.
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/util/sets.dart';
-import 'package:electricsql/src/util/types.dart' show Row;
+import 'package:electricsql/src/util/types.dart' show RelationsCache, Row;
 
 /// Merge server-sent operation with local pending oplog to arrive at the same row state the server is at.
 /// @param localOrigin string specifying the local origin
@@ -15,12 +15,17 @@ PendingChanges mergeEntries(
   List<OplogEntry> local,
   String incomingOrigin,
   List<OplogEntry> incoming,
+  RelationsCache relations,
 ) {
-  final localTableChanges =
-      localOperationsToTableChanges(local, (DateTime timestamp) {
-    return generateTag(localOrigin, timestamp);
-  });
-  final incomingTableChanges = remoteOperationsToTableChanges(incoming);
+  final localTableChanges = localOperationsToTableChanges(
+    local,
+    (DateTime timestamp) {
+      return generateTag(localOrigin, timestamp);
+    },
+    relations,
+  );
+  final incomingTableChanges =
+      remoteOperationsToTableChanges(incoming, relations);
 
   for (final incomingTableChangeEntry in incomingTableChanges.entries) {
     final tablename = incomingTableChangeEntry.key;

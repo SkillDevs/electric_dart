@@ -1,4 +1,5 @@
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/electric/mock.dart';
@@ -15,6 +16,7 @@ import 'package:test/test.dart';
 const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
+final DBSchema dbDescription = DBSchemaRaw(fields: {}, migrations: []);
 final Migrator migrator = MockMigrator();
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
@@ -37,6 +39,7 @@ void main() {
     final mockRegistry = MockRegistry();
     final s1 = await mockRegistry.startProcess(
       dbName: 'a.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -45,6 +48,7 @@ void main() {
     );
     final s2 = await mockRegistry.startProcess(
       dbName: 'b.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -53,6 +57,7 @@ void main() {
     );
     final s3 = await mockRegistry.startProcess(
       dbName: 'c.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -97,6 +102,7 @@ void main() {
     final mockRegistry = MockRegistry();
     final s1 = await mockRegistry.ensureStarted(
       dbName: 'a.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -105,6 +111,7 @@ void main() {
     );
     final s2 = await mockRegistry.ensureStarted(
       dbName: 'b.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -113,6 +120,7 @@ void main() {
     );
     final s3 = await mockRegistry.ensureStarted(
       dbName: 'c.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -247,6 +255,7 @@ void main() {
 Future<Satellite> _callStartProcess(MockRegistry mockRegistry) {
   return mockRegistry.startProcess(
     dbName: dbName,
+    dbDescription: dbDescription,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,
@@ -261,6 +270,7 @@ Future<Satellite> _callEnsureStarted(
 }) {
   return mockRegistry.ensureStarted(
     dbName: name ?? dbName,
+    dbDescription: dbDescription,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,

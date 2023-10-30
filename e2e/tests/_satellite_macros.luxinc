@@ -4,11 +4,11 @@
     # !migrations = await client.read_migrations(process.env.MIGRATION_DIRS + "/index.js")
     # ?$node
     !migrations = $migrations
-    ?$node
+    ??$node
     !shell_db_path = get_shell_db_path "$LUX_SHELLNAME"
-    ?$node
+    ??$node
     !originalDb = make_db shell_db_path
-    ?$node
+    ??$node
     [invoke electrify_db "originalDb" $host $port $migrations]
     ??(in electrify_db) config:
 [endmacro]
@@ -20,7 +20,7 @@
 [macro setup_client_with_migrations satellite_number electric port migrations]
     [invoke start_satellite $satellite_number]
     -$fail_pattern
-    ?$node
+    ??$node
     [invoke connect_to_electric $electric $port $migrations]
 [endmacro]
 
@@ -33,7 +33,60 @@
 [endmacro]
 
 [macro node_await_get_from_table table match]
-    [invoke wait-for "get_rows db '${table}'"  "${match}" 10 $node]
+    [invoke wait-for "get_rows db '${table}'" "${match}" 10 $node]
+[endmacro]
+
+[macro node_await_get_bool id expected_bool]
+    [invoke wait-for "get_bool db '${id}'" "${expected_bool}" 10 $node]
+[endmacro]
+
+[macro node_await_get_uuid id]
+    [invoke wait-for "get_uuid db '${id}'" "${id}" 10 $node]
+[endmacro]
+
+[macro node_await_get_int id]
+    [invoke wait-for "get_int db '${id}'" "${id}" 10 $node]
+[endmacro]
+
+[macro node_await_get_float id]
+    [invoke wait-for "get_float db '${id}'" "${id}" 10 $node]
+[endmacro]
+
+[macro node_write_float id value]
+    # Can write valid floats to the DB
+    !write_float db '${id}' ${value}
+    ??{ id: '${id}', f8:
+    ??$node
+[endmacro]
+
+[macro node_get_uuid id]
+    !get_uuid db '${id}'
+    ??{ id: '${id}' }
+    ??$node
+[endmacro]
+
+[macro node_get_int id expected_int2 expected_int4]
+    !get_int db '${id}'
+    ??{ id: '${id}', i2: ${expected_int2}, i4: ${expected_int4} }
+    ??$node
+[endmacro]
+
+[macro node_get_float id expected_float8]
+    !get_float db '${id}'
+    ??{ id: '${id}', f8: ${expected_float8} }
+    ??$node
+[endmacro]
+
+[macro node_await_get_timestamps match]
+    [invoke wait-for "get_timestamps db" "${match}" 10 $node]
+[endmacro]
+
+[macro node_await_assert_timestamp id timestamp timestamptz]
+    [invoke wait-for "assert_timestamp db '${id}' '${timestamp}' '${timestamptz}'" "true" 10 $node]
+[endmacro]
+
+[macro node_await_assert_datetime id date time]
+    [invoke wait-for "assert_datetime db '${id}' '${date}' '${time}'" "true" 10 $node]
 [endmacro]
 
 [macro node_await_table match]
@@ -50,17 +103,17 @@
 
 [macro node_await_insert keys]
     !insert_item db ${keys}
-    ?$node
+    ??$node
 [endmacro]
 
 [macro node_await_insert_extended keys]
     !insert_extended_item db ${keys}
-    ?$node
+    ??$node
 [endmacro]
 
 [macro node_await_insert_extended_into table keys]
     !insert_extended_into db '${table}' ${keys}
-    ?$node
+    ??$node
 [endmacro]
 
 [macro node_await_get_other match]
@@ -69,7 +122,7 @@
 
 [macro node_await_insert_other keys]
     !insert_other_item db ${keys}
-    ?$node
+    ??$node
 [endmacro]
 
 [macro node_sync_table table]

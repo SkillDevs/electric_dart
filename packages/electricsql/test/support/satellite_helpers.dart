@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
-import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/types.dart';
 
 typedef TableInfo = Map<String, TableSchema>;

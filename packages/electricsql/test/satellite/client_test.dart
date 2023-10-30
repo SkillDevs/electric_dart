@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/conversions/types.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
@@ -34,6 +36,7 @@ void main() {
 
     client = SatelliteClient(
       dbName: dbName,
+      dbDescription: kTestDbDescription,
       socketFactory: WebSocketIOFactory(),
       notifier: MockNotifier(dbName),
       opts: SatelliteClientOpts(
@@ -220,6 +223,18 @@ void main() {
   test('receive transaction over multiple messages', () async {
     await connectAndAuth();
 
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': {
+          'name1': PgType.text,
+          'name2': PgType.text,
+        },
+      },
+      migrations: [],
+    );
+
+    client.debugSetDbDescription(dbDescription);
+
     final start = SatInStartReplicationResp();
     final begin = SatOpBegin(commitTimestamp: Int64.ZERO);
     final commit = SatOpCommit();
@@ -248,17 +263,30 @@ void main() {
 
     final insertOp = SatOpInsert(
       relationId: 1,
-      rowData: serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel),
+      rowData:
+          serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel, dbDescription),
     );
 
     final updateOp = SatOpUpdate(
       relationId: 1,
-      rowData: serializeRow({'name1': 'Hello', 'name2': 'World!'}, rel),
-      oldRowData: serializeRow({'name1': '', 'name2': ''}, rel),
+      rowData: serializeRow(
+        {'name1': 'Hello', 'name2': 'World!'},
+        rel,
+        dbDescription,
+      ),
+      oldRowData: serializeRow(
+        {'name1': '', 'name2': ''},
+        rel,
+        dbDescription,
+      ),
     );
     final deleteOp = SatOpDelete(
       relationId: 1,
-      oldRowData: serializeRow({'name1': 'Hello', 'name2': 'World!'}, rel),
+      oldRowData: serializeRow(
+        {'name1': 'Hello', 'name2': 'World!'},
+        rel,
+        dbDescription,
+      ),
     );
 
     final firstOpLogMessage = SatOpLog(
@@ -623,6 +651,24 @@ void main() {
       ],
     );
 
+    final Fields tblFields = {
+      'id': PgType.uuid,
+      'content': PgType.varchar,
+      'text_null': PgType.text,
+      'text_null_default': PgType.text,
+      'intvalue_null': PgType.int4,
+      'intvalue_null_default': PgType.int4,
+    };
+
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': tblFields,
+        'Items': tblFields,
+      },
+      migrations: [],
+    );
+    client.debugSetDbDescription(dbDescription);
+
     final insertOp = SatOpInsert(
       relationId: 1,
       rowData: serializeRow(
@@ -635,6 +681,7 @@ void main() {
           'intvalue_null_default': '10',
         },
         rel,
+        dbDescription,
       ),
     );
 
@@ -703,7 +750,7 @@ void main() {
       ],
     );
 
-    final record = deserializeRow(serializedRow, rel);
+    final record = deserializeRow(serializedRow, rel, dbDescription);
 
     final firstOpLogMessage = SatOpLog(
       ops: [
@@ -955,6 +1002,22 @@ void main() {
   test('subscription correct protocol sequence with data', () async {
     await connectAndAuth();
 
+    const tablename = 'THE_TABLE_ID';
+
+    final Fields tblFields = {
+      'name1': PgType.text,
+      'name2': PgType.text,
+    };
+
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': tblFields,
+        tablename: tblFields,
+      },
+      migrations: [],
+    );
+    client.debugSetDbDescription(dbDescription);
+
     await startReplication();
 
     final Relation rel = Relation(
@@ -975,7 +1038,6 @@ void main() {
     const subscriptionId = 'THE_SUBS_ID';
     const uuid1 = 'THE_SHAPE_ID_1';
     const uuid2 = 'THE_SHAPE_ID_2';
-    const tablename = 'THE_TABLE_ID';
 
     final shapeReq1 = ShapeRequest(
       requestId: requestId1,
@@ -1021,6 +1083,7 @@ void main() {
       rowData: serializeRow(
         {'name1': 'Foo', 'name2': 'Bar'},
         rel,
+        dbDescription,
       ),
     );
 

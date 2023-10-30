@@ -7,6 +7,7 @@ CREATE TABLE "todo" (
     "listid" TEXT,
     "text" TEXT,
     "completed" INTEGER NOT NULL,
+    "edited_at" TIMESTAMPTZ NOT NULL,
     PRIMARY KEY ("id")
 );
 

@@ -21,9 +21,10 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   @override
   List<GeneratedColumn> get $columns => [value, nbr];
   @override
-  String get aliasedName => _alias ?? 'Items';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Items';
+  String get actualTableName => $name;
+  static const String $name = 'Items';
   @override
   VerificationContext validateIntegrity(Insertable<Item> instance,
       {bool isInserting = false}) {
@@ -200,9 +201,10 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
   @override
   List<GeneratedColumn> get $columns => [id, name];
   @override
-  String get aliasedName => _alias ?? 'User';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'User';
+  String get actualTableName => $name;
+  static const String $name = 'User';
   @override
   VerificationContext validateIntegrity(Insertable<User> instance,
       {bool isInserting = false}) {
@@ -386,9 +388,10 @@ class $PostsTable extends Posts with TableInfo<$PostsTable, Post> {
   @override
   List<GeneratedColumn> get $columns => [id, title, contents, nbr, authorId];
   @override
-  String get aliasedName => _alias ?? 'Post';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Post';
+  String get actualTableName => $name;
+  static const String $name = 'Post';
   @override
   VerificationContext validateIntegrity(Insertable<Post> instance,
       {bool isInserting = false}) {
@@ -662,9 +665,10 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
   @override
   List<GeneratedColumn> get $columns => [id, bio, contents, userId];
   @override
-  String get aliasedName => _alias ?? 'Profile';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'Profile';
+  String get actualTableName => $name;
+  static const String $name = 'Profile';
   @override
   VerificationContext validateIntegrity(Insertable<Profile> instance,
       {bool isInserting = false}) {
@@ -873,16 +877,744 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   }
 }
 
+class $DummyTable extends Dummy with TableInfo<$DummyTable, DummyData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DummyTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _timestampMeta =
+      const VerificationMeta('timestamp');
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+      'timestamp', aliasedName, true,
+      type: ElectricTypes.timestamp, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, timestamp];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'Dummy';
+  @override
+  VerificationContext validateIntegrity(Insertable<DummyData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(_timestampMeta,
+          timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DummyData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DummyData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      timestamp: attachedDatabase.typeMapping
+          .read(ElectricTypes.timestamp, data['${effectivePrefix}timestamp']),
+    );
+  }
+
+  @override
+  $DummyTable createAlias(String alias) {
+    return $DummyTable(attachedDatabase, alias);
+  }
+}
+
+class DummyData extends DataClass implements Insertable<DummyData> {
+  final int id;
+  final DateTime? timestamp;
+  const DummyData({required this.id, this.timestamp});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || timestamp != null) {
+      map['timestamp'] = Variable<DateTime>(timestamp);
+    }
+    return map;
+  }
+
+  DummyCompanion toCompanion(bool nullToAbsent) {
+    return DummyCompanion(
+      id: Value(id),
+      timestamp: timestamp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timestamp),
+    );
+  }
+
+  factory DummyData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DummyData(
+      id: serializer.fromJson<int>(json['id']),
+      timestamp: serializer.fromJson<DateTime?>(json['timestamp']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'timestamp': serializer.toJson<DateTime?>(timestamp),
+    };
+  }
+
+  DummyData copyWith(
+          {int? id, Value<DateTime?> timestamp = const Value.absent()}) =>
+      DummyData(
+        id: id ?? this.id,
+        timestamp: timestamp.present ? timestamp.value : this.timestamp,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DummyData(')
+          ..write('id: $id, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, timestamp);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DummyData &&
+          other.id == this.id &&
+          other.timestamp == this.timestamp);
+}
+
+class DummyCompanion extends UpdateCompanion<DummyData> {
+  final Value<int> id;
+  final Value<DateTime?> timestamp;
+  const DummyCompanion({
+    this.id = const Value.absent(),
+    this.timestamp = const Value.absent(),
+  });
+  DummyCompanion.insert({
+    this.id = const Value.absent(),
+    this.timestamp = const Value.absent(),
+  });
+  static Insertable<DummyData> custom({
+    Expression<int>? id,
+    Expression<DateTime>? timestamp,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (timestamp != null) 'timestamp': timestamp,
+    });
+  }
+
+  DummyCompanion copyWith({Value<int>? id, Value<DateTime?>? timestamp}) {
+    return DummyCompanion(
+      id: id ?? this.id,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] =
+          Variable<DateTime>(timestamp.value, ElectricTypes.timestamp);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DummyCompanion(')
+          ..write('id: $id, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DataTypesTable extends DataTypes
+    with TableInfo<$DataTypesTable, DataType> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DataTypesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+      'date', aliasedName, true,
+      type: ElectricTypes.date, requiredDuringInsert: false);
+  static const VerificationMeta _timeMeta = const VerificationMeta('time');
+  @override
+  late final GeneratedColumn<DateTime> time = GeneratedColumn<DateTime>(
+      'time', aliasedName, true,
+      type: ElectricTypes.time, requiredDuringInsert: false);
+  static const VerificationMeta _timetzMeta = const VerificationMeta('timetz');
+  @override
+  late final GeneratedColumn<DateTime> timetz = GeneratedColumn<DateTime>(
+      'timetz', aliasedName, true,
+      type: ElectricTypes.timeTZ, requiredDuringInsert: false);
+  static const VerificationMeta _timestampMeta =
+      const VerificationMeta('timestamp');
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+      'timestamp', aliasedName, true,
+      type: ElectricTypes.timestamp, requiredDuringInsert: false);
+  static const VerificationMeta _timestamptzMeta =
+      const VerificationMeta('timestamptz');
+  @override
+  late final GeneratedColumn<DateTime> timestamptz = GeneratedColumn<DateTime>(
+      'timestamptz', aliasedName, true,
+      type: ElectricTypes.timestampTZ, requiredDuringInsert: false);
+  static const VerificationMeta _boolColMeta =
+      const VerificationMeta('boolCol');
+  @override
+  late final GeneratedColumn<bool> boolCol = GeneratedColumn<bool>(
+      'bool', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("bool" IN (0, 1))'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, true,
+      type: ElectricTypes.uuid, requiredDuringInsert: false);
+  static const VerificationMeta _int2Meta = const VerificationMeta('int2');
+  @override
+  late final GeneratedColumn<int> int2 = GeneratedColumn<int>(
+      'int2', aliasedName, true,
+      type: ElectricTypes.int2, requiredDuringInsert: false);
+  static const VerificationMeta _int4Meta = const VerificationMeta('int4');
+  @override
+  late final GeneratedColumn<int> int4 = GeneratedColumn<int>(
+      'int4', aliasedName, true,
+      type: ElectricTypes.int4, requiredDuringInsert: false);
+  static const VerificationMeta _float8Meta = const VerificationMeta('float8');
+  @override
+  late final GeneratedColumn<double> float8 = GeneratedColumn<double>(
+      'float8', aliasedName, true,
+      type: ElectricTypes.float8, requiredDuringInsert: false);
+  static const VerificationMeta _relatedIdMeta =
+      const VerificationMeta('relatedId');
+  @override
+  late final GeneratedColumn<int> relatedId = GeneratedColumn<int>(
+      'relatedId', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES Dummy (id)'));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        date,
+        time,
+        timetz,
+        timestamp,
+        timestamptz,
+        boolCol,
+        uuid,
+        int2,
+        int4,
+        float8,
+        relatedId
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'DataTypes';
+  @override
+  VerificationContext validateIntegrity(Insertable<DataType> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    }
+    if (data.containsKey('time')) {
+      context.handle(
+          _timeMeta, time.isAcceptableOrUnknown(data['time']!, _timeMeta));
+    }
+    if (data.containsKey('timetz')) {
+      context.handle(_timetzMeta,
+          timetz.isAcceptableOrUnknown(data['timetz']!, _timetzMeta));
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(_timestampMeta,
+          timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta));
+    }
+    if (data.containsKey('timestamptz')) {
+      context.handle(
+          _timestamptzMeta,
+          timestamptz.isAcceptableOrUnknown(
+              data['timestamptz']!, _timestamptzMeta));
+    }
+    if (data.containsKey('bool')) {
+      context.handle(_boolColMeta,
+          boolCol.isAcceptableOrUnknown(data['bool']!, _boolColMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    }
+    if (data.containsKey('int2')) {
+      context.handle(
+          _int2Meta, int2.isAcceptableOrUnknown(data['int2']!, _int2Meta));
+    }
+    if (data.containsKey('int4')) {
+      context.handle(
+          _int4Meta, int4.isAcceptableOrUnknown(data['int4']!, _int4Meta));
+    }
+    if (data.containsKey('float8')) {
+      context.handle(_float8Meta,
+          float8.isAcceptableOrUnknown(data['float8']!, _float8Meta));
+    }
+    if (data.containsKey('relatedId')) {
+      context.handle(_relatedIdMeta,
+          relatedId.isAcceptableOrUnknown(data['relatedId']!, _relatedIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DataType map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DataType(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      date: attachedDatabase.typeMapping
+          .read(ElectricTypes.date, data['${effectivePrefix}date']),
+      time: attachedDatabase.typeMapping
+          .read(ElectricTypes.time, data['${effectivePrefix}time']),
+      timetz: attachedDatabase.typeMapping
+          .read(ElectricTypes.timeTZ, data['${effectivePrefix}timetz']),
+      timestamp: attachedDatabase.typeMapping
+          .read(ElectricTypes.timestamp, data['${effectivePrefix}timestamp']),
+      timestamptz: attachedDatabase.typeMapping.read(
+          ElectricTypes.timestampTZ, data['${effectivePrefix}timestamptz']),
+      boolCol: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}bool']),
+      uuid: attachedDatabase.typeMapping
+          .read(ElectricTypes.uuid, data['${effectivePrefix}uuid']),
+      int2: attachedDatabase.typeMapping
+          .read(ElectricTypes.int2, data['${effectivePrefix}int2']),
+      int4: attachedDatabase.typeMapping
+          .read(ElectricTypes.int4, data['${effectivePrefix}int4']),
+      float8: attachedDatabase.typeMapping
+          .read(ElectricTypes.float8, data['${effectivePrefix}float8']),
+      relatedId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}relatedId']),
+    );
+  }
+
+  @override
+  $DataTypesTable createAlias(String alias) {
+    return $DataTypesTable(attachedDatabase, alias);
+  }
+}
+
+class DataType extends DataClass implements Insertable<DataType> {
+  final int id;
+  final DateTime? date;
+  final DateTime? time;
+  final DateTime? timetz;
+  final DateTime? timestamp;
+  final DateTime? timestamptz;
+  final bool? boolCol;
+  final String? uuid;
+  final int? int2;
+  final int? int4;
+  final double? float8;
+  final int? relatedId;
+  const DataType(
+      {required this.id,
+      this.date,
+      this.time,
+      this.timetz,
+      this.timestamp,
+      this.timestamptz,
+      this.boolCol,
+      this.uuid,
+      this.int2,
+      this.int4,
+      this.float8,
+      this.relatedId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || date != null) {
+      map['date'] = Variable<DateTime>(date);
+    }
+    if (!nullToAbsent || time != null) {
+      map['time'] = Variable<DateTime>(time);
+    }
+    if (!nullToAbsent || timetz != null) {
+      map['timetz'] = Variable<DateTime>(timetz);
+    }
+    if (!nullToAbsent || timestamp != null) {
+      map['timestamp'] = Variable<DateTime>(timestamp);
+    }
+    if (!nullToAbsent || timestamptz != null) {
+      map['timestamptz'] = Variable<DateTime>(timestamptz);
+    }
+    if (!nullToAbsent || boolCol != null) {
+      map['bool'] = Variable<bool>(boolCol);
+    }
+    if (!nullToAbsent || uuid != null) {
+      map['uuid'] = Variable<String>(uuid);
+    }
+    if (!nullToAbsent || int2 != null) {
+      map['int2'] = Variable<int>(int2);
+    }
+    if (!nullToAbsent || int4 != null) {
+      map['int4'] = Variable<int>(int4);
+    }
+    if (!nullToAbsent || float8 != null) {
+      map['float8'] = Variable<double>(float8);
+    }
+    if (!nullToAbsent || relatedId != null) {
+      map['relatedId'] = Variable<int>(relatedId);
+    }
+    return map;
+  }
+
+  DataTypesCompanion toCompanion(bool nullToAbsent) {
+    return DataTypesCompanion(
+      id: Value(id),
+      date: date == null && nullToAbsent ? const Value.absent() : Value(date),
+      time: time == null && nullToAbsent ? const Value.absent() : Value(time),
+      timetz:
+          timetz == null && nullToAbsent ? const Value.absent() : Value(timetz),
+      timestamp: timestamp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timestamp),
+      timestamptz: timestamptz == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timestamptz),
+      boolCol: boolCol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(boolCol),
+      uuid: uuid == null && nullToAbsent ? const Value.absent() : Value(uuid),
+      int2: int2 == null && nullToAbsent ? const Value.absent() : Value(int2),
+      int4: int4 == null && nullToAbsent ? const Value.absent() : Value(int4),
+      float8:
+          float8 == null && nullToAbsent ? const Value.absent() : Value(float8),
+      relatedId: relatedId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(relatedId),
+    );
+  }
+
+  factory DataType.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DataType(
+      id: serializer.fromJson<int>(json['id']),
+      date: serializer.fromJson<DateTime?>(json['date']),
+      time: serializer.fromJson<DateTime?>(json['time']),
+      timetz: serializer.fromJson<DateTime?>(json['timetz']),
+      timestamp: serializer.fromJson<DateTime?>(json['timestamp']),
+      timestamptz: serializer.fromJson<DateTime?>(json['timestamptz']),
+      boolCol: serializer.fromJson<bool?>(json['boolCol']),
+      uuid: serializer.fromJson<String?>(json['uuid']),
+      int2: serializer.fromJson<int?>(json['int2']),
+      int4: serializer.fromJson<int?>(json['int4']),
+      float8: serializer.fromJson<double?>(json['float8']),
+      relatedId: serializer.fromJson<int?>(json['relatedId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'date': serializer.toJson<DateTime?>(date),
+      'time': serializer.toJson<DateTime?>(time),
+      'timetz': serializer.toJson<DateTime?>(timetz),
+      'timestamp': serializer.toJson<DateTime?>(timestamp),
+      'timestamptz': serializer.toJson<DateTime?>(timestamptz),
+      'boolCol': serializer.toJson<bool?>(boolCol),
+      'uuid': serializer.toJson<String?>(uuid),
+      'int2': serializer.toJson<int?>(int2),
+      'int4': serializer.toJson<int?>(int4),
+      'float8': serializer.toJson<double?>(float8),
+      'relatedId': serializer.toJson<int?>(relatedId),
+    };
+  }
+
+  DataType copyWith(
+          {int? id,
+          Value<DateTime?> date = const Value.absent(),
+          Value<DateTime?> time = const Value.absent(),
+          Value<DateTime?> timetz = const Value.absent(),
+          Value<DateTime?> timestamp = const Value.absent(),
+          Value<DateTime?> timestamptz = const Value.absent(),
+          Value<bool?> boolCol = const Value.absent(),
+          Value<String?> uuid = const Value.absent(),
+          Value<int?> int2 = const Value.absent(),
+          Value<int?> int4 = const Value.absent(),
+          Value<double?> float8 = const Value.absent(),
+          Value<int?> relatedId = const Value.absent()}) =>
+      DataType(
+        id: id ?? this.id,
+        date: date.present ? date.value : this.date,
+        time: time.present ? time.value : this.time,
+        timetz: timetz.present ? timetz.value : this.timetz,
+        timestamp: timestamp.present ? timestamp.value : this.timestamp,
+        timestamptz: timestamptz.present ? timestamptz.value : this.timestamptz,
+        boolCol: boolCol.present ? boolCol.value : this.boolCol,
+        uuid: uuid.present ? uuid.value : this.uuid,
+        int2: int2.present ? int2.value : this.int2,
+        int4: int4.present ? int4.value : this.int4,
+        float8: float8.present ? float8.value : this.float8,
+        relatedId: relatedId.present ? relatedId.value : this.relatedId,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DataType(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('time: $time, ')
+          ..write('timetz: $timetz, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('timestamptz: $timestamptz, ')
+          ..write('boolCol: $boolCol, ')
+          ..write('uuid: $uuid, ')
+          ..write('int2: $int2, ')
+          ..write('int4: $int4, ')
+          ..write('float8: $float8, ')
+          ..write('relatedId: $relatedId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, date, time, timetz, timestamp,
+      timestamptz, boolCol, uuid, int2, int4, float8, relatedId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DataType &&
+          other.id == this.id &&
+          other.date == this.date &&
+          other.time == this.time &&
+          other.timetz == this.timetz &&
+          other.timestamp == this.timestamp &&
+          other.timestamptz == this.timestamptz &&
+          other.boolCol == this.boolCol &&
+          other.uuid == this.uuid &&
+          other.int2 == this.int2 &&
+          other.int4 == this.int4 &&
+          other.float8 == this.float8 &&
+          other.relatedId == this.relatedId);
+}
+
+class DataTypesCompanion extends UpdateCompanion<DataType> {
+  final Value<int> id;
+  final Value<DateTime?> date;
+  final Value<DateTime?> time;
+  final Value<DateTime?> timetz;
+  final Value<DateTime?> timestamp;
+  final Value<DateTime?> timestamptz;
+  final Value<bool?> boolCol;
+  final Value<String?> uuid;
+  final Value<int?> int2;
+  final Value<int?> int4;
+  final Value<double?> float8;
+  final Value<int?> relatedId;
+  const DataTypesCompanion({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.time = const Value.absent(),
+    this.timetz = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.timestamptz = const Value.absent(),
+    this.boolCol = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.int2 = const Value.absent(),
+    this.int4 = const Value.absent(),
+    this.float8 = const Value.absent(),
+    this.relatedId = const Value.absent(),
+  });
+  DataTypesCompanion.insert({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.time = const Value.absent(),
+    this.timetz = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.timestamptz = const Value.absent(),
+    this.boolCol = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.int2 = const Value.absent(),
+    this.int4 = const Value.absent(),
+    this.float8 = const Value.absent(),
+    this.relatedId = const Value.absent(),
+  });
+  static Insertable<DataType> custom({
+    Expression<int>? id,
+    Expression<DateTime>? date,
+    Expression<DateTime>? time,
+    Expression<DateTime>? timetz,
+    Expression<DateTime>? timestamp,
+    Expression<DateTime>? timestamptz,
+    Expression<bool>? boolCol,
+    Expression<String>? uuid,
+    Expression<int>? int2,
+    Expression<int>? int4,
+    Expression<double>? float8,
+    Expression<int>? relatedId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (date != null) 'date': date,
+      if (time != null) 'time': time,
+      if (timetz != null) 'timetz': timetz,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (timestamptz != null) 'timestamptz': timestamptz,
+      if (boolCol != null) 'bool': boolCol,
+      if (uuid != null) 'uuid': uuid,
+      if (int2 != null) 'int2': int2,
+      if (int4 != null) 'int4': int4,
+      if (float8 != null) 'float8': float8,
+      if (relatedId != null) 'relatedId': relatedId,
+    });
+  }
+
+  DataTypesCompanion copyWith(
+      {Value<int>? id,
+      Value<DateTime?>? date,
+      Value<DateTime?>? time,
+      Value<DateTime?>? timetz,
+      Value<DateTime?>? timestamp,
+      Value<DateTime?>? timestamptz,
+      Value<bool?>? boolCol,
+      Value<String?>? uuid,
+      Value<int?>? int2,
+      Value<int?>? int4,
+      Value<double?>? float8,
+      Value<int?>? relatedId}) {
+    return DataTypesCompanion(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      time: time ?? this.time,
+      timetz: timetz ?? this.timetz,
+      timestamp: timestamp ?? this.timestamp,
+      timestamptz: timestamptz ?? this.timestamptz,
+      boolCol: boolCol ?? this.boolCol,
+      uuid: uuid ?? this.uuid,
+      int2: int2 ?? this.int2,
+      int4: int4 ?? this.int4,
+      float8: float8 ?? this.float8,
+      relatedId: relatedId ?? this.relatedId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value, ElectricTypes.date);
+    }
+    if (time.present) {
+      map['time'] = Variable<DateTime>(time.value, ElectricTypes.time);
+    }
+    if (timetz.present) {
+      map['timetz'] = Variable<DateTime>(timetz.value, ElectricTypes.timeTZ);
+    }
+    if (timestamp.present) {
+      map['timestamp'] =
+          Variable<DateTime>(timestamp.value, ElectricTypes.timestamp);
+    }
+    if (timestamptz.present) {
+      map['timestamptz'] =
+          Variable<DateTime>(timestamptz.value, ElectricTypes.timestampTZ);
+    }
+    if (boolCol.present) {
+      map['bool'] = Variable<bool>(boolCol.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value, ElectricTypes.uuid);
+    }
+    if (int2.present) {
+      map['int2'] = Variable<int>(int2.value, ElectricTypes.int2);
+    }
+    if (int4.present) {
+      map['int4'] = Variable<int>(int4.value, ElectricTypes.int4);
+    }
+    if (float8.present) {
+      map['float8'] = Variable<double>(float8.value, ElectricTypes.float8);
+    }
+    if (relatedId.present) {
+      map['relatedId'] = Variable<int>(relatedId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DataTypesCompanion(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('time: $time, ')
+          ..write('timetz: $timetz, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('timestamptz: $timestamptz, ')
+          ..write('boolCol: $boolCol, ')
+          ..write('uuid: $uuid, ')
+          ..write('int2: $int2, ')
+          ..write('int4: $int4, ')
+          ..write('float8: $float8, ')
+          ..write('relatedId: $relatedId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$TestsDatabase extends GeneratedDatabase {
   _$TestsDatabase(QueryExecutor e) : super(e);
   late final $ItemsTable items = $ItemsTable(this);
   late final $UsersTable users = $UsersTable(this);
   late final $PostsTable posts = $PostsTable(this);
   late final $ProfilesTable profiles = $ProfilesTable(this);
+  late final $DummyTable dummy = $DummyTable(this);
+  late final $DataTypesTable dataTypes = $DataTypesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [items, users, posts, profiles];
+      [items, users, posts, profiles, dummy, dataTypes];
 }

@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:todos_electrified/database/database.dart' as m;
 import 'connection/connection.dart' as impl;
 
@@ -17,6 +18,8 @@ class Todos extends Table {
   TextColumn get id => text()();
   TextColumn get listid => text().nullable()();
   TextColumn get textCol => text().named("text").nullable()();
+  Column<DateTime> get editedAt =>
+      customType(ElectricTypes.timestampTZ).named('edited_at')();
   BoolColumn get completed => boolean()();
 }
 
@@ -61,10 +64,12 @@ class DriftRepository implements m.TodosRepository {
           ))
         .map(
           (todo) => m.Todo(
-              completed: todo.completed,
-              id: todo.id,
-              listId: todo.listid,
-              text: todo.textCol!),
+            completed: todo.completed,
+            id: todo.id,
+            listId: todo.listid,
+            editedAt: todo.editedAt,
+            text: todo.textCol!,
+          ),
         )
         .get();
   }
@@ -77,6 +82,7 @@ class DriftRepository implements m.TodosRepository {
         completed: todo.completed,
         listid: Value(todo.listId),
         textCol: Value(todo.text),
+        editedAt: todo.editedAt,
       ),
     );
   }
@@ -97,6 +103,7 @@ class DriftRepository implements m.TodosRepository {
         completed: Value(todo.completed),
         listid: Value(todo.listId),
         textCol: Value(todo.text),
+        editedAt: Value(DateTime.now()),
       ),
     );
   }
@@ -109,10 +116,12 @@ class DriftRepository implements m.TodosRepository {
           ))
         .map(
           (todo) => m.Todo(
-              completed: todo.completed,
-              id: todo.id,
-              listId: todo.listid,
-              text: todo.textCol!),
+            completed: todo.completed,
+            id: todo.id,
+            listId: todo.listid,
+            editedAt: todo.editedAt,
+            text: todo.textCol!,
+          ),
         )
         .watch();
   }

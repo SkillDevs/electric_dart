@@ -33,24 +33,28 @@ class Todo {
   final String id;
   final String? listId;
   final String? text;
+  final DateTime editedAt;
   final bool completed;
 
   Todo({
     required this.id,
     required this.listId,
     required this.text,
+    required this.editedAt,
     required this.completed,
   });
 
   Todo copyWith({
     String? Function()? listId,
     String? text,
+    DateTime? editedAt,
     bool? completed,
   }) {
     return Todo(
       id: id,
       listId: listId != null ? listId() : this.listId,
       text: text ?? this.text,
+      editedAt: editedAt ?? this.editedAt,
       completed: completed ?? this.completed,
     );
   }

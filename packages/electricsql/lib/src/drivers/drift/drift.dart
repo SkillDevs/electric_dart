@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
@@ -19,9 +20,14 @@ Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
   final adapter = opts?.adapter ?? DriftAdapter(db);
   final socketFactory = opts?.socketFactory ?? getDefaultSocketFactory();
 
+  final dbDescription = DBSchemaDrift(
+    db: db,
+    migrations: migrations,
+  );
+
   final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
-    migrations: migrations,
+    dbDescription: dbDescription,
     config: config,
     adapter: adapter,
     socketFactory: socketFactory,
@@ -92,6 +98,9 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
 
   @override
   DatabaseAdapter get adapter => _baseClient.adapter;
+
+  @override
+  DBSchema get dbDescription => _baseClient.dbDescription;
 
   @override
   bool get isConnected => _baseClient.isConnected;

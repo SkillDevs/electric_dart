@@ -1,4 +1,5 @@
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
@@ -14,6 +15,7 @@ export 'package:electricsql/src/satellite/process.dart' show ShapeSubscription;
 abstract class Registry {
   Future<Satellite> ensureStarted({
     required DbName dbName,
+    required DBSchema dbDescription,
     required DatabaseAdapter adapter,
     required Migrator migrator,
     required Notifier notifier,

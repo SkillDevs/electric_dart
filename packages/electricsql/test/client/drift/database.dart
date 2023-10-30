@@ -1,8 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:electricsql/src/client/conversions/custom_types.dart';
 
-// assuming that your file is called filename.dart. This will give an error at
-// first, but it's needed for drift to know about the generated code
 part 'database.g.dart';
 
 class Items extends Table {
@@ -56,7 +55,44 @@ class Profiles extends Table {
   Set<Column<Object>>? get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Items, Users, Posts, Profiles])
+class Dummy extends Table {
+  IntColumn get id => integer()();
+  Column<DateTime> get timestamp =>
+      customType(ElectricTypes.timestamp).nullable()();
+
+  @override
+  String? get tableName => 'Dummy';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+class DataTypes extends Table {
+  IntColumn get id => integer()();
+  Column<DateTime> get date => customType(ElectricTypes.date).nullable()();
+  Column<DateTime> get time => customType(ElectricTypes.time).nullable()();
+  Column<DateTime> get timetz => customType(ElectricTypes.timeTZ).nullable()();
+  Column<DateTime> get timestamp =>
+      customType(ElectricTypes.timestamp).nullable()();
+  Column<DateTime> get timestamptz =>
+      customType(ElectricTypes.timestampTZ).nullable()();
+  BoolColumn get boolCol => boolean().named('bool').nullable()();
+  TextColumn get uuid => customType(ElectricTypes.uuid).nullable()();
+  IntColumn get int2 => customType(ElectricTypes.int2).nullable()();
+  IntColumn get int4 => customType(ElectricTypes.int4).nullable()();
+  RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
+
+  IntColumn get relatedId =>
+      integer().nullable().named('relatedId').references(Dummy, #id)();
+
+  @override
+  String? get tableName => 'DataTypes';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Items, Users, Posts, Profiles, Dummy, DataTypes])
 class TestsDatabase extends _$TestsDatabase {
   TestsDatabase(super.e);
 
@@ -66,6 +102,7 @@ class TestsDatabase extends _$TestsDatabase {
         setup: (db) {
           db.config.doubleQuotedStringLiterals = false;
         },
+        // logStatements: true,
       ),
     );
   }

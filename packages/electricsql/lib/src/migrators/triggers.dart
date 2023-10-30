@@ -12,12 +12,17 @@ class ForeignKey {
   });
 }
 
+typedef ColumnName = String;
+typedef SQLiteType = String;
+typedef ColumnTypes = Map<ColumnName, SQLiteType>;
+
 class Table {
   String tableName;
   String namespace;
-  List<String> columns;
-  List<String> primary;
+  List<ColumnName> columns;
+  List<ColumnName> primary;
   List<ForeignKey> foreignKeys;
+  ColumnTypes columnTypes;
 
   Table({
     required this.tableName,
@@ -25,6 +30,7 @@ class Table {
     required this.columns,
     required this.primary,
     required this.foreignKeys,
+    required this.columnTypes,
   });
 }
 
@@ -48,11 +54,12 @@ List<Statement> generateOplogTriggers(
   final primary = table.primary;
   final columns = table.columns;
   final namespace = table.namespace;
+  final columnTypes = table.columnTypes;
 
-  final newPKs = joinColsForJSON(primary, 'new');
-  final oldPKs = joinColsForJSON(primary, 'old');
-  final newRows = joinColsForJSON(columns, 'new');
-  final oldRows = joinColsForJSON(columns, 'old');
+  final newPKs = joinColsForJSON(primary, columnTypes, 'new');
+  final oldPKs = joinColsForJSON(primary, columnTypes, 'old');
+  final newRows = joinColsForJSON(columns, columnTypes, 'new');
+  final oldRows = joinColsForJSON(columns, columnTypes, 'old');
 
   return <String>[
     '''
@@ -136,6 +143,7 @@ List<Statement> generateCompensationTriggers(
   final tableName = table.tableName;
   final namespace = table.namespace;
   final foreignKeys = table.foreignKeys;
+  final columnTypes = table.columnTypes;
 
   List<Statement> makeTriggers(ForeignKey foreignKey) {
     final childKey = foreignKey.childKey;
@@ -145,7 +153,7 @@ List<Statement> generateCompensationTriggers(
     final fkTableName = foreignKey.table;
     final fkTablePK =
         foreignKey.parentKey; // primary key of the table pointed at by the FK.
-    final joinedFkPKs = joinColsForJSON([fkTablePK], null);
+    final joinedFkPKs = joinColsForJSON([fkTablePK], columnTypes, null);
 
     return <String>[
       '''
@@ -195,8 +203,7 @@ List<Statement> generateTableTriggers(
   Table table,
 ) {
   final oplogTriggers = generateOplogTriggers(tableFullName, table);
-  final fkTriggers =
-      generateCompensationTriggers(tableFullName, table); //, tables)
+  final fkTriggers = generateCompensationTriggers(tableFullName, table);
   return [...oplogTriggers, ...fkTriggers];
 }
 
@@ -206,7 +213,7 @@ List<Statement> generateTableTriggers(
 List<Statement> generateTriggers(Tables tables) {
   final List<Statement> tableTriggers = [];
   tables.forEach((tableFullName, table) {
-    final triggers = generateTableTriggers(tableFullName, table); //, tables)
+    final triggers = generateTableTriggers(tableFullName, table);
     tableTriggers.addAll(triggers);
   });
 
@@ -221,10 +228,70 @@ List<Statement> generateTriggers(Tables tables) {
   return stmts;
 }
 
-String joinColsForJSON(List<String> cols, String? target) {
+/// Joins the column names and values into a string of pairs of the form `'col1', val1, 'col2', val2, ...`
+/// that can be used to build a JSON object in a SQLite `json_object` function call.
+/// Values of type REAL are cast to text to avoid a bug in SQLite's `json_object` function (see below).
+///
+/// NOTE: There is a bug with SQLite's `json_object` function up to version 3.41.2
+///       that causes it to return an invalid JSON object if some value is +Infinity or -Infinity.
+/// @example
+/// sqlite> SELECT json_object('a',2e370,'b',-3e380);
+/// {"a":Inf,"b":-Inf}
+///
+/// The returned JSON is not valid because JSON does not support `Inf` nor `-Inf`.
+/// @example
+/// sqlite> SELECT json_valid((SELECT json_object('a',2e370,'b',-3e380)));
+/// 0
+///
+/// This is fixed in version 3.42.0 and on:
+/// @example
+/// sqlite> SELECT json_object('a',2e370,'b',-3e380);
+/// {"a":9e999,"b":-9e999}
+///
+/// The returned JSON now is valid, the numbers 9e999 and -9e999
+/// are out of range of floating points and thus will be converted
+/// to `Infinity` and `-Infinity` when parsed with `JSON.parse`.
+///
+/// Nevertheless version SQLite version 3.42.0 is very recent (May 2023)
+/// and users may be running older versions so we want to support them.
+/// Therefore we introduce the following workaround:
+/// @example
+/// sqlite> SELECT json_object('a', cast(2e370 as TEXT),'b', cast(-3e380 as TEXT));
+/// {"a":"Inf","b":"-Inf"}
+///
+/// By casting the values to TEXT, infinity values are turned into their string representation.
+/// As such, the resulting JSON is valid.
+/// This means that the values will be stored as strings in the oplog,
+/// thus, we must be careful when parsing the oplog to convert those values back to their numeric type.
+///
+/// For reference:
+/// - https://discord.com/channels/933657521581858818/1163829658236760185
+/// - https://www.sqlite.org/src/info/b52081d0acd07dc5bdb4951a3e8419866131965260c1e3a4c9b6e673bfe3dfea
+///
+/// @param cols The column names
+/// @param target The target to use for the column values (new or old value provided by the trigger).
+String joinColsForJSON(
+  List<String> cols,
+  ColumnTypes colTypes,
+  String? target,
+) {
+  // casts the value to TEXT if it is of type REAL
+  // to work around the bug in SQLite's `json_object` function
+  String castIfNeeded(String col, String targettedCol) {
+    if (colTypes[col] == 'REAL') {
+      return 'cast($targettedCol as TEXT)';
+    } else {
+      return targettedCol;
+    }
+  }
+
   if (target == null) {
-    return (cols..sort()).map((col) => "'$col', $col").join(', ');
+    return (cols..sort())
+        .map((col) => "'$col', ${castIfNeeded(col, col)}")
+        .join(', ');
   } else {
-    return (cols..sort()).map((col) => "'$col', $target.$col").join(', ');
+    return (cols..sort())
+        .map((col) => "'$col', ${castIfNeeded(col, '$target.$col')}")
+        .join(', ');
   }
 }
