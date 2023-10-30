@@ -6,9 +6,9 @@ import 'dart:convert';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
     show SqliteAdapter;
-import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart' as adp
     show Transaction;
+import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
