@@ -77,6 +77,27 @@ void main() {
     expect(satellite, isA<MockSatelliteProcess>());
   });
 
+  test('can stop failed process', () async {
+    final mockRegistry = MockRegistry();
+
+    // Mock the satellite process to fail.
+    mockRegistry.setShouldFailToStart(true);
+
+    await expectLater(
+      () => _callEnsureStarted(mockRegistry),
+      throwsA(anything),
+    );
+
+    // This should not throw. This tests that failed processes are properly cleaned up.
+    await mockRegistry.stop(dbName);
+
+    // Next run a successful process to make sure that works.
+    mockRegistry.setShouldFailToStart(false);
+
+    final satellite = await _callEnsureStarted(mockRegistry);
+    expect(satellite, isA<MockSatelliteProcess>());
+  });
+
   test('ensure starting multiple satellite processes works', () async {
     final mockRegistry = MockRegistry();
     final s1 = await mockRegistry.ensureStarted(

@@ -20,7 +20,7 @@ class Todos extends Table {
   TextColumn get textCol => text().named("text").nullable()();
   Column<DateTime> get editedAt =>
       customType(ElectricTypes.timestampTZ).named('edited_at')();
-  BoolColumn get completed => boolean().withDefault(const Constant(false))();
+  BoolColumn get completed => boolean()();
 }
 
 class TodoLists extends Table {
@@ -79,7 +79,7 @@ class DriftRepository implements m.TodosRepository {
     await db.todos.insertOne(
       TodosCompanion.insert(
         id: todo.id,
-        completed: Value(todo.completed),
+        completed: todo.completed,
         listid: Value(todo.listId),
         textCol: Value(todo.text),
         editedAt: todo.editedAt,

@@ -18,6 +18,7 @@ import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
+import 'package:meta/meta.dart';
 
 typedef DataRecord = Record;
 
@@ -75,7 +76,14 @@ class MockSatelliteProcess implements Satellite {
   }
 }
 
+@visibleForTesting
 class MockRegistry extends BaseRegistry {
+  bool _shouldFailToStart = false;
+
+  void setShouldFailToStart(bool shouldFail) {
+    _shouldFailToStart = shouldFail;
+  }
+
   @override
   Future<Satellite> startProcess({
     required DbName dbName,
@@ -87,6 +95,10 @@ class MockRegistry extends BaseRegistry {
     required HydratedConfig config,
     SatelliteOverrides? overrides,
   }) async {
+    if (_shouldFailToStart) {
+      throw Exception('Failed to start satellite process');
+    }
+
     var effectiveOpts = kSatelliteDefaults;
     if (overrides != null) {
       effectiveOpts = effectiveOpts.copyWithOverrides(overrides);

@@ -36,10 +36,9 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   late final GeneratedColumn<bool> completed = GeneratedColumn<bool>(
       'completed', aliasedName, false,
       type: DriftSqlType.bool,
-      requiredDuringInsert: false,
+      requiredDuringInsert: true,
       defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("completed" IN (0, 1))'),
-      defaultValue: const Constant(false));
+          GeneratedColumn.constraintIsAlways('CHECK ("completed" IN (0, 1))'));
   @override
   List<GeneratedColumn> get $columns =>
       [id, listid, textCol, editedAt, completed];
@@ -75,6 +74,8 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
     if (data.containsKey('completed')) {
       context.handle(_completedMeta,
           completed.isAcceptableOrUnknown(data['completed']!, _completedMeta));
+    } else if (isInserting) {
+      context.missing(_completedMeta);
     }
     return context;
   }
@@ -226,9 +227,10 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     this.listid = const Value.absent(),
     this.textCol = const Value.absent(),
     required DateTime editedAt,
-    this.completed = const Value.absent(),
+    required bool completed,
   })  : id = Value(id),
-        editedAt = Value(editedAt);
+        editedAt = Value(editedAt),
+        completed = Value(completed);
   static Insertable<Todo> custom({
     Expression<String>? id,
     Expression<String>? listid,

@@ -10,6 +10,6 @@ then
     exit 1
 fi
 
-POSTGRES_CONN="postgresql://postgres:password@localhost:5434/${APP_NAME}?sslmode=disable"
+POSTGRES_CONN="postgresql://postgres:proxy_password@localhost:65432/${APP_NAME}?sslmode=disable"
 
 dbmate -u "${POSTGRES_CONN}" -d migrations --no-dump-schema up

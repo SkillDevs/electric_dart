@@ -23,7 +23,7 @@ final kElectricMigrations = UnmodifiableListView<Migration>(<Migration>[
   ),
   Migration(
     statements: [
-      'CREATE TABLE "todo" (\n  "id" TEXT NOT NULL,\n  "listid" TEXT,\n  "text" TEXT,\n  "completed" INTEGER DEFAULT 0 NOT NULL,\n  "edited_at" TEXT NOT NULL,\n  CONSTRAINT "todo_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+      'CREATE TABLE "todo" (\n  "id" TEXT NOT NULL,\n  "listid" TEXT,\n  "text" TEXT,\n  "completed" INTEGER NOT NULL,\n  "edited_at" TEXT NOT NULL,\n  CONSTRAINT "todo_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
       '\n    -- Toggles for turning the triggers on and off\n    INSERT OR IGNORE INTO _electric_trigger_settings(tablename,flag) VALUES (\'main.todo\', 1);\n    ',
       '\n    /* Triggers for table todo */\n\n    -- ensures primary key is immutable\n    DROP TRIGGER IF EXISTS update_ensure_main_todo_primarykey;\n    ',
       '\n    CREATE TRIGGER update_ensure_main_todo_primarykey\n      BEFORE UPDATE ON main.todo\n    BEGIN\n      SELECT\n        CASE\n          WHEN old.id != new.id THEN\n		RAISE (ABORT, \'cannot change the value of column id as it belongs to the primary key\')\n        END;\n    END;\n    ',

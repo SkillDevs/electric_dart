@@ -829,8 +829,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   // Perform a snapshot and notify which data actually changed.
-  // It is not safe to call this function concurrently. Consider
-  // using a wrapped version
+  // It is not safe to call concurrently. Use mutexSnapshot.
   @visibleForTesting
   Future<DateTime> performSnapshot() async {
     // assert a single call at a time
@@ -843,12 +842,13 @@ This means there is a notifier subscription leak.`''');
       _performingSnapshot = true;
     }
 
-    final oplog = opts.oplogTable;
-    final shadow = opts.shadowTable;
-    final timestamp = DateTime.now();
-    final newTag = _generateTag(timestamp);
+    try {
+      final oplog = opts.oplogTable;
+      final shadow = opts.shadowTable;
+      final timestamp = DateTime.now();
+      final newTag = _generateTag(timestamp);
 
-    /*
+      /*
      * IMPORTANT!
      *
      * The following queries make use of a documented but rare SQLite behaviour that allows selecting bare column
@@ -860,9 +860,9 @@ This means there is a notifier subscription leak.`''');
      * oplog that touch a particular row.
      */
 
-    // Update the timestamps on all "new" entries - they have been added but timestamp is still `NULL`
-    final q1 = Statement(
-      '''
+      // Update the timestamps on all "new" entries - they have been added but timestamp is still `NULL`
+      final q1 = Statement(
+        '''
       UPDATE $oplog SET timestamp = ?
       WHERE rowid in (
         SELECT rowid FROM $oplog
@@ -871,12 +871,12 @@ This means there is a notifier subscription leak.`''');
         )
       RETURNING *
     ''',
-      [timestamp.toISOStringUTC()],
-    );
+        [timestamp.toISOStringUTC()],
+      );
 
-    // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
-    final q2 = Statement(
-      '''
+      // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
+      final q2 = Statement(
+        '''
       UPDATE $oplog
       SET clearTags = updates.tags
       FROM (
@@ -891,12 +891,12 @@ This means there is a notifier subscription leak.`''');
       ) AS updates
       WHERE updates.op_rowid = $oplog.rowid
     ''',
-      [timestamp.toISOStringUTC()],
-    );
+        [timestamp.toISOStringUTC()],
+      );
 
-    // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
-    final q3 = Statement(
-      '''
+      // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
+      final q3 = Statement(
+        '''
       INSERT OR REPLACE INTO $shadow (namespace, tablename, primaryKey, tags)
       SELECT namespace, tablename, primaryKey, ?
         FROM $oplog AS op
@@ -904,17 +904,17 @@ This means there is a notifier subscription leak.`''');
         GROUP BY namespace, tablename, primaryKey
         HAVING rowid = max(rowid) AND optype != 'DELETE'
     ''',
-      [
-        encodeTags([newTag]),
-        timestamp.toISOStringUTC(),
-      ],
-    );
+        [
+          encodeTags([newTag]),
+          timestamp.toISOStringUTC(),
+        ],
+      );
 
-    // And finally delete any shadow rows where the last oplog operation was a `DELETE`
-    // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on
-    // re-executing a query per every row in shadow table, but uses a PK join instead.
-    final q4 = Statement(
-      '''
+      // And finally delete any shadow rows where the last oplog operation was a `DELETE`
+      // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on
+      // re-executing a query per every row in shadow table, but uses a PK join instead.
+      final q4 = Statement(
+        '''
       WITH _to_be_deleted (rowid) AS (
         SELECT shadow.rowid
           FROM $oplog AS op
@@ -928,46 +928,51 @@ This means there is a notifier subscription leak.`''');
       DELETE FROM $shadow
       WHERE rowid IN _to_be_deleted
     ''',
-      [timestamp.toISOStringUTC()],
-    );
-
-    // Execute the four queries above in a transaction, returning the results from the first query
-    // We're dropping down to this transaction interface because `runInTransaction` doesn't allow queries
-    final oplogEntries =
-        await adapter.transaction<List<OplogEntry>>((tx, setResult) {
-      tx.query(q1, (tx, res) {
-        if (res.isNotEmpty) {
-          tx.run(
-            q2,
-            (tx, _) => tx.run(
-              q3,
-              (tx, _) => tx.run(
-                q4,
-                (_, __) => setResult(res.map(opLogEntryFromRow).toList()),
-              ),
-            ),
-          );
-        } else {
-          setResult([]);
-        }
-      });
-    });
-
-    if (oplogEntries.isNotEmpty) {
-      unawaited(_notifyChanges(oplogEntries));
-    }
-
-    if (!client.isClosed()) {
-      final enqueued = client.getLastSentLsn();
-      final enqueuedLogPos = bytesToNumber(enqueued);
-
-      // TODO: handle case where pending oplog is large
-      await getEntries(since: enqueuedLogPos).then(
-        (missing) => _replicateSnapshotChanges(missing),
+        [timestamp.toISOStringUTC()],
       );
+
+      // Execute the four queries above in a transaction, returning the results from the first query
+      // We're dropping down to this transaction interface because `runInTransaction` doesn't allow queries
+      final oplogEntries =
+          await adapter.transaction<List<OplogEntry>>((tx, setResult) {
+        tx.query(q1, (tx, res) {
+          if (res.isNotEmpty) {
+            tx.run(
+              q2,
+              (tx, _) => tx.run(
+                q3,
+                (tx, _) => tx.run(
+                  q4,
+                  (_, __) => setResult(res.map(opLogEntryFromRow).toList()),
+                ),
+              ),
+            );
+          } else {
+            setResult([]);
+          }
+        });
+      });
+
+      if (oplogEntries.isNotEmpty) {
+        unawaited(_notifyChanges(oplogEntries));
+      }
+
+      if (!client.isClosed()) {
+        final enqueued = client.getLastSentLsn();
+        final enqueuedLogPos = bytesToNumber(enqueued);
+
+        // TODO: handle case where pending oplog is large
+        await getEntries(since: enqueuedLogPos).then(
+          (missing) => _replicateSnapshotChanges(missing),
+        );
+      }
+      return timestamp;
+    } catch (e) {
+      logger.error('error performing snapshot: $e');
+      rethrow;
+    } finally {
+      _performingSnapshot = false;
     }
-    _performingSnapshot = false;
-    return timestamp;
   }
 
   Future<void> _notifyChanges(List<OplogEntry> results) async {
