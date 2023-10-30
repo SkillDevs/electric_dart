@@ -12,6 +12,9 @@ test_only:
 test_client_only:
 	${LUX} --junit tests/03*
 
+test_only_custom:
+	${LUX} --junit ${TEST}
+
 test: deps pull test_only
 
 pull:

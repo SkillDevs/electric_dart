@@ -33,8 +33,10 @@ cp -r "$DART_E2E_BAK"/satellite_client "$SATELLITE_CLIENT_PATH"
 
 # Restore lux config
 cp -rf "$DART_E2E_BAK"/lux e2e/lux
-# Resotore electric clone
+# Restore electric clone
 cp -rf "$DART_E2E_BAK"/electric_repo e2e/electric_repo
+# Restore run_client_e2e_with_retries.sh
+cp "$DART_E2E_BAK"/run_client_e2e_with_retries.sh e2e
 
 pushd "$ROOT_DIR/e2e"
 # Apply patch ignoring first level from the diff (electric and dart subfolders)

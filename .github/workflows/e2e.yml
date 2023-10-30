@@ -91,7 +91,8 @@ jobs:
       
       # Avoid e2e flakiness by running only the Dart client e2e tests
       # We assume that the electric service e2e tests work on upstream
-      - run: make test_client_only
+      # Tests are flaky on GHA, so we have a custom wrapper script that retries them
+      - run: ./run_client_e2e_with_retries.sh
         id: tests
         env:
           ELECTRIC_IMAGE_NAME: electric-sql-ci/electric
