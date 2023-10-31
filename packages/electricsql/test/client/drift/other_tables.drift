@@ -1,0 +1,6 @@
+import 'package:electricsql/drivers/drift.dart';
+
+CREATE TABLE table_from_drift_file (
+    id TEXT NOT NULL PRIMARY KEY,
+    timestamp `ElectricTypes.timestampTZ` NOT NULL
+);

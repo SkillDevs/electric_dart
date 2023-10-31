@@ -240,4 +240,26 @@ void main() async {
 
     expect(rowsRecords, expected);
   });
+
+  test('drift files serialization/deserialization', () async {
+    final date = DateTime.parse('2023-08-07 18:28:35.421+02');
+
+    final res = await db.tableFromDriftFile.insertReturning(
+      TableFromDriftFileCompanion.insert(
+        id: 'abc',
+        timestamp: date,
+      ),
+    );
+
+    expect(res.timestamp, date);
+
+    final rawRes1 = await db.customSelect(
+      'SELECT timestamp FROM table_from_drift_file WHERE id = ?',
+      variables: [const Variable('abc')],
+    ).get();
+    expect(
+      rawRes1[0].read<String>('timestamp'),
+      '2023-08-07 16:28:35.421Z',
+    );
+  });
 }
