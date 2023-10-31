@@ -22,8 +22,7 @@ Future<ClientDatabase> makeDb(String dbPath) async {
   return db;
 }
 
-Future<MyDriftElectricClient> electrifyDb(
-    ClientDatabase db, String host, int port, List<dynamic> migrationsJ) async {
+Future<MyDriftElectricClient> electrifyDb(ClientDatabase db, String host, int port, List<dynamic> migrationsJ) async {
   final config = ElectricConfig(
     url: "electric://$host:$port",
     logger: LoggerConfig(level: Level.debug, colored: false),
@@ -38,11 +37,12 @@ Future<MyDriftElectricClient> electrifyDb(
     db: db,
     migrations: migrations,
     config: config,
+    tablesWithUser: {},
   );
 
   result.notifier.subscribeToConnectivityStateChanges(
-    (ConnectivityStateChangeNotification x) => print(
-        "Connectivity state changed (${x.dbName}, ${x.connectivityState})"),
+    (ConnectivityStateChangeNotification x) =>
+        print("Connectivity state changed (${x.dbName}, ${x.connectivityState})"),
   );
 
   return result;
@@ -80,9 +80,7 @@ Future<void> syncTable(DriftElectricClient electric, String table) async {
 }
 
 Future<Rows> getTables(DriftElectricClient electric) async {
-  final rows = await electric.db
-      .customSelect("SELECT name FROM sqlite_master WHERE type='table';")
-      .get();
+  final rows = await electric.db.customSelect("SELECT name FROM sqlite_master WHERE type='table';").get();
   return _toRows(rows);
 }
 
@@ -108,8 +106,7 @@ Future<void> getTimestamps(MyDriftElectricClient electric) async {
   //await electric.db.timestamps.findMany();
 }
 
-Future<void> writeTimestamp(
-    MyDriftElectricClient electric, Map<String, Object?> timestampMap) async {
+Future<void> writeTimestamp(MyDriftElectricClient electric, Map<String, Object?> timestampMap) async {
   final companion = TimestampsCompanion.insert(
     id: timestampMap['id'] as String,
     createdAt: DateTime.parse(timestampMap['created_at'] as String),
@@ -118,8 +115,7 @@ Future<void> writeTimestamp(
   await electric.db.timestamps.insert().insert(companion);
 }
 
-Future<void> writeDatetime(
-    MyDriftElectricClient electric, Map<String, Object?> datetimeMap) async {
+Future<void> writeDatetime(MyDriftElectricClient electric, Map<String, Object?> datetimeMap) async {
   final companion = DatetimesCompanion.insert(
     id: datetimeMap['id'] as String,
     d: DateTime.parse(datetimeMap['d'] as String),
@@ -128,21 +124,15 @@ Future<void> writeDatetime(
   await electric.db.datetimes.insert().insert(companion);
 }
 
-Future<Timestamp?> getTimestamp(
-    MyDriftElectricClient electric, String id) async {
-  final timestamp = await (electric.db.timestamps.select()
-        ..where((tbl) => tbl.id.equals(id)))
-      .getSingleOrNull();
+Future<Timestamp?> getTimestamp(MyDriftElectricClient electric, String id) async {
+  final timestamp = await (electric.db.timestamps.select()..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   return timestamp;
 }
 
 Future<Datetime?> getDatetime(MyDriftElectricClient electric, String id) async {
-  final datetime = await (electric.db.datetimes.select()
-        ..where((tbl) => tbl.id.equals(id)))
-      .getSingleOrNull();
+  final datetime = await (electric.db.datetimes.select()..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
 
-  final rowJ = JsonEncoder.withIndent('  ')
-      .convert(toColumns(datetime)?.map((key, value) {
+  final rowJ = JsonEncoder.withIndent('  ').convert(toColumns(datetime)?.map((key, value) {
     final Object? effectiveValue;
     if (value is DateTime) {
       effectiveValue = value.toIso8601String();
@@ -156,42 +146,33 @@ Future<Datetime?> getDatetime(MyDriftElectricClient electric, String id) async {
   return datetime;
 }
 
-Future<bool> assertTimestamp(MyDriftElectricClient electric, String id,
-    String expectedCreatedAt, String expectedUpdatedAt) async {
+Future<bool> assertTimestamp(
+    MyDriftElectricClient electric, String id, String expectedCreatedAt, String expectedUpdatedAt) async {
   final timestamp = await getTimestamp(electric, id);
-  final matches =
-      checkTimestamp(timestamp, expectedCreatedAt, expectedUpdatedAt);
+  final matches = checkTimestamp(timestamp, expectedCreatedAt, expectedUpdatedAt);
   return matches;
 }
 
-Future<bool> assertDatetime(MyDriftElectricClient electric, String id,
-    String expectedDate, String expectedTime) async {
+Future<bool> assertDatetime(MyDriftElectricClient electric, String id, String expectedDate, String expectedTime) async {
   final datetime = await getDatetime(electric, id);
   final matches = checkDatetime(datetime, expectedDate, expectedTime);
   return matches;
 }
 
-bool checkTimestamp(
-    Timestamp? timestamp, String expectedCreatedAt, String expectedUpdatedAt) {
+bool checkTimestamp(Timestamp? timestamp, String expectedCreatedAt, String expectedUpdatedAt) {
   if (timestamp == null) return false;
 
-  return timestamp.createdAt.millisecondsSinceEpoch ==
-          DateTime.parse(expectedCreatedAt).millisecondsSinceEpoch &&
-      timestamp.updatedAt.millisecondsSinceEpoch ==
-          DateTime.parse(expectedUpdatedAt).millisecondsSinceEpoch;
+  return timestamp.createdAt.millisecondsSinceEpoch == DateTime.parse(expectedCreatedAt).millisecondsSinceEpoch &&
+      timestamp.updatedAt.millisecondsSinceEpoch == DateTime.parse(expectedUpdatedAt).millisecondsSinceEpoch;
 }
 
-bool checkDatetime(
-    Datetime? datetime, String expectedDate, String expectedTime) {
+bool checkDatetime(Datetime? datetime, String expectedDate, String expectedTime) {
   if (datetime == null) return false;
-  return datetime.d.millisecondsSinceEpoch ==
-          DateTime.parse(expectedDate).millisecondsSinceEpoch &&
-      datetime.t.millisecondsSinceEpoch ==
-          DateTime.parse(expectedTime).millisecondsSinceEpoch;
+  return datetime.d.millisecondsSinceEpoch == DateTime.parse(expectedDate).millisecondsSinceEpoch &&
+      datetime.t.millisecondsSinceEpoch == DateTime.parse(expectedTime).millisecondsSinceEpoch;
 }
 
-Future<SingleRow> writeBool(
-    MyDriftElectricClient electric, String id, bool b) async {
+Future<SingleRow> writeBool(MyDriftElectricClient electric, String id, bool b) async {
   final row = await electric.db.bools.insertReturning(
     BoolsCompanion.insert(
       id: id,
@@ -202,8 +183,7 @@ Future<SingleRow> writeBool(
 }
 
 Future<bool?> getBool(MyDriftElectricClient electric, String id) async {
-  final row = await (electric.db.bools.select()..where((t) => t.id.equals(id)))
-      .getSingle();
+  final row = await (electric.db.bools.select()..where((t) => t.id.equals(id))).getSingle();
   return row.b;
 }
 
@@ -231,8 +211,7 @@ Future<Rows> getItemIds(DriftElectricClient electric) async {
 }
 
 Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
-  final row = await (electric.db.uuids.select()..where((t) => t.id.equals(id)))
-      .getSingle();
+  final row = await (electric.db.uuids.select()..where((t) => t.id.equals(id))).getSingle();
   return SingleRow.fromItem(row);
 }
 
@@ -255,13 +234,11 @@ Future<SingleRow> writeUUID(MyDriftElectricClient electric, String id) async {
 }
 
 Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
-  final item = await (electric.db.ints.select()..where((t) => t.id.equals(id)))
-      .getSingle();
+  final item = await (electric.db.ints.select()..where((t) => t.id.equals(id))).getSingle();
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeInt(
-    MyDriftElectricClient electric, String id, int i2, int i4) async {
+Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int i2, int i4) async {
   final item = await electric.db.ints.insertReturning(
     IntsCompanion.insert(
       id: id,
@@ -273,14 +250,11 @@ Future<SingleRow> writeInt(
 }
 
 Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
-  final item = await (electric.db.floats.select()
-        ..where((t) => t.id.equals(id)))
-      .getSingle();
+  final item = await (electric.db.floats.select()..where((t) => t.id.equals(id))).getSingle();
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeFloat(
-    MyDriftElectricClient electric, String id, double f8) async {
+Future<SingleRow> writeFloat(MyDriftElectricClient electric, String id, double f8) async {
   final item = await electric.db.floats.insertReturning(
     FloatsCompanion.insert(
       id: id,
@@ -290,8 +264,7 @@ Future<SingleRow> writeFloat(
   return SingleRow.fromItem(item);
 }
 
-Future<Rows> getItemColumns(
-    DriftElectricClient electric, String table, String column) async {
+Future<Rows> getItemColumns(DriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
       .customSelect(
         "SELECT $column FROM $table;",
@@ -370,8 +343,7 @@ Future<Rows> getOtherItems(DriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<void> insertOtherItem(
-    DriftElectricClient electric, List<String> keys) async {
+Future<void> insertOtherItem(DriftElectricClient electric, List<String> keys) async {
   await electric.db.customInsert(
     "INSERT INTO items(id, content) VALUES (?,?);",
     variables: [

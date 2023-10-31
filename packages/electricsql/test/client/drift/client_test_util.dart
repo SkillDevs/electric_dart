@@ -5,8 +5,7 @@ import 'package:electricsql/src/satellite/mock.dart';
 
 import 'database.dart';
 
-Future<DriftElectricClient<DB>>
-    electrifyTestDatabase<DB extends DatabaseConnectionUser>(DB db) async {
+Future<DriftElectricClient<DB>> electrifyTestDatabase<DB extends DatabaseConnectionUser>(DB db) async {
   final electric = await electrify(
     dbName: 'test-db',
     db: db,
@@ -15,6 +14,7 @@ Future<DriftElectricClient<DB>>
     opts: ElectrifyOptions(
       registry: MockRegistry(),
     ),
+    tablesWithUser: {},
   );
 
   // Sync all shapes such that we don't get warnings on every query
