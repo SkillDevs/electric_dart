@@ -1,4 +1,5 @@
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
@@ -8,6 +9,7 @@ abstract interface class ElectricClient {
   // ElectricNamespace methods
   DatabaseAdapter get adapter;
   Notifier get notifier;
+  DBSchema get dbDescription;
 
   bool get isConnected;
 
@@ -31,8 +33,12 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
   @protected
   final IShapeManager shapeManager;
 
+  @override
+  final DBSchema dbDescription;
+
   factory ElectricClientImpl.create({
     required DatabaseAdapter adapter,
+    required DBSchema dbDescription,
     required Notifier notifier,
     required Satellite satellite,
   }) {
@@ -43,6 +49,7 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
       notifier: notifier,
       satellite: satellite,
       shapeManager: shapeManager,
+      dbDescription: dbDescription,
     );
   }
 
@@ -52,6 +59,7 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
     required super.notifier,
     required this.satellite,
     required this.shapeManager,
+    required this.dbDescription,
   }) : super();
 
   @override

@@ -3,7 +3,11 @@ import 'dart:io';
 
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/src/client/conversions/types.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
+import 'package:electricsql/src/migrators/schema.dart';
+import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -17,6 +21,24 @@ import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 import '../util/sqlite.dart';
+
+DBSchema kTestDbDescription = DBSchemaRaw(
+  fields: {
+    'child': {
+      'id': PgType.integer,
+      'parent': PgType.integer,
+    },
+    'parent': {
+      'id': PgType.integer,
+      'value': PgType.text,
+      'other': PgType.integer,
+    },
+    'another': {
+      'id': PgType.integer,
+    },
+  },
+  migrations: [],
+);
 
 Map<String, Relation> kTestRelations = {
   'child': Relation(
@@ -76,6 +98,58 @@ Map<String, Relation> kTestRelations = {
         type: 'INTEGER',
         isNullable: false,
         primaryKey: true,
+      ),
+    ],
+  ),
+  'floatTable': Relation(
+    id: 3,
+    schema: 'public',
+    table: 'floatTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'id',
+        type: 'INTEGER',
+        isNullable: false,
+        primaryKey: true,
+      ),
+      RelationColumn(
+        name: 'value',
+        type: 'REAL',
+        isNullable: true,
+        primaryKey: false,
+      ),
+    ],
+  ),
+  'personTable': Relation(
+    id: 4,
+    schema: 'public',
+    table: 'personTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'id',
+        type: 'REAL',
+        isNullable: false,
+        primaryKey: true,
+      ),
+      RelationColumn(
+        name: 'name',
+        type: 'TEXT',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'age',
+        type: 'INTEGER',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'bmi',
+        type: 'REAL',
+        isNullable: true,
+        primaryKey: false,
       ),
     ],
   ),
@@ -165,12 +239,57 @@ class SatelliteTestContext {
   }
 
   Future<void> clean() async {
-    await removeFile(dbName);
-    await removeFile('$dbName-journal');
+    await _clean(dbName);
   }
 
   Future<void> cleanAndStopSatellite() async {
-    await satellite.stop();
-    await clean();
+    await cleanAndStopSatelliteRaw(dbName: dbName, satellite: satellite);
   }
 }
+
+Future<void> cleanAndStopSatelliteRaw({
+  required DbName dbName,
+  required SatelliteProcess satellite,
+}) async {
+  await satellite.stop();
+  await _clean(dbName);
+}
+
+Future<void> _clean(DbName dbName) async {
+  await removeFile(dbName);
+  await removeFile('$dbName-journal');
+}
+
+void migrateDb(Database db, Table table) {
+  final tableName = table.tableName;
+  // Create the table in the database
+  final createTableSQL =
+      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL)';
+  db.execute(createTableSQL);
+
+  // Apply the initial migration on the database
+  final migration = kBaseMigrations[0].statements;
+  for (final stmt in migration) {
+    db.execute(stmt);
+  }
+  final triggers = generateTableTriggers(tableName, table);
+
+  // Apply the triggers on the database
+  for (final trigger in triggers) {
+    db.execute(trigger.sql);
+  }
+}
+
+final kPersonTable = Table(
+  namespace: 'main',
+  tableName: 'personTable',
+  columns: ['id', 'name', 'age', 'bmi'],
+  primary: ['id'],
+  foreignKeys: [],
+  columnTypes: {
+    'id': 'REAL',
+    'name': 'TEXT',
+    'age': 'INTEGER',
+    'bmi': 'REAL',
+  },
+);

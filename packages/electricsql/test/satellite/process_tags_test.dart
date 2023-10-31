@@ -8,7 +8,7 @@ import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
-import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:sqlite3/sqlite3.dart';

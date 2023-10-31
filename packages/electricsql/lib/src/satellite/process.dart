@@ -5,12 +5,12 @@ import 'package:collection/collection.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
-import 'package:electricsql/src/migrators/bundle.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/proto/satellite.pbenum.dart';
 import 'package:electricsql/src/satellite/config.dart';
+import 'package:electricsql/src/satellite/error.dart';
 import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
@@ -19,7 +19,10 @@ import 'package:electricsql/src/satellite/shapes/shapes.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/src/util/js_array_funs.dart';
+import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
@@ -45,14 +48,13 @@ typedef SubscriptionNotifier = ({
 typedef ConnectRetryHandler = bool Function(Object error, int attempt);
 
 // ignore: prefer_function_declarations_over_variables
-final ConnectRetryHandler defaultConnectRetryHandler = (_error, _attempts) {
-  // for simplicity, always retry
+final ConnectRetryHandler defaultConnectRetryHandler = (error, _attempts) {
+  if (error is! SatelliteException || isThrowable(error) || isFatal(error)) {
+    logger.debug('connectAndStartRetryHandler was cancelled: $error');
+    return false;
+  }
   return true;
 };
-
-const connectionRetryPolicy = ConnectionRetryPolicy();
-
-const throwErrors = {SatelliteErrorCode.internal};
 
 class SatelliteProcess implements Satellite {
   @override
@@ -94,6 +96,7 @@ class SatelliteProcess implements Satellite {
 
   RelationsCache relations = {};
 
+  final List<ClientShapeDefinition> previousShapeSubscriptions = [];
   late SubscriptionsManager subscriptions;
   final Map<String, Completer<void>> subscriptionNotifiers = {};
   late String Function() subscriptionIdGenerator;
@@ -151,6 +154,10 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+    final sqliteVersionRow =
+        await adapter.query(Statement('SELECT sqlite_version() AS version'));
+    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
+
     await migrator.up();
 
     final isVerified = await _verifyTableStructure();
@@ -189,7 +196,7 @@ This means there is a notifier subscription leak.`''');
         // chance to handle the change before actually handling it internally in the process
         await Future<void>.delayed(Duration.zero);
 
-        await connectivityStateChanged(notification.connectivityState);
+        await handleConnectivityStateChange(notification.connectivityState);
       },
     );
 
@@ -223,8 +230,7 @@ This means there is a notifier subscription leak.`''');
       subscriptions.setState(subscriptionsState);
     }
 
-    final connectionFuture =
-        connectWithBackoff().then((_) => _startReplication());
+    final connectionFuture = connectWithBackoff();
     return ConnectionWrapper(
       connectionFuture: connectionFuture,
     );
@@ -310,7 +316,7 @@ This means there is a notifier subscription leak.`''');
       _potentialDataChangeSubscription = null;
     }
 
-    return connectivityStateChanged(ConnectivityState.disconnected);
+    _disconnect();
   }
 
   @override
@@ -523,16 +529,22 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  // maintains subscriptions
-  Future<List<ClientShapeDefinition>> _resetClientState() async {
-    await connectivityStateChanged(ConnectivityState.disconnected);
-
+  Future<void> _resetClientState({
+    bool keepSubscribedShapes = false,
+  }) async {
+    logger.warning('resetting client state');
+    _disconnect();
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
-    final List<ClientShapeDefinition> shapeDefs = subscriptionIds
-        .map((subId) => subscriptions.shapesForActiveSubscription(subId))
-        .whereNotNull()
-        .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
-        .toList();
+
+    if (keepSubscribedShapes) {
+      final List<ClientShapeDefinition> shapeDefs = subscriptionIds
+          .map((subId) => subscriptions.shapesForActiveSubscription(subId))
+          .whereNotNull()
+          .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
+          .toList();
+
+      previousShapeSubscriptions.addAll(shapeDefs);
+    }
 
     _lsn = null;
 
@@ -545,23 +557,6 @@ This means there is a notifier subscription leak.`''');
       _setMetaStatement('lsn', null),
       _setMetaStatement('subscriptions', subscriptions.serialize()),
     ]);
-
-    return shapeDefs;
-  }
-
-  Future<void> _reconnect(List<ClientShapeDefinition> shapeDefs) async {
-    logger.warning('reconnecting to server');
-    await connectWithBackoff();
-    await _startReplication();
-
-    if (shapeDefs.isNotEmpty) {
-      unawaited(subscribe(shapeDefs));
-    }
-  }
-
-  Future<void> _resetClientStateAndReconnect() async {
-    final shapes = await _resetClientState();
-    await _reconnect(shapes);
   }
 
   Future<void> _handleSubscriptionError(
@@ -597,7 +592,7 @@ This means there is a notifier subscription leak.`''');
       if (satelliteError.code == SatelliteErrorCode.authRequired) {
         // TODO: should stop retrying
         logger.warning(
-          'a fatal error occurred while initializing: ${satelliteError.message}',
+          'an authentication error occurred while connecting to server: ${satelliteError.message}',
         );
         return;
       }
@@ -610,31 +605,46 @@ This means there is a notifier subscription leak.`''');
       'an error occurred in satellite: ${satelliteError.message}',
     );
 
-    // all other errors are handled by closing the client (if not yet) and retrying
-    unawaited(
-      connectivityStateChanged(ConnectivityState.disconnected)
-          .then((_) => connectivityStateChanged(ConnectivityState.available)),
-    );
+    unawaited(_handleOrThrowClientError(satelliteError));
+  }
+
+  Future<void> _handleOrThrowClientError(SatelliteException error) {
+    _disconnect();
+
+    // TODO(dart): Should we handle this case? When can it happen?
+    /*  if (!error) {
+      final e = new SatelliteError(
+        SatelliteErrorCode.INTERNAL,
+        'received an error event without an error code'
+      )
+      throw wrapFatalError(e)
+    } */
+
+    if (isThrowable(error)) {
+      throw error;
+    }
+    if (isFatal(error)) {
+      throw wrapFatalError(error);
+    }
+
+    logger.warning('Client disconnected with a non fatal error, reconnecting');
+    return connectWithBackoff();
   }
 
   @visibleForTesting
-  Future<void> connectivityStateChanged(
+  Future<void> handleConnectivityStateChange(
     ConnectivityState status,
   ) async {
-    connectivityState = status;
-    logger.debug('connectivity state changed $status');
+    logger.debug('Connectivity state changed: $status');
 
-    // TODO: no op if state is the same
     switch (status) {
       case ConnectivityState.available:
         {
           logger.warning('checking network availability and reconnecting');
-          return connectWithBackoff().then((_) => _startReplication());
+          return connectWithBackoff();
         }
-      case ConnectivityState.error:
       case ConnectivityState.disconnected:
         {
-          logger.warning('client disconnected from server');
           client.close();
           return;
         }
@@ -649,7 +659,6 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  // we might just move starting replication into the retrier, which might be more simple to manage
   @visibleForTesting
   Future<void> connectWithBackoff() async {
     final _initializing = initializing;
@@ -659,8 +668,14 @@ This means there is a notifier subscription leak.`''');
 
     Future<void> _attemptBody() async {
       await _connect();
+      await _startReplication();
+      _subscribePreviousShapeRequests();
+
+      _notifyConnectivityState(ConnectivityState.connected);
+      initializing?.complete();
     }
 
+    final backoffOpts = opts.connectionBackoffOptions;
     int retryAttempt = 0;
     try {
       await retry_lib.retry(
@@ -668,9 +683,10 @@ This means there is a notifier subscription leak.`''');
           retryAttempt++;
           return _attemptBody();
         },
-        maxAttempts: connectionRetryPolicy.numOfAttempts,
-        maxDelay: connectionRetryPolicy.maxDelay,
-        delayFactor: connectionRetryPolicy.startingDelay,
+        maxAttempts: backoffOpts.numOfAttempts,
+        maxDelay: backoffOpts.maxDelay,
+        delayFactor: backoffOpts.startingDelay,
+        randomizationFactor: backoffOpts.randomizationFactor,
         retryIf: (e) {
           return connectRetryHandler(e, retryAttempt);
         },
@@ -679,17 +695,34 @@ This means there is a notifier subscription leak.`''');
       // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 
-      final error = SatelliteException(
-        SatelliteErrorCode.connectionFailedAfterRetry,
-        'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
-      );
+      final error = !connectRetryHandler(e, 0)
+          ? e
+          : SatelliteException(
+              SatelliteErrorCode.connectionFailedAfterRetry,
+              'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
+            );
 
-      initializing?.completeError(e);
-      notifier.connectivityStateChanged(
-        dbName,
-        ConnectivityState.disconnected,
-      );
+      _disconnect();
+      initializing?.completeError(error);
       throw error;
+    }
+  }
+
+  void _subscribePreviousShapeRequests() {
+    try {
+      if (previousShapeSubscriptions.isNotEmpty) {
+        logger.warning('Subscribing previous shape definitions');
+        subscribe(
+          previousShapeSubscriptions.splice(
+            0,
+            previousShapeSubscriptions.length,
+          ),
+        );
+      }
+    } catch (error) {
+      final message =
+          'Client was unable to subscribe previously subscribed shapes: $error';
+      throw SatelliteException(SatelliteErrorCode.internal, message);
     }
   }
 
@@ -718,6 +751,11 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
+  void _disconnect() {
+    client.close();
+    _notifyConnectivityState(ConnectivityState.disconnected);
+  }
+
   Future<void> _startReplication() async {
     try {
       final schemaVersion = await migrator.querySchemaVersion();
@@ -733,52 +771,35 @@ This means there is a notifier subscription leak.`''');
         subscriptionIds.isNotEmpty ? subscriptionIds : null,
       );
       if (error != null) {
-        if ((error.code == SatelliteErrorCode.invalidPosition ||
-                error.code == SatelliteErrorCode.behindWindow ||
-                error.code == SatelliteErrorCode.subscriptionNotFound) &&
-            opts.clearOnBehindWindow) {
-          logger.warning(
-            'server error: ${error.message}. resetting client state and retrying connection',
-          );
-          // restart reconnection loop
-          return await _resetClientStateAndReconnect();
-        }
         throw error;
       }
-
-      notifier.connectivityStateChanged(dbName, ConnectivityState.connected);
-      initializing?.complete();
     } catch (error) {
-      if (error is SatelliteException &&
-          error.code == SatelliteErrorCode.unknownSchemaVersion) {
-        logger.warning(kSchemaVersionErrorMsg);
+      logger.warning("Couldn't start replication: $error");
 
-        // FIXME: I think at this point it's clear the client needs to be re-generated
-        initializing?.completeError(
-          SatelliteException(error.code, kSchemaVersionErrorMsg),
-        );
-        notifier.connectivityStateChanged(
-          dbName,
-          ConnectivityState.disconnected,
-        );
-        return;
-      } else {
-        initializing?.completeError(error);
-        if (error is! SatelliteException) {
-          rethrow;
-        }
-        if (throwErrors.contains(error.code)) {
-          rethrow;
-        }
-
-        logger.warning(
-          "Couldn't start replication with reason: ${error.message}. resetting client state and retrying",
-        );
-        return _resetClientStateAndReconnect();
+      if (error is! SatelliteException) {
+        throw SatelliteException(SatelliteErrorCode.internal, error.toString());
       }
-    } finally {
-      initializing = null;
+
+      if (isOutOfSyncError(error) && opts.clearOnBehindWindow) {
+        await _resetClientState(keepSubscribedShapes: true);
+        rethrow;
+      }
+
+      // Some errors could be fixed by dropping local database entirely
+      // We propagate throwable and fatal errors for the app to decide
+      if (isThrowable(error)) {
+        rethrow;
+      }
+
+      if (isFatal(error)) {
+        throw wrapFatalError(error);
+      }
     }
+  }
+
+  void _notifyConnectivityState(ConnectivityState connectivityState) {
+    this.connectivityState = connectivityState;
+    notifier.connectivityStateChanged(dbName, this.connectivityState!);
   }
 
   Future<bool> _verifyTableStructure() async {
@@ -814,8 +835,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   // Perform a snapshot and notify which data actually changed.
-  // It is not safe to call this function concurrently. Consider
-  // using a wrapped version
+  // It is not safe to call concurrently. Use mutexSnapshot.
   @visibleForTesting
   Future<DateTime> performSnapshot() async {
     // assert a single call at a time
@@ -828,12 +848,13 @@ This means there is a notifier subscription leak.`''');
       _performingSnapshot = true;
     }
 
-    final oplog = opts.oplogTable;
-    final shadow = opts.shadowTable;
-    final timestamp = DateTime.now();
-    final newTag = _generateTag(timestamp);
+    try {
+      final oplog = opts.oplogTable;
+      final shadow = opts.shadowTable;
+      final timestamp = DateTime.now();
+      final newTag = _generateTag(timestamp);
 
-    /*
+      /*
      * IMPORTANT!
      *
      * The following queries make use of a documented but rare SQLite behaviour that allows selecting bare column
@@ -845,9 +866,9 @@ This means there is a notifier subscription leak.`''');
      * oplog that touch a particular row.
      */
 
-    // Update the timestamps on all "new" entries - they have been added but timestamp is still `NULL`
-    final q1 = Statement(
-      '''
+      // Update the timestamps on all "new" entries - they have been added but timestamp is still `NULL`
+      final q1 = Statement(
+        '''
       UPDATE $oplog SET timestamp = ?
       WHERE rowid in (
         SELECT rowid FROM $oplog
@@ -856,12 +877,12 @@ This means there is a notifier subscription leak.`''');
         )
       RETURNING *
     ''',
-      [timestamp.toISOStringUTC()],
-    );
+        [timestamp.toISOStringUTC()],
+      );
 
-    // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
-    final q2 = Statement(
-      '''
+      // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
+      final q2 = Statement(
+        '''
       UPDATE $oplog
       SET clearTags = updates.tags
       FROM (
@@ -876,12 +897,12 @@ This means there is a notifier subscription leak.`''');
       ) AS updates
       WHERE updates.op_rowid = $oplog.rowid
     ''',
-      [timestamp.toISOStringUTC()],
-    );
+        [timestamp.toISOStringUTC()],
+      );
 
-    // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
-    final q3 = Statement(
-      '''
+      // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
+      final q3 = Statement(
+        '''
       INSERT OR REPLACE INTO $shadow (namespace, tablename, primaryKey, tags)
       SELECT namespace, tablename, primaryKey, ?
         FROM $oplog AS op
@@ -889,17 +910,17 @@ This means there is a notifier subscription leak.`''');
         GROUP BY namespace, tablename, primaryKey
         HAVING rowid = max(rowid) AND optype != 'DELETE'
     ''',
-      [
-        encodeTags([newTag]),
-        timestamp.toISOStringUTC(),
-      ],
-    );
+        [
+          encodeTags([newTag]),
+          timestamp.toISOStringUTC(),
+        ],
+      );
 
-    // And finally delete any shadow rows where the last oplog operation was a `DELETE`
-    // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on
-    // re-executing a query per every row in shadow table, but uses a PK join instead.
-    final q4 = Statement(
-      '''
+      // And finally delete any shadow rows where the last oplog operation was a `DELETE`
+      // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on
+      // re-executing a query per every row in shadow table, but uses a PK join instead.
+      final q4 = Statement(
+        '''
       WITH _to_be_deleted (rowid) AS (
         SELECT shadow.rowid
           FROM $oplog AS op
@@ -913,46 +934,51 @@ This means there is a notifier subscription leak.`''');
       DELETE FROM $shadow
       WHERE rowid IN _to_be_deleted
     ''',
-      [timestamp.toISOStringUTC()],
-    );
-
-    // Execute the four queries above in a transaction, returning the results from the first query
-    // We're dropping down to this transaction interface because `runInTransaction` doesn't allow queries
-    final oplogEntries =
-        await adapter.transaction<List<OplogEntry>>((tx, setResult) {
-      tx.query(q1, (tx, res) {
-        if (res.isNotEmpty) {
-          tx.run(
-            q2,
-            (tx, _) => tx.run(
-              q3,
-              (tx, _) => tx.run(
-                q4,
-                (_, __) => setResult(res.map(_opLogEntryFromRow).toList()),
-              ),
-            ),
-          );
-        } else {
-          setResult([]);
-        }
-      });
-    });
-
-    if (oplogEntries.isNotEmpty) {
-      unawaited(_notifyChanges(oplogEntries));
-    }
-
-    if (!client.isClosed()) {
-      final enqueued = client.getLastSentLsn();
-      final enqueuedLogPos = bytesToNumber(enqueued);
-
-      // TODO: handle case where pending oplog is large
-      await getEntries(since: enqueuedLogPos).then(
-        (missing) => _replicateSnapshotChanges(missing),
+        [timestamp.toISOStringUTC()],
       );
+
+      // Execute the four queries above in a transaction, returning the results from the first query
+      // We're dropping down to this transaction interface because `runInTransaction` doesn't allow queries
+      final oplogEntries =
+          await adapter.transaction<List<OplogEntry>>((tx, setResult) {
+        tx.query(q1, (tx, res) {
+          if (res.isNotEmpty) {
+            tx.run(
+              q2,
+              (tx, _) => tx.run(
+                q3,
+                (tx, _) => tx.run(
+                  q4,
+                  (_, __) => setResult(res.map(opLogEntryFromRow).toList()),
+                ),
+              ),
+            );
+          } else {
+            setResult([]);
+          }
+        });
+      });
+
+      if (oplogEntries.isNotEmpty) {
+        unawaited(_notifyChanges(oplogEntries));
+      }
+
+      if (!client.isClosed()) {
+        final enqueued = client.getLastSentLsn();
+        final enqueuedLogPos = bytesToNumber(enqueued);
+
+        // TODO: handle case where pending oplog is large
+        await getEntries(since: enqueuedLogPos).then(
+          (missing) => _replicateSnapshotChanges(missing),
+        );
+      }
+      return timestamp;
+    } catch (e) {
+      logger.error('error performing snapshot: $e');
+      rethrow;
+    } finally {
+      _performingSnapshot = false;
     }
-    _performingSnapshot = false;
-    return timestamp;
   }
 
   Future<void> _notifyChanges(List<OplogEntry> results) async {
@@ -1015,8 +1041,13 @@ This means there is a notifier subscription leak.`''');
     String incomingOrigin,
   ) async {
     final local = await getEntries();
-    final merged =
-        mergeEntries(authState!.clientId, local, incomingOrigin, incoming);
+    final merged = mergeEntries(
+      authState!.clientId,
+      local,
+      incomingOrigin,
+      incoming,
+      relations,
+    );
 
     final List<Statement> stmts = [];
 
@@ -1063,7 +1094,7 @@ This means there is a notifier subscription leak.`''');
         ORDER BY rowid ASC
     ''';
     final rows = await adapter.query(Statement(selectEntries, [since]));
-    return rows.map(_opLogEntryFromRow).toList();
+    return rows.map(opLogEntryFromRow).toList();
   }
 
   Statement _deleteShadowTagsStatement(ShadowEntry shadow) {
@@ -1355,65 +1386,9 @@ This means there is a notifier subscription leak.`''');
     return clientId;
   }
 
-  Future<List<({String name})>> _getLocalTableNames() async {
-    final notIn = <String>[
-      opts.metaTable.tablename,
-      opts.migrationsTable.tablename,
-      opts.oplogTable.tablename,
-      opts.triggersTable.tablename,
-      opts.shadowTable.tablename,
-      'sqlite_schema',
-      'sqlite_sequence',
-      'sqlite_temp_schema',
-    ];
-
-    final tables = '''
-      SELECT name FROM sqlite_master
-        WHERE type = 'table'
-          AND name NOT IN (${notIn.map((_) => '?').join(',')})
-    ''';
-    final tableNames = await adapter.query(Statement(tables, notIn));
-    return tableNames.map((row) => (name: row['name']! as String)).toList();
-  }
-
-  // Fetch primary keys from local store and use them to identify incoming ops.
-  // TODO: Improve this code once with Migrator and consider simplifying oplog.
   @visibleForTesting
   Future<RelationsCache> getLocalRelations() async {
-    final tableNames = await _getLocalTableNames();
-    final RelationsCache relations = {};
-
-    int id = 0;
-    const schema = 'public'; // TODO
-    for (final table in tableNames) {
-      final tableName = table.name;
-      const sql = 'SELECT * FROM pragma_table_info(?)';
-      final args = [tableName];
-      final columnsForTable = await adapter.query(Statement(sql, args));
-      if (columnsForTable.isEmpty) {
-        continue;
-      }
-      final Relation relation = Relation(
-        id: id++,
-        schema: schema,
-        table: tableName,
-        tableType: SatRelation_RelationType.TABLE,
-        columns: [],
-      );
-      for (final c in columnsForTable) {
-        relation.columns.add(
-          RelationColumn(
-            name: c['name']! as String,
-            type: c['type']! as String,
-            isNullable: (c['notnull']! as int) == 0,
-            primaryKey: (c['pk']! as int) > 0,
-          ),
-        );
-      }
-      relations[tableName] = relation;
-    }
-
-    return relations;
+    return inferRelationsFromSQLite(adapter, opts);
   }
 
   String _generateTag(DateTime timestamp) {
@@ -1568,6 +1543,11 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
         parentKey: fk.pkCols[0],
       );
     }).toList(),
+    columnTypes: Map.fromEntries(
+      tbl.columns.map(
+        (col) => MapEntry(col.name, col.sqliteType.toUpperCase()),
+      ),
+    ),
   );
   final fullTableName = '${table.namespace}.${table.tableName}';
   return generateTableTriggers(fullTableName, table);
@@ -1587,7 +1567,8 @@ class ShadowEntryLookup {
   ShadowEntryLookup({required this.cached, required this.entry});
 }
 
-OplogEntry _opLogEntryFromRow(Map<String, Object?> row) {
+@visibleForTesting
+OplogEntry opLogEntryFromRow(Map<String, Object?> row) {
   return OplogEntry(
     namespace: row['namespace']! as String,
     tablename: row['tablename']! as String,
@@ -1608,17 +1589,5 @@ class ApplyIncomingResult {
   ApplyIncomingResult({
     required this.tableNames,
     required this.statements,
-  });
-}
-
-class ConnectionRetryPolicy {
-  final int numOfAttempts;
-  final Duration startingDelay;
-  final Duration maxDelay;
-
-  const ConnectionRetryPolicy({
-    this.numOfAttempts = 100,
-    this.startingDelay = const Duration(milliseconds: 100),
-    this.maxDelay = const Duration(milliseconds: 5000),
   });
 }

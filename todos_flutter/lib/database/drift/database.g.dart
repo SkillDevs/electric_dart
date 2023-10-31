@@ -24,22 +24,29 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   late final GeneratedColumn<String> textCol = GeneratedColumn<String>(
       'text', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _editedAtMeta =
+      const VerificationMeta('editedAt');
+  @override
+  late final GeneratedColumn<DateTime> editedAt = GeneratedColumn<DateTime>(
+      'edited_at', aliasedName, false,
+      type: ElectricTypes.timestampTZ, requiredDuringInsert: true);
   static const VerificationMeta _completedMeta =
       const VerificationMeta('completed');
   @override
   late final GeneratedColumn<bool> completed = GeneratedColumn<bool>(
       'completed', aliasedName, false,
       type: DriftSqlType.bool,
-      requiredDuringInsert: false,
+      requiredDuringInsert: true,
       defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("completed" IN (0, 1))'),
-      defaultValue: const Constant(false));
+          GeneratedColumn.constraintIsAlways('CHECK ("completed" IN (0, 1))'));
   @override
-  List<GeneratedColumn> get $columns => [id, listid, textCol, completed];
+  List<GeneratedColumn> get $columns =>
+      [id, listid, textCol, editedAt, completed];
   @override
-  String get aliasedName => _alias ?? 'todo';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'todo';
+  String get actualTableName => $name;
+  static const String $name = 'todo';
   @override
   VerificationContext validateIntegrity(Insertable<Todo> instance,
       {bool isInserting = false}) {
@@ -58,9 +65,17 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
       context.handle(_textColMeta,
           textCol.isAcceptableOrUnknown(data['text']!, _textColMeta));
     }
+    if (data.containsKey('edited_at')) {
+      context.handle(_editedAtMeta,
+          editedAt.isAcceptableOrUnknown(data['edited_at']!, _editedAtMeta));
+    } else if (isInserting) {
+      context.missing(_editedAtMeta);
+    }
     if (data.containsKey('completed')) {
       context.handle(_completedMeta,
           completed.isAcceptableOrUnknown(data['completed']!, _completedMeta));
+    } else if (isInserting) {
+      context.missing(_completedMeta);
     }
     return context;
   }
@@ -77,6 +92,8 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
           .read(DriftSqlType.string, data['${effectivePrefix}listid']),
       textCol: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}text']),
+      editedAt: attachedDatabase.typeMapping.read(
+          ElectricTypes.timestampTZ, data['${effectivePrefix}edited_at'])!,
       completed: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}completed'])!,
     );
@@ -95,9 +112,14 @@ class Todo extends DataClass implements Insertable<Todo> {
   final String id;
   final String? listid;
   final String? textCol;
+  final DateTime editedAt;
   final bool completed;
   const Todo(
-      {required this.id, this.listid, this.textCol, required this.completed});
+      {required this.id,
+      this.listid,
+      this.textCol,
+      required this.editedAt,
+      required this.completed});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -108,6 +130,7 @@ class Todo extends DataClass implements Insertable<Todo> {
     if (!nullToAbsent || textCol != null) {
       map['text'] = Variable<String>(textCol);
     }
+    map['edited_at'] = Variable<DateTime>(editedAt);
     map['completed'] = Variable<bool>(completed);
     return map;
   }
@@ -120,6 +143,7 @@ class Todo extends DataClass implements Insertable<Todo> {
       textCol: textCol == null && nullToAbsent
           ? const Value.absent()
           : Value(textCol),
+      editedAt: Value(editedAt),
       completed: Value(completed),
     );
   }
@@ -131,6 +155,7 @@ class Todo extends DataClass implements Insertable<Todo> {
       id: serializer.fromJson<String>(json['id']),
       listid: serializer.fromJson<String?>(json['listid']),
       textCol: serializer.fromJson<String?>(json['textCol']),
+      editedAt: serializer.fromJson<DateTime>(json['editedAt']),
       completed: serializer.fromJson<bool>(json['completed']),
     );
   }
@@ -141,6 +166,7 @@ class Todo extends DataClass implements Insertable<Todo> {
       'id': serializer.toJson<String>(id),
       'listid': serializer.toJson<String?>(listid),
       'textCol': serializer.toJson<String?>(textCol),
+      'editedAt': serializer.toJson<DateTime>(editedAt),
       'completed': serializer.toJson<bool>(completed),
     };
   }
@@ -149,11 +175,13 @@ class Todo extends DataClass implements Insertable<Todo> {
           {String? id,
           Value<String?> listid = const Value.absent(),
           Value<String?> textCol = const Value.absent(),
+          DateTime? editedAt,
           bool? completed}) =>
       Todo(
         id: id ?? this.id,
         listid: listid.present ? listid.value : this.listid,
         textCol: textCol.present ? textCol.value : this.textCol,
+        editedAt: editedAt ?? this.editedAt,
         completed: completed ?? this.completed,
       );
   @override
@@ -162,13 +190,14 @@ class Todo extends DataClass implements Insertable<Todo> {
           ..write('id: $id, ')
           ..write('listid: $listid, ')
           ..write('textCol: $textCol, ')
+          ..write('editedAt: $editedAt, ')
           ..write('completed: $completed')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, listid, textCol, completed);
+  int get hashCode => Object.hash(id, listid, textCol, editedAt, completed);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -176,6 +205,7 @@ class Todo extends DataClass implements Insertable<Todo> {
           other.id == this.id &&
           other.listid == this.listid &&
           other.textCol == this.textCol &&
+          other.editedAt == this.editedAt &&
           other.completed == this.completed);
 }
 
@@ -183,29 +213,36 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   final Value<String> id;
   final Value<String?> listid;
   final Value<String?> textCol;
+  final Value<DateTime> editedAt;
   final Value<bool> completed;
   const TodosCompanion({
     this.id = const Value.absent(),
     this.listid = const Value.absent(),
     this.textCol = const Value.absent(),
+    this.editedAt = const Value.absent(),
     this.completed = const Value.absent(),
   });
   TodosCompanion.insert({
     required String id,
     this.listid = const Value.absent(),
     this.textCol = const Value.absent(),
-    this.completed = const Value.absent(),
-  }) : id = Value(id);
+    required DateTime editedAt,
+    required bool completed,
+  })  : id = Value(id),
+        editedAt = Value(editedAt),
+        completed = Value(completed);
   static Insertable<Todo> custom({
     Expression<String>? id,
     Expression<String>? listid,
     Expression<String>? textCol,
+    Expression<DateTime>? editedAt,
     Expression<bool>? completed,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (listid != null) 'listid': listid,
       if (textCol != null) 'text': textCol,
+      if (editedAt != null) 'edited_at': editedAt,
       if (completed != null) 'completed': completed,
     });
   }
@@ -214,11 +251,13 @@ class TodosCompanion extends UpdateCompanion<Todo> {
       {Value<String>? id,
       Value<String?>? listid,
       Value<String?>? textCol,
+      Value<DateTime>? editedAt,
       Value<bool>? completed}) {
     return TodosCompanion(
       id: id ?? this.id,
       listid: listid ?? this.listid,
       textCol: textCol ?? this.textCol,
+      editedAt: editedAt ?? this.editedAt,
       completed: completed ?? this.completed,
     );
   }
@@ -235,6 +274,10 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     if (textCol.present) {
       map['text'] = Variable<String>(textCol.value);
     }
+    if (editedAt.present) {
+      map['edited_at'] =
+          Variable<DateTime>(editedAt.value, ElectricTypes.timestampTZ);
+    }
     if (completed.present) {
       map['completed'] = Variable<bool>(completed.value);
     }
@@ -247,6 +290,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
           ..write('id: $id, ')
           ..write('listid: $listid, ')
           ..write('textCol: $textCol, ')
+          ..write('editedAt: $editedAt, ')
           ..write('completed: $completed')
           ..write(')'))
         .toString();
@@ -278,9 +322,10 @@ class $TodoListsTable extends TodoLists
   @override
   List<GeneratedColumn> get $columns => [id, filter, editing];
   @override
-  String get aliasedName => _alias ?? 'todolist';
+  String get aliasedName => _alias ?? actualTableName;
   @override
-  String get actualTableName => 'todolist';
+  String get actualTableName => $name;
+  static const String $name = 'todolist';
   @override
   VerificationContext validateIntegrity(Insertable<TodoList> instance,
       {bool isInserting = false}) {

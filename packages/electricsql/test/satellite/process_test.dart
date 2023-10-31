@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
     show SqliteAdapter;
+import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart' as adp
+    show Transaction;
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
@@ -207,7 +209,8 @@ void main() {
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
 
-    await satellite.start(authConfig);
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
 
     await Future<void>.delayed(opts.pollingInterval);
 
@@ -225,13 +228,14 @@ void main() {
     await Future<void>.delayed(opts.pollingInterval);
 
     // no txn notified
-    expect(notifier.notifications.length, 3);
+    expect(notifier.notifications.length, 4);
 
-    await satellite.start(authConfig);
-    await Future<void>.delayed(Duration.zero);
+    final conn1 = await satellite.start(authConfig);
+    await conn1.connectionFuture;
+    await Future<void>.delayed(opts.pollingInterval);
 
     // connect, 4th txn
-    expect(notifier.notifications.length, 5);
+    expect(notifier.notifications.length, 6);
   });
 
   test('snapshots on potential data change', () async {
@@ -265,9 +269,13 @@ void main() {
     final entries = await satellite.getEntries();
     final clientId = satellite.authState!.clientId;
 
-    final merged = localOperationsToTableChanges(entries, (DateTime timestamp) {
-      return generateTag(clientId, timestamp);
-    });
+    final merged = localOperationsToTableChanges(
+      entries,
+      (DateTime timestamp) {
+        return generateTag(clientId, timestamp);
+      },
+      kTestRelations,
+    );
     final opLogTableChange = merged['main.parent']!['{"id":1}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
@@ -306,7 +314,13 @@ void main() {
     final local = await satellite.getEntries();
     final localTimestamp =
         DateTime.parse(local[0].timestamp).millisecondsSinceEpoch;
-    final merged = mergeEntries(clientId, local, 'remote', [incomingEntry]);
+    final merged = mergeEntries(
+      clientId,
+      local,
+      'remote',
+      [incomingEntry],
+      kTestRelations,
+    );
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -371,7 +385,13 @@ void main() {
       oldValues: {},
     );
 
-    final merged = mergeEntries(clientId, local, 'remote', [incomingEntry]);
+    final merged = mergeEntries(
+      clientId,
+      local,
+      'remote',
+      [incomingEntry],
+      kTestRelations,
+    );
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -578,6 +598,10 @@ void main() {
       },
       oldValues: {},
     );
+
+    // satellite must be aware of the relations in order to deserialise oplog entries
+    satellite.relations = kTestRelations;
+
     await satellite.setAuthState(authState);
     await satellite.apply([incomingEntry], 'remote');
 
@@ -726,7 +750,8 @@ void main() {
       ),
     ];
 
-    final merged = mergeEntries(clientId, local, 'remote', incoming);
+    final merged =
+        mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -810,7 +835,8 @@ void main() {
       ),
     ];
 
-    final merged = mergeEntries(clientId, local, 'remote', incoming);
+    final merged =
+        mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
     final item = merged['main.parent']!['{"id":1}']!;
 
     // The incoming entry modified the value of the `value` column to `'remote'`
@@ -867,7 +893,8 @@ void main() {
     ];
 
     final local = <OplogEntry>[];
-    final merged = mergeEntries(clientId, local, 'remote', incoming);
+    final merged =
+        mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
     final item = merged['main.parent']!['{"id":1}'];
 
     expect(
@@ -1117,6 +1144,9 @@ void main() {
       ),
     ];
 
+    // satellite must be aware of the relations in order to deserialise oplog entries
+    satellite.relations = kTestRelations;
+
     // Should not throw
     await satellite.apply(incoming, 'remote');
   });
@@ -1251,7 +1281,8 @@ void main() {
     final sentLsn = satellite.client.getLastSentLsn();
     expect(sentLsn, numberToBytes(1));
 
-    await satellite.connectivityStateChanged(ConnectivityState.disconnected);
+    await satellite
+        .handleConnectivityStateChange(ConnectivityState.disconnected);
 
     await adapter.run(
       Statement(
@@ -1266,7 +1297,7 @@ void main() {
     expect(lsn1, sentLsn);
 
     // Once connectivity is restored, we will immediately run a snapshot to send pending rows
-    await satellite.connectivityStateChanged(ConnectivityState.available);
+    await satellite.handleConnectivityStateChange(ConnectivityState.available);
     // Wait for snapshot to run
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final lsn2 = satellite.client.getLastSentLsn();
@@ -1344,7 +1375,6 @@ void main() {
         conn.connectionFuture,
       ].map(
         (f) => f.onError<SatelliteException>((e, st) {
-          //console.log(`error ${e}`)
           numExpects++;
           expect(e.code, SatelliteErrorCode.internal);
         }),
@@ -1907,17 +1937,39 @@ void main() {
 
     expect(numExpects, 3);
   });
+
+  // check that performing snapshot doesn't throw without resetting the performing snapshot assertions
+  test('(regression) performSnapshot handles exceptions gracefully', () async {
+    await runMigrations();
+    await satellite.setAuthState(authState);
+
+    satellite.updateDatabaseAdapter(
+      ReplaceTxDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+    );
+
+    const error = 'FAKE TRANSACTION';
+
+    final customAdapter = satellite.adapter as ReplaceTxDatabaseAdapter;
+
+    customAdapter.customTxFun = (_) {
+      throw Exception(error);
+    };
+
+    try {
+      await satellite.performSnapshot();
+      fail('Should throw');
+    } on Exception catch (e) {
+      expect(e.toString(), 'Exception: $error');
+
+      // Restore default tx behavior
+      customAdapter.customTxFun = null;
+    }
+
+    await satellite.performSnapshot();
+
+    // Doesn't throw
+  });
 }
-
-// TODO: implement reconnect protocol
-
-// test('resume out of window clears subscriptions and clears oplog after ack', async (t) => {})
-
-// test('not possible to subscribe while oplog is not pushed', async (t) => {})
-
-// test('process restart loads previous subscriptions', async (t) => {})
-
-// test('oplog messages allowed between SatSubsRep and SatSubsDataBegin', async (t) => {})
 
 class SlowDatabaseAdapter extends SqliteAdapter {
   SlowDatabaseAdapter(
@@ -1931,5 +1983,26 @@ class SlowDatabaseAdapter extends SqliteAdapter {
   Future<RunResult> run(Statement statement) async {
     await Future<void>.delayed(delay);
     return super.run(statement);
+  }
+}
+
+typedef _TxFun<T> = Future<T> Function(
+  void Function(adp.Transaction tx, void Function(T res) setResult) f,
+);
+
+class ReplaceTxDatabaseAdapter extends SqliteAdapter {
+  ReplaceTxDatabaseAdapter(
+    super.db,
+  );
+
+  _TxFun<dynamic>? customTxFun;
+
+  @override
+  Future<T> transaction<T>(
+    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+  ) {
+    return customTxFun != null
+        ? (customTxFun! as _TxFun<T>).call(f)
+        : super.transaction(f);
   }
 }

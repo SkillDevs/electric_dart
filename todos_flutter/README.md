@@ -4,12 +4,24 @@ A new Flutter project.
 
 ## Prerequisites
 
-* Flutter 3.10.x
-* Postgres migrations tool - [go-migrate](https://github.com/golang-migrate/migrate/releases)
+* Flutter 3.13.x
+* Postgres migrations tool - [dbmate](https://github.com/amacneil/dbmate/releases)
 * Docker Compose - In order to run Electric locally
 
 
 ## Setup
+
+### 0. Prepare the project in the electric_dart monorepo.
+
+Because the example is running against local dependencies in the monorepo Melos is required to bootstrap the project correctly.
+
+```sh
+# Install melos
+dart pub global activate melos
+
+# Bootstrap the project
+melos bs
+```
 
 ### 1. Start backend
 
@@ -25,16 +37,16 @@ cd backend
 
 ### 2. Apply migrations in Postgres
 
-In this demo we used [go-migrate](https://github.com/golang-migrate/migrate) to apply the migrations automatically into Postgres.
+In this demo we used [dbmate](https://github.com/amacneil/dbmate) to apply the migrations automatically into Postgres.
 
 ```sh
 cd backend
-./apply_migrations.sh # Under the hood this runs `migrate` (go-migrate) as follows:
+./apply-migrations.sh # Under the hood this runs `dbmate` as follows:
 
 # > POSTGRES_URL="postgres://postgres:password@localhost:5432/{dbname}?sslmode=disable"
-# > migrate -path migrations -database "$POSTGRES_URL" up
-# 1/u create_todomvc (67.635257ms)
-# 2/u electrify_todos (361.353339ms)
+# > dbmate -d migrations -u "$POSTGRES_URL" up
+# Applying: 20230924100310_create_todo_list.sql
+# Applying: 20230924100404_create_todo.sql
 ```
 
 ### 3. Get Flutter packages
@@ -66,14 +78,14 @@ You can optionally tweak the `electrify` function in `lib/electric.dart` to chan
 
 ## Extra information about the migrations
 
-To create a new migration with go-migrate:
+To create a new migration with dbmate:
 ```sh
-migrate create -ext sql -dir migrations -seq <migration_name>
+dbmate -d migrations new <migration_name>
 ```
 
 To apply the migrations using the Postgres connection:
 ```sh
-migrate -path migrations -database "postgres://postgres:password@localhost:5432/electric?sslmode=disable" up
+dbmate -d migrations -u "postgres://postgres:proxy_password@localhost:65432/todos-electrified?sslmode=disable" up
 ```
 
 Every time the schema changes in Postgres, we need to update the client bundling the required migrations. You can do that following the next section, although in this example they have already been generated.

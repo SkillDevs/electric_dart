@@ -2,6 +2,7 @@ import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/schema.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/types.dart';
 
 const kElectricMigrationsTable = '_electric_migrations';
@@ -108,9 +109,20 @@ class BundleMigrator implements Migrator {
     List<StmtMigration> migrations,
     List<MigrationRecord> existing,
   ) async {
+    // `existing` migrations may contain migrations
+    // received at runtime that are not bundled in the app
+    // i.e. those are not present in `migrations`
+    // Thus, `existing` may be longer than `migrations`.
+    // So we should only compare a prefix of `existing`
+    // that has the same length as `migrations`
+
+    // take a slice of `existing` migrations
+    // that will be checked against `migrations`
+    final existingPrefix = existing.slice(0, migrations.length);
+
     // First we validate that the existing records are the first migrations.
-    for (var i = 0; i < existing.length; i++) {
-      final migrationRecord = existing[i];
+    for (var i = 0; i < existingPrefix.length; i++) {
+      final migrationRecord = existingPrefix[i];
       final version = migrationRecord.version;
 
       final migration = migrations[i];
@@ -124,9 +136,7 @@ class BundleMigrator implements Migrator {
     }
 
     // Then we can confidently slice and return the non-existing.
-    final localMigrations = [...migrations];
-    localMigrations.removeRange(0, existing.length);
-    return localMigrations;
+    return migrations.slice(existingPrefix.length);
   }
 
   @override

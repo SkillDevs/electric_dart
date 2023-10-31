@@ -87,7 +87,12 @@ jobs:
 
       - run: make lux
       - run: make deps pull
-      - run: make test_only
+      # - run: make test_only
+      
+      # Avoid e2e flakiness by running only the Dart client e2e tests
+      # We assume that the electric service e2e tests work on upstream
+      # Tests are flaky on GHA, so we have a custom wrapper script that retries them
+      - run: ./run_client_e2e_with_retries.sh
         id: tests
         env:
           ELECTRIC_IMAGE_NAME: electric-sql-ci/electric

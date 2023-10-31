@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:electricsql/satellite.dart';
+import 'package:collection/collection.dart';
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/sets.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -149,8 +151,8 @@ List<OplogEntry> fromTransaction(
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         transaction.commitTimestamp.toInt(),
       ).toISOStringUTC(), // TODO: check precision
-      newRow: t.record == null ? null : json.encode(t.record),
-      oldRow: t.oldRecord == null ? null : json.encode(t.oldRecord),
+      newRow: t.record == null ? null : serialiseRow(t.record!),
+      oldRow: t.oldRecord == null ? null : serialiseRow(t.oldRecord!),
       clearTags: encodeTags(t.tags),
     );
   }).toList();
@@ -198,18 +200,6 @@ List<DataTransaction> toTransactions(
   );
 }
 
-ShadowEntry newShadowEntry(OplogEntry oplogEntry) {
-  return ShadowEntry(
-    namespace: oplogEntry.namespace,
-    tablename: oplogEntry.tablename,
-    primaryKey: primaryKeyToStr(
-      (json.decode(oplogEntry.primaryKey) as Map<String, dynamic>)
-          .cast<String, Object>(),
-    ),
-    tags: shadowTagsDefault,
-  );
-}
-
 // Convert a list of `OplogEntry`s into a nested `OplogTableChanges` map of
 // `{tableName: {primaryKey: entryChanges}}` where the entryChanges has the
 // most recent `optype` and column `value`` from all of the operations.
@@ -218,12 +208,16 @@ ShadowEntry newShadowEntry(OplogEntry oplogEntry) {
 OplogTableChanges localOperationsToTableChanges(
   List<OplogEntry> operations,
   Tag Function(DateTime timestamp) genTag,
+  RelationsCache relations,
 ) {
   final OplogTableChanges initialValue = {};
 
   return operations.fold(initialValue, (acc, entry) {
-    final entryChanges =
-        localEntryToChanges(entry, genTag(DateTime.parse(entry.timestamp)));
+    final entryChanges = localEntryToChanges(
+      entry,
+      genTag(DateTime.parse(entry.timestamp)),
+      relations,
+    );
 
     // Sort for deterministic key generation.
     final primaryKeyStr = primaryKeyToStr(entryChanges.primaryKeyCols);
@@ -269,11 +263,14 @@ OplogTableChanges localOperationsToTableChanges(
   });
 }
 
-PendingChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
+PendingChanges remoteOperationsToTableChanges(
+  List<OplogEntry> operations,
+  RelationsCache relations,
+) {
   final PendingChanges initialValue = {};
 
   return operations.fold<PendingChanges>(initialValue, (acc, entry) {
-    final entryChanges = remoteEntryToChanges(entry);
+    final entryChanges = remoteEntryToChanges(entry, relations);
 
     // Sort for deterministic key generation.
     final primaryKeyStr = primaryKeyToStr(entryChanges.primaryKeyCols);
@@ -296,6 +293,56 @@ PendingChanges remoteOperationsToTableChanges(List<OplogEntry> operations) {
     }
 
     return acc;
+  });
+}
+
+/// Serialises a row that is represented by a record.
+/// `NaN`, `+Inf`, and `-Inf` are transformed to their string equivalent.
+/// @param record The row to serialise.
+String serialiseRow(Row row) {
+  final convertedToSpec = row.map((key, value) {
+    if (value is double) {
+      if (value.isNaN) {
+        return MapEntry(key, 'NaN');
+      } else if (value.isInfinite) {
+        return MapEntry(key, value.isNegative ? '-Inf' : 'Inf');
+      }
+    }
+    return MapEntry(key, value);
+  });
+
+  return json.encode(convertedToSpec);
+}
+
+/// Deserialises a row back into a record.
+/// `"NaN"`, `"+Inf"`, and `"-Inf"` are transformed back into their numeric equivalent
+/// iff the column type is a float.
+/// @param str The row to deserialise.
+/// @param rel The relation for the table to which this row belongs.
+Row deserialiseRow(String str, Relation rel) {
+  final parsed = json.decode(str) as Map<String, Object?>;
+
+  return parsed.map((key, value) {
+    final columnType = rel.columns
+        .firstWhereOrNull((c) => c.name == key)
+        ?.type
+        .toUpperCase()
+        .replaceAll(' ', '');
+    if ((columnType == 'FLOAT4' ||
+            columnType == 'FLOAT8' ||
+            columnType == 'REAL') &&
+        value is String) {
+      if (value == 'NaN') {
+        return MapEntry(key, double.nan);
+      } else if (value == 'Inf') {
+        return MapEntry(key, double.infinity);
+      } else if (value == '-Inf') {
+        return MapEntry(key, double.negativeInfinity);
+      } else {
+        return MapEntry(key, double.parse(value));
+      }
+    }
+    return MapEntry(key, value);
   });
 }
 
@@ -346,12 +393,18 @@ class ShadowEntry with EquatableMixin {
 
 // Convert an `OplogEntry` to an `OplogEntryChanges` structure,
 // parsing out the changed columns from the oldRow and the newRow.
-OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
+OplogEntryChanges localEntryToChanges(
+  OplogEntry entry,
+  Tag tag,
+  RelationsCache relations,
+) {
+  final relation = relations[entry.tablename]!;
+
   final OplogEntryChanges result = OplogEntryChanges(
     namespace: entry.namespace,
     tablename: entry.tablename,
-    primaryKeyCols: (json.decode(entry.primaryKey) as Map<String, dynamic>)
-        .cast<String, Object>(),
+    primaryKeyCols:
+        deserialiseRow(entry.primaryKey, relation).cast<String, Object>(),
     optype: entry.optype == OpType.delete
         ? ChangesOpType.delete
         : ChangesOpType.upsert,
@@ -361,9 +414,9 @@ OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
   );
 
   final Row oldRow =
-      entry.oldRow != null ? json.decode(entry.oldRow!) as Row : {};
+      entry.oldRow != null ? deserialiseRow(entry.oldRow!, relation) : {};
   final Row newRow =
-      entry.newRow != null ? json.decode(entry.newRow!) as Row : {};
+      entry.newRow != null ? deserialiseRow(entry.newRow!, relation) : {};
 
   final timestamp = DateTime.parse(entry.timestamp).millisecondsSinceEpoch;
 
@@ -379,15 +432,21 @@ OplogEntryChanges localEntryToChanges(OplogEntry entry, Tag tag) {
 
 // Convert an `OplogEntry` to a `ShadowEntryChanges` structure,
 // parsing out the changed columns from the oldRow and the newRow.
-ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
-  final Row oldRow = _decodeRow(entry.oldRow);
-  final Row newRow = _decodeRow(entry.newRow);
+ShadowEntryChanges remoteEntryToChanges(
+  OplogEntry entry,
+  RelationsCache relations,
+) {
+  final relation = relations[entry.tablename]!;
+  final Row oldRow =
+      entry.oldRow != null ? deserialiseRow(entry.oldRow!, relation) : {};
+  final Row newRow =
+      entry.newRow != null ? deserialiseRow(entry.newRow!, relation) : {};
 
   final result = ShadowEntryChanges(
     namespace: entry.namespace,
     tablename: entry.tablename,
-    primaryKeyCols: (json.decode(entry.primaryKey) as Map<String, dynamic>)
-        .cast<String, Object>(),
+    primaryKeyCols:
+        deserialiseRow(entry.primaryKey, relation).cast<String, Object>(),
     optype: entry.optype == OpType.delete
         ? ChangesOpType.delete
         : ChangesOpType.upsert,
@@ -406,16 +465,6 @@ ShadowEntryChanges remoteEntryToChanges(OplogEntry entry) {
   }
 
   return result;
-}
-
-Row _decodeRow(String? row) {
-  if (row == null) {
-    return {};
-  }
-
-  final decoded = json.decode(row) as Row?;
-
-  return decoded ?? {};
 }
 
 class ShadowEntryChanges with EquatableMixin {
@@ -451,22 +500,13 @@ class ShadowEntryChanges with EquatableMixin {
 /// @returns a stringified JSON with stable sorting on column names
 String primaryKeyToStr(Map<String, Object> primaryKeyObj) {
   final keys = primaryKeyObj.keys.toList()..sort();
-  if (keys.isEmpty) return '{}';
 
-  final jsonStr = StringBuffer('{');
-  for (var i = 0; i < keys.length; i++) {
-    final key = keys[i];
-    jsonStr.write(json.encode(key));
-    jsonStr.write(':');
-    jsonStr.write(json.encode(primaryKeyObj[key]));
-
-    if (i < keys.length - 1) {
-      jsonStr.write(',');
-    }
+  final sortedObj = <String, Object>{};
+  for (final key in keys) {
+    sortedObj[key] = primaryKeyObj[key]!;
   }
 
-  jsonStr.write('}');
-  return jsonStr.toString();
+  return serialiseRow(sortedObj);
 }
 
 ShadowKey getShadowPrimaryKey(
@@ -497,20 +537,20 @@ List<Tag> decodeTags(String tags) {
 }
 
 DataChange opLogEntryToChange(OplogEntry entry, RelationsCache relations) {
-  Map<String, Object?>? record;
-  Map<String, Object?>? oldRecord;
-  if (entry.newRow != null) {
-    record = json.decode(entry.newRow!) as Map<String, Object?>;
-  }
-
-  if (entry.oldRow != null) {
-    oldRecord = json.decode(entry.oldRow!) as Map<String, Object?>;
-  }
-
   final relation = relations[entry.tablename];
 
   if (relation == null) {
     throw Exception('Could not find relation for ${entry.tablename}');
+  }
+
+  Map<String, Object?>? record;
+  Map<String, Object?>? oldRecord;
+  if (entry.newRow != null) {
+    record = deserialiseRow(entry.newRow!, relation);
+  }
+
+  if (entry.oldRow != null) {
+    oldRecord = deserialiseRow(entry.oldRow!, relation);
   }
 
   return DataChange(

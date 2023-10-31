@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
@@ -17,6 +18,7 @@ import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
+import 'package:meta/meta.dart';
 
 typedef DataRecord = Record;
 
@@ -74,10 +76,18 @@ class MockSatelliteProcess implements Satellite {
   }
 }
 
+@visibleForTesting
 class MockRegistry extends BaseRegistry {
+  bool _shouldFailToStart = false;
+
+  void setShouldFailToStart(bool shouldFail) {
+    _shouldFailToStart = shouldFail;
+  }
+
   @override
   Future<Satellite> startProcess({
     required DbName dbName,
+    required DBSchema dbDescription,
     required DatabaseAdapter adapter,
     required Migrator migrator,
     required Notifier notifier,
@@ -85,6 +95,10 @@ class MockRegistry extends BaseRegistry {
     required HydratedConfig config,
     SatelliteOverrides? overrides,
   }) async {
+    if (_shouldFailToStart) {
+      throw Exception('Failed to start satellite process');
+    }
+
     var effectiveOpts = kSatelliteDefaults;
     if (overrides != null) {
       effectiveOpts = effectiveOpts.copyWithOverrides(overrides);
@@ -115,11 +129,29 @@ class MockSatelliteClient extends EventEmitter implements Client {
   List<Timer> timeouts = [];
 
   RelationsCache relations = {};
+  void Function(Relation relation)? relationsCb;
+  void Function(Transaction tx)? transactionsCb;
 
   Map<String, List<DataRecord>> relationData = {};
 
   void setRelations(RelationsCache relations) {
     this.relations = relations;
+
+    final _relationsCb = relationsCb;
+    if (_relationsCb != null) {
+      for (final rel in relations.values) {
+        _relationsCb(rel);
+      }
+    }
+  }
+
+  void setTransactions(List<Transaction> transactions) {
+    final _transactionsCb = transactionsCb;
+    if (_transactionsCb != null) {
+      for (final tx in transactions) {
+        _transactionsCb(tx);
+      }
+    }
   }
 
   void setRelationData(String tablename, DataRecord record) {
@@ -320,12 +352,16 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToRelations(void Function(Relation relation) callback) {}
+  void subscribeToRelations(void Function(Relation relation) callback) {
+    relationsCb = callback;
+  }
 
   @override
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
-  ) {}
+  ) {
+    transactionsCb = callback;
+  }
 
   @override
   void enqueueTransaction(

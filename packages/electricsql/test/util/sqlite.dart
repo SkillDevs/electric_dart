@@ -9,3 +9,9 @@ Database openSqliteDb(String path) {
   db.config.doubleQuotedStringLiterals = false;
   return db;
 }
+
+Database openSqliteDbMemory() {
+  final db = sqlite3.openInMemory();
+  db.config.doubleQuotedStringLiterals = false;
+  return db;
+}

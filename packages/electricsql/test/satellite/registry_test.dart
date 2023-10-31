@@ -1,4 +1,5 @@
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/electric/mock.dart';
@@ -15,14 +16,15 @@ import 'package:test/test.dart';
 const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
+final DBSchema dbDescription = DBSchemaRaw(fields: {}, migrations: []);
 final Migrator migrator = MockMigrator();
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
 
-final HydratedConfig config = HydratedConfig(
-  //debug: true,
-  replication: ReplicationConfig(host: '127.0.0.1', port: 5133, ssl: false),
-  auth: const AuthConfig(clientId: null, token: 'test-token'),
+final HydratedConfig config = hydrateConfig(
+  ElectricConfig(
+    auth: const AuthConfig(clientId: null, token: 'test-token'),
+  ),
 );
 
 void main() {
@@ -37,6 +39,7 @@ void main() {
     final mockRegistry = MockRegistry();
     final s1 = await mockRegistry.startProcess(
       dbName: 'a.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -45,6 +48,7 @@ void main() {
     );
     final s2 = await mockRegistry.startProcess(
       dbName: 'b.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -53,6 +57,7 @@ void main() {
     );
     final s3 = await mockRegistry.startProcess(
       dbName: 'c.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -72,10 +77,32 @@ void main() {
     expect(satellite, isA<MockSatelliteProcess>());
   });
 
+  test('can stop failed process', () async {
+    final mockRegistry = MockRegistry();
+
+    // Mock the satellite process to fail.
+    mockRegistry.setShouldFailToStart(true);
+
+    await expectLater(
+      () => _callEnsureStarted(mockRegistry),
+      throwsA(anything),
+    );
+
+    // This should not throw. This tests that failed processes are properly cleaned up.
+    await mockRegistry.stop(dbName);
+
+    // Next run a successful process to make sure that works.
+    mockRegistry.setShouldFailToStart(false);
+
+    final satellite = await _callEnsureStarted(mockRegistry);
+    expect(satellite, isA<MockSatelliteProcess>());
+  });
+
   test('ensure starting multiple satellite processes works', () async {
     final mockRegistry = MockRegistry();
     final s1 = await mockRegistry.ensureStarted(
       dbName: 'a.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -84,6 +111,7 @@ void main() {
     );
     final s2 = await mockRegistry.ensureStarted(
       dbName: 'b.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -92,6 +120,7 @@ void main() {
     );
     final s3 = await mockRegistry.ensureStarted(
       dbName: 'c.db',
+      dbDescription: dbDescription,
       adapter: adapter,
       migrator: migrator,
       notifier: notifier,
@@ -226,6 +255,7 @@ void main() {
 Future<Satellite> _callStartProcess(MockRegistry mockRegistry) {
   return mockRegistry.startProcess(
     dbName: dbName,
+    dbDescription: dbDescription,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,
@@ -240,6 +270,7 @@ Future<Satellite> _callEnsureStarted(
 }) {
   return mockRegistry.ensureStarted(
     dbName: name ?? dbName,
+    dbDescription: dbDescription,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,

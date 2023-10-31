@@ -63,7 +63,14 @@ Migration makeMigration(MetaData migration) {
   final statements = migration.ops
       .map((op) => op.stmts.map((stmt) => _removeUserIdColumn(stmt.sql)))
       .expand((l) => l);
-  final tablesI = migration.ops.map((op) => op.table).toList();
+
+  final tablesI = migration.ops
+      // if the operation did not change any table
+      // then ignore it as we don't have to build triggers for it
+      .where((op) => op.hasTable())
+      .map((op) => op.table)
+      .toList();
+
   // remove duplicate tables
   final tables = tablesI.whereIndexed((idx, tbl) {
     return tablesI.indexWhere((t) => t.name == tbl.name) == idx;

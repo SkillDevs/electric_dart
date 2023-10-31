@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/conversions/types.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
@@ -34,6 +36,7 @@ void main() {
 
     client = SatelliteClient(
       dbName: dbName,
+      dbDescription: kTestDbDescription,
       socketFactory: WebSocketIOFactory(),
       notifier: MockNotifier(dbName),
       opts: SatelliteClientOpts(
@@ -220,6 +223,18 @@ void main() {
   test('receive transaction over multiple messages', () async {
     await connectAndAuth();
 
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': {
+          'name1': PgType.text,
+          'name2': PgType.text,
+        },
+      },
+      migrations: [],
+    );
+
+    client.debugSetDbDescription(dbDescription);
+
     final start = SatInStartReplicationResp();
     final begin = SatOpBegin(commitTimestamp: Int64.ZERO);
     final commit = SatOpCommit();
@@ -248,17 +263,30 @@ void main() {
 
     final insertOp = SatOpInsert(
       relationId: 1,
-      rowData: serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel),
+      rowData:
+          serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel, dbDescription),
     );
 
     final updateOp = SatOpUpdate(
       relationId: 1,
-      rowData: serializeRow({'name1': 'Hello', 'name2': 'World!'}, rel),
-      oldRowData: serializeRow({'name1': '', 'name2': ''}, rel),
+      rowData: serializeRow(
+        {'name1': 'Hello', 'name2': 'World!'},
+        rel,
+        dbDescription,
+      ),
+      oldRowData: serializeRow(
+        {'name1': '', 'name2': ''},
+        rel,
+        dbDescription,
+      ),
     );
     final deleteOp = SatOpDelete(
       relationId: 1,
-      oldRowData: serializeRow({'name1': 'Hello', 'name2': 'World!'}, rel),
+      oldRowData: serializeRow(
+        {'name1': 'Hello', 'name2': 'World!'},
+        rel,
+        dbDescription,
+      ),
     );
 
     final firstOpLogMessage = SatOpLog(
@@ -292,6 +320,102 @@ void main() {
     });
 
     await client.startReplication(null, null, null);
+    await completer.future;
+  });
+
+  test('migration transaction contains all information', () async {
+    await connectAndAuth();
+
+    final newTableRelation = SatRelation(
+      relationId: 2001, // doesn't matter
+      schemaName: 'public',
+      tableName: 'NewTable',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        SatRelationColumn(
+          name: 'id',
+          type: 'TEXT',
+          isNullable: false,
+          primaryKey: true,
+        ),
+      ],
+    );
+
+    final start = SatInStartReplicationResp();
+    final relation = newTableRelation;
+    final begin = SatOpBegin(
+      commitTimestamp: Int64.ZERO,
+      isMigration: true,
+    );
+    const migrationVersion = '123_456';
+    final migrate = SatOpMigrate(
+      version: migrationVersion,
+      stmts: [
+        SatOpMigrate_Stmt(
+          type: SatOpMigrate_Type.CREATE_TABLE,
+          sql:
+              'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n) WITHOUT ROWID;\n',
+        ),
+      ],
+      table: SatOpMigrate_Table(
+        name: 'foo',
+        columns: [
+          SatOpMigrate_Column(
+            name: 'value',
+            sqliteType: 'TEXT',
+            pgType: SatOpMigrate_PgColumnType(
+              name: 'VARCHAR',
+              array: [],
+              size: [],
+            ),
+          ),
+        ],
+        fks: [],
+        pks: ['value'],
+      ),
+    );
+    final commit = SatOpCommit();
+
+    final opLogMsg = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(migrate: migrate),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    final stop = SatInStopReplicationResp();
+
+    server.nextRpcResponse('startReplication', [start, relation, opLogMsg]);
+    server.nextRpcResponse('stopReplication', [stop]);
+
+    final completer = Completer<void>();
+
+    client.on('transaction', (TransactionEvent event) {
+      final transaction = event.transaction;
+      expect(transaction.migrationVersion, migrationVersion);
+      expect(
+        transaction,
+        Transaction(
+          commitTimestamp: commit.commitTimestamp,
+          lsn: begin.lsn,
+          changes: [
+            SchemaChange(
+              migrationType: SatOpMigrate_Type.CREATE_TABLE,
+              table: migrate.table,
+              sql:
+                  'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n) WITHOUT ROWID;\n',
+            ),
+          ],
+          origin: begin.origin,
+          migrationVersion: migrationVersion,
+        ),
+      );
+      completer.complete();
+    });
+
+    await client.startReplication(null, null, null);
+
     await completer.future;
   });
 
@@ -527,6 +651,24 @@ void main() {
       ],
     );
 
+    final Fields tblFields = {
+      'id': PgType.uuid,
+      'content': PgType.varchar,
+      'text_null': PgType.text,
+      'text_null_default': PgType.text,
+      'intvalue_null': PgType.int4,
+      'intvalue_null_default': PgType.int4,
+    };
+
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': tblFields,
+        'Items': tblFields,
+      },
+      migrations: [],
+    );
+    client.debugSetDbDescription(dbDescription);
+
     final insertOp = SatOpInsert(
       relationId: 1,
       rowData: serializeRow(
@@ -539,6 +681,7 @@ void main() {
           'intvalue_null_default': '10',
         },
         rel,
+        dbDescription,
       ),
     );
 
@@ -607,7 +750,7 @@ void main() {
       ],
     );
 
-    final record = deserializeRow(serializedRow, rel);
+    final record = deserializeRow(serializedRow, rel, dbDescription);
 
     final firstOpLogMessage = SatOpLog(
       ops: [
@@ -859,6 +1002,22 @@ void main() {
   test('subscription correct protocol sequence with data', () async {
     await connectAndAuth();
 
+    const tablename = 'THE_TABLE_ID';
+
+    final Fields tblFields = {
+      'name1': PgType.text,
+      'name2': PgType.text,
+    };
+
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': tblFields,
+        tablename: tblFields,
+      },
+      migrations: [],
+    );
+    client.debugSetDbDescription(dbDescription);
+
     await startReplication();
 
     final Relation rel = Relation(
@@ -879,7 +1038,6 @@ void main() {
     const subscriptionId = 'THE_SUBS_ID';
     const uuid1 = 'THE_SHAPE_ID_1';
     const uuid2 = 'THE_SHAPE_ID_2';
-    const tablename = 'THE_TABLE_ID';
 
     final shapeReq1 = ShapeRequest(
       requestId: requestId1,
@@ -925,6 +1083,7 @@ void main() {
       rowData: serializeRow(
         {'name1': 'Foo', 'name2': 'Bar'},
         rel,
+        dbDescription,
       ),
     );
 

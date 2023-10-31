@@ -1,16 +1,20 @@
+import 'dart:convert';
+
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/sockets/mock.dart';
+import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
-// String encodeSatOpMigrateMsg(SatOpMigrate request) {
-//   final msgEncoded = encodeMessage(request);
-//   return base64.encode(msgEncoded);
-// }
+String encodeSatOpMigrateMsg(SatOpMigrate request) {
+  final msgEncoded = encodeMessage(request);
+  return base64.encode(msgEncoded);
+}
 
 void main() {
   final MetaData metaData = MetaData(
@@ -96,6 +100,32 @@ void main() {
     );
   });
 
+  test('generate index creation migration from meta data', () {
+    final metaData = parseMetadata({
+      'format': 'SatOpMigrate',
+      'ops': [
+        encodeSatOpMigrateMsg(
+          SatOpMigrate(
+            version: '20230613112725_814',
+            stmts: [
+              SatOpMigrate_Stmt(
+                type: SatOpMigrate_Type.CREATE_INDEX,
+                sql: 'CREATE INDEX idx_stars_username ON stars(username);',
+              ),
+            ],
+          ),
+        ),
+      ],
+      'protocol_version': 'Electric.Satellite',
+      'version': '20230613112725_814',
+    });
+    final migration = makeMigration(metaData);
+    expect(migration.version == metaData.version, isTrue);
+    expect(migration.statements, [
+      'CREATE INDEX idx_stars_username ON stars(username);',
+    ]);
+  });
+
   test('load migration from meta data', () async {
     const dbName = 'memory';
     final db = sqlite3.openInMemory();
@@ -103,7 +133,7 @@ void main() {
     final electric = await electrify(
       db: db,
       dbName: dbName,
-      migrations: [migration],
+      dbDescription: DBSchemaRaw(fields: {}, migrations: [migration]),
       config: ElectricConfig(
         auth: const AuthConfig(
           token: 'test-token',

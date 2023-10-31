@@ -235,17 +235,12 @@ class ConnectivityButton extends HookConsumerWidget {
           icon: Symbols.wifi_off,
           color: theme.colorScheme.error
         ),
-      ConnectivityState.error => (
-          icon: Symbols.wifi_off,
-          color: theme.colorScheme.error
-        ),
     };
 
     final String label = switch (connectivityState) {
       ConnectivityState.available => "Available",
       ConnectivityState.connected => "Connected",
       ConnectivityState.disconnected => "Disconnected",
-      ConnectivityState.error => "Error",
     };
 
     return ElevatedButton.icon(
@@ -299,6 +294,7 @@ class _TodosLoaded extends HookConsumerWidget {
                         id: genUUID(),
                         listId: kListId,
                         text: textController.text,
+                        editedAt: DateTime.now(),
                         completed: false,
                       ),
                     );
@@ -366,6 +362,9 @@ class TodoTile extends ConsumerWidget {
           decoration: todo.completed ? TextDecoration.lineThrough : null,
           color: todo.completed ? Colors.grey : null,
         ),
+      ),
+      subtitle: Text(
+        todo.editedAt.toIso8601String(),
       ),
       trailing: IconButton(
         onPressed: () async {
