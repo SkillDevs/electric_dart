@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/generate_migrations/builder.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations/prisma.dart';
 import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
@@ -103,6 +104,8 @@ If this argument is not provided they are written to
       return false;
     }
 
+    // TODO(dart): Check docker installed
+
     return true;
   }
 
@@ -144,6 +147,23 @@ If this argument is not provided they are written to
 
       // Fetch the migrations from Electric endpoint and write them into tmpDir
       await fetchMigrations(migrationEndpoint, migrationsDir, tmpDir);
+
+      final prismaCLIDir =
+          await Directory(path.join(tmpDir.path, 'prisma-cli')).create();
+      final prismaCLI = PrismaCLI(logger: _logger, folder: prismaCLIDir);
+      _logger.info('Installing Prisma CLI via Docker...');
+      await prismaCLI.install();
+
+      final prismaSchema = await createPrismaSchema(tmpDir, proxy: proxy);
+
+      // Introspect the created DB to update the Prisma schema
+      _logger.info('Introspecting database...');
+      await introspectDB(prismaCLI, prismaSchema);
+
+      print(prismaSchema.readAsStringSync());
+
+      // Add custom validators (such as uuid) to the Prisma schema
+      //await addValidators(prismaSchema)
 
       _logger.info('Building migrations...');
       final migrationsFile = resolveMigrationsFile(out);
