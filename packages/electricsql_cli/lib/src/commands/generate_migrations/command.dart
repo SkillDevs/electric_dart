@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/generate_migrations/builder.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations/postgres.dart';
 import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
+import 'package:postgres/postgres.dart';
 
 /// {@template sample_command}
 ///
@@ -144,6 +146,16 @@ If this argument is not provided they are written to
 
       // Fetch the migrations from Electric endpoint and write them into tmpDir
       await fetchMigrations(migrationEndpoint, migrationsDir, tmpDir);
+
+      final postgresUri = Uri.parse(proxy);
+      final connection = getPostgresConnectionFromUri(
+        postgresUri,
+        // This is so that the proxy doesn't behave in a special way, like with prisma
+        customUser: 'anonymous',
+      );
+      await connection.open();
+      await introspectFromPostgres(connection);
+      await connection.close();
 
       _logger.info('Building migrations...');
       final migrationsFile = resolveMigrationsFile(out);
