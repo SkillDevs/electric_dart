@@ -50,8 +50,9 @@ If this argument is not provided they are written to
 
   @override
   Future<int> run() async {
-    String service =
-        (argResults?['service'] as String?) ?? 'http://127.0.0.1:5133';
+    final String defaultService =
+        Platform.environment['ELECTRIC_URL'] ?? 'http://127.0.0.1:5133';
+    String service = (argResults?['service'] as String?) ?? defaultService;
     if (service.endsWith('/')) {
       service = service.substring(0, service.length - 1);
     }
