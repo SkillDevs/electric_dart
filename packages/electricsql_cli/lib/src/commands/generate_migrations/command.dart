@@ -27,6 +27,17 @@ resorts to the default url which is `http://127.0.0.1:5133''',
         valueHelp: 'url',
       )
       ..addOption(
+        'proxy',
+        help: '''
+Optional argument providing the url to connect to the PG database via the proxy.
+ *    If not provided, it uses the url set in the `PG_PROXY_URL` environment variable.
+ *    If that variable is not set, it resorts to the default url which is
+ *    'postgresql://prisma:password@localhost:65432/electric'.
+ *    NOTE: the generator introspects the PG database via the proxy,
+ *          the URL must therefore connect using the "prisma" user.''',
+        valueHelp: 'url',
+      )
+      ..addOption(
         'out',
         help: '''
 Optional argument to specify where to write the migrations file.
@@ -50,8 +61,9 @@ If this argument is not provided they are written to
 
   @override
   Future<int> run() async {
-    String service =
-        (argResults?['service'] as String?) ?? 'http://127.0.0.1:5133';
+    final String defaultService =
+        Platform.environment['ELECTRIC_URL'] ?? 'http://127.0.0.1:5133';
+    String service = (argResults?['service'] as String?) ?? defaultService;
     if (service.endsWith('/')) {
       service = service.substring(0, service.length - 1);
     }
@@ -59,12 +71,20 @@ If this argument is not provided they are written to
     final out = (argResults?['out'] as String?) ??
         'lib/generated/electric_migrations.dart';
 
+    final String defaultProxy = Platform.environment['ELECTRIC_PROXY_URL'] ??
+        'postgresql://prisma:proxy_password@localhost:65432/electric';
+    final String proxy = (argResults?['proxy'] as String?) ?? defaultProxy;
+
     final valid = await _prechecks(service: service, out: out);
     if (!valid) {
       return ExitCode.config.code;
     }
 
-    await _runGenerator(service: service, out: out);
+    await _runGenerator(
+      service: service,
+      out: out,
+      proxy: proxy,
+    );
 
     return ExitCode.success.code;
   }
@@ -106,6 +126,7 @@ If this argument is not provided they are written to
   Future<void> _runGenerator({
     required String service,
     required String out,
+    required String proxy,
   }) async {
     _logger.info('Generating migrations file...');
 
