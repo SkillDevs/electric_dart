@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations/prisma.dart';
 import 'package:path/path.dart' as path;
 
 Future<void> buildMigrations(
@@ -102,14 +103,22 @@ String generateMigrationsDartCode(List<Migration> migrations) {
       ]).code,
   );
 
+  return _buildLibCode(
+    (b) => b..body.add(electricMigrationsField),
+  );
+}
+
+String _buildLibCode(void Function(LibraryBuilder b) updateLib) {
   final library = Library(
-    (b) => b
-      ..comments.add('GENERATED CODE - DO NOT MODIFY BY HAND')
-      ..ignoreForFile.addAll([
-        'depend_on_referenced_packages',
-        'prefer_double_quotes',
-      ])
-      ..body.add(electricMigrationsField),
+    (b) {
+      b
+        ..comments.add('GENERATED CODE - DO NOT MODIFY BY HAND')
+        ..ignoreForFile.addAll([
+          'depend_on_referenced_packages',
+          'prefer_double_quotes',
+        ]);
+      updateLib(b);
+    },
   );
 
   final emitter = DartEmitter(
@@ -121,3 +130,52 @@ String generateMigrationsDartCode(List<Migration> migrations) {
   );
   return codeStr;
 }
+
+Future<void> buildDriftSchemaDartFile(
+  DriftSchemaInfo driftSchemaInfo,
+  File driftSchemaFile,
+) async {
+  final outParent = driftSchemaFile.parent;
+  if (!outParent.existsSync()) {
+    await outParent.create(recursive: true);
+  }
+
+  final contents = _generateDriftSchemaDartCode(driftSchemaInfo);
+
+  // Update the configuration file
+  await driftSchemaFile.writeAsString(contents);
+}
+
+String _generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
+  return _buildLibCode(
+    (b) => b,
+  );
+}
+
+
+/*
+class DataTypes extends Table {
+  IntColumn get id => integer()();
+  Column<DateTime> get date => customType(ElectricTypes.date).nullable()();
+  Column<DateTime> get time => customType(ElectricTypes.time).nullable()();
+  Column<DateTime> get timetz => customType(ElectricTypes.timeTZ).nullable()();
+  Column<DateTime> get timestamp =>
+      customType(ElectricTypes.timestamp).nullable()();
+  Column<DateTime> get timestamptz =>
+      customType(ElectricTypes.timestampTZ).nullable()();
+  BoolColumn get boolCol => boolean().named('bool').nullable()();
+  TextColumn get uuid => customType(ElectricTypes.uuid).nullable()();
+  IntColumn get int2 => customType(ElectricTypes.int2).nullable()();
+  IntColumn get int4 => customType(ElectricTypes.int4).nullable()();
+  RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
+
+  IntColumn get relatedId =>
+      integer().nullable().named('relatedId').references(Dummy, #id)();
+
+  @override
+  String? get tableName => 'DataTypes';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+}
+*/

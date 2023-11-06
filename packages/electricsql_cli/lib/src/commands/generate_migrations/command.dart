@@ -41,9 +41,9 @@ Optional argument providing the url to connect to the PG database via the proxy.
       ..addOption(
         'out',
         help: '''
-Optional argument to specify where to write the migrations file.
+Optional argument to specify where to write the generated files.
 If this argument is not provided they are written to
-`lib/generated/electric_migrations.dart`''',
+`lib/generated/electric`''',
         valueHelp: 'file_path',
       );
   }
@@ -58,7 +58,8 @@ If this argument is not provided they are written to
 
   final Logger _logger;
 
-  static const String defaultMigrationsFileName = 'electric_migrations.dart';
+  static const String defaultMigrationsFileName = 'migrations.dart';
+  static const String defaultDriftSchemaFileName = 'drift_schema.dart';
 
   @override
   Future<int> run() async {
@@ -69,21 +70,21 @@ If this argument is not provided they are written to
       service = service.substring(0, service.length - 1);
     }
 
-    final out = (argResults?['out'] as String?) ??
-        'lib/generated/electric_migrations.dart';
+    final outFolder =
+        (argResults?['out'] as String?) ?? 'lib/generated/electric';
 
     final String defaultProxy = Platform.environment['ELECTRIC_PROXY_URL'] ??
         'postgresql://prisma:proxy_password@localhost:65432/electric';
     final String proxy = (argResults?['proxy'] as String?) ?? defaultProxy;
 
-    final valid = await _prechecks(service: service, out: out);
+    final valid = await _prechecks(service: service, outFolder: outFolder);
     if (!valid) {
       return ExitCode.config.code;
     }
 
     await _runGenerator(
       service: service,
-      out: out,
+      outFolder: outFolder,
       proxy: proxy,
     );
 
@@ -92,7 +93,7 @@ If this argument is not provided they are written to
 
   Future<bool> _prechecks({
     required String service,
-    required String out,
+    required String outFolder,
   }) async {
     if (!(await _isDartProject())) {
       _logger.err('ERROR: This command must be run inside a Dart project');
@@ -101,6 +102,12 @@ If this argument is not provided they are written to
 
     if (!(await _isElectricServiceReachable(service))) {
       _logger.err('ERROR: Could not reach Electric service at $service');
+      return false;
+    }
+
+    if (File(outFolder).existsSync() &&
+        FileSystemEntity.isFileSync(outFolder)) {
+      _logger.err('ERROR: The output path $outFolder is a file');
       return false;
     }
 
@@ -139,7 +146,7 @@ If this argument is not provided they are written to
 
   Future<void> _runGenerator({
     required String service,
-    required String out,
+    required String outFolder,
     required String proxy,
   }) async {
     _logger.info('Generating migrations file...');
@@ -177,9 +184,12 @@ If this argument is not provided they are written to
       // Add custom validators (such as uuid) to the Prisma schema
       // await addValidators(prismaSchema);
       final schemaInfo = extractInfoFromPrismaSchema(prismaSchemaContent);
+      _logger.info('Building Drift DB schema...');
+      final driftSchemaFile = resolveDriftSchemaFile(outFolder);
+      await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
 
       _logger.info('Building migrations...');
-      final migrationsFile = resolveMigrationsFile(out);
+      final migrationsFile = resolveMigrationsFile(outFolder);
       await buildMigrations(migrationsDir, migrationsFile);
     } finally {
       // Delete the temporary folder
@@ -187,15 +197,16 @@ If this argument is not provided they are written to
     }
   }
 
-  File resolveMigrationsFile(String out) {
-    final ext = path.extension(out);
-    if (ext.isEmpty) {
-      return File(
-        path.join(Directory.current.path, out, defaultMigrationsFileName),
-      );
-    } else {
-      return File(out);
-    }
+  File resolveMigrationsFile(String outFolder) {
+    return File(
+      path.join(outFolder, defaultMigrationsFileName),
+    ).absolute;
+  }
+
+  File resolveDriftSchemaFile(String outFolder) {
+    return File(
+      path.join(outFolder, defaultDriftSchemaFileName),
+    ).absolute;
   }
 
   /// Fetches the migrations from the provided endpoint,
