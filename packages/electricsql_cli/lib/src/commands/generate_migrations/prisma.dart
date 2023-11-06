@@ -126,41 +126,110 @@ class PrismaCLI {
 }
 
 // TODO(dart): maybe remove
-Future<void> extractInfoFromPrismaSchema(String prismaSchema) async {
+DriftSchemaInfo extractInfoFromPrismaSchema(String prismaSchema) {
   final models = parseModels(prismaSchema);
 
   print(models);
 
   final tableInfos = models.map((e) {
-    final tableName = e.name;
-    final className = tableName.pascalCase;
+    String tableName = e.name;
+
+    final mapAttr = e.attributes
+        .where(
+          (a) => a.type == '@@map',
+        )
+        .firstOrNull;
+
+    if (mapAttr != null) {
+      final mappedNameLiteral = mapAttr.args.join(',');
+      tableName = _extractStringLiteral(mappedNameLiteral);
+    }
+
+    final className = e.name.pascalCase;
 
     print("$tableName -> $className");
 
     return DriftTableInfo(
       tableName: tableName,
       dartClassName: className,
-      columns: e.fields.map((e) => _prismaFieldToColumn(e)).toList(),
+      columns: _prismaFieldsToColumns(e, e.fields).toList(),
     );
   }).toList();
 
   final schemaInfo = DriftSchemaInfo(tables: tableInfos);
 
   print(schemaInfo);
+
+  return schemaInfo;
 }
 
-DriftColumn _prismaFieldToColumn(Field field) {
-  final columnName = field.field;
-  final dartName = columnName.camelCase;
+String _extractStringLiteral(String s) {
+  if (s.startsWith('"') && s.endsWith('"')) {
+    return s.substring(1, s.length - 1);
+  }
 
-  final bool isPrimaryKey = field.attributes.any((a) => a.type == '@id');
+  if (s.startsWith("'") && s.endsWith("'")) {
+    return s.substring(1, s.length - 1);
+  }
 
-  return DriftColumn(
-    columnName: columnName,
-    dartName: dartName,
-    type: DriftElectricColumnType.date,
-    isPrimaryKey: isPrimaryKey,
+  throw Exception('Expected string literal: $s');
+}
+
+Iterable<DriftColumn> _prismaFieldsToColumns(
+    Model model, List<Field> fields) sync* {
+  final primaryKeyFields = _getPrimaryKeysFromModel(model);
+
+  for (final field in fields) {
+    if (field.type.endsWith('[]')) {
+      // No array types
+      continue;
+    }
+
+    if (field.attributes.any((a) => a.type == '@relation')) {
+      // No relations
+      continue;
+    }
+
+    final fieldName = field.field;
+    final columnName = fieldName;
+    final dartName = columnName.camelCase;
+
+    final bool isPrimaryKey = primaryKeyFields.contains(fieldName);
+
+    yield DriftColumn(
+      columnName: columnName,
+      dartName: dartName,
+      type: DriftElectricColumnType.date,
+      isPrimaryKey: isPrimaryKey,
+    );
+  }
+}
+
+Set<String> _getPrimaryKeysFromModel(Model m) {
+  final idFields =
+      m.fields.where((f) => f.attributes.any((a) => a.type == '@id'));
+  final Set<String> idFieldsSet = idFields.map((f) => f.field).toSet();
+
+  final Attribute? modelIdAttr =
+      m.attributes.where((a) => a.type == '@@id').firstOrNull;
+
+  if (modelIdAttr == null) {
+    return idFieldsSet;
+  }
+
+  final modelIdAttrArgs = modelIdAttr.args.join(',').trim();
+  assert(
+    modelIdAttrArgs.startsWith('[') && modelIdAttrArgs.endsWith(']'),
+    'Expected @@id to have arguments in the form of [field1, field2, ...]',
   );
+
+  final compositeFields = modelIdAttrArgs
+      .substring(1, modelIdAttrArgs.length - 1)
+      .split(',')
+      .map((s) => s.trim())
+      .toSet();
+
+  return compositeFields.toSet()..addAll(idFieldsSet);
 }
 
 class DriftSchemaInfo {
@@ -179,10 +248,11 @@ class DriftTableInfo {
   final String dartClassName;
   final List<DriftColumn> columns;
 
-  DriftTableInfo(
-      {required this.tableName,
-      required this.dartClassName,
-      required this.columns});
+  DriftTableInfo({
+    required this.tableName,
+    required this.dartClassName,
+    required this.columns,
+  });
 
   @override
   String toString() =>
@@ -247,7 +317,13 @@ List<Model> parseModels(String prismaSchema) {
 
   // // Match fields in the body of the models
   return modelBodies
-      .map((model) => Model(name: model.name, fields: parseFields(model.body)))
+      .map(
+        (model) => Model(
+          name: model.name,
+          fields: parseFields(model.body),
+          attributes: _parseModelAttributes(model.body),
+        ),
+      )
       .toList();
 }
 
@@ -280,35 +356,75 @@ List<Field> parseFields(String body) {
     return Field(
       field: f.field,
       type: f.type,
-      attributes: parseAttributes(f.attributes),
+      attributes:
+          _parseAttributes(f.attributes, attrType: _AttributeType.field),
     );
   }).toList();
+}
+
+List<Attribute> _parseModelAttributes(String body) {
+  final attrsRegex = RegExp(
+    r'^\s*(?<attribute>(@@[\w.]+\(.*\)+\s*))\s*$',
+    multiLine: true,
+  );
+  final modelAttrsMatches = [...attrsRegex.allMatches(body)];
+  final attrs = modelAttrsMatches.map((match) {
+    final String attribute = match.namedGroup('attribute')!;
+
+    final parsed = _parseAttributes(attribute, attrType: _AttributeType.model);
+    assert(parsed.length == 1, 'Expected exactly @@ attribute');
+    return parsed[0];
+  }).toList();
+
+  return attrs;
+}
+
+enum _AttributeType {
+  field,
+  model,
 }
 
 /// Takes a string of attributes, e.g. `@id @db.Timestamp(2)`,
 /// and returns an array of attributes, e.g. `['@id', '@db.Timestamp(2)]`.
 /// @param attributes String of attributes
 /// @returns Array of attributes.
-List<Attribute> parseAttributes(String? attributes) {
+List<Attribute> _parseAttributes(
+  String? attributes, {
+  required _AttributeType attrType,
+}) {
   if (attributes == null) return [];
+
+  final prefix = switch (attrType) {
+    _AttributeType.field => '@',
+    _AttributeType.model => '@@',
+  };
 
   // Matches each attribute in a string of attributes
   // e.g. @id @db.Timestamp(2)
   // The optional args capture group matches anything
   // but not @or newline because that would be the start of a new attribute
-  final attributeRegex = RegExp(r'(?<type>@[\w\.]+)(?<args>\([^@\n\r]+\))?');
+  final attributeRegex = RegExp(
+    // ignore: unnecessary_raw_strings
+    r'(?<type>' + prefix + r'[\w\.]+)(?<args>\([^@\n\r]+\))?',
+  );
   final matches = [...attributeRegex.allMatches(attributes)];
   return matches.map((m) {
-    final type = m.namedGroup('type')!;
+    final type = m.namedGroup('type')!.trim();
     final String? args = m.namedGroup('args');
 
-    final noParens = args?.substring(
-        1, args.length - 1); // arguments without starting '(' and closing ')'
-    final parsedArgs =
-        noParens?.split(',').map((arg) => arg.trim()).toList() ?? [];
+    List<String> parsedArgs = [];
+    if (args != null && args.length > 2) {
+      final noParens = args.substring(
+        1,
+        args.length - 1,
+      ); // arguments without starting '(' and closing ')'
+      parsedArgs = noParens.split(',').map((arg) => arg.trim()).toList();
+    }
 
     assert(
-        type.startsWith('@'), 'The attribute type is expected to start with @');
+      type.startsWith(prefix),
+      'The attribute type is expected to start with $prefix',
+    );
     return Attribute(
       type: type,
       args: parsedArgs,
@@ -317,7 +433,7 @@ List<Attribute> parseAttributes(String? attributes) {
 }
 
 class Attribute {
-  // With the format @{string}
+  // With the format @{string} or @@{string} if it is a model attribute
   final String type;
   final List<String> args;
 
@@ -325,7 +441,7 @@ class Attribute {
 
   @override
   String toString() {
-    return 'Attribute(type: $type, args: $args)';
+    return "Attribute(type: '$type', args: ${args.map((s) => "'$s'").toList()})";
   }
 }
 
@@ -338,18 +454,23 @@ class Field {
 
   @override
   String toString() {
-    return 'Field(field: $field, type: $type, attributes: $attributes)';
+    return "Field(field: '$field', type: '$type', attributes: $attributes)";
   }
 }
 
 class Model {
   final String name;
   final List<Field> fields;
+  final List<Attribute> attributes;
 
-  Model({required this.name, required this.fields});
+  Model({
+    required this.name,
+    required this.fields,
+    required this.attributes,
+  });
 
   @override
   String toString() {
-    return 'Model(name: $name, fields: $fields)';
+    return 'Model(name: $name, fields: $fields, attributes: $attributes)';
   }
 }
