@@ -160,10 +160,12 @@ If this argument is not provided they are written to
       _logger.info('Introspecting database...');
       await introspectDB(prismaCLI, prismaSchema);
 
-      print(prismaSchema.readAsStringSync());
+      final prismaSchemaContent = prismaSchema.readAsStringSync();
+      print(prismaSchemaContent);
 
       // Add custom validators (such as uuid) to the Prisma schema
-      //await addValidators(prismaSchema)
+      // await addValidators(prismaSchema);
+      await extractInfoFromPrismaSchema(prismaSchemaContent);
 
       _logger.info('Building migrations...');
       final migrationsFile = resolveMigrationsFile(out);
