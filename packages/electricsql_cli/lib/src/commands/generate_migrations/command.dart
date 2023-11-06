@@ -104,7 +104,18 @@ If this argument is not provided they are written to
       return false;
     }
 
-    // TODO(dart): Check docker installed
+    // Check that Docker is installed
+    final dockerRes = await Process.run('docker', ['--version']);
+    if (dockerRes.exitCode != 0) {
+      _logger.err('ERROR: Could not run docker command');
+      _logger.err(
+        'Docker is required in order to introspect the Postgres database with the Prisma CLI',
+      );
+      _logger.err('Exit code: ${dockerRes.exitCode}');
+      _logger.err('Stderr: ${dockerRes.stderr}');
+      _logger.err('Stdout: ${dockerRes.stdout}');
+      return false;
+    }
 
     return true;
   }
@@ -165,7 +176,7 @@ If this argument is not provided they are written to
 
       // Add custom validators (such as uuid) to the Prisma schema
       // await addValidators(prismaSchema);
-      await extractInfoFromPrismaSchema(prismaSchemaContent);
+      final schemaInfo = extractInfoFromPrismaSchema(prismaSchemaContent);
 
       _logger.info('Building migrations...');
       final migrationsFile = resolveMigrationsFile(out);
