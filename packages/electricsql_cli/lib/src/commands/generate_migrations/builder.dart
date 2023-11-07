@@ -156,61 +156,20 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
   for (final tableInfo in driftSchemaInfo.tables) {
     final List<Method> methods = [];
 
-    // Table name
-    methods.add(
-      Method(
-        (b) => b
-          ..name = 'tableName'
-          ..returns = refer('String?')
-          ..type = MethodType.getter
-          ..body = literal(tableInfo.tableName).code
-          ..annotations.add(
-            const CodeExpression(Code('override')),
-          ),
-      ),
+    final Method? primaryKeyGetter = _getPrimaryKeyGetter(tableInfo);
+    final Method? tableNameGetter = _getTableNameGetter(tableInfo);
+
+    methods.addAll(
+      [
+        // Fields
+        for (final columnInfo in tableInfo.columns)
+          _getColumnFieldGetter(columnInfo),
+
+        if (tableNameGetter != null) tableNameGetter,
+        if (primaryKeyGetter != null) primaryKeyGetter,
+        _getWithoutRowIdGetter(),
+      ],
     );
-
-    // Primary key
-    // methods.add(
-    //   Method(
-    //     (b) => b
-    //       ..name = 'primaryKey'
-    //       ..returns = refer('Set<Column<Object>>?')
-    //       ..type = MethodType.getter
-    //       ..body =
-    //           literalSet(tableInfo.primaryKey.map((c) => refer(c.name))).code
-    //       ..annotations.add(
-    //         const CodeExpression(Code('override')),
-    //       ),
-    //   ),
-    // );
-
-    // Fields
-    for (final columnInfo in tableInfo.columns) {
-      var columnBuilderExpr = _getInitialColumnBuilder(columnInfo);
-
-      if (columnInfo.columnName != columnInfo.dartName) {
-        columnBuilderExpr = columnBuilderExpr
-            .property('named')
-            .call([literal(columnInfo.columnName)]);
-      }
-
-      if (columnInfo.isNullable) {
-        columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
-      }
-
-      final columnExpr = columnBuilderExpr.call([]);
-
-      methods.add(
-        Method(
-          (b) => b
-            ..name = columnInfo.dartName
-            ..type = MethodType.getter
-            ..returns = _getOutColumnTypeFromColumnInfo(columnInfo)
-            ..body = columnExpr.code,
-        ),
-      );
-    }
 
     final tableClass = Class(
       (b) => b
@@ -223,6 +182,77 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
 
   return _buildLibCode(
     (b) => b..body.addAll(tableClasses),
+  );
+}
+
+Method? _getPrimaryKeyGetter(DriftTableInfo tableInfo) {
+  final primaryKeyCols = tableInfo.columns.where((c) => c.isPrimaryKey);
+  if (primaryKeyCols.isNotEmpty) {
+    return Method(
+      (b) => b
+        ..name = 'primaryKey'
+        ..returns = refer('Set<Column<Object>>?', kDriftImport)
+        ..type = MethodType.getter
+        ..body = literalSet(primaryKeyCols.map((e) => refer(e.dartName))).code
+        ..annotations.add(
+          const CodeExpression(Code('override')),
+        ),
+    );
+  }
+  return null;
+}
+
+Method _getColumnFieldGetter(DriftColumn columnInfo) {
+  var columnBuilderExpr = _getInitialColumnBuilder(columnInfo);
+
+  if (columnInfo.columnName != columnInfo.dartName) {
+    columnBuilderExpr = columnBuilderExpr
+        .property('named')
+        .call([literal(columnInfo.columnName)]);
+  }
+
+  if (columnInfo.isNullable) {
+    columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
+  }
+
+  final columnExpr = columnBuilderExpr.call([]);
+
+  return Method(
+    (b) => b
+      ..name = columnInfo.dartName
+      ..type = MethodType.getter
+      ..returns = _getOutColumnTypeFromColumnInfo(columnInfo)
+      ..body = columnExpr.code,
+  );
+}
+
+Method _getWithoutRowIdGetter() {
+  return Method(
+    (b) => b
+      ..name = 'withoutRowId'
+      ..returns = refer('bool')
+      ..type = MethodType.getter
+      ..body = literal(true).code
+      ..annotations.add(
+        const CodeExpression(Code('override')),
+      ),
+  );
+}
+
+Method? _getTableNameGetter(DriftTableInfo tableInfo) {
+  if (tableInfo.dartClassName == tableInfo.tableName) {
+    return null;
+  }
+
+  return Method(
+    (b) => b
+      ..name = 'tableName'
+      ..returns = refer('String?')
+      ..type = MethodType.getter
+      ..body = literal(tableInfo.tableName).code
+      ..annotations.add(
+        const CodeExpression(Code('override')),
+      ),
   );
 }
 

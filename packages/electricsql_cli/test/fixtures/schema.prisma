@@ -44,4 +44,5 @@ model datatypes {
 model weirdnames {
   c_uuid String @id @db.Uuid
   val    String @map("1val")
+  text   String
 }

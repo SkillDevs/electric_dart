@@ -200,7 +200,10 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
       columnName = _extractStringLiteral(mappedNameLiteral);
     }
 
-    final dartName = fieldName.camelCase;
+    var dartName = fieldName.camelCase;
+    if (_isInvalidColumnDartName(dartName)) {
+      dartName = '${dartName}Col';
+    }
 
     final bool isPrimaryKey = primaryKeyFields.contains(fieldName);
 
@@ -356,4 +359,32 @@ enum DriftElectricColumnType {
   timestamp,
   timestampTZ,
   uuid,
+}
+
+bool _isInvalidColumnDartName(String name) {
+  return const [
+    // dart primitive types
+    'int',
+    'bool',
+    'double',
+    'null',
+    // drift table getters
+    'tableName',
+    'withoutRowId',
+    'dontWriteConstraints',
+    'isStrict',
+    'primaryKey',
+    'uniqueKeys',
+    'customConstraints',
+    'integer',
+    'int64',
+    'intEnum',
+    'text',
+    'textEnum',
+    'boolean',
+    'dateTime',
+    'blob',
+    'real',
+    'customType',
+  ].contains(name);
 }
