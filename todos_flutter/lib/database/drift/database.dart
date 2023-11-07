@@ -1,42 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:todos_electrified/database/database.dart' as m;
+import 'package:todos_electrified/generated/electric/drift_schema.dart';
 import 'connection/connection.dart' as impl;
 
 part 'database.g.dart';
-
-class Todos extends Table {
-  @override
-  bool get withoutRowId => true;
-
-  @override
-  String? get tableName => "todo";
-
-  @override
-  Set<Column<Object>>? get primaryKey => {id};
-
-  TextColumn get id => text()();
-  TextColumn get listid => text().nullable()();
-  TextColumn get textCol => text().named("text").nullable()();
-  Column<DateTime> get editedAt =>
-      customType(ElectricTypes.timestampTZ).named('edited_at')();
-  BoolColumn get completed => boolean()();
-}
-
-class TodoLists extends Table {
-  @override
-  bool get withoutRowId => true;
-
-  @override
-  String? get tableName => "todolist";
-
-  @override
-  Set<Column<Object>>? get primaryKey => {id};
-
-  TextColumn get id => text()();
-  TextColumn get filter => text().nullable()();
-  TextColumn get editing => text().nullable()();
-}
 
 Future<DriftRepository> initDriftTodosDatabase() async {
   final db = AppDatabase();
@@ -77,7 +45,7 @@ class DriftRepository implements m.TodosRepository {
   @override
   Future<void> insertTodo(m.Todo todo) async {
     await db.todos.insertOne(
-      TodosCompanion.insert(
+      TodoCompanion.insert(
         id: todo.id,
         completed: todo.completed,
         listid: Value(todo.listId),
@@ -93,16 +61,16 @@ class DriftRepository implements m.TodosRepository {
   }
 
   @override
-  Future<void> updateTodo(m.Todo todo) async {
+  Future<void> updateTodo(m.Todo item) async {
     await (db.todos.update()
           ..where(
-            (tbl) => tbl.id.equals(todo.id),
+            (tbl) => tbl.id.equals(item.id),
           ))
         .write(
-      TodosCompanion(
-        completed: Value(todo.completed),
-        listid: Value(todo.listId),
-        textCol: Value(todo.text),
+      TodoCompanion(
+        completed: Value(item.completed),
+        listid: Value(item.listId),
+        textCol: Value(item.text),
         editedAt: Value(DateTime.now()),
       ),
     );
@@ -127,9 +95,12 @@ class DriftRepository implements m.TodosRepository {
   }
 }
 
-@DriftDatabase(tables: [Todos, TodoLists])
+@DriftDatabase(tables: kElectrifiedTables)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(impl.connect());
+
+  //TODO(dart): Maybe this could be configurable in the drift schema builder
+  $TodoTable get todos => todo;
 
   @override
   int get schemaVersion => 1;

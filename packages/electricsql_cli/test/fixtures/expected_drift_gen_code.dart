@@ -5,6 +5,13 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
 
+const kElectrifiedTables = [
+  Project,
+  Membership,
+  Datatypes,
+  Weirdnames,
+];
+
 class Project extends Table {
   TextColumn get id => text()();
 

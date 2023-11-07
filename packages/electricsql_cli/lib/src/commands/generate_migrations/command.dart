@@ -179,7 +179,6 @@ If this argument is not provided they are written to
       await introspectDB(prismaCLI, prismaSchema);
 
       final prismaSchemaContent = prismaSchema.readAsStringSync();
-      print(prismaSchemaContent);
 
       // Add custom validators (such as uuid) to the Prisma schema
       // await addValidators(prismaSchema);

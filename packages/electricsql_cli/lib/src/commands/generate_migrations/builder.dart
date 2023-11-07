@@ -89,12 +89,7 @@ String generateMigrationsDartCode(List<Migration> migrations) {
   }).toList();
 
   // UnmodifiableListView<Migration>
-  final unmodifListReference = TypeReference(
-    (b) => b
-      ..url = 'dart:collection'
-      ..symbol = 'UnmodifiableListView'
-      ..types.add(migrationReference.type),
-  );
+  final unmodifListReference = _getUnmodifiedableListRef(migrationReference);
 
   // global final immutable field for the migrations
   final electricMigrationsField = Field(
@@ -108,6 +103,15 @@ String generateMigrationsDartCode(List<Migration> migrations) {
 
   return _buildLibCode(
     (b) => b..body.add(electricMigrationsField),
+  );
+}
+
+TypeReference _getUnmodifiedableListRef(Reference genericRef) {
+  return TypeReference(
+    (b) => b
+      ..url = 'dart:collection'
+      ..symbol = 'UnmodifiableListView'
+      ..types.add(genericRef.type),
   );
 }
 
@@ -181,7 +185,24 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
   }
 
   return _buildLibCode(
-    (b) => b..body.addAll(tableClasses),
+    (b) => b
+      ..body.addAll(
+        [
+          _getElectrifiedTablesField(tableClasses),
+          ...tableClasses,
+        ],
+      ),
+  );
+}
+
+Field _getElectrifiedTablesField(List<Class> tableClasses) {
+  return Field(
+    (b) => b
+      ..name = 'kElectrifiedTables'
+      ..modifier = FieldModifier.constant
+      ..assignment =
+          // List of table types
+          literalList(tableClasses.map((e) => refer(e.name))).code,
   );
 }
 
@@ -309,31 +330,3 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
       return refer('Column<DateTime>', kDriftImport);
   }
 }
-
-
-/*
-class DataTypes extends Table {
-  IntColumn get id => integer()();
-  Column<DateTime> get date => customType(ElectricTypes.date).nullable()();
-  Column<DateTime> get time => customType(ElectricTypes.time).nullable()();
-  Column<DateTime> get timetz => customType(ElectricTypes.timeTZ).nullable()();
-  Column<DateTime> get timestamp =>
-      customType(ElectricTypes.timestamp).nullable()();
-  Column<DateTime> get timestamptz =>
-      customType(ElectricTypes.timestampTZ).nullable()();
-  BoolColumn get boolCol => boolean().named('bool').nullable()();
-  TextColumn get uuid => customType(ElectricTypes.uuid).nullable()();
-  IntColumn get int2 => customType(ElectricTypes.int2).nullable()();
-  IntColumn get int4 => customType(ElectricTypes.int4).nullable()();
-  RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
-
-  IntColumn get relatedId =>
-      integer().nullable().named('relatedId').references(Dummy, #id)();
-
-  @override
-  String? get tableName => 'DataTypes';
-
-  @override
-  Set<Column<Object>>? get primaryKey => {id};
-}
-*/
