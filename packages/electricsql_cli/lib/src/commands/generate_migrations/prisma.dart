@@ -190,6 +190,11 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     final fieldName = field.field;
     String columnName = fieldName;
 
+    if (columnName == 'electric_user_id') {
+      // Don't include "electric_user_id" special column in the client schema
+      continue;
+    }
+
     final mapAttr = field.attributes
         .where(
           (a) => a.type == '@map',
