@@ -21,7 +21,7 @@ List<Model> parseModels(String prismaSchema) {
     );
   });
 
-  // // Match fields in the body of the models
+  // Match fields in the body of the models
   return modelBodies
       .map(
         (model) => Model(

@@ -70,6 +70,9 @@ Future<List<String>> getMigrationNames(Directory migrationsFolder) async {
   return dirNames;
 }
 
+const kDriftImport = 'package:drift/drift.dart';
+const kElectricSqlDriftImport = 'package:electricsql/drivers/drift.dart';
+
 String generateMigrationsDartCode(List<Migration> migrations) {
   const kElectricSqlImport = 'package:electricsql/electricsql.dart';
 
@@ -140,16 +143,141 @@ Future<void> buildDriftSchemaDartFile(
     await outParent.create(recursive: true);
   }
 
-  final contents = _generateDriftSchemaDartCode(driftSchemaInfo);
+  final contents = generateDriftSchemaDartCode(driftSchemaInfo);
 
   // Update the configuration file
   await driftSchemaFile.writeAsString(contents);
 }
 
-String _generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
+String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
+  final tableRef = refer('Table', kDriftImport);
+
+  final List<Class> tableClasses = [];
+  for (final tableInfo in driftSchemaInfo.tables) {
+    final List<Method> methods = [];
+
+    // Table name
+    methods.add(
+      Method(
+        (b) => b
+          ..name = 'tableName'
+          ..returns = refer('String?')
+          ..type = MethodType.getter
+          ..body = literal(tableInfo.tableName).code
+          ..annotations.add(
+            const CodeExpression(Code('override')),
+          ),
+      ),
+    );
+
+    // Primary key
+    // methods.add(
+    //   Method(
+    //     (b) => b
+    //       ..name = 'primaryKey'
+    //       ..returns = refer('Set<Column<Object>>?')
+    //       ..type = MethodType.getter
+    //       ..body =
+    //           literalSet(tableInfo.primaryKey.map((c) => refer(c.name))).code
+    //       ..annotations.add(
+    //         const CodeExpression(Code('override')),
+    //       ),
+    //   ),
+    // );
+
+    // Fields
+    for (final columnInfo in tableInfo.columns) {
+      var columnBuilderExpr = _getInitialColumnBuilder(columnInfo);
+
+      if (columnInfo.columnName != columnInfo.dartName) {
+        columnBuilderExpr = columnBuilderExpr
+            .property('named')
+            .call([literal(columnInfo.columnName)]);
+      }
+
+      if (columnInfo.isNullable) {
+        columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
+      }
+
+      final columnExpr = columnBuilderExpr.call([]);
+
+      methods.add(
+        Method(
+          (b) => b
+            ..name = columnInfo.dartName
+            ..type = MethodType.getter
+            ..returns = _getOutColumnTypeFromColumnInfo(columnInfo)
+            ..body = columnExpr.code,
+        ),
+      );
+    }
+
+    final tableClass = Class(
+      (b) => b
+        ..extend = tableRef
+        ..name = tableInfo.dartClassName
+        ..methods.addAll(methods),
+    );
+    tableClasses.add(tableClass);
+  }
+
   return _buildLibCode(
-    (b) => b,
+    (b) => b..body.addAll(tableClasses),
   );
+}
+
+Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
+  switch (columnInfo.type) {
+    case DriftElectricColumnType.int2:
+      return _customElectricTypeExpr('int2');
+    case DriftElectricColumnType.int4:
+      return _customElectricTypeExpr('int4');
+    case DriftElectricColumnType.float8:
+      return _customElectricTypeExpr('float8');
+    case DriftElectricColumnType.string:
+      return refer('text', kDriftImport).call([]);
+    case DriftElectricColumnType.bool:
+      return refer('boolean', kDriftImport).call([]);
+    case DriftElectricColumnType.date:
+      return _customElectricTypeExpr('date');
+    case DriftElectricColumnType.time:
+      return _customElectricTypeExpr('time');
+    case DriftElectricColumnType.timeTZ:
+      return _customElectricTypeExpr('timeTZ');
+    case DriftElectricColumnType.timestamp:
+      return _customElectricTypeExpr('timestamp');
+    case DriftElectricColumnType.timestampTZ:
+      return _customElectricTypeExpr('timestampTZ');
+    case DriftElectricColumnType.uuid:
+      return _customElectricTypeExpr('uuid');
+  }
+}
+
+Expression _customElectricTypeExpr(String electricTypeName) {
+  final electricTypesClass = refer('ElectricTypes', kElectricSqlDriftImport);
+  return refer('customType', kDriftImport)
+      .call([electricTypesClass.property(electricTypeName)]);
+}
+
+Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
+  switch (columnInfo.type) {
+    case DriftElectricColumnType.int2:
+    case DriftElectricColumnType.int4:
+      return refer('IntColumn', kDriftImport);
+    case DriftElectricColumnType.float8:
+      return refer('RealColumn', kDriftImport);
+    case DriftElectricColumnType.uuid:
+    case DriftElectricColumnType.string:
+      return refer('TextColumn', kDriftImport);
+    case DriftElectricColumnType.bool:
+      return refer('BoolColumn', kDriftImport);
+    case DriftElectricColumnType.date:
+    case DriftElectricColumnType.time:
+    case DriftElectricColumnType.timeTZ:
+    case DriftElectricColumnType.timestamp:
+    case DriftElectricColumnType.timestampTZ:
+      return refer('Column<DateTime>', kDriftImport);
+  }
 }
 
 
