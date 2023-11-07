@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
+import 'package:code_builder/code_builder.dart';
 import 'package:electricsql_cli/src/commands/generate_migrations/builder.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate_migrations/prisma.dart';
 import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
@@ -148,6 +150,7 @@ If this argument is not provided they are written to
     required String service,
     required String outFolder,
     required String proxy,
+    required ElectricDriftGenOpts? driftSchemaGenOpts,
   }) async {
     _logger.info('Generating migrations file...');
 
@@ -182,7 +185,10 @@ If this argument is not provided they are written to
 
       // Add custom validators (such as uuid) to the Prisma schema
       // await addValidators(prismaSchema);
-      final schemaInfo = extractInfoFromPrismaSchema(prismaSchemaContent);
+      final schemaInfo = extractInfoFromPrismaSchema(
+        prismaSchemaContent,
+        genOpts: driftSchemaGenOpts,
+      );
       _logger.info('Building Drift DB schema...');
       final driftSchemaFile = resolveDriftSchemaFile(outFolder);
       await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);

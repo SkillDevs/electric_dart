@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate_migrations/prisma.dart';
 import 'package:path/path.dart' as path;
 
@@ -175,11 +176,16 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
       ],
     );
 
+    final dataclassAnotation = _getDataClassAnnotation(driftSchemaInfo, tableInfo);
+
     final tableClass = Class(
       (b) => b
         ..extend = tableRef
         ..name = tableInfo.dartClassName
-        ..methods.addAll(methods),
+        ..methods.addAll(methods)
+        ..annotations.addAll([
+          if (dataclassAnotation != null) dataclassAnotation,
+        ]),
     );
     tableClasses.add(tableClass);
   }
@@ -329,4 +335,25 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
     case DriftElectricColumnType.timestampTZ:
       return refer('Column<DateTime>', kDriftImport);
   }
+}
+
+Expression? _getDataClassAnnotation(
+  DriftSchemaInfo driftSchemaInfo,
+  DriftTableInfo tableInfo,
+) {
+  final DataClassNameInfo? customDataClassInfo =
+      driftSchemaInfo.genOpts?.resolveDataClassName(tableInfo.tableName);
+
+  Expression? dataclassAnotation;
+  if (customDataClassInfo != null) {
+    // @DataClassName("SampleName", extending: BaseModel)
+    final String dataClassName = customDataClassInfo.name;
+    final Reference? extendingRef = customDataClassInfo.extending;
+    dataclassAnotation = refer('DataClassName', kDriftImport).call([
+      literal(dataClassName),
+    ], {
+      if (extendingRef != null) 'extending': extendingRef,
+    });
+  }
+  return dataclassAnotation;
 }

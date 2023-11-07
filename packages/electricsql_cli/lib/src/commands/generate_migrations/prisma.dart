@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/prisma_schema_parser.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart';
@@ -126,7 +127,10 @@ class PrismaCLI {
   }
 }
 
-DriftSchemaInfo extractInfoFromPrismaSchema(String prismaSchema) {
+DriftSchemaInfo extractInfoFromPrismaSchema(
+  String prismaSchema, {
+  ElectricDriftGenOpts? genOpts,
+}) {
   final models = parseModels(prismaSchema);
   //print(models);
 
@@ -144,16 +148,17 @@ DriftSchemaInfo extractInfoFromPrismaSchema(String prismaSchema) {
       final mappedNameLiteral = mapAttr.args.join(',');
       tableName = _extractStringLiteral(mappedNameLiteral);
     }
-    final className = modelName.pascalCase;
+    final className =
+        genOpts?.resolveTableName(tableName) ?? modelName.pascalCase;
 
     return DriftTableInfo(
       tableName: tableName,
       dartClassName: className,
-      columns: _prismaFieldsToColumns(e, e.fields).toList(),
+      columns: _prismaFieldsToColumns(e, e.fields, genOpts: genOpts).toList(),
     );
   }).toList();
 
-  final schemaInfo = DriftSchemaInfo(tables: tableInfos);
+  final schemaInfo = DriftSchemaInfo(tables: tableInfos, genOpts: genOpts);
 
   return schemaInfo;
 }
@@ -172,8 +177,9 @@ String _extractStringLiteral(String s) {
 
 Iterable<DriftColumn> _prismaFieldsToColumns(
   Model model,
-  List<Field> fields,
-) sync* {
+  List<Field> fields, {
+  required ElectricDriftGenOpts? genOpts,
+}) sync* {
   final primaryKeyFields = _getPrimaryKeysFromModel(model);
 
   for (final field in fields) {
@@ -205,9 +211,20 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
       columnName = _extractStringLiteral(mappedNameLiteral);
     }
 
-    var dartName = fieldName.camelCase;
-    if (_isInvalidColumnDartName(dartName)) {
-      dartName = '${dartName}Col';
+    String? dartName;
+    if (genOpts != null) {
+      dartName = genOpts.resolveColumnName(
+            model.name,
+            columnName,
+          ) ??
+          fieldName.camelCase;
+    }
+
+    if (dartName == null) {
+      dartName = fieldName.camelCase;
+      if (_isInvalidColumnDartName(dartName)) {
+        dartName = '${dartName}Col';
+      }
     }
 
     final bool isPrimaryKey = primaryKeyFields.contains(fieldName);
@@ -306,9 +323,11 @@ Set<String> _getPrimaryKeysFromModel(Model m) {
 
 class DriftSchemaInfo {
   final List<DriftTableInfo> tables;
+  final ElectricDriftGenOpts? genOpts;
 
   DriftSchemaInfo({
     required this.tables,
+    required this.genOpts,
   });
 
   @override

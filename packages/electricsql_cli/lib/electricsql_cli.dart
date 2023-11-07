@@ -8,3 +8,6 @@
 /// electricsql_cli --help
 /// ```
 library electricsql_cli;
+
+export 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart'
+    show ElectricDriftGenOpts;
