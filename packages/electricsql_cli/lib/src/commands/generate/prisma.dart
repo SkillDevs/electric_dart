@@ -148,8 +148,10 @@ DriftSchemaInfo extractInfoFromPrismaSchema(
       final mappedNameLiteral = mapAttr.args.join(',');
       tableName = _extractStringLiteral(mappedNameLiteral);
     }
-    final className =
-        genOpts?.resolveTableName(tableName) ?? modelName.pascalCase;
+
+    final tableGenOpts = genOpts?.tableGenOpts(tableName);
+
+    final className = tableGenOpts?.driftTableName ?? modelName.pascalCase;
 
     return DriftTableInfo(
       tableName: tableName,
@@ -212,12 +214,11 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     }
 
     String? dartName;
-    if (genOpts != null) {
-      dartName = genOpts.resolveColumnName(
-        model.name,
-        columnName,
-      );
-    }
+
+    final columnGenOpts = genOpts?.columnGenOpts(model.name, columnName);
+
+    // First check if the column has a custom name
+    dartName = columnGenOpts?.driftColumnName;
 
     if (dartName == null) {
       dartName = fieldName.camelCase;

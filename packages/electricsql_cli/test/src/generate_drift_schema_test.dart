@@ -35,43 +35,37 @@ void main() {
 
 class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
   @override
-  String? resolveTableName(String sqlTableName) {
+  DriftTableGenOpts? tableGenOpts(String sqlTableName) {
     switch (sqlTableName) {
       case 'GenOpts':
-        return 'GenOptsDriftTable';
-    }
-    return null;
-  }
-
-  @override
-  DataClassNameInfo? resolveDataClassName(String sqlTableName) {
-    switch (sqlTableName) {
-      case 'GenOpts':
-        return DataClassNameInfo(
-          'MyDataClassName',
-          extending: refer('BaseModel', 'package:myapp/base_model.dart'),
+        return DriftTableGenOpts(
+          driftTableName: 'GenOptsDriftTable',
+          dataClassName: DataClassNameInfo(
+            'MyDataClassName',
+            extending: refer('BaseModel', 'package:myapp/base_model.dart'),
+          ),
         );
     }
     return null;
   }
 
   @override
-  String? resolveColumnName(String sqlTableName, String sqlColumnName) {
-    if (sqlTableName == 'GenOpts' && sqlColumnName == 'id') {
-      return 'myIdCol';
+  DriftColumnGenOpts? columnGenOpts(String sqlTableName, String sqlColumnName) {
+    if (sqlTableName == 'GenOpts') {
+      if (sqlColumnName == 'id') {
+        return DriftColumnGenOpts(
+          driftColumnName: 'myIdCol',
+        );
+      } else if (sqlColumnName == 'timestamp') {
+        return DriftColumnGenOpts(
+          columnBuilderModifier: (e) => clientDefaultExpression(
+            e,
+            value: dateTimeNowExpression,
+          ),
+        );
+      }
     }
-    return null;
-  }
 
-  @override
-  Expression? extendColumnDefinition(
-    String sqlTableName,
-    String sqlColumnName,
-    Expression columnBuilderExpression,
-  ) {
-    if (sqlTableName == 'GenOpts' && sqlColumnName == 'timestamp') {
-      return clientDefaultDateTimeNowExpression(columnBuilderExpression);
-    }
     return null;
   }
 }

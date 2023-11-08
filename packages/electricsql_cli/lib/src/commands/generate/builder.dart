@@ -159,6 +159,9 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
 
   final List<Class> tableClasses = [];
   for (final tableInfo in driftSchemaInfo.tables) {
+    final DriftTableGenOpts? tableGenOpts =
+        driftSchemaInfo.genOpts?.tableGenOpts(tableInfo.tableName);
+
     final List<Method> methods = [];
 
     final Method? primaryKeyGetter = _getPrimaryKeyGetter(tableInfo);
@@ -171,7 +174,10 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
           _getColumnFieldGetter(
             tableInfo.tableName,
             columnInfo,
-            driftSchemaInfo.genOpts,
+            driftSchemaInfo.genOpts?.columnGenOpts(
+              tableInfo.tableName,
+              columnInfo.columnName,
+            ),
           ),
 
         if (tableNameGetter != null) tableNameGetter,
@@ -180,8 +186,10 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
       ],
     );
 
-    final dataclassAnotation =
-        _getDataClassAnnotation(driftSchemaInfo, tableInfo);
+    final dataclassAnotation = _getDataClassAnnotation(
+      driftSchemaInfo,
+      tableGenOpts,
+    );
 
     final tableClass = Class(
       (b) => b
@@ -237,7 +245,7 @@ Method? _getPrimaryKeyGetter(DriftTableInfo tableInfo) {
 Method _getColumnFieldGetter(
   String tableName,
   DriftColumn columnInfo,
-  ElectricDriftGenOpts? genOpts,
+  DriftColumnGenOpts? genOpts,
 ) {
   var columnBuilderExpr = _getInitialColumnBuilder(columnInfo);
 
@@ -251,15 +259,10 @@ Method _getColumnFieldGetter(
     columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
   }
 
-  final Expression? columnBuilderExtensionExpr =
-      genOpts?.extendColumnDefinition(
-    tableName,
-    columnInfo.columnName,
-    columnBuilderExpr,
-  );
-
-  if (columnBuilderExtensionExpr != null) {
-    columnBuilderExpr = columnBuilderExtensionExpr;
+  // Custom modifiers
+  final columnBuilderModifier = genOpts?.columnBuilderModifier;
+  if (columnBuilderModifier != null) {
+    columnBuilderExpr = columnBuilderModifier(columnBuilderExpr);
   }
 
   final columnExpr = columnBuilderExpr.call([]);
@@ -359,10 +362,9 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
 
 Expression? _getDataClassAnnotation(
   DriftSchemaInfo driftSchemaInfo,
-  DriftTableInfo tableInfo,
+  DriftTableGenOpts? tableGenOpts,
 ) {
-  final DataClassNameInfo? customDataClassInfo =
-      driftSchemaInfo.genOpts?.resolveDataClassName(tableInfo.tableName);
+  final DataClassNameInfo? customDataClassInfo = tableGenOpts?.dataClassName;
 
   Expression? dataclassAnotation;
   if (customDataClassInfo != null) {

@@ -1,30 +1,65 @@
 import 'package:code_builder/code_builder.dart';
 
 abstract class ElectricDriftGenOpts {
-  /// Customize the way the Drift table name class is generated
-  /// null means use the default
-  String? resolveTableName(String sqlTableName) {
+  /// Customize the way the Drift Table class is generated
+  /// Returning null means use the default
+  /// [sqlTableName] is the name of the table in the database
+  DriftTableGenOpts? tableGenOpts(String sqlTableName) {
     return null;
   }
 
-  /// Customize the way the Drift column name class is generated
-  /// null means use the default
-  String? resolveColumnName(String sqlTableName, String sqlColumnName) {
+  /// Customize the way the Drift Table class is generated
+  /// Returning null means use the default
+  /// [sqlTableName] is the name of the table in the database
+  /// [sqlColumnName] is the name of the column in the database
+  DriftColumnGenOpts? columnGenOpts(String sqlTableName, String sqlColumnName) {
     return null;
   }
+}
+
+class DriftTableGenOpts {
+  /// Customize the way the Drift table name class is generated
+  /// Returning null means use the default
+  final String? driftTableName;
 
   /// Customize the way the Drift data class is generated
-  DataClassNameInfo? resolveDataClassName(String sqlTableName) {
-    return null;
-  }
+  /// Returning null means use the default
+  final DataClassNameInfo? dataClassName;
 
-  Expression? extendColumnDefinition(
-    String sqlTableName,
-    String sqlColumnName,
-    Expression columnBuilderExpression,
-  ) {
-    return null;
-  }
+  DriftTableGenOpts({
+    this.driftTableName,
+    this.dataClassName,
+  });
+}
+
+/// A function that takes a [ColumnBuilder] expression from drift and returns a modified
+/// [ColumnBuilder] expression.
+typedef ColumnBuilderModifier = Expression Function(Expression columnBuilder);
+
+class DriftColumnGenOpts {
+  /// Customize the way the Drift column name class is generated
+  /// Returning null means use the default
+  final String? driftColumnName;
+
+  /// Customize the way the Drift column definition is generated
+  /// Returning null means use the default
+  ///
+  /// One common use case could be including a `.clientDefault(() => DateTime.now())` in your
+  /// drift schema.
+  /// That can be defined as follows:
+  ///
+  /// ```dart
+  /// (baseColumnBuilder) => clientDefaultExpression(
+  ///   baseColumnBuilder,
+  ///   value: dateTimeNowExpression,
+  /// )
+  /// ```
+  final ColumnBuilderModifier? columnBuilderModifier;
+
+  DriftColumnGenOpts({
+    this.driftColumnName,
+    this.columnBuilderModifier,
+  });
 }
 
 /// Options to customize how the [DataClassName] from drift annotation is generated
