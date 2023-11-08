@@ -26,7 +26,7 @@ class DriftRepository implements m.TodosRepository {
 
   @override
   Future<List<m.Todo>> fetchTodos() async {
-    return (db.todos.select()
+    return (db.todo.select()
           ..orderBy(
             [(tbl) => OrderingTerm(expression: tbl.textCol.lower())],
           ))
@@ -44,7 +44,7 @@ class DriftRepository implements m.TodosRepository {
 
   @override
   Future<void> insertTodo(m.Todo todo) async {
-    await db.todos.insertOne(
+    await db.todo.insertOne(
       TodoCompanion.insert(
         id: todo.id,
         completed: todo.completed,
@@ -57,12 +57,12 @@ class DriftRepository implements m.TodosRepository {
 
   @override
   Future<void> removeTodo(String id) async {
-    await db.todos.deleteWhere((tbl) => tbl.id.equals(id));
+    await db.todo.deleteWhere((tbl) => tbl.id.equals(id));
   }
 
   @override
   Future<void> updateTodo(m.Todo item) async {
-    await (db.todos.update()
+    await (db.todo.update()
           ..where(
             (tbl) => tbl.id.equals(item.id),
           ))
@@ -78,7 +78,7 @@ class DriftRepository implements m.TodosRepository {
 
   @override
   Stream<List<m.Todo>> watchTodos() {
-    return (db.todos.select()
+    return (db.todo.select()
           ..orderBy(
             [(tbl) => OrderingTerm(expression: tbl.textCol.lower())],
           ))
@@ -98,9 +98,6 @@ class DriftRepository implements m.TodosRepository {
 @DriftDatabase(tables: kElectrifiedTables)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(impl.connect());
-
-  //TODO(dart): Maybe this could be configurable in the drift schema builder
-  $TodoTable get todos => todo;
 
   @override
   int get schemaVersion => 1;
