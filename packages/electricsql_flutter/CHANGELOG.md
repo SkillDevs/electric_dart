@@ -1,3 +1,8 @@
+## 0.3.0
+
+* Support electricsql Dart v0.3.0
+
+
 ## 0.2.0
 
 * Support electricsql Dart v0.2.0
