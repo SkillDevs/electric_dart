@@ -4,6 +4,7 @@ import 'package:code_builder/code_builder.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
+import 'package:electricsql_cli/src/drift_gen_util.dart';
 import 'package:path/path.dart';
 import 'package:test/test.dart';
 
@@ -58,6 +59,18 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
   String? resolveColumnName(String sqlTableName, String sqlColumnName) {
     if (sqlTableName == 'GenOpts' && sqlColumnName == 'id') {
       return 'myIdCol';
+    }
+    return null;
+  }
+
+  @override
+  Expression? extendColumnDefinition(
+    String sqlTableName,
+    String sqlColumnName,
+    Expression columnBuilderExpression,
+  ) {
+    if (sqlTableName == 'GenOpts' && sqlColumnName == 'timestamp') {
+      return clientDefaultDateTimeNowExpression(columnBuilderExpression);
     }
     return null;
   }

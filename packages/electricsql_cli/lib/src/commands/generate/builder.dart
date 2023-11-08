@@ -168,7 +168,11 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
       [
         // Fields
         for (final columnInfo in tableInfo.columns)
-          _getColumnFieldGetter(columnInfo),
+          _getColumnFieldGetter(
+            tableInfo.tableName,
+            columnInfo,
+            driftSchemaInfo.genOpts,
+          ),
 
         if (tableNameGetter != null) tableNameGetter,
         if (primaryKeyGetter != null) primaryKeyGetter,
@@ -230,7 +234,11 @@ Method? _getPrimaryKeyGetter(DriftTableInfo tableInfo) {
   return null;
 }
 
-Method _getColumnFieldGetter(DriftColumn columnInfo) {
+Method _getColumnFieldGetter(
+  String tableName,
+  DriftColumn columnInfo,
+  ElectricDriftGenOpts? genOpts,
+) {
   var columnBuilderExpr = _getInitialColumnBuilder(columnInfo);
 
   if (columnInfo.columnName != columnInfo.dartName) {
@@ -241,6 +249,17 @@ Method _getColumnFieldGetter(DriftColumn columnInfo) {
 
   if (columnInfo.isNullable) {
     columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
+  }
+
+  final Expression? columnBuilderExtensionExpr =
+      genOpts?.extendColumnDefinition(
+    tableName,
+    columnInfo.columnName,
+    columnBuilderExpr,
+  );
+
+  if (columnBuilderExtensionExpr != null) {
+    columnBuilderExpr = columnBuilderExtensionExpr;
   }
 
   final columnExpr = columnBuilderExpr.call([]);

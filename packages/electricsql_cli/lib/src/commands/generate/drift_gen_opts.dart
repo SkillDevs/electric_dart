@@ -17,6 +17,14 @@ abstract class ElectricDriftGenOpts {
   DataClassNameInfo? resolveDataClassName(String sqlTableName) {
     return null;
   }
+
+  Expression? extendColumnDefinition(
+    String sqlTableName,
+    String sqlColumnName,
+    Expression columnBuilderExpression,
+  ) {
+    return null;
+  }
 }
 
 /// Options to customize how the [DataClassName] from drift annotation is generated

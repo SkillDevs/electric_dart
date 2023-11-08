@@ -14,3 +14,4 @@ export 'package:electricsql_cli/src/commands/generate/command.dart'
     show runElectricCodeGeneration;
 export 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart'
     show DataClassNameInfo, ElectricDriftGenOpts;
+export 'package:electricsql_cli/src/drift_gen_util.dart';

@@ -116,6 +116,9 @@ class GenOptsDriftTable extends Table {
 
   TextColumn get value => text()();
 
+  Column<DateTime> get timestamp => customType(ElectricTypes.timestampTZ)
+      .clientDefault(() => DateTime.now())();
+
   @override
   String? get tableName => 'GenOpts';
 

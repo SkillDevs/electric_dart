@@ -49,4 +49,5 @@ model weirdnames {
 model GenOpts {
   id Int
   value String
+  timestamp   DateTime @db.Timestamptz(6)
 }
