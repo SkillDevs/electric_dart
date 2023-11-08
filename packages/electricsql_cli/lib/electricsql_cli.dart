@@ -10,7 +10,7 @@
 library electricsql_cli;
 
 export 'package:code_builder/code_builder.dart';
-export 'package:electricsql_cli/src/commands/generate_migrations/command.dart'
+export 'package:electricsql_cli/src/commands/generate/command.dart'
     show runElectricCodeGeneration;
-export 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart'
+export 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart'
     show DataClassNameInfo, ElectricDriftGenOpts;

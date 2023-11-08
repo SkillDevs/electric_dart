@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
-import 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart';
-import 'package:electricsql_cli/src/commands/generate_migrations/prisma.dart';
+import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
+import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:path/path.dart' as path;
 
 Future<void> buildMigrations(
@@ -176,7 +176,8 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
       ],
     );
 
-    final dataclassAnotation = _getDataClassAnnotation(driftSchemaInfo, tableInfo);
+    final dataclassAnotation =
+        _getDataClassAnnotation(driftSchemaInfo, tableInfo);
 
     final tableClass = Class(
       (b) => b

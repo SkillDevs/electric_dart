@@ -12,9 +12,9 @@ Add the electricsql_cli as a dev dependency in your `pubspec.yaml` file.
 
 ```sh
 # Generate client migrations dart file
-$ dart run electricsql_cli generate_migrations
+$ dart run electricsql_cli generate
 
 # Description of the available commands
 $ dart run electricsql_cli --help
-$ dart run electricsql_cli generate_migrations --help
+$ dart run electricsql_cli generate --help
 ```

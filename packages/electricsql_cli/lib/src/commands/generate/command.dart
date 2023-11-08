@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
 
-//TODO(dart): update documentation for sql cli
 /// {@template sample_command}
 ///
 /// `electricsql_cli generate`

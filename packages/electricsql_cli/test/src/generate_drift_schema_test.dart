@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:code_builder/code_builder.dart';
-import 'package:electricsql_cli/src/commands/generate_migrations/builder.dart';
-import 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart';
-import 'package:electricsql_cli/src/commands/generate_migrations/prisma.dart';
+import 'package:electricsql_cli/src/commands/generate/builder.dart';
+import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
+import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:path/path.dart';
 import 'package:test/test.dart';
 

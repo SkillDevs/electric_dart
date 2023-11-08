@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:electricsql_cli/src/commands/generate_migrations/prisma.dart';
+import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:path/path.dart';
 import 'package:test/test.dart';
 

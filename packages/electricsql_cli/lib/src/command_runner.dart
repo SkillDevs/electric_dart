@@ -1,7 +1,7 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
-import 'package:electricsql_cli/src/commands/generate_migrations/command.dart';
+import 'package:electricsql_cli/src/commands/generate/command.dart';
 import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 

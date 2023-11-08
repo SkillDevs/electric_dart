@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:electricsql_cli/src/commands/generate_migrations/drift_gen_opts.dart';
+import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/prisma_schema_parser.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart';
