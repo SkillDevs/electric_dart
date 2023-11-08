@@ -214,10 +214,9 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     String? dartName;
     if (genOpts != null) {
       dartName = genOpts.resolveColumnName(
-            model.name,
-            columnName,
-          ) ??
-          fieldName.camelCase;
+        model.name,
+        columnName,
+      );
     }
 
     if (dartName == null) {

@@ -4,12 +4,14 @@
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
+import 'package:myapp/base_model.dart';
 
 const kElectrifiedTables = [
   Project,
   Membership,
   Datatypes,
   Weirdnames,
+  CustomDriftTableName,
 ];
 
 class Project extends Table {
@@ -100,6 +102,20 @@ class Weirdnames extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {cUuid};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+@DataClassName(
+  'MyDataClassName',
+  extending: BaseModel,
+)
+class CustomDriftTableName extends Table {
+  IntColumn get myIdCol => customType(ElectricTypes.int4).named('id')();
+
+  @override
+  String? get tableName => 'CustomDataClass';
 
   @override
   bool get withoutRowId => true;

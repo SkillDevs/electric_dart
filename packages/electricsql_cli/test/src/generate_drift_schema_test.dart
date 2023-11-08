@@ -14,7 +14,10 @@ void main() {
       'test/fixtures/schema.prisma',
     );
     final _prismaSchema = File(_prismaSchemaFile).readAsStringSync();
-    final schemaInfo = extractInfoFromPrismaSchema(_prismaSchema);
+    final schemaInfo = extractInfoFromPrismaSchema(
+      _prismaSchema,
+      genOpts: CustomElectricDriftGenOpts(),
+    );
 
     final contents = generateDriftSchemaDartCode(schemaInfo);
 
@@ -27,4 +30,35 @@ void main() {
 
     expect(contents, await File(expectedFile).readAsString());
   });
+}
+
+class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
+  @override
+  String? resolveTableName(String sqlTableName) {
+    switch (sqlTableName) {
+      case 'CustomDataClass':
+        return 'CustomDriftTableName';
+    }
+    return null;
+  }
+
+  @override
+  DataClassNameInfo? resolveDataClassName(String sqlTableName) {
+    switch (sqlTableName) {
+      case 'CustomDataClass':
+        return DataClassNameInfo(
+          'MyDataClassName',
+          extending: refer('BaseModel', 'package:myapp/base_model.dart'),
+        );
+    }
+    return null;
+  }
+
+  @override
+  String? resolveColumnName(String sqlTableName, String sqlColumnName) {
+    if (sqlTableName == 'CustomDataClass' && sqlColumnName == 'id') {
+      return 'myIdCol';
+    }
+    return null;
+  }
 }
