@@ -25,7 +25,7 @@ class GenerateMigrationsCommand extends Command<int> {
 Optional argument providing the url to connect to Electric.
 If not provided, it uses the url set in the `ELECTRIC_URL`
 environment variable. If that variable is not set, it
-resorts to the default url which is `http://127.0.0.1:5133''',
+resorts to the default url which is '$defaultElectricServiceUrl\'''',
         valueHelp: 'url',
       )
       ..addOption(
@@ -34,7 +34,7 @@ resorts to the default url which is `http://127.0.0.1:5133''',
 Optional argument providing the url to connect to the PG database via the proxy.
  *    If not provided, it uses the url set in the `PG_PROXY_URL` environment variable.
  *    If that variable is not set, it resorts to the default url which is
- *    'postgresql://prisma:password@localhost:65432/electric'.
+ *    '$defaultElectricProxyUrl'.
  *    NOTE: the generator introspects the PG database via the proxy,
  *          the URL must therefore connect using the "prisma" user.''',
         valueHelp: 'url',
@@ -81,7 +81,7 @@ If this argument is not provided they are written to
 
 const String defaultMigrationsFileName = 'migrations.dart';
 const String defaultDriftSchemaFileName = 'drift_schema.dart';
-const String defaultElectricServiceUrl = 'http://127.0.0.1:5133';
+const String defaultElectricServiceUrl = 'http://localhost:5133';
 const String defaultElectricProxyUrl =
     'postgresql://prisma:proxy_password@localhost:65432/electric';
 

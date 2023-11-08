@@ -47,7 +47,7 @@ abstract class Satellite {
   ConnectivityState? connectivityState;
 
   Future<ConnectionWrapper> start(AuthConfig authConfig);
-  Future<void> stop();
+  Future<void> stop({bool? shutdown});
   Future<ShapeSubscription> subscribe(
     List<ClientShapeDefinition> shapeDefinitions,
   );
@@ -56,27 +56,30 @@ abstract class Satellite {
 
 abstract class Client {
   Future<void> connect();
-  void close();
+  void disconnect();
+  void shutdown();
   Future<AuthResponse> authenticate(
     AuthState authState,
   );
-  bool isClosed();
+  bool isConnected();
   Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
   );
   Future<StopReplicationResponse> stopReplication();
-  void subscribeToRelations(void Function(Relation relation) callback);
-  void subscribeToTransactions(
-    Future<void> Function(Transaction transaction) callback,
-  );
+  void subscribeToRelations(RelationCallback callback);
+  void unsubscribeToRelations(EventListener<Relation> eventListener);
+  void subscribeToTransactions(TransactionCallback callback);
+  void unsubscribeToTransactions(EventListener<TransactionEvent> eventListener);
   void enqueueTransaction(
     DataTransaction transaction,
   );
   LSN getLastSentLsn();
-  EventListener<void> subscribeToOutboundEvent(void Function() callback);
-  void unsubscribeToOutboundEvent(EventListener<void> eventListener);
+  EventListener<void> subscribeToOutboundStarted(
+    OutboundStartedCallback callback,
+  );
+  void unsubscribeToOutboundStarted(EventListener<LSN> eventListener);
   EventListener<SatelliteException> subscribeToError(ErrorCallback callback);
   void unsubscribeToError(EventListener<SatelliteException> eventListener);
 
@@ -85,9 +88,6 @@ abstract class Client {
     List<ShapeRequest> shapes,
   );
   Future<UnsubscribeResponse> unsubscribe(List<String> subIds);
-
-  // TODO: there is currently no way of unsubscribing from the server
-  // unsubscribe(subscriptionId: string): Promise<void>
 
   SubscriptionEventListeners subscribeToSubscriptionEvents(
     SubscriptionDeliveredCallback successCallback,

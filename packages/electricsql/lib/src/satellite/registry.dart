@@ -134,7 +134,7 @@ abstract class BaseRegistry implements Registry {
     // Otherwise, if running then stop.
     final satellite = satellites[dbName];
     if (satellite != null) {
-      final stoppingPromise = satellite.stop().then((_) {
+      final stoppingPromise = satellite.stop(shutdown: true).then((_) {
         satellites.remove(dbName);
         stoppingPromises.remove(dbName);
       });
@@ -188,10 +188,8 @@ class GlobalRegistry extends BaseRegistry {
     );
 
     final client = SatelliteClient(
-      dbName: dbName,
       dbDescription: dbDescription,
       socketFactory: socketFactory,
-      notifier: notifier,
       opts: satelliteClientOpts,
     );
 

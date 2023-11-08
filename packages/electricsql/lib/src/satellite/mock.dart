@@ -71,7 +71,7 @@ class MockSatelliteProcess implements Satellite {
   }
 
   @override
-  Future<void> stop() async {
+  Future<void> stop({bool? shutdown}) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
 }
@@ -119,8 +119,9 @@ class MockRegistry extends BaseRegistry {
 }
 
 class MockSatelliteClient extends EventEmitter implements Client {
+  bool isDown = false;
   bool replicating = false;
-  bool closed = true;
+  bool disconnected = true;
   List<int>? inboundAck = kDefaultLogPos;
 
   List<int> outboundSent = kDefaultLogPos;
@@ -130,7 +131,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
   RelationsCache relations = {};
   void Function(Relation relation)? relationsCb;
-  void Function(Transaction tx)? transactionsCb;
+  TransactionCallback? transactionsCb;
 
   Map<String, List<DataRecord>> relationData = {};
 
@@ -141,15 +142,6 @@ class MockSatelliteClient extends EventEmitter implements Client {
     if (_relationsCb != null) {
       for (final rel in relations.values) {
         _relationsCb(rel);
-      }
-    }
-  }
-
-  void setTransactions(List<Transaction> transactions) {
-    final _transactionsCb = transactionsCb;
-    if (_transactionsCb != null) {
-      for (final tx in transactions) {
-        _transactionsCb(tx);
       }
     }
   }
@@ -261,8 +253,13 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  bool isClosed() {
-    return closed;
+  bool isConnected() {
+    return !disconnected;
+  }
+
+  @override
+  void shutdown() {
+    isDown = true;
   }
 
   @override
@@ -274,12 +271,19 @@ class MockSatelliteClient extends EventEmitter implements Client {
   Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
-    closed = false;
+    if (isDown) {
+      throw SatelliteException(
+        SatelliteErrorCode.unexpectedState,
+        'FAKE DOWN',
+      );
+    }
+
+    disconnected = false;
   }
 
   @override
-  void close() {
-    closed = true;
+  void disconnect() {
+    disconnected = true;
     for (final t in timeouts) {
       t.cancel();
     }
@@ -357,10 +361,22 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
+  void unsubscribeToRelations(EventListener<Relation> eventListener) {
+    relationsCb = null;
+  }
+
+  @override
   void subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   ) {
     transactionsCb = callback;
+  }
+
+  @override
+  void unsubscribeToTransactions(
+    EventListener<TransactionEvent> eventListener,
+  ) {
+    throw Exception('Method not implemented.');
   }
 
   @override
@@ -371,13 +387,15 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  EventListener<void> subscribeToOutboundEvent(void Function() callback) {
-    return on<void>('outbound_started', (_) => callback());
+  EventListener<LSN> subscribeToOutboundStarted(
+    OutboundStartedCallback callback,
+  ) {
+    return on<LSN>('outbound_started', callback);
   }
 
   @override
-  void unsubscribeToOutboundEvent(EventListener<void> eventListener) {
-    removeEventListener(eventListener);
+  void unsubscribeToOutboundStarted(EventListener<void> eventListener) {
+    throw Exception('Method not implemented.');
   }
 
   void sendErrorAfterTimeout(String subscriptionId, int timeoutMillis) {
