@@ -1915,7 +1915,7 @@ void main() {
   });
 
   test('connection backoff success', () async {
-    client.close();
+    client.disconnect();
 
     int numExpects = 0;
 

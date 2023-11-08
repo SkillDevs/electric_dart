@@ -6,7 +6,6 @@ import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/notifiers/notifiers.dart' hide Change;
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/rpc.dart';
@@ -42,9 +41,33 @@ const subscriptionError = {
   SatelliteErrorCode.shapeDeliveryError,
 };
 
-class SatelliteClient extends EventEmitter implements Client {
+abstract interface class SafeEventEmitter {
+  EventListener<SatelliteException> onError(ErrorCallback callback);
+  EventListener<Relation> onRelation(RelationCallback callback);
+  EventListener<TransactionEvent> onTransaction(
+    IncomingTransactionCallback callback,
+  );
+  EventListener<LSN> onOutboundStarted(OutboundStartedCallback callback);
+
+  bool emitError(SatelliteException error);
+  bool emitRelation(Relation relation);
+  bool emitTransaction(TransactionEvent transactionEvent);
+  bool emitOutboundStarted(LSN lsn);
+
+  void removeListener<T>(EventListener<T> eventListener);
+
+  void removeAllListeners();
+
+  int listenerCount(String event);
+}
+
+class SatelliteClient implements Client {
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
+  late final SafeEventEmitter _emitter;
+
+  @visibleForTesting
+  SafeEventEmitter get emitter => _emitter;
 
   Socket? socket;
 
@@ -64,6 +87,7 @@ class SatelliteClient extends EventEmitter implements Client {
   List<String> allowedMutexedRpcResponses = [];
 
   DBSchema _dbDescription;
+  bool _isDown = false;
 
   @visibleForTesting
   void debugSetDbDescription(DBSchema value) {
@@ -78,17 +102,15 @@ class SatelliteClient extends EventEmitter implements Client {
   };
 
   SatelliteClient({
-    // ignore: avoid_unused_constructor_parameters
-    required DbName dbName,
     required DBSchema dbDescription,
     required this.socketFactory,
-    // ignore: avoid_unused_constructor_parameters
-    required Notifier notifier,
     required this.opts,
   }) : _dbDescription = dbDescription {
     // This cannot be lazyly instantiated in the 'late final' property, otherwise
     // it won't be properly ready to emit events at the right time
     _subscriptionsDataCache = SubscriptionsDataCache(_dbDescription);
+
+    _emitter = SatelliteClientEventEmitter();
 
     inbound = resetReplication<Transaction>(null, null);
     outbound = resetReplication<DataTransaction>(null, null);
@@ -148,8 +170,15 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   Future<void> connect() async {
-    if (!isClosed()) {
-      close();
+    if (_isDown) {
+      throw SatelliteException(
+        SatelliteErrorCode.unexpectedState,
+        'client has already shutdown',
+      );
+    }
+
+    if (isConnected()) {
+      disconnect();
     }
 
     final completer = Completer<void>();
@@ -158,7 +187,7 @@ class SatelliteClient extends EventEmitter implements Client {
     this.socket = socket;
 
     void onceError(Object error) {
-      close();
+      disconnect();
       completer.completeError(error);
     }
 
@@ -173,21 +202,20 @@ class SatelliteClient extends EventEmitter implements Client {
       socketHandler = (Uint8List message) => handleIncoming(message);
       socket.onMessage(socketHandler!);
       socket.onError((error) {
-        if (listenerCount('error') == 0) {
-          close();
+        if (_emitter.listenerCount('error') == 0) {
+          disconnect();
           logger.error(
             'socket error but no listener is attached: $error',
           );
         }
-        emit('error', error);
+        _emitter.emitError(error);
       });
       socket.onClose(() {
-        close();
-        if (listenerCount('error') == 0) {
+        disconnect();
+        if (_emitter.listenerCount('error') == 0) {
           logger.error('socket closed but no listener is attached');
         }
-        emit(
-          'error',
+        _emitter.emitError(
           SatelliteException(SatelliteErrorCode.socketError, 'socket closed'),
         );
       });
@@ -207,12 +235,8 @@ class SatelliteClient extends EventEmitter implements Client {
     return completer.future;
   }
 
-  int listenerCount(String event) {
-    return listeners.where((l) => l.type == event).length;
-  }
-
   @override
-  void close() {
+  void disconnect() {
     outbound = resetReplication(outbound.lastLsn, null);
     inbound = resetReplication(inbound.lastLsn, null);
 
@@ -225,15 +249,15 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  bool isClosed() {
-    return socketHandler == null;
+  bool isConnected() {
+    return socketHandler != null;
   }
 
-  void removeAllListeners() {
-    // Prevent concurrent modification
-    for (final listener in [...listeners]) {
-      removeEventListener(listener);
-    }
+  @override
+  void shutdown() {
+    disconnect();
+    _emitter.removeAllListeners();
+    _isDown = true;
   }
 
   Future<T> delayIncomingMessages<T>(
@@ -280,7 +304,7 @@ class SatelliteClient extends EventEmitter implements Client {
       if (error is SatelliteException) {
         // subscription errors are emitted through specific event
         if (!subscriptionError.contains(error.code)) {
-          emit('error', error);
+          _emitter.emitError(error);
         }
       } else {
         // This is an unexpected runtime error
@@ -303,20 +327,33 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   void subscribeToTransactions(
-    Future<void> Function(Transaction transaction) callback,
+    TransactionCallback callback,
   ) {
-    on<TransactionEvent>('transaction', (txnEvent) async {
-      // move callback execution outside the message handling path
+    _emitter.onTransaction((txnEvent) async {
       await callback(txnEvent.transaction);
       txnEvent.ackCb();
     });
   }
 
   @override
-  void subscribeToRelations(
-    void Function(Relation relation) callback,
+  void unsubscribeToTransactions(
+    EventListener<TransactionEvent> eventListener,
   ) {
-    on<Relation>('relation', callback);
+    _emitter.removeListener(eventListener);
+  }
+
+  @override
+  void subscribeToRelations(
+    RelationCallback callback,
+  ) {
+    _emitter.onRelation(callback);
+  }
+
+  @override
+  void unsubscribeToRelations(
+    EventListener<Relation> eventListener,
+  ) {
+    _emitter.removeListener(eventListener);
   }
 
   @override
@@ -407,7 +444,7 @@ class SatelliteClient extends EventEmitter implements Client {
       logger.debug('[proto] send: ${msgToString(request)}');
     }
     final _socket = socket;
-    if (_socket == null || isClosed()) {
+    if (_socket == null || !isConnected()) {
       throw SatelliteException(
         SatelliteErrorCode.unexpectedState,
         'trying to send message, but client is closed',
@@ -515,11 +552,10 @@ class SatelliteClient extends EventEmitter implements Client {
       throttledPushTransaction =
           Throttle(pushTransactions, Duration(milliseconds: opts.pushPeriod));
 
-      emit('outbound_started', message.lsn);
+      _emitter.emitOutboundStarted(message.lsn);
       return SatInStartReplicationResp();
     } else {
-      emit(
-        'error',
+      _emitter.emitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${outbound.isReplicating} handling 'start' request",
@@ -552,22 +588,24 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   EventListener<SatelliteException> subscribeToError(ErrorCallback callback) {
-    return on<SatelliteException>('error', callback);
+    return _emitter.onError(callback);
   }
 
   @override
   void unsubscribeToError(EventListener<SatelliteException> eventListener) {
-    removeEventListener(eventListener);
+    _emitter.removeListener(eventListener);
   }
 
   @override
-  EventListener<void> subscribeToOutboundEvent(void Function() callback) {
-    return on<void>('outbound_started', (_) => callback());
+  EventListener<void> subscribeToOutboundStarted(
+    OutboundStartedCallback callback,
+  ) {
+    return _emitter.onOutboundStarted(callback);
   }
 
   @override
-  void unsubscribeToOutboundEvent(EventListener<void> eventListener) {
-    removeEventListener(eventListener);
+  void unsubscribeToOutboundStarted(EventListener<void> eventListener) {
+    _emitter.removeListener(eventListener);
   }
 
   @override
@@ -683,8 +721,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
       return SatInStopReplicationResp();
     } else {
-      emit(
-        'error',
+      _emitter.emitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'stop' request",
@@ -713,8 +750,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
   void handleRelation(SatRelation message) {
     if (inbound.isReplicating != ReplicationStatus.active) {
-      emit(
-        'error',
+      _emitter.emitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'relation' message",
@@ -741,7 +777,7 @@ class SatelliteClient extends EventEmitter implements Client {
     );
 
     inbound.relations[relation.id] = relation;
-    emit('relation', relation);
+    _emitter.emitRelation(relation);
   }
 
   void handleTransaction(SatOpLog message) {
@@ -757,8 +793,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleErrorResp(SatErrorResp error) {
-    emit(
-      'error',
+    _emitter.emitError(
       serverErrorToSatelliteError(error),
     );
   }
@@ -828,8 +863,7 @@ class SatelliteClient extends EventEmitter implements Client {
           origin: lastTx.origin,
           migrationVersion: lastTx.migrationVersion,
         );
-        emit<TransactionEvent>(
-          'transaction',
+        _emitter.emitTransaction(
           TransactionEvent(
             transaction,
             () => inbound.lastLsn = transaction.lsn,
@@ -1166,4 +1200,78 @@ DecodedMessage toMessage(Uint8List data) {
   }
 
   return DecodedMessage(decodeMessage(data.sublist(1), type), type);
+}
+
+class SatelliteClientEventEmitter implements SafeEventEmitter {
+  final EventEmitter _emitter = EventEmitter();
+
+  SatelliteClientEventEmitter();
+
+  @override
+  bool emitError(SatelliteException error) {
+    return _emit('error', error);
+  }
+
+  @override
+  bool emitRelation(Relation relation) {
+    return _emit('relation', relation);
+  }
+
+  @override
+  bool emitTransaction(TransactionEvent transactionEvent) {
+    return _emit('transaction', transactionEvent);
+  }
+
+  @override
+  bool emitOutboundStarted(LSN lsn) {
+    return _emit('outbound_started', lsn);
+  }
+
+  @override
+  EventListener<SatelliteException> onError(ErrorCallback callback) {
+    return _on('error', callback);
+  }
+
+  @override
+  EventListener<Relation> onRelation(RelationCallback callback) {
+    return _on('relation', callback);
+  }
+
+  @override
+  EventListener<TransactionEvent> onTransaction(
+    IncomingTransactionCallback callback,
+  ) {
+    return _on('transaction', callback);
+  }
+
+  @override
+  EventListener<LSN> onOutboundStarted(OutboundStartedCallback callback) {
+    return _on('outbound_started', callback);
+  }
+
+  @override
+  int listenerCount(String event) {
+    return _emitter.listeners.where((l) => l.type == event).length;
+  }
+
+  @override
+  void removeAllListeners() {
+    // Prevent concurrent modification
+    for (final listener in [..._emitter.listeners]) {
+      _emitter.removeEventListener(listener);
+    }
+  }
+
+  @override
+  void removeListener<T>(EventListener<T> eventListener) {
+    _emitter.removeEventListener(eventListener);
+  }
+
+  EventListener<T> _on<T>(String eventName, void Function(T) callback) {
+    return _emitter.on<T>(eventName, callback);
+  }
+
+  bool _emit<T>(String eventName, T data) {
+    return _emitter.emit<T>(eventName, data);
+  }
 }

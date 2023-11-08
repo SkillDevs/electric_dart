@@ -274,7 +274,7 @@ This means there is a notifier subscription leak.`''');
     client.subscribeToRelations(updateRelations);
     // FIXME: calling an async function in an event emitter
     client.subscribeToTransactions(applyTransaction);
-    client.subscribeToOutboundEvent(() => throttledSnapshot());
+    client.subscribeToOutboundStarted((_) => throttledSnapshot());
 
     client.subscribeToSubscriptionEvents(
       _handleSubscriptionData,
@@ -283,7 +283,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   @override
-  Future<void> stop() async {
+  Future<void> stop({bool? shutdown}) async {
     // Stop snapshotting and polling for changes.
     throttledSnapshot.cancel();
 
@@ -312,6 +312,10 @@ This means there is a notifier subscription leak.`''');
     }
 
     _disconnect();
+
+    if (shutdown == true) {
+      client.shutdown();
+    }
   }
 
   @override
@@ -606,15 +610,6 @@ This means there is a notifier subscription leak.`''');
   Future<void> _handleOrThrowClientError(SatelliteException error) {
     _disconnect();
 
-    // TODO(dart): Should we handle this case? When can it happen?
-    /*  if (!error) {
-      final e = new SatelliteError(
-        SatelliteErrorCode.INTERNAL,
-        'received an error event without an error code'
-      )
-      throw wrapFatalError(e)
-    } */
-
     if (isThrowable(error)) {
       throw error;
     }
@@ -640,7 +635,7 @@ This means there is a notifier subscription leak.`''');
         }
       case ConnectivityState.disconnected:
         {
-          client.close();
+          client.disconnect();
           return;
         }
       case ConnectivityState.connected:
@@ -746,7 +741,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   void _disconnect() {
-    client.close();
+    client.disconnect();
     _notifyConnectivityState(ConnectivityState.disconnected);
   }
 
@@ -957,7 +952,7 @@ This means there is a notifier subscription leak.`''');
         unawaited(_notifyChanges(oplogEntries));
       }
 
-      if (!client.isClosed()) {
+      if (client.isConnected()) {
         final enqueued = client.getLastSentLsn();
         final enqueuedLogPos = bytesToNumber(enqueued);
 
@@ -1010,7 +1005,7 @@ This means there is a notifier subscription leak.`''');
     List<OplogEntry> results,
   ) async {
     // TODO: Don't try replicating when outbound is inactive
-    if (client.isClosed()) {
+    if (!client.isConnected()) {
       return;
     }
 
