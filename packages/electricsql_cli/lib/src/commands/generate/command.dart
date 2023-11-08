@@ -5,6 +5,7 @@ import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
+import 'package:electricsql_cli/src/commands/generate_migrations/postgres.dart';
 import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
@@ -145,19 +146,6 @@ Future<bool> _prechecks({
     return false;
   }
 
-  // Check that Docker is installed
-  final dockerRes = await Process.run('docker', ['--version']);
-  if (dockerRes.exitCode != 0) {
-    logger.err('ERROR: Could not run docker command');
-    logger.err(
-      'Docker is required in order to introspect the Postgres database with the Prisma CLI',
-    );
-    logger.err('Exit code: ${dockerRes.exitCode}');
-    logger.err('Stderr: ${dockerRes.stderr}');
-    logger.err('Stdout: ${dockerRes.stdout}');
-    return false;
-  }
-
   return true;
 }
 
@@ -202,26 +190,22 @@ Future<void> _runGenerator({
     // Fetch the migrations from Electric endpoint and write them into tmpDir
     await fetchMigrations(migrationEndpoint, migrationsDir, tmpDir);
 
-    final prismaCLIDir =
-        await Directory(path.join(tmpDir.path, 'prisma-cli')).create();
-    final prismaCLI = PrismaCLI(logger: logger, folder: prismaCLIDir);
-    logger.info('Installing Prisma CLI via Docker...');
-    await prismaCLI.install();
-
-    final prismaSchema = await createPrismaSchema(tmpDir, proxy: proxy);
-
     // Introspect the created DB to update the Prisma schema
     logger.info('Introspecting database...');
-    await introspectDB(prismaCLI, prismaSchema);
 
-    final prismaSchemaContent = prismaSchema.readAsStringSync();
-
-    // Add custom validators (such as uuid) to the Prisma schema
-    // await addValidators(prismaSchema);
-    final schemaInfo = extractInfoFromPrismaSchema(
-      prismaSchemaContent,
+    final postgresUri = Uri.parse(proxy);
+    final connection = getPostgresConnectionFromUri(
+      postgresUri,
+      // This is so that the proxy doesn't behave in a special way, like with prisma
+      customUser: 'anonymous',
+    );
+    await connection.open();
+    final DriftSchemaInfo schemaInfo = await introspectFromPostgres(
+      connection,
       genOpts: driftSchemaGenOpts,
     );
+    await connection.close();
+
     logger.info('Building Drift DB schema...');
     final driftSchemaFile = resolveDriftSchemaFile(outFolder);
     await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);

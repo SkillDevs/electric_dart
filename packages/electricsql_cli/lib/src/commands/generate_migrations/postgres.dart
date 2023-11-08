@@ -1,6 +1,11 @@
+import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
+import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:postgres/postgres.dart';
 
-Future<void> introspectFromPostgres(PostgreSQLConnection pg) async {
+Future<DriftSchemaInfo> introspectFromPostgres(
+  PostgreSQLConnection pg, {
+  ElectricDriftGenOpts? genOpts,
+}) async {
   final tables = await _getElectrifiedTables(pg);
 
   for (final table in tables) {
