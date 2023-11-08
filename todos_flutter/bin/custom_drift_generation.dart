@@ -1,3 +1,4 @@
+// ignore: depend_on_referenced_packages
 import 'package:electricsql_cli/electricsql_cli.dart';
 
 /// This is a custom drift generation script that overrides the default
