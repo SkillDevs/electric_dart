@@ -100,6 +100,6 @@ dart run electricsql_cli generate
 ```
 
 It will connect to the Electric service and generate the migrations file automatically. You can configure the service url
-as well as the output file. Check out the options with `--help`.
+as well as the output directory. Check out the options with `--help`.
 
-The generated file contains the constant `kElectricMigrations` which you need to provide to the `electrify` function when initializing Electric.
+The generated code contains the constant `kElectricMigrations` which you need to provide to the `electrify` function when initializing Electric.

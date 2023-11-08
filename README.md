@@ -26,14 +26,21 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 
 ### What's Electric?
 
-ElectricSQL is a local-first software platform. Use it to build super fast, collaborative, offline-capable apps directly on Postgres. [Introduction & Live Demos](https://electric-sql.com/docs/intro/local-first)
+ElectricSQL is a local-first software platform. Use it to build super fast, collaborative, offline-capable cross-platform apps directly on Postgres. [Introduction & Live Demos](https://electric-sql.com/docs/intro/local-first)
 
 
 ### Run the Todos example
 
+This is a simple Todos app which can sync across all the platforms supported by Flutter (iOS, Android, Web, Windows, macOS and Linux).
+
 [Instructions](https://github.com/SkillDevs/electric_dart/blob/master/todos_flutter/README.md)
 
 ![Electric Flutter](https://github.com/SkillDevs/electric_dart/assets/22084723/4fa1d198-97c6-48ef-9500-24bd1cf788ea)
+
+## Quickstart
+
+[Quickstart](https://github.com/SkillDevs/electric_dart/blob/master/docs/quickstart.md) to integrate Electric into your own Flutter app.
+
 
 ## Usage
 
