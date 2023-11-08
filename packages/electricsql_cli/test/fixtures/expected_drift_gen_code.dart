@@ -11,7 +11,7 @@ const kElectrifiedTables = [
   Membership,
   Datatypes,
   Weirdnames,
-  CustomDriftTableName,
+  GenOptsDriftTable,
 ];
 
 class Project extends Table {
@@ -111,11 +111,13 @@ class Weirdnames extends Table {
   'MyDataClassName',
   extending: BaseModel,
 )
-class CustomDriftTableName extends Table {
+class GenOptsDriftTable extends Table {
   IntColumn get myIdCol => customType(ElectricTypes.int4).named('id')();
 
+  TextColumn get value => text()();
+
   @override
-  String? get tableName => 'CustomDataClass';
+  String? get tableName => 'GenOpts';
 
   @override
   bool get withoutRowId => true;

@@ -46,6 +46,7 @@ model weirdnames {
   text   String
 }
 
-model CustomDataClass {
+model GenOpts {
   id Int
+  value String
 }

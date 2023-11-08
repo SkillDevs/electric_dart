@@ -36,8 +36,8 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
   @override
   String? resolveTableName(String sqlTableName) {
     switch (sqlTableName) {
-      case 'CustomDataClass':
-        return 'CustomDriftTableName';
+      case 'GenOpts':
+        return 'GenOptsDriftTable';
     }
     return null;
   }
@@ -45,7 +45,7 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
   @override
   DataClassNameInfo? resolveDataClassName(String sqlTableName) {
     switch (sqlTableName) {
-      case 'CustomDataClass':
+      case 'GenOpts':
         return DataClassNameInfo(
           'MyDataClassName',
           extending: refer('BaseModel', 'package:myapp/base_model.dart'),
@@ -56,7 +56,7 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
 
   @override
   String? resolveColumnName(String sqlTableName, String sqlColumnName) {
-    if (sqlTableName == 'CustomDataClass' && sqlColumnName == 'id') {
+    if (sqlTableName == 'GenOpts' && sqlColumnName == 'id') {
       return 'myIdCol';
     }
     return null;
