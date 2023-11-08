@@ -1,0 +1,6 @@
+include: ../../analysis_options.yaml
+
+analyzer:
+  exclude:
+    - test/fixtures/expected_drift_gen_code.dart
+

@@ -3,6 +3,199 @@
 part of 'database.dart';
 
 // ignore_for_file: type=lint
+class TableFromDriftFile extends Table
+    with TableInfo<TableFromDriftFile, TableFromDriftFileData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  TableFromDriftFile(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      $customConstraints: 'NOT NULL PRIMARY KEY');
+  static const VerificationMeta _timestampMeta =
+      const VerificationMeta('timestamp');
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+      'timestamp', aliasedName, false,
+      type: ElectricTypes.timestampTZ,
+      requiredDuringInsert: true,
+      $customConstraints: 'NOT NULL');
+  @override
+  List<GeneratedColumn> get $columns => [id, timestamp];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'table_from_drift_file';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<TableFromDriftFileData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(_timestampMeta,
+          timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta));
+    } else if (isInserting) {
+      context.missing(_timestampMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TableFromDriftFileData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TableFromDriftFileData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      timestamp: attachedDatabase.typeMapping.read(
+          ElectricTypes.timestampTZ, data['${effectivePrefix}timestamp'])!,
+    );
+  }
+
+  @override
+  TableFromDriftFile createAlias(String alias) {
+    return TableFromDriftFile(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class TableFromDriftFileData extends DataClass
+    implements Insertable<TableFromDriftFileData> {
+  final String id;
+  final DateTime timestamp;
+  const TableFromDriftFileData({required this.id, required this.timestamp});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    return map;
+  }
+
+  TableFromDriftFileCompanion toCompanion(bool nullToAbsent) {
+    return TableFromDriftFileCompanion(
+      id: Value(id),
+      timestamp: Value(timestamp),
+    );
+  }
+
+  factory TableFromDriftFileData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TableFromDriftFileData(
+      id: serializer.fromJson<String>(json['id']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+    };
+  }
+
+  TableFromDriftFileData copyWith({String? id, DateTime? timestamp}) =>
+      TableFromDriftFileData(
+        id: id ?? this.id,
+        timestamp: timestamp ?? this.timestamp,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('TableFromDriftFileData(')
+          ..write('id: $id, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, timestamp);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TableFromDriftFileData &&
+          other.id == this.id &&
+          other.timestamp == this.timestamp);
+}
+
+class TableFromDriftFileCompanion
+    extends UpdateCompanion<TableFromDriftFileData> {
+  final Value<String> id;
+  final Value<DateTime> timestamp;
+  final Value<int> rowid;
+  const TableFromDriftFileCompanion({
+    this.id = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TableFromDriftFileCompanion.insert({
+    required String id,
+    required DateTime timestamp,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        timestamp = Value(timestamp);
+  static Insertable<TableFromDriftFileData> custom({
+    Expression<String>? id,
+    Expression<DateTime>? timestamp,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TableFromDriftFileCompanion copyWith(
+      {Value<String>? id, Value<DateTime>? timestamp, Value<int>? rowid}) {
+    return TableFromDriftFileCompanion(
+      id: id ?? this.id,
+      timestamp: timestamp ?? this.timestamp,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] =
+          Variable<DateTime>(timestamp.value, ElectricTypes.timestampTZ);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TableFromDriftFileCompanion(')
+          ..write('id: $id, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -1605,6 +1798,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
 
 abstract class _$TestsDatabase extends GeneratedDatabase {
   _$TestsDatabase(QueryExecutor e) : super(e);
+  late final TableFromDriftFile tableFromDriftFile = TableFromDriftFile(this);
   late final $ItemsTable items = $ItemsTable(this);
   late final $UsersTable users = $UsersTable(this);
   late final $PostsTable posts = $PostsTable(this);
@@ -1616,5 +1810,5 @@ abstract class _$TestsDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [items, users, posts, profiles, dummy, dataTypes];
+      [tableFromDriftFile, items, users, posts, profiles, dummy, dataTypes];
 }

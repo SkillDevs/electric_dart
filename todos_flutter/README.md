@@ -61,7 +61,7 @@ This generates the migrations Dart code needed by the Electric client to bundle 
 
 ```sh
 # Within the Flutter app folder, where the pubspec.yaml file is located.
-dart run electricsql_cli generate_migrations
+dart run electricsql_cli generate
 ```
 
 ### 5. Run the app
@@ -96,10 +96,10 @@ We can automatically generate the necessary migrations that the client app needs
 With `electricsql_cli` as a dev dependency in your app, you can then run: 
 
 ```sh
-dart run electricsql_cli generate_migrations
+dart run electricsql_cli generate
 ```
 
 It will connect to the Electric service and generate the migrations file automatically. You can configure the service url
-as well as the output file. Check out the options with `--help`.
+as well as the output directory. Check out the options with `--help`.
 
-The generated file contains the constant `kElectricMigrations` which you need to provide to the `electrify` function when initializing Electric.
+The generated code contains the constant `kElectricMigrations` which you need to provide to the `electrify` function when initializing Electric.

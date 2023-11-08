@@ -6,7 +6,7 @@ CREATE TABLE "todo" (
     "id" TEXT NOT NULL,
     "listid" TEXT,
     "text" TEXT,
-    "completed" INTEGER NOT NULL,
+    "completed" BOOLEAN NOT NULL,
     "edited_at" TIMESTAMPTZ NOT NULL,
     PRIMARY KEY ("id")
 );

@@ -92,7 +92,10 @@ class DataTypes extends Table {
   Set<Column<Object>>? get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Items, Users, Posts, Profiles, Dummy, DataTypes])
+@DriftDatabase(
+  tables: [Items, Users, Posts, Profiles, Dummy, DataTypes],
+  include: {'./other_tables.drift'},
+)
 class TestsDatabase extends _$TestsDatabase {
   TestsDatabase(super.e);
 
