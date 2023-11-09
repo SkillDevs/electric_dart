@@ -271,14 +271,14 @@ packages:
       path: "../packages/electricsql"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.3.1"
   electricsql_cli:
     dependency: "direct dev"
     description:
       path: "../packages/electricsql_cli"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.3.1"
   electricsql_flutter:
     dependency: "direct main"
     description:

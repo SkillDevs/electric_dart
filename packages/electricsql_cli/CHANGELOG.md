@@ -1,3 +1,8 @@
+## 0.3.1
+
+* Code based on official Typescript client [v0.7.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.7.1)
+
+
 ## 0.3.0
 
 * [BREAKING CHANGE]: The `generate_migrations` command is now called `generate` and it will also generate the drift schema code automatically based on the Postgres schema.
