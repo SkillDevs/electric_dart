@@ -216,8 +216,8 @@ Future<void> _runGenerator({
 
     final prismaSchemaContent = prismaSchema.readAsStringSync();
 
-    // Add custom validators (such as uuid) to the Prisma schema
-    // await addValidators(prismaSchema);
+    //print(prismaSchemaContent);
+
     final schemaInfo = extractInfoFromPrismaSchema(
       prismaSchemaContent,
       genOpts: driftSchemaGenOpts,

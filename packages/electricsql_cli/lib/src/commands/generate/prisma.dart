@@ -30,7 +30,7 @@ Future<File> createPrismaSchema(
   final prismaSchemaFile = File(join(prismaDir.path, 'schema.prisma'));
   await prismaDir.create(recursive: true);
 
-  // RelationMode = "prisma" is uses so that "array like" foreign key relations
+  // RelationMode = "prisma" is used so that "array like" foreign key relations
   // are not created in the prisma schema
 
   final schema = '''
