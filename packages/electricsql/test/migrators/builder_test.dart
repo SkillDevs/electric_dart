@@ -96,7 +96,7 @@ void main() {
     );
     expect(
       migration.statements[3],
-      "\n    CREATE TRIGGER update_ensure_main_stars_primarykey\n      BEFORE UPDATE ON main.stars\n    BEGIN\n      SELECT\n        CASE\n          WHEN old.id != new.id THEN\n\t\tRAISE (ABORT, 'cannot change the value of column id as it belongs to the primary key')\n        END;\n    END;\n    ",
+      "\n    CREATE TRIGGER update_ensure_main_stars_primarykey\n      BEFORE UPDATE ON \"main\".\"stars\"\n    BEGIN\n      SELECT\n        CASE\n          WHEN old.\"id\" != new.\"id\" THEN\n\t\tRAISE (ABORT, 'cannot change the value of column id as it belongs to the primary key')\n        END;\n    END;\n    ",
     );
   });
 

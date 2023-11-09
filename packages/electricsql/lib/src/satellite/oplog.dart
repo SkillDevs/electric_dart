@@ -315,7 +315,7 @@ String serialiseRow(Row row) {
 
 /// Deserialises a row back into a record.
 /// `"NaN"`, `"+Inf"`, and `"-Inf"` are transformed back into their numeric equivalent
-/// iff the column type is a float.
+/// if the column type is a float.
 /// @param str The row to deserialise.
 /// @param rel The relation for the table to which this row belongs.
 Row deserialiseRow(String str, Relation rel) {

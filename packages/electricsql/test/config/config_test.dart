@@ -12,9 +12,10 @@ void main() {
       ),
     );
 
-    expect(hydrated.replication.host, '127.0.0.1');
+    expect(hydrated.replication.host, 'localhost');
     expect(hydrated.replication.port, 5133);
     expect(hydrated.replication.ssl, false);
+    expect(hydrated.replication.timeout, const Duration(milliseconds: 3000));
 
     expect(hydrated.auth.token, 'test-token');
 

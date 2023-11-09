@@ -16,11 +16,16 @@ class ElectricConfig {
   /// ssl is enabled or 80 when it isn't.
   ///
   /// Defaults to:
-  /// `http://127.0.0.1:5133`
+  /// `http://localhost:5133`
   final String? url;
 
   /// Optional logger configuration.
   final LoggerConfig? logger;
+
+  /// Timeout for RPC requests.
+  /// Needs to be large enough for the server to have time to deliver the full initial subscription data
+  /// when the client subscribes to a shape for the first time.
+  final Duration? timeout;
 
   /// Optional backoff options for connecting with Electric
   final ConnectionBackoffOptions? connectionBackoffOptions;
@@ -29,6 +34,7 @@ class ElectricConfig {
     required this.auth,
     this.url,
     this.logger,
+    this.timeout,
     this.connectionBackoffOptions,
   });
 }
@@ -49,11 +55,13 @@ class ReplicationConfig {
   final String host;
   final int port;
   final bool ssl;
+  final Duration timeout;
 
   ReplicationConfig({
     required this.host,
     required this.port,
     required this.ssl,
+    required this.timeout,
   });
 }
 
@@ -62,7 +70,7 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
 
   //final debug = config.debug ?? false;
 
-  final url = Uri.parse(config.url ?? 'http://127.0.0.1:5133');
+  final url = Uri.parse(config.url ?? 'http://localhost:5133');
 
   final isSecureProtocol = url.scheme == 'https' || url.scheme == 'wss';
   final sslEnabled = isSecureProtocol || url.queryParameters['ssl'] == 'true';
@@ -74,6 +82,7 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
     host: url.host,
     port: port,
     ssl: sslEnabled,
+    timeout: config.timeout ?? const Duration(milliseconds: 3000),
   );
 
   final connectionBackoffOptions = config.connectionBackoffOptions ??

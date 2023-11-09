@@ -117,7 +117,7 @@ abstract class Notifier {
   void actuallyChanged(DbName dbName, List<Change> changes);
 
   // Reactive hooks then subscribe to "data has actually changed" notifications,
-  // using the info to trigger re-queries, iff the changes affect databases and
+  // using the info to trigger re-queries, if the changes affect databases and
   // tables that their queries depend on. This then trigger re-rendering iff
   // the query results are actually affected by the data changes.
   String subscribeToDataChanges(ChangeCallback callback);

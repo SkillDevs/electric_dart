@@ -185,6 +185,7 @@ class GlobalRegistry extends BaseRegistry {
       host: config.replication.host,
       port: config.replication.port,
       ssl: config.replication.ssl,
+      timeout: config.replication.timeout.inMilliseconds,
     );
 
     final client = SatelliteClient(
