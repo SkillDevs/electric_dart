@@ -149,9 +149,9 @@ Dart 3.x and Melos required
 
 ### Generate the Protobuf code
 
-Install the `protoc_plugin` Dart package. Version used: `^20.0.1`
+Install the `protoc_plugin` Dart package.
 
-`dart pub global activate protoc_plugin 20.0.1`
+`dart pub global activate protoc_plugin`
 
 To generate the code
 
