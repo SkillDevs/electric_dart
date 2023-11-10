@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:todos_electrified/database/database.dart';
@@ -336,7 +337,8 @@ class TodoTile extends ConsumerWidget {
         ),
       ),
       subtitle: Text(
-        todo.editedAt.toIso8601String(),
+        "Last edited: ${DateFormat.yMMMd().add_jm().format(todo.editedAt)}",
+        style: Theme.of(context).textTheme.bodySmall,
       ),
       trailing: IconButton(
         onPressed: () async {
