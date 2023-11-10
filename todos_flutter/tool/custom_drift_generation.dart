@@ -6,6 +6,7 @@
 ///
 /// In order to run it you can do `dart tool/custom_drift_generation.dart`
 /// instead of running `dart run electricsql_cli generate`
+library;
 
 import 'package:electricsql_cli/electricsql_cli.dart';
 
