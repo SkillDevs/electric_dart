@@ -9,35 +9,35 @@ environment:
   flutter: ">=3.10.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
-  electricsql_flutter:
-    path: ../packages/electricsql_flutter
+  animated_emoji: ^2.0.0
+  cupertino_icons: ^1.0.2
+  drift: ^2.13.0
   electricsql:
     path: ../packages/electricsql
-  cupertino_icons: ^1.0.2
+  electricsql_flutter:
+    path: ../packages/electricsql_flutter
+  flutter:
+    sdk: flutter
+  flutter_hooks: ^0.20.1
+  flutter_svg: ^2.0.7
+  hooks_riverpod: ^2.3.10
+  logging: ^1.2.0
+  material_design_icons_flutter: ^7.0.7296
+  material_symbols_icons: ^4.2668.0
+  path: ^1.8.2
+  path_provider: ^2.0.14
   sqlite3: ^2.1.0
   sqlite3_flutter_libs: ^0.5.17
-  path: ^1.8.2
-  hooks_riverpod: ^2.3.10
-  path_provider: ^2.0.14
-  logging: ^1.2.0
-  drift: ^2.13.0
-  animated_emoji: ^2.0.0
-  material_design_icons_flutter: ^7.0.7296
-  flutter_hooks: ^0.20.1
-  material_symbols_icons: ^4.2668.0
-  flutter_svg: ^2.0.7
 
 dev_dependencies:
-  drift_dev: ^2.13.0
   build_runner: ^2.4.4
+  drift_dev: ^2.13.0
   electricsql_cli:
     path: ../packages/electricsql_cli
-  flutter_test:
-    sdk: flutter
 
   flutter_lints: ^2.0.0
+  flutter_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
