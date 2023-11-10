@@ -4,10 +4,9 @@
 /// This file is not used in the todos code generation, but it is an example of the
 /// options supported.
 ///
-/// In order to run it you can do `dart bin/custom_drift_generation.dart`
+/// In order to run it you can do `dart tool/custom_drift_generation.dart`
 /// instead of running `dart run electricsql_cli generate`
 
-// ignore: depend_on_referenced_packages
 import 'package:electricsql_cli/electricsql_cli.dart';
 
 void main(List<String> args) async {
