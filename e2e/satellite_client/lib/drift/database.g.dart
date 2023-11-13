@@ -31,32 +31,32 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   late final GeneratedColumn<String> contentTextNullDefault =
       GeneratedColumn<String>('content_text_null_default', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _intValueNullMeta =
-      const VerificationMeta('intValueNull');
+  static const VerificationMeta _intvalueNullMeta =
+      const VerificationMeta('intvalueNull');
   @override
-  late final GeneratedColumn<int> intValueNull = GeneratedColumn<int>(
+  late final GeneratedColumn<int> intvalueNull = GeneratedColumn<int>(
       'intvalue_null', aliasedName, true,
-      type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _intValueNullDefaultMeta =
-      const VerificationMeta('intValueNullDefault');
+      type: ElectricTypes.int4, requiredDuringInsert: false);
+  static const VerificationMeta _intvalueNullDefaultMeta =
+      const VerificationMeta('intvalueNullDefault');
   @override
-  late final GeneratedColumn<int> intValueNullDefault = GeneratedColumn<int>(
+  late final GeneratedColumn<int> intvalueNullDefault = GeneratedColumn<int>(
       'intvalue_null_default', aliasedName, true,
-      type: DriftSqlType.int, requiredDuringInsert: false);
+      type: ElectricTypes.int4, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
         content,
         contentTextNull,
         contentTextNullDefault,
-        intValueNull,
-        intValueNullDefault
+        intvalueNull,
+        intvalueNullDefault
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Items';
+  static const String $name = 'items';
   @override
   VerificationContext validateIntegrity(Insertable<Item> instance,
       {bool isInserting = false}) {
@@ -87,15 +87,15 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     }
     if (data.containsKey('intvalue_null')) {
       context.handle(
-          _intValueNullMeta,
-          intValueNull.isAcceptableOrUnknown(
-              data['intvalue_null']!, _intValueNullMeta));
+          _intvalueNullMeta,
+          intvalueNull.isAcceptableOrUnknown(
+              data['intvalue_null']!, _intvalueNullMeta));
     }
     if (data.containsKey('intvalue_null_default')) {
       context.handle(
-          _intValueNullDefaultMeta,
-          intValueNullDefault.isAcceptableOrUnknown(
-              data['intvalue_null_default']!, _intValueNullDefaultMeta));
+          _intvalueNullDefaultMeta,
+          intvalueNullDefault.isAcceptableOrUnknown(
+              data['intvalue_null_default']!, _intvalueNullDefaultMeta));
     }
     return context;
   }
@@ -115,10 +115,10 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
       contentTextNullDefault: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}content_text_null_default']),
-      intValueNull: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}intvalue_null']),
-      intValueNullDefault: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}intvalue_null_default']),
+      intvalueNull: attachedDatabase.typeMapping
+          .read(ElectricTypes.int4, data['${effectivePrefix}intvalue_null']),
+      intvalueNullDefault: attachedDatabase.typeMapping.read(
+          ElectricTypes.int4, data['${effectivePrefix}intvalue_null_default']),
     );
   }
 
@@ -126,6 +126,9 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   $ItemsTable createAlias(String alias) {
     return $ItemsTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class Item extends DataClass implements Insertable<Item> {
@@ -133,15 +136,15 @@ class Item extends DataClass implements Insertable<Item> {
   final String content;
   final String? contentTextNull;
   final String? contentTextNullDefault;
-  final int? intValueNull;
-  final int? intValueNullDefault;
+  final int? intvalueNull;
+  final int? intvalueNullDefault;
   const Item(
       {required this.id,
       required this.content,
       this.contentTextNull,
       this.contentTextNullDefault,
-      this.intValueNull,
-      this.intValueNullDefault});
+      this.intvalueNull,
+      this.intvalueNullDefault});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -154,11 +157,11 @@ class Item extends DataClass implements Insertable<Item> {
       map['content_text_null_default'] =
           Variable<String>(contentTextNullDefault);
     }
-    if (!nullToAbsent || intValueNull != null) {
-      map['intvalue_null'] = Variable<int>(intValueNull);
+    if (!nullToAbsent || intvalueNull != null) {
+      map['intvalue_null'] = Variable<int>(intvalueNull);
     }
-    if (!nullToAbsent || intValueNullDefault != null) {
-      map['intvalue_null_default'] = Variable<int>(intValueNullDefault);
+    if (!nullToAbsent || intvalueNullDefault != null) {
+      map['intvalue_null_default'] = Variable<int>(intvalueNullDefault);
     }
     return map;
   }
@@ -173,12 +176,12 @@ class Item extends DataClass implements Insertable<Item> {
       contentTextNullDefault: contentTextNullDefault == null && nullToAbsent
           ? const Value.absent()
           : Value(contentTextNullDefault),
-      intValueNull: intValueNull == null && nullToAbsent
+      intvalueNull: intvalueNull == null && nullToAbsent
           ? const Value.absent()
-          : Value(intValueNull),
-      intValueNullDefault: intValueNullDefault == null && nullToAbsent
+          : Value(intvalueNull),
+      intvalueNullDefault: intvalueNullDefault == null && nullToAbsent
           ? const Value.absent()
-          : Value(intValueNullDefault),
+          : Value(intvalueNullDefault),
     );
   }
 
@@ -191,9 +194,9 @@ class Item extends DataClass implements Insertable<Item> {
       contentTextNull: serializer.fromJson<String?>(json['contentTextNull']),
       contentTextNullDefault:
           serializer.fromJson<String?>(json['contentTextNullDefault']),
-      intValueNull: serializer.fromJson<int?>(json['intValueNull']),
-      intValueNullDefault:
-          serializer.fromJson<int?>(json['intValueNullDefault']),
+      intvalueNull: serializer.fromJson<int?>(json['intvalueNull']),
+      intvalueNullDefault:
+          serializer.fromJson<int?>(json['intvalueNullDefault']),
     );
   }
   @override
@@ -205,8 +208,8 @@ class Item extends DataClass implements Insertable<Item> {
       'contentTextNull': serializer.toJson<String?>(contentTextNull),
       'contentTextNullDefault':
           serializer.toJson<String?>(contentTextNullDefault),
-      'intValueNull': serializer.toJson<int?>(intValueNull),
-      'intValueNullDefault': serializer.toJson<int?>(intValueNullDefault),
+      'intvalueNull': serializer.toJson<int?>(intvalueNull),
+      'intvalueNullDefault': serializer.toJson<int?>(intvalueNullDefault),
     };
   }
 
@@ -215,8 +218,8 @@ class Item extends DataClass implements Insertable<Item> {
           String? content,
           Value<String?> contentTextNull = const Value.absent(),
           Value<String?> contentTextNullDefault = const Value.absent(),
-          Value<int?> intValueNull = const Value.absent(),
-          Value<int?> intValueNullDefault = const Value.absent()}) =>
+          Value<int?> intvalueNull = const Value.absent(),
+          Value<int?> intvalueNullDefault = const Value.absent()}) =>
       Item(
         id: id ?? this.id,
         content: content ?? this.content,
@@ -226,11 +229,11 @@ class Item extends DataClass implements Insertable<Item> {
         contentTextNullDefault: contentTextNullDefault.present
             ? contentTextNullDefault.value
             : this.contentTextNullDefault,
-        intValueNull:
-            intValueNull.present ? intValueNull.value : this.intValueNull,
-        intValueNullDefault: intValueNullDefault.present
-            ? intValueNullDefault.value
-            : this.intValueNullDefault,
+        intvalueNull:
+            intvalueNull.present ? intvalueNull.value : this.intvalueNull,
+        intvalueNullDefault: intvalueNullDefault.present
+            ? intvalueNullDefault.value
+            : this.intvalueNullDefault,
       );
   @override
   String toString() {
@@ -239,15 +242,15 @@ class Item extends DataClass implements Insertable<Item> {
           ..write('content: $content, ')
           ..write('contentTextNull: $contentTextNull, ')
           ..write('contentTextNullDefault: $contentTextNullDefault, ')
-          ..write('intValueNull: $intValueNull, ')
-          ..write('intValueNullDefault: $intValueNullDefault')
+          ..write('intvalueNull: $intvalueNull, ')
+          ..write('intvalueNullDefault: $intvalueNullDefault')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, content, contentTextNull,
-      contentTextNullDefault, intValueNull, intValueNullDefault);
+      contentTextNullDefault, intvalueNull, intvalueNullDefault);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -256,8 +259,8 @@ class Item extends DataClass implements Insertable<Item> {
           other.content == this.content &&
           other.contentTextNull == this.contentTextNull &&
           other.contentTextNullDefault == this.contentTextNullDefault &&
-          other.intValueNull == this.intValueNull &&
-          other.intValueNullDefault == this.intValueNullDefault);
+          other.intvalueNull == this.intvalueNull &&
+          other.intvalueNullDefault == this.intvalueNullDefault);
 }
 
 class ItemsCompanion extends UpdateCompanion<Item> {
@@ -265,26 +268,23 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<String> content;
   final Value<String?> contentTextNull;
   final Value<String?> contentTextNullDefault;
-  final Value<int?> intValueNull;
-  final Value<int?> intValueNullDefault;
-  final Value<int> rowid;
+  final Value<int?> intvalueNull;
+  final Value<int?> intvalueNullDefault;
   const ItemsCompanion({
     this.id = const Value.absent(),
     this.content = const Value.absent(),
     this.contentTextNull = const Value.absent(),
     this.contentTextNullDefault = const Value.absent(),
-    this.intValueNull = const Value.absent(),
-    this.intValueNullDefault = const Value.absent(),
-    this.rowid = const Value.absent(),
+    this.intvalueNull = const Value.absent(),
+    this.intvalueNullDefault = const Value.absent(),
   });
   ItemsCompanion.insert({
     required String id,
     required String content,
     this.contentTextNull = const Value.absent(),
     this.contentTextNullDefault = const Value.absent(),
-    this.intValueNull = const Value.absent(),
-    this.intValueNullDefault = const Value.absent(),
-    this.rowid = const Value.absent(),
+    this.intvalueNull = const Value.absent(),
+    this.intvalueNullDefault = const Value.absent(),
   })  : id = Value(id),
         content = Value(content);
   static Insertable<Item> custom({
@@ -292,9 +292,8 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Expression<String>? content,
     Expression<String>? contentTextNull,
     Expression<String>? contentTextNullDefault,
-    Expression<int>? intValueNull,
-    Expression<int>? intValueNullDefault,
-    Expression<int>? rowid,
+    Expression<int>? intvalueNull,
+    Expression<int>? intvalueNullDefault,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -302,10 +301,9 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       if (contentTextNull != null) 'content_text_null': contentTextNull,
       if (contentTextNullDefault != null)
         'content_text_null_default': contentTextNullDefault,
-      if (intValueNull != null) 'intvalue_null': intValueNull,
-      if (intValueNullDefault != null)
-        'intvalue_null_default': intValueNullDefault,
-      if (rowid != null) 'rowid': rowid,
+      if (intvalueNull != null) 'intvalue_null': intvalueNull,
+      if (intvalueNullDefault != null)
+        'intvalue_null_default': intvalueNullDefault,
     });
   }
 
@@ -314,18 +312,16 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       Value<String>? content,
       Value<String?>? contentTextNull,
       Value<String?>? contentTextNullDefault,
-      Value<int?>? intValueNull,
-      Value<int?>? intValueNullDefault,
-      Value<int>? rowid}) {
+      Value<int?>? intvalueNull,
+      Value<int?>? intvalueNullDefault}) {
     return ItemsCompanion(
       id: id ?? this.id,
       content: content ?? this.content,
       contentTextNull: contentTextNull ?? this.contentTextNull,
       contentTextNullDefault:
           contentTextNullDefault ?? this.contentTextNullDefault,
-      intValueNull: intValueNull ?? this.intValueNull,
-      intValueNullDefault: intValueNullDefault ?? this.intValueNullDefault,
-      rowid: rowid ?? this.rowid,
+      intvalueNull: intvalueNull ?? this.intvalueNull,
+      intvalueNullDefault: intvalueNullDefault ?? this.intvalueNullDefault,
     );
   }
 
@@ -345,14 +341,13 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       map['content_text_null_default'] =
           Variable<String>(contentTextNullDefault.value);
     }
-    if (intValueNull.present) {
-      map['intvalue_null'] = Variable<int>(intValueNull.value);
+    if (intvalueNull.present) {
+      map['intvalue_null'] =
+          Variable<int>(intvalueNull.value, ElectricTypes.int4);
     }
-    if (intValueNullDefault.present) {
-      map['intvalue_null_default'] = Variable<int>(intValueNullDefault.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
+    if (intvalueNullDefault.present) {
+      map['intvalue_null_default'] =
+          Variable<int>(intvalueNullDefault.value, ElectricTypes.int4);
     }
     return map;
   }
@@ -364,9 +359,8 @@ class ItemsCompanion extends UpdateCompanion<Item> {
           ..write('content: $content, ')
           ..write('contentTextNull: $contentTextNull, ')
           ..write('contentTextNullDefault: $contentTextNullDefault, ')
-          ..write('intValueNull: $intValueNull, ')
-          ..write('intValueNullDefault: $intValueNullDefault, ')
-          ..write('rowid: $rowid')
+          ..write('intvalueNull: $intvalueNull, ')
+          ..write('intvalueNullDefault: $intvalueNullDefault')
           ..write(')'))
         .toString();
   }
@@ -393,17 +387,14 @@ class $OtherItemsTable extends OtherItems
   @override
   late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
       'item_id', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('UNIQUE REFERENCES Items (id)'));
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [id, content, itemId];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'OtherItems';
+  static const String $name = 'other_items';
   @override
   VerificationContext validateIntegrity(Insertable<OtherItem> instance,
       {bool isInserting = false}) {
@@ -446,6 +437,9 @@ class $OtherItemsTable extends OtherItems
   $OtherItemsTable createAlias(String alias) {
     return $OtherItemsTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class OtherItem extends DataClass implements Insertable<OtherItem> {
@@ -526,44 +520,35 @@ class OtherItemsCompanion extends UpdateCompanion<OtherItem> {
   final Value<String> id;
   final Value<String> content;
   final Value<String?> itemId;
-  final Value<int> rowid;
   const OtherItemsCompanion({
     this.id = const Value.absent(),
     this.content = const Value.absent(),
     this.itemId = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   OtherItemsCompanion.insert({
     required String id,
     required String content,
     this.itemId = const Value.absent(),
-    this.rowid = const Value.absent(),
   })  : id = Value(id),
         content = Value(content);
   static Insertable<OtherItem> custom({
     Expression<String>? id,
     Expression<String>? content,
     Expression<String>? itemId,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (content != null) 'content': content,
       if (itemId != null) 'item_id': itemId,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   OtherItemsCompanion copyWith(
-      {Value<String>? id,
-      Value<String>? content,
-      Value<String?>? itemId,
-      Value<int>? rowid}) {
+      {Value<String>? id, Value<String>? content, Value<String?>? itemId}) {
     return OtherItemsCompanion(
       id: id ?? this.id,
       content: content ?? this.content,
       itemId: itemId ?? this.itemId,
-      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -579,9 +564,6 @@ class OtherItemsCompanion extends UpdateCompanion<OtherItem> {
     if (itemId.present) {
       map['item_id'] = Variable<String>(itemId.value);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
@@ -590,8 +572,7 @@ class OtherItemsCompanion extends UpdateCompanion<OtherItem> {
     return (StringBuffer('OtherItemsCompanion(')
           ..write('id: $id, ')
           ..write('content: $content, ')
-          ..write('itemId: $itemId, ')
-          ..write('rowid: $rowid')
+          ..write('itemId: $itemId')
           ..write(')'))
         .toString();
   }
@@ -626,7 +607,7 @@ class $TimestampsTable extends Timestamps
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Timestamps';
+  static const String $name = 'timestamps';
   @override
   VerificationContext validateIntegrity(Insertable<Timestamp> instance,
       {bool isInserting = false}) {
@@ -671,6 +652,9 @@ class $TimestampsTable extends Timestamps
   $TimestampsTable createAlias(String alias) {
     return $TimestampsTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class Timestamp extends DataClass implements Insertable<Timestamp> {
@@ -746,18 +730,15 @@ class TimestampsCompanion extends UpdateCompanion<Timestamp> {
   final Value<String> id;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
-  final Value<int> rowid;
   const TimestampsCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   TimestampsCompanion.insert({
     required String id,
     required DateTime createdAt,
     required DateTime updatedAt,
-    this.rowid = const Value.absent(),
   })  : id = Value(id),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
@@ -765,26 +746,22 @@ class TimestampsCompanion extends UpdateCompanion<Timestamp> {
     Expression<String>? id,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   TimestampsCompanion copyWith(
       {Value<String>? id,
       Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
-      Value<int>? rowid}) {
+      Value<DateTime>? updatedAt}) {
     return TimestampsCompanion(
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -802,9 +779,6 @@ class TimestampsCompanion extends UpdateCompanion<Timestamp> {
       map['updated_at'] =
           Variable<DateTime>(updatedAt.value, ElectricTypes.timestampTZ);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
@@ -813,8 +787,7 @@ class TimestampsCompanion extends UpdateCompanion<Timestamp> {
     return (StringBuffer('TimestampsCompanion(')
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('rowid: $rowid')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -847,7 +820,7 @@ class $DatetimesTable extends Datetimes
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Datetimes';
+  static const String $name = 'datetimes';
   @override
   VerificationContext validateIntegrity(Insertable<Datetime> instance,
       {bool isInserting = false}) {
@@ -890,6 +863,9 @@ class $DatetimesTable extends Datetimes
   $DatetimesTable createAlias(String alias) {
     return $DatetimesTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class Datetime extends DataClass implements Insertable<Datetime> {
@@ -963,18 +939,15 @@ class DatetimesCompanion extends UpdateCompanion<Datetime> {
   final Value<String> id;
   final Value<DateTime> d;
   final Value<DateTime> t;
-  final Value<int> rowid;
   const DatetimesCompanion({
     this.id = const Value.absent(),
     this.d = const Value.absent(),
     this.t = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   DatetimesCompanion.insert({
     required String id,
     required DateTime d,
     required DateTime t,
-    this.rowid = const Value.absent(),
   })  : id = Value(id),
         d = Value(d),
         t = Value(t);
@@ -982,26 +955,20 @@ class DatetimesCompanion extends UpdateCompanion<Datetime> {
     Expression<String>? id,
     Expression<DateTime>? d,
     Expression<DateTime>? t,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (d != null) 'd': d,
       if (t != null) 't': t,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   DatetimesCompanion copyWith(
-      {Value<String>? id,
-      Value<DateTime>? d,
-      Value<DateTime>? t,
-      Value<int>? rowid}) {
+      {Value<String>? id, Value<DateTime>? d, Value<DateTime>? t}) {
     return DatetimesCompanion(
       id: id ?? this.id,
       d: d ?? this.d,
       t: t ?? this.t,
-      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1017,9 +984,6 @@ class DatetimesCompanion extends UpdateCompanion<Datetime> {
     if (t.present) {
       map['t'] = Variable<DateTime>(t.value, ElectricTypes.time);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
@@ -1028,8 +992,7 @@ class DatetimesCompanion extends UpdateCompanion<Datetime> {
     return (StringBuffer('DatetimesCompanion(')
           ..write('id: $id, ')
           ..write('d: $d, ')
-          ..write('t: $t, ')
-          ..write('rowid: $rowid')
+          ..write('t: $t')
           ..write(')'))
         .toString();
   }
@@ -1059,7 +1022,7 @@ class $BoolsTable extends Bools with TableInfo<$BoolsTable, Bool> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Bools';
+  static const String $name = 'bools';
   @override
   VerificationContext validateIntegrity(Insertable<Bool> instance,
       {bool isInserting = false}) {
@@ -1093,6 +1056,9 @@ class $BoolsTable extends Bools with TableInfo<$BoolsTable, Bool> {
   $BoolsTable createAlias(String alias) {
     return $BoolsTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class Bool extends DataClass implements Insertable<Bool> {
@@ -1157,35 +1123,28 @@ class Bool extends DataClass implements Insertable<Bool> {
 class BoolsCompanion extends UpdateCompanion<Bool> {
   final Value<String> id;
   final Value<bool?> b;
-  final Value<int> rowid;
   const BoolsCompanion({
     this.id = const Value.absent(),
     this.b = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   BoolsCompanion.insert({
     required String id,
     this.b = const Value.absent(),
-    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Bool> custom({
     Expression<String>? id,
     Expression<bool>? b,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (b != null) 'b': b,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  BoolsCompanion copyWith(
-      {Value<String>? id, Value<bool?>? b, Value<int>? rowid}) {
+  BoolsCompanion copyWith({Value<String>? id, Value<bool?>? b}) {
     return BoolsCompanion(
       id: id ?? this.id,
       b: b ?? this.b,
-      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1198,9 +1157,6 @@ class BoolsCompanion extends UpdateCompanion<Bool> {
     if (b.present) {
       map['b'] = Variable<bool>(b.value);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
@@ -1208,8 +1164,7 @@ class BoolsCompanion extends UpdateCompanion<Bool> {
   String toString() {
     return (StringBuffer('BoolsCompanion(')
           ..write('id: $id, ')
-          ..write('b: $b, ')
-          ..write('rowid: $rowid')
+          ..write('b: $b')
           ..write(')'))
         .toString();
   }
@@ -1231,7 +1186,7 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Uuids';
+  static const String $name = 'uuids';
   @override
   VerificationContext validateIntegrity(Insertable<Uuid> instance,
       {bool isInserting = false}) {
@@ -1260,6 +1215,9 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   $UuidsTable createAlias(String alias) {
     return $UuidsTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class Uuid extends DataClass implements Insertable<Uuid> {
@@ -1313,29 +1271,23 @@ class Uuid extends DataClass implements Insertable<Uuid> {
 
 class UuidsCompanion extends UpdateCompanion<Uuid> {
   final Value<String> id;
-  final Value<int> rowid;
   const UuidsCompanion({
     this.id = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   UuidsCompanion.insert({
     required String id,
-    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Uuid> custom({
     Expression<String>? id,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  UuidsCompanion copyWith({Value<String>? id, Value<int>? rowid}) {
+  UuidsCompanion copyWith({Value<String>? id}) {
     return UuidsCompanion(
       id: id ?? this.id,
-      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1345,17 +1297,13 @@ class UuidsCompanion extends UpdateCompanion<Uuid> {
     if (id.present) {
       map['id'] = Variable<String>(id.value, ElectricTypes.uuid);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('UuidsCompanion(')
-          ..write('id: $id, ')
-          ..write('rowid: $rowid')
+          ..write('id: $id')
           ..write(')'))
         .toString();
   }
@@ -1387,7 +1335,7 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Ints';
+  static const String $name = 'ints';
   @override
   VerificationContext validateIntegrity(Insertable<Int> instance,
       {bool isInserting = false}) {
@@ -1426,6 +1374,9 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   $IntsTable createAlias(String alias) {
     return $IntsTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class Int extends DataClass implements Insertable<Int> {
@@ -1507,43 +1458,34 @@ class IntsCompanion extends UpdateCompanion<Int> {
   final Value<String> id;
   final Value<int?> i2;
   final Value<int?> i4;
-  final Value<int> rowid;
   const IntsCompanion({
     this.id = const Value.absent(),
     this.i2 = const Value.absent(),
     this.i4 = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   IntsCompanion.insert({
     required String id,
     this.i2 = const Value.absent(),
     this.i4 = const Value.absent(),
-    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Int> custom({
     Expression<String>? id,
     Expression<int>? i2,
     Expression<int>? i4,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (i2 != null) 'i2': i2,
       if (i4 != null) 'i4': i4,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   IntsCompanion copyWith(
-      {Value<String>? id,
-      Value<int?>? i2,
-      Value<int?>? i4,
-      Value<int>? rowid}) {
+      {Value<String>? id, Value<int?>? i2, Value<int?>? i4}) {
     return IntsCompanion(
       id: id ?? this.id,
       i2: i2 ?? this.i2,
       i4: i4 ?? this.i4,
-      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1559,9 +1501,6 @@ class IntsCompanion extends UpdateCompanion<Int> {
     if (i4.present) {
       map['i4'] = Variable<int>(i4.value, ElectricTypes.int4);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
@@ -1570,8 +1509,7 @@ class IntsCompanion extends UpdateCompanion<Int> {
     return (StringBuffer('IntsCompanion(')
           ..write('id: $id, ')
           ..write('i2: $i2, ')
-          ..write('i4: $i4, ')
-          ..write('rowid: $rowid')
+          ..write('i4: $i4')
           ..write(')'))
         .toString();
   }
@@ -1598,7 +1536,7 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Floats';
+  static const String $name = 'floats';
   @override
   VerificationContext validateIntegrity(Insertable<Float> instance,
       {bool isInserting = false}) {
@@ -1632,6 +1570,9 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   $FloatsTable createAlias(String alias) {
     return $FloatsTable(attachedDatabase, alias);
   }
+
+  @override
+  bool get withoutRowId => true;
 }
 
 class Float extends DataClass implements Insertable<Float> {
@@ -1697,35 +1638,28 @@ class Float extends DataClass implements Insertable<Float> {
 class FloatsCompanion extends UpdateCompanion<Float> {
   final Value<String> id;
   final Value<double?> f8;
-  final Value<int> rowid;
   const FloatsCompanion({
     this.id = const Value.absent(),
     this.f8 = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   FloatsCompanion.insert({
     required String id,
     this.f8 = const Value.absent(),
-    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Float> custom({
     Expression<String>? id,
     Expression<double>? f8,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (f8 != null) 'f8': f8,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  FloatsCompanion copyWith(
-      {Value<String>? id, Value<double?>? f8, Value<int>? rowid}) {
+  FloatsCompanion copyWith({Value<String>? id, Value<double?>? f8}) {
     return FloatsCompanion(
       id: id ?? this.id,
       f8: f8 ?? this.f8,
-      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1738,9 +1672,6 @@ class FloatsCompanion extends UpdateCompanion<Float> {
     if (f8.present) {
       map['f8'] = Variable<double>(f8.value, ElectricTypes.float8);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
@@ -1748,8 +1679,7 @@ class FloatsCompanion extends UpdateCompanion<Float> {
   String toString() {
     return (StringBuffer('FloatsCompanion(')
           ..write('id: $id, ')
-          ..write('f8: $f8, ')
-          ..write('rowid: $rowid')
+          ..write('f8: $f8')
           ..write(')'))
         .toString();
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
+import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:electricsql_cli/src/prisma_schema_parser.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart';
@@ -319,70 +320,6 @@ Set<String> _getPrimaryKeysFromModel(Model m) {
       .toSet();
 
   return compositeFields.toSet()..addAll(idFieldsSet);
-}
-
-class DriftSchemaInfo {
-  final List<DriftTableInfo> tables;
-  final ElectricDriftGenOpts? genOpts;
-
-  DriftSchemaInfo({
-    required this.tables,
-    required this.genOpts,
-  });
-
-  @override
-  String toString() => 'DriftSchemaInfo(tables: $tables)';
-}
-
-class DriftTableInfo {
-  final String tableName;
-  final String dartClassName;
-  final List<DriftColumn> columns;
-
-  DriftTableInfo({
-    required this.tableName,
-    required this.dartClassName,
-    required this.columns,
-  });
-
-  @override
-  String toString() =>
-      'DriftTableInfo(tableName: $tableName, dartClassName: $dartClassName, columns: $columns)';
-}
-
-class DriftColumn {
-  final String columnName;
-  final String dartName;
-  final DriftElectricColumnType type;
-  final bool isPrimaryKey;
-  final bool isNullable;
-
-  DriftColumn({
-    required this.columnName,
-    required this.dartName,
-    required this.type,
-    required this.isNullable,
-    required this.isPrimaryKey,
-  });
-
-  @override
-  String toString() {
-    return 'DriftColumn(columnName: $columnName, dartName: $dartName, type: $type, nullable: $isNullable, isPrimaryKey: $isPrimaryKey)';
-  }
-}
-
-enum DriftElectricColumnType {
-  int2,
-  int4,
-  float8,
-  string,
-  bool,
-  date,
-  time,
-  timeTZ,
-  timestamp,
-  timestampTZ,
-  uuid,
 }
 
 bool _isInvalidColumnDartName(String name) {

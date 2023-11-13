@@ -5,7 +5,7 @@ import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
-import 'package:electricsql_cli/src/commands/generate/prisma.dart';
+import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:path/path.dart' as path;
 
 Future<void> buildMigrations(

@@ -1,0 +1,51 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DUMMY_URL_NOT_USED")
+}
+
+model Items {
+  id                        String  @id
+  content                   String
+  content_text_null         String?
+  content_text_null_default String?
+  intvalue_null             Int?
+  intvalue_null_default     Int?
+}
+
+model OtherItems {
+  id      String  @id
+  content String
+  item_id String? @unique
+}
+
+model Timestamps {
+  id String @id
+  created_at DateTime @db.Timestamp(3)
+  updated_at DateTime @db.Timestamptz(3)
+}
+
+model Datetimes {
+  id String   @id
+  d  DateTime @db.Date
+  t  DateTime @db.Time(3)
+}
+
+model Bools {
+  id String @id
+  b  Boolean?
+}
+
+model Uuids {
+  id String @id @db.Uuid /// @zod.string.uuid()
+}
+
+model Ints {
+  id String @id
+  i2 Int? @db.SmallInt /// @zod.number.int().gte(-32768).lte(32767)
+  i4 Int?              /// @zod.number.int().gte(-2147483648).lte(2147483647)
+}
+
+model Floats {
+  id String @id
+  f8 Float? @db.DoublePrecision /// @zod.custom.use(z.number().or(z.nan()))
+}
