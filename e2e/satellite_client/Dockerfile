@@ -12,10 +12,17 @@ RUN apt-get update && apt install sqlite3 wget nodejs -y
 # Specify the Dart SDK base image version using dart:<version> (ex: dart:2.12)
 FROM dart:stable AS build
 
+# Copy electricsql core source code
 WORKDIR /repo/packages/electricsql
 COPY packages/electricsql/pubspec.* ./
 RUN dart pub get
 
+# Copy CLI source code
+WORKDIR /repo/packages/electricsql_cli
+COPY packages/electricsql_cli/pubspec.* ./
+RUN dart pub get
+
+# Copy E2E client source code
 WORKDIR /repo/e2e/satellite_client
 COPY e2e/satellite_client/pubspec.* ./
 RUN dart pub get
