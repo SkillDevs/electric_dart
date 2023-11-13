@@ -1,9 +1,10 @@
-import 'dart:convert';
+import 'dart:convert' hide JsonCodec;
 
 import 'package:electricsql/src/util/converters/codecs/date.dart';
 import 'package:electricsql/src/util/converters/codecs/float8.dart';
 import 'package:electricsql/src/util/converters/codecs/int2.dart';
 import 'package:electricsql/src/util/converters/codecs/int4.dart';
+import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:electricsql/src/util/converters/codecs/time.dart';
 import 'package:electricsql/src/util/converters/codecs/timestamp.dart';
 import 'package:electricsql/src/util/converters/codecs/timestamptz.dart';
@@ -20,6 +21,7 @@ class TypeConverters {
   static const Int2Codec int2 = Int2Codec();
   static const Int4Codec int4 = Int4Codec();
   static const Float8Codec float8 = Float8Codec();
+  static const JsonCodec json = JsonCodec();
 }
 
 class ValidationCodec<T> extends Codec<T, T> {

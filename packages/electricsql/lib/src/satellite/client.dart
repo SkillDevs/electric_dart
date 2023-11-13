@@ -1124,6 +1124,8 @@ Object deserializeColumnData(
     case PgType.timestampTz:
     case PgType.uuid:
     case PgType.varchar:
+    case PgType.json:
+    case PgType.jsonb:
       return TypeDecoder.text(column);
     case PgType.bool:
       return TypeDecoder.boolean(column);

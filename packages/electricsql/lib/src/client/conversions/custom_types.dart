@@ -14,6 +14,8 @@ class ElectricTypes {
   static const Int2Type int2 = Int2Type();
   static const Int4Type int4 = Int4Type();
   static const Float8Type float8 = Float8Type();
+  static const JsonType json = JsonType();
+  static const JsonBType jsonb = JsonBType();
 }
 
 abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
@@ -143,4 +145,22 @@ class Float8Type extends CustomElectricType<double, Object> {
 
     return '$encoded';
   }
+}
+
+class JsonType extends CustomElectricType<Object, String> {
+  const JsonType()
+      : super(
+          codec: TypeConverters.json,
+          typeName: 'json',
+          pgType: PgType.json,
+        );
+}
+
+class JsonBType extends CustomElectricType<Object, String> {
+  const JsonBType()
+      : super(
+          codec: TypeConverters.json,
+          typeName: 'jsonb',
+          pgType: PgType.jsonb,
+        );
 }

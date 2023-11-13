@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
+import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
@@ -193,6 +196,43 @@ void main() async {
       await _testFloat8(db, double.nan);
     });
   });
+
+  group('json', () {
+    test('int', () async {
+      await _testJson(db, 1);
+    });
+
+    test('double', () async {
+      await _testJson(db, 1.5);
+    });
+
+    test('string', () async {
+      await _testJson(db, 'hello');
+    });
+
+    test('list', () async {
+      await _testJson(db, [1, 2, 3]);
+    });
+
+    test('map', () async {
+      await _testJson(db, {'a': 1, 'b': 2});
+    });
+
+    test('null', () async {
+      await _testJson(db, kJsonNull);
+    });
+
+    test('true', () async {
+      await _testJson(db, true);
+    });
+
+    test('invalid', () async {
+      await expectLater(
+        () async => _testJson(db, Object()),
+        throwsA(isA<JsonUnsupportedObjectError>()),
+      );
+    });
+  });
 }
 
 Future<void> _testDate(TestsDatabase db, DateTime value) async {
@@ -345,6 +385,18 @@ Future<void> _testFloat8(TestsDatabase db, double value) async {
       float8: Value(v),
     ),
     customT: ElectricTypes.float8,
+  );
+}
+
+Future<void> _testJson(TestsDatabase db, Object value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.json,
+    insertCol: (c, v) => c.copyWith(
+      json: Value(v),
+    ),
+    customT: ElectricTypes.json,
   );
 }
 
