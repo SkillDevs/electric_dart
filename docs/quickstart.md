@@ -50,9 +50,9 @@ You can run the tool within your Flutter app as follows:
 dart run electricsql_cli generate
 ```
 
-After it finishes you should have a the folder `lib/generated/electric` created. Inside you will find the `drift` schema and the Electric SQL migrations.
+After it finishes you should have the folder `lib/generated/electric` created. Inside you will find the `drift` schema and the Electric SQL migrations.
 
-After this point, the app should be configured like a regular app that uses `drift` with a minor adjustment.
+After this point, the app should be configured like a regular app that uses `drift`, with minor adjustments.
 You can refer to the official `drift` docs here https://drift.simonbinder.eu/docs/getting-started/
 
 When defining the `drift` database class you need to provide the tables from the generated file.
@@ -69,9 +69,14 @@ dart run build_runner build
 import 'dart:io';
 
 import 'package:drift/native.dart';
+
+// Import the generated Drift schema, which contains your electrified tables
 import 'package:myapp/generated/electric/drift_schema.dart';
+
 // [IMPORTANT] Add this line to enable the import of electric types for Drift
+// You can also import them from `electricsql_flutter`
 import 'package:electricsql/drivers/drift.dart'; 
+
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -85,7 +90,7 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 
   // [IMPORTANT CHANGE!!!]
-  // drift by default creates the local database tables. This is done by electric in
+  // Drift by default creates the local database tables. This is done by electric in
   // this situation, so we provide an empty onCreate callback
   @override
   MigrationStrategy get migration {
