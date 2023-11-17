@@ -14,6 +14,7 @@ const kElectrifiedTables = [
   Uuids,
   Ints,
   Floats,
+  Jsons,
 ];
 
 class Items extends Table {
@@ -125,6 +126,23 @@ class Floats extends Table {
   TextColumn get id => text()();
 
   RealColumn get f8 => customType(ElectricTypes.float8).nullable()();
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Jsons extends Table {
+  TextColumn get id => text()();
+
+  Column<Object> get js => customType(ElectricTypes.json).nullable()();
+
+  Column<Object> get jsb => customType(ElectricTypes.jsonb).nullable()();
+
+  @override
+  String? get tableName => 'jsons';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};

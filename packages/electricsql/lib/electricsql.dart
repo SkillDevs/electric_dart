@@ -21,4 +21,4 @@ export 'src/migrators/migrators.dart' show Migration;
 export 'src/util/debug/index.dart';
 
 // Utils that we embed in the main library
-export 'src/util/index.dart' show ConnectivityState, TypeConverters;
+export 'src/util/index.dart' show ConnectivityState, TypeConverters, kJsonNull;

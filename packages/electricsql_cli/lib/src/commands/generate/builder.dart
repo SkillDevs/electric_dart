@@ -330,6 +330,10 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
       return _customElectricTypeExpr('timestampTZ');
     case DriftElectricColumnType.uuid:
       return _customElectricTypeExpr('uuid');
+    case DriftElectricColumnType.json:
+      return _customElectricTypeExpr('json');
+    case DriftElectricColumnType.jsonb:
+      return _customElectricTypeExpr('jsonb');
   }
 }
 
@@ -357,6 +361,9 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
     case DriftElectricColumnType.timestamp:
     case DriftElectricColumnType.timestampTZ:
       return refer('Column<DateTime>', kDriftImport);
+    case DriftElectricColumnType.json:
+    case DriftElectricColumnType.jsonb:
+      return refer('Column<Object>', kDriftImport);
   }
 }
 

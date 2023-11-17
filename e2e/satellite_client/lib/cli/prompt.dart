@@ -176,6 +176,37 @@ Future<void> start() async {
           command,
           getFloat,
         );
+      } else if (name == "get_jsonb") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getJsonb,
+        );
+      } else if (name == "get_json") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getJson,
+        );
+      } else if (name == "get_json_raw") {
+        await processCommand2Params<MyDriftElectricClient, String, String?>(
+          state,
+          command,
+          getJsonRaw,
+        );
+      } else if (name == "get_jsonb_raw") {
+        await processCommand2Params<MyDriftElectricClient, String, String?>(
+          state,
+          command,
+          getJsonbRaw,
+        );
+      } else if (name == "write_json") {
+        await processCommand4Params<MyDriftElectricClient, String, Object?,
+            Object?, SingleRow>(
+          state,
+          command,
+          writeJson,
+        );
       } else if (name == "get_items") {
         await processCommand1Param<MyDriftElectricClient, Rows>(
           state,

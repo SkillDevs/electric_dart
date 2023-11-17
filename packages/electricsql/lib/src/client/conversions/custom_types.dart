@@ -159,7 +159,7 @@ class JsonType extends CustomElectricType<Object, String> {
 class JsonBType extends CustomElectricType<Object, String> {
   const JsonBType()
       : super(
-          codec: TypeConverters.json,
+          codec: TypeConverters.jsonb,
           typeName: 'jsonb',
           pgType: PgType.jsonb,
         );

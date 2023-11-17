@@ -11,6 +11,9 @@ import 'package:electricsql/src/util/converters/codecs/timestamptz.dart';
 import 'package:electricsql/src/util/converters/codecs/timetz.dart';
 import 'package:electricsql/src/util/converters/codecs/uuid.dart';
 
+export 'package:electricsql/src/util/converters/codecs/json.dart'
+    show kJsonNull;
+
 class TypeConverters {
   static const TimestampCodec timestamp = TimestampCodec();
   static const TimestampTZCodec timestampTZ = TimestampTZCodec();
@@ -22,6 +25,7 @@ class TypeConverters {
   static const Int4Codec int4 = Int4Codec();
   static const Float8Codec float8 = Float8Codec();
   static const JsonCodec json = JsonCodec();
+  static const JsonCodec jsonb = json;
 }
 
 class ValidationCodec<T> extends Codec<T, T> {
