@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:electricsql/src/util/converters/codecs/date.dart';
+import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/float8.dart';
 import 'package:electricsql/src/util/converters/codecs/int2.dart';
 import 'package:electricsql/src/util/converters/codecs/int4.dart';
@@ -19,6 +20,7 @@ class TypeConverters {
   static const UUIDCodec uuid = UUIDCodec();
   static const Int2Codec int2 = Int2Codec();
   static const Int4Codec int4 = Int4Codec();
+  static const Float4Codec float4 = Float4Codec();
   static const Float8Codec float8 = Float8Codec();
 }
 

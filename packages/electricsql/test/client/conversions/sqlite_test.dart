@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
@@ -202,40 +203,42 @@ void main() async {
   });
 
   test('floats are converted correctly to SQLite', () async {
-    final List<(int id, double value)> values = [
-      (1, 1.234),
-      (2, double.nan),
-      (3, double.infinity),
-      (4, double.negativeInfinity),
+    final List<(int id, double float4, double float8)> values = [
+      (1, 1.234, 1.234),
+      (2, double.nan, double.nan),
+      (3, double.infinity, double.infinity),
+      (4, double.negativeInfinity, double.negativeInfinity),
     ];
 
     for (final entry in values) {
-      final (id, value) = entry;
+      final (id, f4, f8) = entry;
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
               id: Value(id),
-              float8: Value(value),
+              float4: Value(f4),
+              float8: Value(f8),
             ),
           );
     }
 
     final rawRes = await db.customSelect(
-      'SELECT id, float8 FROM DataTypes ORDER BY id ASC',
+      'SELECT id, float4, float8 FROM DataTypes ORDER BY id ASC',
       variables: [],
     ).get();
 
-    final List<(int id, Object value)> expected = [
-      (1, 1.234),
-      (2, 'NaN'),
-      (3, double.infinity),
-      (4, double.negativeInfinity),
+    final List<(int id, Object float4, Object float8)> expected = [
+      (1, fround(1.234), 1.234),
+      (2, 'NaN', 'NaN'),
+      (3, double.infinity, double.infinity),
+      (4, double.negativeInfinity, double.negativeInfinity),
     ];
 
-    final List<(int id, Object value)> rowsRecords = rawRes.map((row) {
+    final List<(int id, Object float4, Object float8)> rowsRecords = rawRes.map((row) {
       final data = row.data;
       final id = data['id'] as int;
-      final Object value = data['float8'] as Object;
-      return (id, value);
+      final Object float4 = data['float4'] as Object;
+      final Object float8 = data['float8'] as Object;
+      return (id, float4, float8);
     }).toList();
 
     expect(rowsRecords, expected);
