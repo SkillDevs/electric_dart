@@ -1525,13 +1525,18 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _f4Meta = const VerificationMeta('f4');
+  @override
+  late final GeneratedColumn<double> f4 = GeneratedColumn<double>(
+      'f4', aliasedName, true,
+      type: ElectricTypes.float4, requiredDuringInsert: false);
   static const VerificationMeta _f8Meta = const VerificationMeta('f8');
   @override
   late final GeneratedColumn<double> f8 = GeneratedColumn<double>(
       'f8', aliasedName, true,
       type: ElectricTypes.float8, requiredDuringInsert: false);
   @override
-  List<GeneratedColumn> get $columns => [id, f8];
+  List<GeneratedColumn> get $columns => [id, f4, f8];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1547,6 +1552,9 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
     } else if (isInserting) {
       context.missing(_idMeta);
     }
+    if (data.containsKey('f4')) {
+      context.handle(_f4Meta, f4.isAcceptableOrUnknown(data['f4']!, _f4Meta));
+    }
     if (data.containsKey('f8')) {
       context.handle(_f8Meta, f8.isAcceptableOrUnknown(data['f8']!, _f8Meta));
     }
@@ -1561,6 +1569,8 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
     return Float(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      f4: attachedDatabase.typeMapping
+          .read(ElectricTypes.float4, data['${effectivePrefix}f4']),
       f8: attachedDatabase.typeMapping
           .read(ElectricTypes.float8, data['${effectivePrefix}f8']),
     );
@@ -1577,12 +1587,16 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
 
 class Float extends DataClass implements Insertable<Float> {
   final String id;
+  final double? f4;
   final double? f8;
-  const Float({required this.id, this.f8});
+  const Float({required this.id, this.f4, this.f8});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    if (!nullToAbsent || f4 != null) {
+      map['f4'] = Variable<double>(f4);
+    }
     if (!nullToAbsent || f8 != null) {
       map['f8'] = Variable<double>(f8);
     }
@@ -1592,6 +1606,7 @@ class Float extends DataClass implements Insertable<Float> {
   FloatsCompanion toCompanion(bool nullToAbsent) {
     return FloatsCompanion(
       id: Value(id),
+      f4: f4 == null && nullToAbsent ? const Value.absent() : Value(f4),
       f8: f8 == null && nullToAbsent ? const Value.absent() : Value(f8),
     );
   }
@@ -1601,6 +1616,7 @@ class Float extends DataClass implements Insertable<Float> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Float(
       id: serializer.fromJson<String>(json['id']),
+      f4: serializer.fromJson<double?>(json['f4']),
       f8: serializer.fromJson<double?>(json['f8']),
     );
   }
@@ -1609,56 +1625,72 @@ class Float extends DataClass implements Insertable<Float> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'f4': serializer.toJson<double?>(f4),
       'f8': serializer.toJson<double?>(f8),
     };
   }
 
-  Float copyWith({String? id, Value<double?> f8 = const Value.absent()}) =>
+  Float copyWith(
+          {String? id,
+          Value<double?> f4 = const Value.absent(),
+          Value<double?> f8 = const Value.absent()}) =>
       Float(
         id: id ?? this.id,
+        f4: f4.present ? f4.value : this.f4,
         f8: f8.present ? f8.value : this.f8,
       );
   @override
   String toString() {
     return (StringBuffer('Float(')
           ..write('id: $id, ')
+          ..write('f4: $f4, ')
           ..write('f8: $f8')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, f8);
+  int get hashCode => Object.hash(id, f4, f8);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Float && other.id == this.id && other.f8 == this.f8);
+      (other is Float &&
+          other.id == this.id &&
+          other.f4 == this.f4 &&
+          other.f8 == this.f8);
 }
 
 class FloatsCompanion extends UpdateCompanion<Float> {
   final Value<String> id;
+  final Value<double?> f4;
   final Value<double?> f8;
   const FloatsCompanion({
     this.id = const Value.absent(),
+    this.f4 = const Value.absent(),
     this.f8 = const Value.absent(),
   });
   FloatsCompanion.insert({
     required String id,
+    this.f4 = const Value.absent(),
     this.f8 = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Float> custom({
     Expression<String>? id,
+    Expression<double>? f4,
     Expression<double>? f8,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (f4 != null) 'f4': f4,
       if (f8 != null) 'f8': f8,
     });
   }
 
-  FloatsCompanion copyWith({Value<String>? id, Value<double?>? f8}) {
+  FloatsCompanion copyWith(
+      {Value<String>? id, Value<double?>? f4, Value<double?>? f8}) {
     return FloatsCompanion(
       id: id ?? this.id,
+      f4: f4 ?? this.f4,
       f8: f8 ?? this.f8,
     );
   }
@@ -1668,6 +1700,9 @@ class FloatsCompanion extends UpdateCompanion<Float> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (f4.present) {
+      map['f4'] = Variable<double>(f4.value, ElectricTypes.float4);
     }
     if (f8.present) {
       map['f8'] = Variable<double>(f8.value, ElectricTypes.float8);
@@ -1679,6 +1714,7 @@ class FloatsCompanion extends UpdateCompanion<Float> {
   String toString() {
     return (StringBuffer('FloatsCompanion(')
           ..write('id: $id, ')
+          ..write('f4: $f4, ')
           ..write('f8: $f8')
           ..write(')'))
         .toString();

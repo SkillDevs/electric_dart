@@ -280,10 +280,11 @@ Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
 }
 
 Future<SingleRow> writeFloat(
-    MyDriftElectricClient electric, String id, double f8) async {
+    MyDriftElectricClient electric, String id, double f4, double f8) async {
   final item = await electric.db.floats.insertReturning(
     FloatsCompanion.insert(
       id: id,
+      f4: Value(f4),
       f8: Value(f8),
     ),
   );
