@@ -29,6 +29,7 @@ void main() async {
       'uuid': PgType.uuid,
       'int2': PgType.int2,
       'int4': PgType.int4,
+      'float4': PgType.float4,
       'float8': PgType.float8,
       'relatedId': PgType.integer,
     });
