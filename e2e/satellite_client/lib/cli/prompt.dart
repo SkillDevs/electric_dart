@@ -168,7 +168,8 @@ Future<void> start() async {
             SingleRow>(
           state,
           command,
-          (electric, id, f4, f8) => writeFloat(electric, id, f4.toDouble(), f8.toDouble()),
+          (electric, id, f4, f8) =>
+              writeFloat(electric, id, f4.toDouble(), f8.toDouble()),
         );
       } else if (name == "get_float") {
         await processCommand2Params<MyDriftElectricClient, String, SingleRow>(

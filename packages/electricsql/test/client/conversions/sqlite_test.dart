@@ -233,7 +233,8 @@ void main() async {
       (4, double.negativeInfinity, double.negativeInfinity),
     ];
 
-    final List<(int id, Object float4, Object float8)> rowsRecords = rawRes.map((row) {
+    final List<(int id, Object float4, Object float8)> rowsRecords =
+        rawRes.map((row) {
       final data = row.data;
       final id = data['id'] as int;
       final Object float4 = data['float4'] as Object;

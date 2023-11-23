@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:test/test.dart';
