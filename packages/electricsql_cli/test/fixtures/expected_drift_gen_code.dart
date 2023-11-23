@@ -63,7 +63,7 @@ class Datatypes extends Table {
 
   IntColumn get cInt4 => customType(ElectricTypes.int4).named('c_int4')();
 
-  Int64Column get cInt8 => int64().named('c_int8')();
+  IntColumn get cInt8 => customType(ElectricTypes.int8).named('c_int8')();
 
   RealColumn get cFloat8 =>
       customType(ElectricTypes.float8).named('c_float8')();

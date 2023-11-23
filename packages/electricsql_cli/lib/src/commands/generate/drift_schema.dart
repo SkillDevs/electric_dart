@@ -14,8 +14,13 @@ class DriftSchemaInfo {
 }
 
 class DriftTableInfo {
+  /// The name of the table in the database
   final String tableName;
+
+  /// The name of the Dart Table class in the Drift schema
   final String dartClassName;
+
+  /// Information for the columns
   final List<DriftColumn> columns;
 
   DriftTableInfo({
