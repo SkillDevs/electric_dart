@@ -367,6 +367,46 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.17_node_satell
  
  [cleanup]
    [invoke teardown]
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.18_node_satellite_can_sync_float.lux dart/tests/03.18_node_satellite_can_sync_float.lux
+--- electric/tests/03.18_node_satellite_can_sync_float.lux	2023-11-22 19:13:54.593630344 +0100
++++ dart/tests/03.18_node_satellite_can_sync_float.lux	2023-11-23 10:34:52.044565530 +0100
+@@ -45,7 +45,7 @@
+     [invoke node_get_float "row2" -1.4020000137922178e+36 -1.797e+308]
+ 
+     [invoke node_write_float "row3" -1e10 5.006]
+-    [invoke node_get_float "row3" -10000000000 5.006]
++    [invoke node_get_float "row3" -10000000000.0 5.006]
+ 
+     [invoke node_write_float "row4" 3.402e+39 Infinity]
+     [invoke node_get_float "row4" Infinity Infinity]
+@@ -53,11 +53,11 @@
+     [invoke node_write_float "row5" -3.402e+39 -1.797e+309]
+     [invoke node_get_float "row5" -Infinity -Infinity]
+ 
+-    [invoke node_write_float "row6" "2 * {}" NaN]
++    [invoke node_write_float "row6" NaN NaN]
+     [invoke node_get_float "row6" NaN NaN]
+ 
+     [invoke node_write_float "row7" -0 -0]
+-    [invoke node_get_float "row7" 0 0]
++    [invoke node_get_float "row7" 0.0 0.0]
+ 
+ [shell pg_1]
+     [invoke wait-for "SELECT * FROM public.floats;" "row7" 10 $psql]
+@@ -85,11 +85,11 @@
+ 
+     [invoke node_get_float "row1" 1.4020000137922178e+36 1.797e+308]
+     [invoke node_get_float "row2" -1.4020000137922178e+36 -1.797e+308]
+-    [invoke node_get_float "row3" -10000000000 5.006]
++    [invoke node_get_float "row3" -10000000000.0 5.006]
+     [invoke node_get_float "row4" Infinity Infinity]
+     [invoke node_get_float "row5" -Infinity -Infinity]
+     [invoke node_get_float "row6" NaN NaN]
+-    [invoke node_get_float "row7" 0 0]
++    [invoke node_get_float "row7" 0.0 0.0]
+ 
+ [cleanup]
+   [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
 --- electric/tests/_satellite_macros.luxinc	2023-11-22 19:13:54.594630347 +0100
 +++ dart/tests/_satellite_macros.luxinc	2023-11-22 19:07:46.823525715 +0100
