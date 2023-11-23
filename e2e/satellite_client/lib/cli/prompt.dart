@@ -151,12 +151,19 @@ Future<void> start() async {
           getUUID,
         );
       } else if (name == "write_int") {
-        await processCommand4Params<MyDriftElectricClient, String, int, int,
-            SingleRow>(
-          state,
-          command,
-          writeInt,
-        );
+        await processCommand5Params<MyDriftElectricClient, String, int, int,
+            Object, SingleRow>(state, command, (electric, id, i2, i4, i8Raw) {
+          final BigInt i8;
+          if (i8Raw is int) {
+            i8 = BigInt.from(i8Raw);
+          } else if (i8Raw is String) {
+            i8 = BigInt.parse(i8Raw.replaceAll('n', ''));
+          } else {
+            throw Exception("Invalid i8 value: $i8Raw");
+          }
+
+          return writeInt(electric, id, i2, i4, i8);
+        });
       } else if (name == "get_int") {
         await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
           state,
@@ -315,6 +322,22 @@ Future<void> processCommand4Params<P1, P2, P3, P4, R>(
 
   await processCommand<R>(state, command, () async {
     return await handler(p1, p2, p3, p4);
+  });
+}
+
+Future<void> processCommand5Params<P1, P2, P3, P4, P5, R>(
+  AppState state,
+  Command command,
+  FutureOr<R> Function(P1, P2, P3, P4, P5) handler,
+) async {
+  final p1 = command.arguments[0] as P1;
+  final p2 = command.arguments[1] as P2;
+  final p3 = command.arguments[2] as P3;
+  final p4 = command.arguments[3] as P4;
+  final p5 = command.arguments[4] as P5;
+
+  await processCommand<R>(state, command, () async {
+    return await handler(p1, p2, p3, p4, p5);
   });
 }
 

@@ -114,6 +114,8 @@ class Ints extends Table {
 
   IntColumn get i4 => customType(ElectricTypes.int4).nullable()();
 
+  Int64Column get i8 => int64().nullable()();
+
   @override
   Set<Column<Object>>? get primaryKey => {id};
 

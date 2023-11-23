@@ -290,6 +290,10 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
         default:
           throw Exception('Unknown DateTime @db. attribute: $dbAttrName');
       }
+    case 'BigInt':
+      // TODO(dart): Support int8 type in Dart
+      return DriftElectricColumnType.bigint;
+      return DriftElectricColumnType.int8;
     default:
       throw Exception('Unknown Prisma type: $nonNullableType');
   }

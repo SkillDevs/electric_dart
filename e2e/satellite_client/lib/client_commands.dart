@@ -260,13 +260,14 @@ Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeInt(
-    MyDriftElectricClient electric, String id, int i2, int i4) async {
+Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int i2,
+    int i4, BigInt i8) async {
   final item = await electric.db.ints.insertReturning(
     IntsCompanion.insert(
       id: id,
       i2: Value(i2),
       i4: Value(i4),
+      i8: Value(i8),
     ),
   );
   return SingleRow.fromItem(item);

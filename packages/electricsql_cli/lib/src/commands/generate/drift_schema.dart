@@ -53,6 +53,7 @@ class DriftColumn {
 enum DriftElectricColumnType {
   int2,
   int4,
+  int8,
   float8,
   string,
   bool,
@@ -62,4 +63,5 @@ enum DriftElectricColumnType {
   timestamp,
   timestampTZ,
   uuid,
+  bigint,
 }
