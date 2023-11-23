@@ -13,6 +13,7 @@ class ElectricTypes {
   static const UUIDType uuid = UUIDType();
   static const Int2Type int2 = Int2Type();
   static const Int4Type int4 = Int4Type();
+  static const Int8Type int8 = Int8Type();
   static const Float8Type float8 = Float8Type();
 }
 
@@ -120,6 +121,15 @@ class Int4Type extends CustomElectricType<int, int> {
           codec: TypeConverters.int4,
           typeName: 'int4',
           pgType: PgType.int4,
+        );
+}
+
+class Int8Type extends CustomElectricType<int, int> {
+  const Int8Type()
+      : super(
+          codec: TypeConverters.int8,
+          typeName: 'int8',
+          pgType: PgType.int8,
         );
 }
 

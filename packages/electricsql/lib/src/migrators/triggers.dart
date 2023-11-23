@@ -1,3 +1,4 @@
+import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class ForeignKey {
@@ -14,7 +15,8 @@ class ForeignKey {
 
 typedef ColumnName = String;
 typedef SQLiteType = String;
-typedef ColumnTypes = Map<ColumnName, SQLiteType>;
+typedef ColumnType = ({SQLiteType sqliteType, PgType pgType});
+typedef ColumnTypes = Map<ColumnName, ColumnType>;
 
 class Table {
   String tableName;
@@ -228,6 +230,7 @@ List<Statement> generateTriggers(Tables tables) {
 /// Joins the column names and values into a string of pairs of the form `'col1', val1, 'col2', val2, ...`
 /// that can be used to build a JSON object in a SQLite `json_object` function call.
 /// Values of type REAL are cast to text to avoid a bug in SQLite's `json_object` function (see below).
+/// Similarly, values of type INT8 (i.e. BigInts) are cast to text because JSON does not support BigInts.
 ///
 /// NOTE: There is a bug with SQLite's `json_object` function up to version 3.41.2
 ///       that causes it to return an invalid JSON object if some value is +Infinity or -Infinity.

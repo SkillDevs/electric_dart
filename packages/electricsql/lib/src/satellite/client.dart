@@ -1118,6 +1118,7 @@ Object deserializeColumnData(
   switch (columnType) {
     case PgType.char:
     case PgType.date:
+    case PgType.int8:
     case PgType.text:
     case PgType.time:
     case PgType.timestamp:
@@ -1130,7 +1131,6 @@ Object deserializeColumnData(
     case PgType.int:
     case PgType.int2:
     case PgType.int4:
-    case PgType.int8:
     case PgType.integer:
       return num.parse(TypeDecoder.text(column));
     case PgType.float4:

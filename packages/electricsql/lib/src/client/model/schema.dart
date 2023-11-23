@@ -84,8 +84,9 @@ class DBSchemaDrift implements DBSchema {
             : PgType.integer;
       case DriftSqlType.double:
         return PgType.real;
-      case DriftSqlType.blob:
       case DriftSqlType.bigInt:
+        return PgType.int8;
+      case DriftSqlType.blob:
       case DriftSqlType.any:
         // Unsupported
         return null;

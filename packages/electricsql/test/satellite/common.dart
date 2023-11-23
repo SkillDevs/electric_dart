@@ -287,9 +287,9 @@ final kPersonTable = Table(
   primary: ['id'],
   foreignKeys: [],
   columnTypes: {
-    'id': 'REAL',
-    'name': 'TEXT',
-    'age': 'INTEGER',
-    'bmi': 'REAL',
+    'id': (sqliteType: 'REAL', pgType: PgType.real),
+    'name': (sqliteType: 'TEXT', pgType: PgType.text),
+    'age': (sqliteType: 'INTEGER', pgType: PgType.integer),
+    'bmi': (sqliteType: 'REAL', pgType: PgType.real),
   },
 );
