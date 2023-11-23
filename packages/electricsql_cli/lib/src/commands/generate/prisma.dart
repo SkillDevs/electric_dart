@@ -298,7 +298,7 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
       switch (dbAttrName) {
         case 'Json':
           return DriftElectricColumnType.json;
-        case 'Jsonb':
+        case 'JsonB':
           return DriftElectricColumnType.jsonb;
         default:
           throw Exception('Unknown Json @db. attribute: $dbAttrName');

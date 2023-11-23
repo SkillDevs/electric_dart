@@ -20,8 +20,6 @@ void main() {
       genOpts: CustomElectricDriftGenOpts(),
     );
 
-    throw UnimplementedError("Add json to tests");
-
     final contents = generateDriftSchemaDartCode(schemaInfo);
 
     final expectedFile = join(
