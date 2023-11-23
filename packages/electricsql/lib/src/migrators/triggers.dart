@@ -1,4 +1,3 @@
-import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class ForeignKey {
@@ -15,7 +14,8 @@ class ForeignKey {
 
 typedef ColumnName = String;
 typedef SQLiteType = String;
-typedef ColumnType = ({SQLiteType sqliteType, PgType pgType});
+typedef PgTypeStr = String;
+typedef ColumnType = ({SQLiteType sqliteType, PgTypeStr pgType});
 typedef ColumnTypes = Map<ColumnName, ColumnType>;
 
 class Table {
@@ -278,7 +278,14 @@ String joinColsForJSON(
   // casts the value to TEXT if it is of type REAL
   // to work around the bug in SQLite's `json_object` function
   String castIfNeeded(String col, String targettedCol) {
-    if (colTypes[col] == 'REAL') {
+    final tpes = colTypes[col]!;
+    final sqliteType = tpes.sqliteType;
+    final pgType = tpes.pgType;
+    if (
+        // REAL has a special handling for NaN and Infinities
+        sqliteType == 'REAL' ||
+            // INT8 and BIGINT encoded as string in oplog JSON
+            (pgType == 'INT8' || pgType == 'BIGINT')) {
       return 'cast($targettedCol as TEXT)';
     } else {
       return targettedCol;

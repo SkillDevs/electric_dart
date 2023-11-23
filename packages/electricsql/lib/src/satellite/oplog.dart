@@ -341,6 +341,11 @@ Row deserialiseRow(String str, Relation rel) {
         return MapEntry(key, double.parse(value));
       }
     }
+
+    if (columnType == 'INT8' || columnType == 'BIGINT') {
+      return MapEntry(key, BigInt.parse(value.toString()));
+    }
+
     return MapEntry(key, value);
   });
 }

@@ -1519,7 +1519,15 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
     }).toList(),
     columnTypes: Map.fromEntries(
       tbl.columns.map(
-        (col) => MapEntry(col.name, col.sqliteType.toUpperCase()),
+        (col) {
+          return MapEntry(
+            col.name,
+            (
+              sqliteType: col.sqliteType.toUpperCase(),
+              pgType: col.ensurePgType().name.toUpperCase(),
+            ),
+          );
+        },
       ),
     ),
   );
