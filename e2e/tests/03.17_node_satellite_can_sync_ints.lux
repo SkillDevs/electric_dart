@@ -40,11 +40,11 @@
 
     # Can write valid ints to the DB
     !write_int db 'row3' 0 0 0
-    ??{ id: 'row3', i2: 0, i4: 0, i8: 0 }
+    ??{ id: 'row3', i2: 0, i4: 0, i8: 0n }
     ?$node
 
     !write_int db 'row4' 0 0 9223372036854775806
-    ??{ id: 'row4', i2: 0, i4: 0, i8: 9223372036854775806 }
+    ??{ id: 'row4', i2: 0, i4: 0, i8: 9223372036854775806n }
     ?$node
 
 [shell proxy_1]

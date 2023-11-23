@@ -431,6 +431,9 @@ Row _mapToRow(Map<String, Object?> map) {
     final String newVal;
     if (value is String) {
       newVal = "'$value'";
+    } else if (value is BigInt) {
+      // To match JS bigint output
+      newVal = "${value}n";
     } else {
       newVal = value.toString();
     }
