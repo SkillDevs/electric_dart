@@ -53,8 +53,8 @@ class DriftColumn {
 enum DriftElectricColumnType {
   int2,
   int4,
-  float8,
   float4,
+  float8,
   string,
   bool,
   date,
