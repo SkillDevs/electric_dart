@@ -132,6 +132,9 @@ DriftSchemaInfo extractInfoFromPrismaSchema(
   String prismaSchema, {
   ElectricDriftGenOpts? genOpts,
 }) {
+  final enums = parseEnums(prismaSchema);
+  final driftEnums = _buildDriftEnums(enums);
+
   final models = parseModels(prismaSchema);
   //print(models);
 
@@ -157,7 +160,12 @@ DriftSchemaInfo extractInfoFromPrismaSchema(
     return DriftTableInfo(
       tableName: tableName,
       dartClassName: className,
-      columns: _prismaFieldsToColumns(e, e.fields, genOpts: genOpts).toList(),
+      columns: _prismaFieldsToColumns(
+        e,
+        e.fields,
+        genOpts: genOpts,
+        driftEnums: driftEnums,
+      ).toList(),
     );
   }).toList();
 
@@ -178,10 +186,29 @@ String _extractStringLiteral(String s) {
   throw Exception('Expected string literal: $s');
 }
 
+Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
+  return Map.fromEntries(
+    enums.map((e) {
+      final pgName = e.name;
+      final dartType = 'Db${pgName.pascalCase}';
+
+      return MapEntry(
+        pgName,
+        DriftEnum(
+          pgName: pgName,
+          pgValues: e.values,
+          dartEnumName: dartType,
+        ),
+      );
+    }),
+  );
+}
+
 Iterable<DriftColumn> _prismaFieldsToColumns(
   Model model,
   List<Field> fields, {
   required ElectricDriftGenOpts? genOpts,
+  required Map<String, DriftEnum> driftEnums,
 }) sync* {
   final primaryKeyFields = _getPrimaryKeysFromModel(model);
 
@@ -223,33 +250,52 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
 
     if (dartName == null) {
       dartName = fieldName.camelCase;
-      if (_isInvalidColumnDartName(dartName)) {
+      if (_isInvalidDartIdentifier(dartName)) {
         dartName = '${dartName}Col';
       }
     }
 
     final bool isPrimaryKey = primaryKeyFields.contains(fieldName);
 
+    final prismaType = field.type;
+    final nonNullableType = prismaType.endsWith('?')
+        ? prismaType.substring(0, prismaType.length - 1)
+        : prismaType;
+
+    final driftType = _convertPrismaTypeToDrift(
+      nonNullableType,
+      field.attributes,
+      driftEnums,
+    );
+    DriftEnum? enumType;
+    if (driftType == DriftElectricColumnType.enumT) {
+      final DriftEnum _enumType = driftEnums[nonNullableType]!;
+      enumType = _enumType;
+    }
+
     yield DriftColumn(
       columnName: columnName,
       dartName: dartName,
-      type: _convertPrismaTypeToDrift(field.type, field.attributes),
+      type: driftType,
       isNullable: field.type.endsWith('?'),
       isPrimaryKey: isPrimaryKey,
+      // If the type is an enum, hold the enum information
+      enumType: enumType,
     );
   }
 }
 
 DriftElectricColumnType _convertPrismaTypeToDrift(
-  String prismaType,
+  String nonNullableType,
   List<Attribute> attrs,
+  Map<String, DriftEnum> driftEnums,
 ) {
-  final nonNullableType = prismaType.endsWith('?')
-      ? prismaType.substring(0, prismaType.length - 1)
-      : prismaType;
-
   final dbAttr = attrs.where((a) => a.type.startsWith('@db.')).firstOrNull;
   final dbAttrName = dbAttr?.type.substring('@db.'.length);
+
+  if (driftEnums.containsKey(nonNullableType)) {
+    return DriftElectricColumnType.enumT;
+  }
 
   switch (nonNullableType) {
     case 'Int':
@@ -322,7 +368,7 @@ Set<String> _getPrimaryKeysFromModel(Model m) {
   return compositeFields.toSet()..addAll(idFieldsSet);
 }
 
-bool _isInvalidColumnDartName(String name) {
+bool _isInvalidDartIdentifier(String name) {
   return const [
     // dart primitive types
     'int',

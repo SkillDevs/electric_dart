@@ -7,6 +7,7 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:path/path.dart' as path;
+import 'package:recase/recase.dart';
 
 Future<void> buildMigrations(
   Directory migrationsFolder,
@@ -330,6 +331,14 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
       return _customElectricTypeExpr('timestampTZ');
     case DriftElectricColumnType.uuid:
       return _customElectricTypeExpr('uuid');
+    case DriftElectricColumnType.enumT:
+      final enumType = columnInfo.enumType!;
+      final enumNameCamel = enumType.pgName.camelCase;
+
+      // Generates `customType(ElectricEnumTypes.<enum>Type)`
+      final enumTypesClass = refer('ElectricEnumTypes');
+      return refer('customType', kDriftImport)
+          .call([enumTypesClass.property('${enumNameCamel}Type')]);
   }
 }
 
@@ -357,6 +366,10 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
     case DriftElectricColumnType.timestamp:
     case DriftElectricColumnType.timestampTZ:
       return refer('Column<DateTime>', kDriftImport);
+    case DriftElectricColumnType.enumT:
+      final enumType = columnInfo.enumType!;
+      final enumDartType = enumType.dartEnumName;
+      return refer('Column<$enumDartType>', kDriftImport);
   }
 }
 

@@ -38,6 +38,13 @@ List<Model> parseModels(String prismaSchema) {
 /// @param body Body of a model
 /// @returns Fields defined by the model
 List<Field> parseFields(String body) {
+  final unsupportedTypesMatches =
+      RegExp(r'Unsupported\("public.(\w+)"\)').allMatches(body);
+  for (final match in unsupportedTypesMatches) {
+    // ignore: parameter_assignments
+    body = body.replaceAll(match.group(0)!, match.group(1)!);
+  }
+
   // The regex below matches the fields of a model (it assumes there are no comments at the end of the line)
   // It uses named captured groups to capture the field name, its type, and optional attributes
   // the type can be `type` or `type?` or `type[]`
@@ -138,6 +145,48 @@ List<Attribute> _parseAttributes(
   }).toList();
 }
 
+/// Parses the Prisma schema and returns all enums.
+/// @param prismaSchema The Prisma schema to parse
+/// @returns Array of models.
+List<EnumPrisma> parseEnums(String prismaSchema) {
+  // Remove comments
+  // matches // until end of the line (also matches field validators added with ///)
+  final commentRegex = RegExp(r'\/\/.*$', multiLine: true);
+  final schema = prismaSchema.replaceAll(commentRegex, '');
+
+  // Match enums defined in the schema
+  final enumRegex =
+      RegExp(r'^\s*enum\s+(?<name>\w+)\s*{(?<body>[^}]*)}', multiLine: true);
+  final matches = [...enumRegex.allMatches(schema)];
+  final enumBodies = matches.map((match) {
+    final name = match.namedGroup('name')!.trim();
+    final body = match.namedGroup('body')!;
+
+    return (
+      name: name,
+      body: body,
+    );
+  });
+
+  // Match fields in the body of the models
+  return enumBodies.map(
+    (enumInfo) {
+      return EnumPrisma(
+        name: enumInfo.name,
+        values: _parseEnumValues(enumInfo.body),
+      );
+    },
+  ).toList();
+}
+
+/// Takes the body of an enum and returns
+/// an array of values defined by the enum.
+List<String> _parseEnumValues(String body) {
+  final values =
+      body.split('\n').map((e) => e.trim()).where((line) => line.isNotEmpty);
+  return values.toList();
+}
+
 class Attribute {
   // With the format @{string} or @@{string} if it is a model attribute
   final String type;
@@ -178,5 +227,17 @@ class Model {
   @override
   String toString() {
     return 'Model(name: $name, fields: $fields, attributes: $attributes)';
+  }
+}
+
+class EnumPrisma {
+  final String name;
+  final List<String> values;
+
+  EnumPrisma({required this.name, required this.values});
+
+  @override
+  String toString() {
+    return 'EnumPrisma(name: $name, values: $values)';
   }
 }

@@ -35,6 +35,7 @@ class DriftColumn {
   final DriftElectricColumnType type;
   final bool isPrimaryKey;
   final bool isNullable;
+  final DriftEnum? enumType;
 
   DriftColumn({
     required this.columnName,
@@ -42,12 +43,28 @@ class DriftColumn {
     required this.type,
     required this.isNullable,
     required this.isPrimaryKey,
+    this.enumType,
   });
 
   @override
   String toString() {
     return 'DriftColumn(columnName: $columnName, dartName: $dartName, type: $type, nullable: $isNullable, isPrimaryKey: $isPrimaryKey)';
   }
+}
+
+class DriftEnum {
+  final String pgName;
+  final List<String> pgValues;
+  final String dartEnumName;
+
+  DriftEnum({
+    required this.pgName,
+    required this.pgValues,
+    required this.dartEnumName,
+  });
+
+  @override
+  String toString() => 'DriftEnum(name: $pgName, pgValues: $pgValues)';
 }
 
 enum DriftElectricColumnType {
@@ -62,4 +79,5 @@ enum DriftElectricColumnType {
   timestamp,
   timestampTZ,
   uuid,
+  enumT,
 }
