@@ -176,6 +176,18 @@ Future<void> start() async {
           command,
           getFloat,
         );
+      } else if (name == "write_enum") {
+        await processCommand3Params<MyDriftElectricClient, String, String?,
+            SingleRow>(state, command, (electric, id, enumStr) {
+          //final enumValue = enumStr == null ? null : enumFromString(enumStr);
+          return writeEnum(electric, id, enumStr);
+        });
+      } else if (name == "get_enum") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getEnum,
+        );
       } else if (name == "get_items") {
         await processCommand1Param<MyDriftElectricClient, Rows>(
           state,

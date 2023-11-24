@@ -1685,6 +1685,175 @@ class FloatsCompanion extends UpdateCompanion<Float> {
   }
 }
 
+class $EnumsTable extends Enums with TableInfo<$EnumsTable, Enum> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EnumsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _cMeta = const VerificationMeta('c');
+  @override
+  late final GeneratedColumn<String> c = GeneratedColumn<String>(
+      'c', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, c];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'enums';
+  @override
+  VerificationContext validateIntegrity(Insertable<Enum> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('c')) {
+      context.handle(_cMeta, c.isAcceptableOrUnknown(data['c']!, _cMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Enum map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Enum(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      c: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}c']),
+    );
+  }
+
+  @override
+  $EnumsTable createAlias(String alias) {
+    return $EnumsTable(attachedDatabase, alias);
+  }
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Enum extends DataClass implements Insertable<Enum> {
+  final String id;
+  final String? c;
+  const Enum({required this.id, this.c});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || c != null) {
+      map['c'] = Variable<String>(c);
+    }
+    return map;
+  }
+
+  EnumsCompanion toCompanion(bool nullToAbsent) {
+    return EnumsCompanion(
+      id: Value(id),
+      c: c == null && nullToAbsent ? const Value.absent() : Value(c),
+    );
+  }
+
+  factory Enum.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Enum(
+      id: serializer.fromJson<String>(json['id']),
+      c: serializer.fromJson<String?>(json['c']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'c': serializer.toJson<String?>(c),
+    };
+  }
+
+  Enum copyWith({String? id, Value<String?> c = const Value.absent()}) => Enum(
+        id: id ?? this.id,
+        c: c.present ? c.value : this.c,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Enum(')
+          ..write('id: $id, ')
+          ..write('c: $c')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, c);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Enum && other.id == this.id && other.c == this.c);
+}
+
+class EnumsCompanion extends UpdateCompanion<Enum> {
+  final Value<String> id;
+  final Value<String?> c;
+  const EnumsCompanion({
+    this.id = const Value.absent(),
+    this.c = const Value.absent(),
+  });
+  EnumsCompanion.insert({
+    required String id,
+    this.c = const Value.absent(),
+  }) : id = Value(id);
+  static Insertable<Enum> custom({
+    Expression<String>? id,
+    Expression<String>? c,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (c != null) 'c': c,
+    });
+  }
+
+  EnumsCompanion copyWith({Value<String>? id, Value<String?>? c}) {
+    return EnumsCompanion(
+      id: id ?? this.id,
+      c: c ?? this.c,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (c.present) {
+      map['c'] = Variable<String>(c.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EnumsCompanion(')
+          ..write('id: $id, ')
+          ..write('c: $c')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ClientDatabase extends GeneratedDatabase {
   _$ClientDatabase(QueryExecutor e) : super(e);
   late final $ItemsTable items = $ItemsTable(this);
@@ -1695,10 +1864,20 @@ abstract class _$ClientDatabase extends GeneratedDatabase {
   late final $UuidsTable uuids = $UuidsTable(this);
   late final $IntsTable ints = $IntsTable(this);
   late final $FloatsTable floats = $FloatsTable(this);
+  late final $EnumsTable enums = $EnumsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [items, otherItems, timestamps, datetimes, bools, uuids, ints, floats];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        items,
+        otherItems,
+        timestamps,
+        datetimes,
+        bools,
+        uuids,
+        ints,
+        floats,
+        enums
+      ];
 }

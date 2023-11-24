@@ -1030,8 +1030,8 @@ class SatelliteClient implements Client {
 /// @param dbDescription Database description object
 /// @param table Name of the table
 /// @param column Name of the column
-/// @returns The PG type of the column
-PgType _getColumnType(
+/// @returns The PG type of the column or null if unknown (possibly an enum at runtime via the socket)
+PgType? _getColumnType(
   DBSchema dbDescription,
   String table,
   RelationColumn column,
@@ -1039,7 +1039,8 @@ PgType _getColumnType(
   if (dbDescription.hasTable(table) &&
       dbDescription.getFields(table).containsKey(column.name)) {
     // The table and column are known in the DB description
-    return dbDescription.getFields(table)[column.name]!;
+    final PgType pgType = dbDescription.getFields(table)[column.name]!;
+    return pgType;
   } else {
     // The table or column is not known.
     // There must have been a migration that added it to the DB while the app was running.
@@ -1050,7 +1051,10 @@ PgType _getColumnType(
     // because it was received at runtime and thus will have the PG type
     // (which would not be the case for bundled relations fetched
     //  from the endpoint because the endpoint maps PG types to SQLite types).
-    return pgTypeFromColumnType(column.type);
+    final PgType? pgType = maybePgTypeFromColumnType(column.type);
+    // if the type is not know, it's probably an ENUM, the name of the incoming type
+    // is the name of the enum
+    return pgType;
   }
 }
 
@@ -1113,7 +1117,7 @@ int calculateNumBytes(int columnNum) {
 
 Object deserializeColumnData(
   List<int> column,
-  PgType columnType,
+  PgType? columnType,
 ) {
   switch (columnType) {
     case PgType.char:
@@ -1124,6 +1128,8 @@ Object deserializeColumnData(
     case PgType.timestampTz:
     case PgType.uuid:
     case PgType.varchar:
+    // enums (pgType == null) are decoded from text
+    case null:
       return TypeDecoder.text(column);
     case PgType.bool:
       return TypeDecoder.boolean(column);
@@ -1143,13 +1149,14 @@ Object deserializeColumnData(
 }
 
 // All values serialized as textual representation
-List<int> serializeColumnData(Object columnValue, PgType columnType) {
+List<int> serializeColumnData(Object columnValue, PgType? columnType) {
   switch (columnType) {
     case PgType.bool:
       return TypeEncoder.boolean(columnValue as int);
     case PgType.timeTz:
       return TypeEncoder.timetz(columnValue as String);
     default:
+      // Enums (pgType == null) are encoded as text
       return TypeEncoder.text(_getDefaultStringToSerialize(columnValue));
   }
 }

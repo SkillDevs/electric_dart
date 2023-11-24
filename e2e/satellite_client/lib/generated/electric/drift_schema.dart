@@ -14,6 +14,7 @@ const kElectrifiedTables = [
   Uuids,
   Ints,
   Floats,
+  Enums,
 ];
 
 class Items extends Table {
@@ -125,6 +126,18 @@ class Floats extends Table {
   TextColumn get id => text()();
 
   RealColumn get f8 => customType(ElectricTypes.float8).nullable()();
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Enums extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get c => text().nullable()();
 
   @override
   Set<Column<Object>>? get primaryKey => {id};

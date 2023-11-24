@@ -29,13 +29,16 @@ final Map<String, PgType> _pgTypeMap = Map.fromEntries(
   ),
 );
 
-PgType pgTypeFromColumnType(String columnType) {
+PgType? maybePgTypeFromColumnType(String columnType) {
   final key = columnType.toUpperCase();
   final pgType = _pgTypeMap[key];
-
-  if (pgType == null) {
-    throw Exception('Unknown PG type: $key');
-  }
-
   return pgType;
 }
+
+/* PgType pgTypeFromColumnType(String columnType) {
+  final pgType = maybePgTypeFromColumnType(columnType);
+  if (pgType == null) {
+    throw Exception("Unknown PG type: '$columnType'");
+  }
+  return pgType;
+} */

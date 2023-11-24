@@ -290,6 +290,24 @@ Future<SingleRow> writeFloat(
   return SingleRow.fromItem(item);
 }
 
+Future<SingleRow> getEnum(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.enums.select()
+        ..where((t) => t.id.equals(id)))
+      .getSingle();
+  return SingleRow.fromItem(item);
+}
+
+Future<SingleRow> writeEnum(
+    MyDriftElectricClient electric, String id, String? enumStr) async {
+  final item = await electric.db.enums.insertReturning(
+    EnumsCompanion.insert(
+      id: id,
+      c: Value(enumStr),
+    ),
+  );
+  return SingleRow.fromItem(item);
+}
+
 Future<Rows> getItemColumns(
     DriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
