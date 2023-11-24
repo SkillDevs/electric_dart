@@ -291,8 +291,7 @@ Future<SingleRow> writeFloat(
 }
 
 Future<SingleRow> getEnum(MyDriftElectricClient electric, String id) async {
-  final item = await (electric.db.enums.select()
-        ..where((t) => t.id.equals(id)))
+  final item = await (electric.db.enums.select()..where((t) => t.id.equals(id)))
       .getSingle();
   return SingleRow.fromItem(item);
 }
