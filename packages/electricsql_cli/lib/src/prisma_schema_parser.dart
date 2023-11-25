@@ -182,9 +182,38 @@ List<EnumPrisma> parseEnums(String prismaSchema) {
 /// Takes the body of an enum and returns
 /// an array of values defined by the enum.
 List<String> _parseEnumValues(String body) {
-  final values =
-      body.split('\n').map((e) => e.trim()).where((line) => line.isNotEmpty);
-  return values.toList();
+  final enumLines = body
+      .split('\n')
+      .map((e) => e.trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
+
+  final values = <String>[];
+  for (final line in enumLines) {
+    final splitted = line.split(' ');
+    if (splitted.length > 1) {
+      final attrsStr = splitted.sublist(1).join(' ');
+      final attrs = _parseAttributes(attrsStr, attrType: _AttributeType.field);
+
+      final mapAttr = attrs
+          .where(
+            (a) => a.type == '@map',
+          )
+          .firstOrNull;
+
+      if (mapAttr != null) {
+        final mappedNameLiteral = mapAttr.args.join(',');
+        final pgEnumValue = extractStringLiteral(mappedNameLiteral);
+        values.add(pgEnumValue);
+      } else {
+        throw Exception('Unexpected spaces in enum line: $line');
+      }
+    } else {
+      values.add(line);
+    }
+  }
+
+  return values;
 }
 
 class Attribute {
@@ -240,4 +269,16 @@ class EnumPrisma {
   String toString() {
     return 'EnumPrisma(name: $name, values: $values)';
   }
+}
+
+String extractStringLiteral(String s) {
+  if (s.startsWith('"') && s.endsWith('"')) {
+    return s.substring(1, s.length - 1);
+  }
+
+  if (s.startsWith("'") && s.endsWith("'")) {
+    return s.substring(1, s.length - 1);
+  }
+
+  throw Exception('Expected string literal: $s');
 }

@@ -150,7 +150,7 @@ DriftSchemaInfo extractInfoFromPrismaSchema(
 
     if (mapAttr != null) {
       final mappedNameLiteral = mapAttr.args.join(',');
-      tableName = _extractStringLiteral(mappedNameLiteral);
+      tableName = extractStringLiteral(mappedNameLiteral);
     }
 
     final tableGenOpts = genOpts?.tableGenOpts(tableName);
@@ -169,22 +169,16 @@ DriftSchemaInfo extractInfoFromPrismaSchema(
     );
   }).toList();
 
-  final schemaInfo = DriftSchemaInfo(tables: tableInfos, genOpts: genOpts);
+  final schemaInfo = DriftSchemaInfo(
+    tables: tableInfos,
+    enums: driftEnums,
+    genOpts: genOpts,
+  );
 
   return schemaInfo;
 }
 
-String _extractStringLiteral(String s) {
-  if (s.startsWith('"') && s.endsWith('"')) {
-    return s.substring(1, s.length - 1);
-  }
 
-  if (s.startsWith("'") && s.endsWith("'")) {
-    return s.substring(1, s.length - 1);
-  }
-
-  throw Exception('Expected string literal: $s');
-}
 
 Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
   return Map.fromEntries(
@@ -192,12 +186,23 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
       final pgName = e.name;
       final dartType = 'Db${pgName.pascalCase}';
 
+      final pgNameCamel = pgName.camelCase;
+
+      final String enumFieldName = _ensureValidDartIdentifier(pgNameCamel);
+
+      final values = e.values.map((pgValue) {
+        final dartVal = _ensureValidDartIdentifier(pgValue.camelCase);
+        return (dartVal: dartVal, pgVal: pgValue);
+      }).toList();
+
       return MapEntry(
         pgName,
         DriftEnum(
           pgName: pgName,
-          pgValues: e.values,
+          values: values,
           dartEnumName: dartType,
+          enumCodecName: enumFieldName,
+          driftTypeName: enumFieldName,
         ),
       );
     }),
@@ -238,7 +243,7 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
         .firstOrNull;
     if (mapAttr != null) {
       final mappedNameLiteral = mapAttr.args.join(',');
-      columnName = _extractStringLiteral(mappedNameLiteral);
+      columnName = extractStringLiteral(mappedNameLiteral);
     }
 
     String? dartName;
@@ -250,7 +255,8 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
 
     if (dartName == null) {
       dartName = fieldName.camelCase;
-      if (_isInvalidDartIdentifier(dartName)) {
+      if (_isInvalidDartIdentifierForDriftTable(dartName)) {
+        // TODO(dart): use $ instead of col?
         dartName = '${dartName}Col';
       }
     }
@@ -368,6 +374,25 @@ Set<String> _getPrimaryKeysFromModel(Model m) {
   return compositeFields.toSet()..addAll(idFieldsSet);
 }
 
+String _ensureValidDartIdentifier(
+  String name, {
+  bool Function(String)? isReservedWord,
+  String suffix = '\$',
+}) {
+  String newName = name;
+  if (name.startsWith(RegExp('[0-9]'))) {
+    newName = '\$$name';
+  }
+
+  final bool Function(String name) effectiveIsReservedWord =
+      isReservedWord ?? _isInvalidDartIdentifier;
+
+  if (effectiveIsReservedWord(newName)) {
+    newName = '$newName$suffix';
+  }
+  return newName;
+}
+
 bool _isInvalidDartIdentifier(String name) {
   return const [
     // dart primitive types
@@ -375,6 +400,17 @@ bool _isInvalidDartIdentifier(String name) {
     'bool',
     'double',
     'null',
+    'true',
+    'false',
+  ].contains(name);
+}
+
+bool _isInvalidDartIdentifierForDriftTable(String name) {
+  if (_isInvalidDartIdentifier(name)) {
+    return true;
+  }
+
+  return const [
     // drift table getters
     'tableName',
     'withoutRowId',

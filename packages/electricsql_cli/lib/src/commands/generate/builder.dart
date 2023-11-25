@@ -156,8 +156,7 @@ Future<void> buildDriftSchemaDartFile(
 String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
   final List<Class> tableClasses = _getTableClasses(driftSchemaInfo);
 
-  final List<ElectricEnumDeclarationBlock> electricEnumDeclarationsBlocks =
-      getElectricEnumDeclarationBlocks(driftSchemaInfo);
+  final List<Enum> electricEnums = getElectricEnumDeclarations(driftSchemaInfo);
 
   return _buildLibCode(
     (b) => b
@@ -165,13 +164,10 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
         [
           _getElectrifiedTablesField(tableClasses),
           ...tableClasses,
-          if (electricEnumDeclarationsBlocks.isNotEmpty) ...[
+          if (electricEnums.isNotEmpty) ...[
             // Enums
             Code('\n// ${'-' * 30} ENUMS ${'-' * 30}\n\n'),
-            for (final block in electricEnumDeclarationsBlocks) ...[
-              block.enumType,
-              block.enumToPg,
-            ],
+            ...electricEnums,
             getElectricEnumCodecsClass(driftSchemaInfo),
             getElectricEnumTypesClass(driftSchemaInfo),
           ],

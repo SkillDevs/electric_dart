@@ -3,12 +3,10 @@ import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:recase/recase.dart';
 
-typedef ElectricEnumDeclarationBlock = ({Spec enumType, Spec enumToPg});
-
-List<ElectricEnumDeclarationBlock> getElectricEnumDeclarationBlocks(
+List<Enum> getElectricEnumDeclarations(
   DriftSchemaInfo driftSchemaInfo,
 ) {
-  final List<ElectricEnumDeclarationBlock> enumBlocks = [];
+  final List<Enum> enumBlocks = [];
 
   final enums = driftSchemaInfo.enums;
   for (final enumInfo in enums.values) {
@@ -24,41 +22,27 @@ List<ElectricEnumDeclarationBlock> getElectricEnumDeclarationBlocks(
         ),
     );
 
-    final enumRef = refer(enumInfo.dartEnumName);
-
-    final enumToPgField = Field(
-      (b) => b
-        ..name = _getDartEnumToPgMapName(enumInfo.pgName)
-        ..modifier = FieldModifier.constant
-        ..docs.addAll(
-          [
-            '/// Maps Dart enum to the Postgres enum value.',
-            '/// This text value is stored in the local database.',
-          ],
-        )
-        ..assignment = literalMap(
-          Map.fromEntries(
-            enumInfo.values.map(
-              (valInfo) {
-                final enumValRef = enumRef.property(valInfo.dartVal);
-                return MapEntry(enumValRef, valInfo.pgVal);
-              },
-            ),
-          ),
-          enumRef,
-          refer('String'),
-        ).code,
-    );
-
-    enumBlocks.add(
-      (
-        enumType: enumType,
-        enumToPg: enumToPgField,
-      ),
-    );
+    enumBlocks.add(enumType);
   }
 
   return enumBlocks;
+}
+
+Expression _getDartEnumToPgExpr(DriftEnum enumInfo) {
+  final enumRef = refer(enumInfo.dartEnumName);
+
+  return literalMap(
+    Map.fromEntries(
+      enumInfo.values.map(
+        (valInfo) {
+          final enumValRef = enumRef.property(valInfo.dartVal);
+          return MapEntry(enumValRef, valInfo.pgVal);
+        },
+      ),
+    ),
+    enumRef,
+    refer('String'),
+  );
 }
 
 String _getDartEnumToPgMapName(String pgName) {
@@ -88,7 +72,7 @@ Class getElectricEnumCodecsClass(DriftSchemaInfo driftSchemaInfo) {
         ..static = true
         ..docs.add('/// Codec for Dart enum "$pgName"')
         ..assignment = enumCodecRef.newInstance([], {
-          'dartEnumToPgEnum': enumToPgField,
+          'dartEnumToPgEnum': _getDartEnumToPgExpr(enumInfo),
           'values': enumRef.property('values'),
         }).code,
     );
