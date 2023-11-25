@@ -193,6 +193,7 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
         // Fields
         for (final columnInfo in tableInfo.columns)
           _getColumnFieldGetter(
+            driftSchemaInfo,
             tableInfo.tableName,
             columnInfo,
             driftSchemaInfo.genOpts?.columnGenOpts(
@@ -255,11 +256,12 @@ Method? _getPrimaryKeyGetter(DriftTableInfo tableInfo) {
 }
 
 Method _getColumnFieldGetter(
+  DriftSchemaInfo schemaInfo,
   String tableName,
   DriftColumn columnInfo,
   DriftColumnGenOpts? genOpts,
 ) {
-  var columnBuilderExpr = _getInitialColumnBuilder(columnInfo);
+  var columnBuilderExpr = _getInitialColumnBuilder(schemaInfo, columnInfo);
 
   if (columnInfo.columnName != columnInfo.dartName) {
     columnBuilderExpr = columnBuilderExpr
@@ -283,7 +285,7 @@ Method _getColumnFieldGetter(
     (b) => b
       ..name = columnInfo.dartName
       ..type = MethodType.getter
-      ..returns = _getOutColumnTypeFromColumnInfo(columnInfo)
+      ..returns = _getOutColumnTypeFromColumnInfo(schemaInfo, columnInfo)
       ..body = columnExpr.code,
   );
 }
@@ -318,7 +320,10 @@ Method? _getTableNameGetter(DriftTableInfo tableInfo) {
   );
 }
 
-Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
+Expression _getInitialColumnBuilder(
+  DriftSchemaInfo schemaInfo,
+  DriftColumn columnInfo,
+) {
   switch (columnInfo.type) {
     case DriftElectricColumnType.int2:
       return _customElectricTypeExpr('int2');
@@ -343,7 +348,7 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
     case DriftElectricColumnType.uuid:
       return _customElectricTypeExpr('uuid');
     case DriftElectricColumnType.enumT:
-      final driftEnum = columnInfo.enumType!;
+      final driftEnum = schemaInfo.enums[columnInfo.enumPgType!]!;
 
       // Generates `customType(ElectricEnumTypes.<enum>Type)`
       final enumTypesClass = refer(kElectricEnumTypesClassName);
@@ -358,7 +363,10 @@ Expression _customElectricTypeExpr(String electricTypeName) {
       .call([electricTypesClass.property(electricTypeName)]);
 }
 
-Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
+Reference _getOutColumnTypeFromColumnInfo(
+  DriftSchemaInfo schemaInfo,
+  DriftColumn columnInfo,
+) {
   switch (columnInfo.type) {
     case DriftElectricColumnType.int2:
     case DriftElectricColumnType.int4:
@@ -377,8 +385,8 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
     case DriftElectricColumnType.timestampTZ:
       return refer('Column<DateTime>', kDriftImport);
     case DriftElectricColumnType.enumT:
-      final enumType = columnInfo.enumType!;
-      final enumDartType = enumType.dartEnumName;
+      final driftEnum = schemaInfo.enums[columnInfo.enumPgType!]!;
+      final enumDartType = driftEnum.dartEnumName;
       return refer('Column<$enumDartType>', kDriftImport);
   }
 }

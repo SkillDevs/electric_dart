@@ -37,7 +37,7 @@ class DriftColumn {
   final DriftElectricColumnType type;
   final bool isPrimaryKey;
   final bool isNullable;
-  final DriftEnum? enumType;
+  final String? enumPgType;
 
   DriftColumn({
     required this.columnName,
@@ -45,7 +45,7 @@ class DriftColumn {
     required this.type,
     required this.isNullable,
     required this.isPrimaryKey,
-    this.enumType,
+    this.enumPgType,
   });
 
   @override

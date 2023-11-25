@@ -191,8 +191,7 @@ void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   final enumCol = table.columns.firstWhere((e) => e.columnName == 'int');
   expect(enumCol.type, DriftElectricColumnType.enumT);
   expect(enumCol.dartName, 'intCol');
-  final enumInfo = enumCol.enumType!;
-  expect(enumInfo.pgName, 'integer');
+  expect(enumCol.enumPgType, 'integer');
 }
 
 void expectEnums(DriftSchemaInfo schemaInfo) {

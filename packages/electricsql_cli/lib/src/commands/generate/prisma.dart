@@ -271,10 +271,10 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
       field.attributes,
       driftEnums,
     );
-    DriftEnum? enumType;
+    String? enumPgType;
     if (driftType == DriftElectricColumnType.enumT) {
-      final DriftEnum _enumType = driftEnums[nonNullableType]!;
-      enumType = _enumType;
+      final DriftEnum driftEnum = driftEnums[nonNullableType]!;
+      enumPgType = driftEnum.pgName;
     }
 
     yield DriftColumn(
@@ -283,8 +283,8 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
       type: driftType,
       isNullable: field.type.endsWith('?'),
       isPrimaryKey: isPrimaryKey,
-      // If the type is an enum, hold the enum information
-      enumType: enumType,
+      // If the type is an enum, hold the enum name in postgres
+      enumPgType: enumPgType,
     );
   }
 }
