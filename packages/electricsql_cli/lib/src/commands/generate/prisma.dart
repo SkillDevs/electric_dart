@@ -178,8 +178,6 @@ DriftSchemaInfo extractInfoFromPrismaSchema(
   return schemaInfo;
 }
 
-
-
 Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
   return Map.fromEntries(
     enums.map((e) {

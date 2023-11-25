@@ -1,7 +1,6 @@
 import 'package:code_builder/code_builder.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
-import 'package:recase/recase.dart';
 
 List<Enum> getElectricEnumDeclarations(
   DriftSchemaInfo driftSchemaInfo,
@@ -45,10 +44,6 @@ Expression _getDartEnumToPgExpr(DriftEnum enumInfo) {
   );
 }
 
-String _getDartEnumToPgMapName(String pgName) {
-  return 'k${pgName.pascalCase}EnumToPg';
-}
-
 Class getElectricEnumCodecsClass(DriftSchemaInfo driftSchemaInfo) {
   final List<Field> codecFields = [];
   for (final enumInfo in driftSchemaInfo.enums.values) {
@@ -56,7 +51,6 @@ Class getElectricEnumCodecsClass(DriftSchemaInfo driftSchemaInfo) {
     final enumCodecName = enumInfo.enumCodecName;
 
     final enumRef = refer(enumInfo.dartEnumName);
-    final enumToPgField = refer(_getDartEnumToPgMapName(pgName));
 
     final enumCodecRef = TypeReference(
       (b) => b

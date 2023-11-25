@@ -9,7 +9,6 @@ import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:path/path.dart' as path;
-import 'package:recase/recase.dart';
 
 Future<void> buildMigrations(
   Directory migrationsFolder,

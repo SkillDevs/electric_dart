@@ -70,7 +70,8 @@ class DriftEnum {
   });
 
   @override
-  String toString() => 'DriftEnum(name: $pgName, values: $values, dartEnumName: $dartEnumName, enumCodecName: $enumCodecName, driftTypeName: $driftTypeName)';
+  String toString() =>
+      'DriftEnum(name: $pgName, values: $values, dartEnumName: $dartEnumName, enumCodecName: $enumCodecName, driftTypeName: $driftTypeName)';
 }
 
 enum DriftElectricColumnType {
