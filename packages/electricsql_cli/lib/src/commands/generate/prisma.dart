@@ -251,13 +251,10 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     // First check if the column has a custom name
     dartName = columnGenOpts?.driftColumnName;
 
-    if (dartName == null) {
-      dartName = fieldName.camelCase;
-      if (_isInvalidDartIdentifierForDriftTable(dartName)) {
-        // TODO(dart): use $ instead of col?
-        dartName = '${dartName}Col';
-      }
-    }
+    dartName ??= _ensureValidDartIdentifier(
+      fieldName.camelCase,
+      isReservedWord: _isInvalidDartIdentifierForDriftTable,
+    );
 
     final bool isPrimaryKey = primaryKeyFields.contains(fieldName);
 

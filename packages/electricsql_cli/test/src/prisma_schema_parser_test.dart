@@ -186,11 +186,11 @@ void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   // Conflict with drift and/or dart types
   final textColumn = table.columns.firstWhere((c) => c.columnName == 'text');
   expect(textColumn.type, DriftElectricColumnType.string);
-  expect(textColumn.dartName, 'textCol');
+  expect(textColumn.dartName, r'text$');
 
   final enumCol = table.columns.firstWhere((e) => e.columnName == 'int');
   expect(enumCol.type, DriftElectricColumnType.enumT);
-  expect(enumCol.dartName, 'intCol');
+  expect(enumCol.dartName, r'int$');
   expect(enumCol.enumPgType, 'integer');
 }
 

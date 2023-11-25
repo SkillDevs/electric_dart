@@ -321,7 +321,7 @@ SingleRow _enumClassToRawRow(Enum item) {
     driftCols['c'] = ElectricEnumCodecs.color.encode(colorEnum);
   }
 
-  return SingleRow(_mapToRow(driftCols));
+  return SingleRow(driftCols);
 }
 
 Future<Rows> getItemColumns(

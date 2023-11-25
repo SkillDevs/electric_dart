@@ -97,9 +97,9 @@ class Weirdnames extends Table {
 
   TextColumn get val => text().named('1val')();
 
-  TextColumn get textCol => text().named('text')();
+  TextColumn get text$ => text().named('text')();
 
-  Column<DbInteger> get intCol =>
+  Column<DbInteger> get int$ =>
       customType(ElectricEnumTypes.integer).named('int').nullable()();
 
   @override
