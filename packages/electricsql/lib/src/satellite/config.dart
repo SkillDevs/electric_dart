@@ -1,3 +1,4 @@
+import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:meta/meta.dart';
 
@@ -106,6 +107,8 @@ class SatelliteOpts {
 
   /// Backoff options for connecting with Electric
   final ConnectionBackoffOptions connectionBackoffOptions;
+
+  bool get debug => logger.levelImportance <= Level.debug.value;
 
   const SatelliteOpts({
     required this.metaTable,

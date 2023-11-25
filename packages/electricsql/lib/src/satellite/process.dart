@@ -149,9 +149,9 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<ConnectionWrapper> start(AuthConfig authConfig) async {
-    final sqliteVersionRow =
-        await adapter.query(Statement('SELECT sqlite_version() AS version'));
-    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
+    if (opts.debug) {
+      await _logSQLiteVersion();
+    }
 
     await migrator.up();
 
@@ -229,6 +229,12 @@ This means there is a notifier subscription leak.`''');
     return ConnectionWrapper(
       connectionFuture: connectionFuture,
     );
+  }
+
+  Future<void> _logSQLiteVersion() async {
+    final sqliteVersionRow =
+        await adapter.query(Statement('SELECT sqlite_version() AS version'));
+    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
   }
 
   @visibleForTesting

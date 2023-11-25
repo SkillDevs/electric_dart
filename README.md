@@ -1,10 +1,14 @@
 ![Tests](https://github.com/SkillDevs/electric_dart/actions/workflows/tests.yml/badge.svg)
+![E2E](https://github.com/SkillDevs/electric_dart/actions/workflows/e2e.yml/badge.svg)
 
 [![pub package](https://img.shields.io/pub/v/electricsql.svg?label=electricsql&color=blue)](https://pub.dartlang.org/packages/electricsql)
 [![pub package](https://img.shields.io/pub/v/electricsql_flutter.svg?label=electricsql_flutter&color=blue)](https://pub.dartlang.org/packages/electricsql_flutter)
 [![pub package](https://img.shields.io/pub/v/electricsql_cli.svg?label=electricsql_cli&color=blue)](https://pub.dartlang.org/packages/electricsql_cli)
 
-# Electric Dart ⚡🎯
+<h1>
+    <img align="center" height="60" src="https://github.com/SkillDevs/electric_dart/blob/master/resources/electric_dart_icon.png"/>
+    Electric Dart
+</h1>
 
 #### 🛠️ WORK IN PROGRESS 🛠️
 
