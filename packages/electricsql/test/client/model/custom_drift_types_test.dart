@@ -190,6 +190,18 @@ void main() async {
     test('min', () async {
       await _testInt8BigInt(db, BigInt.from(-9223372036854775808));
     });
+
+    test('invalid', () async {
+      await expectLater(
+        () async => _testInt8BigInt(db, BigInt.parse('9223372036854775808')),
+        throwsA(isA<Exception>()),
+      );
+
+      await expectLater(
+        () async => _testInt8BigInt(db, BigInt.parse('-9223372036854775809')),
+        throwsA(isA<Exception>()),
+      );
+    });
   });
 
   group('float8', () {
