@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/enums.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:path/path.dart' as path;
@@ -72,12 +74,7 @@ Future<List<String>> getMigrationNames(Directory migrationsFolder) async {
   return dirNames;
 }
 
-const kDriftImport = 'package:drift/drift.dart';
-const kElectricSqlDriftImport = 'package:electricsql/drivers/drift.dart';
-
 String generateMigrationsDartCode(List<Migration> migrations) {
-  const kElectricSqlImport = 'package:electricsql/electricsql.dart';
-
   final migrationReference = refer('Migration', kElectricSqlImport);
 
   // Migrations
@@ -133,6 +130,7 @@ String _buildLibCode(void Function(LibraryBuilder b) updateLib) {
   final emitter = DartEmitter(
     allocator: Allocator(),
     useNullSafetySyntax: true,
+    orderDirectives: true,
   );
   final codeStr = DartFormatter().format(
     '${library.accept(emitter)}',
@@ -156,6 +154,33 @@ Future<void> buildDriftSchemaDartFile(
 }
 
 String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
+  final List<Class> tableClasses = _getTableClasses(driftSchemaInfo);
+
+  final List<ElectricEnumDeclarationBlock> electricEnumDeclarationsBlocks =
+      getElectricEnumDeclarationBlocks(driftSchemaInfo);
+
+  return _buildLibCode(
+    (b) => b
+      ..body.addAll(
+        [
+          _getElectrifiedTablesField(tableClasses),
+          ...tableClasses,
+          if (electricEnumDeclarationsBlocks.isNotEmpty) ...[
+            // Enums
+            Code('\n// ${'-' * 30} ENUMS ${'-' * 30}\n\n'),
+            for (final block in electricEnumDeclarationsBlocks) ...[
+              block.enumType,
+              block.enumToPg,
+            ],
+            getElectricEnumCodecsClass(driftSchemaInfo),
+            getElectricEnumTypesClass(driftSchemaInfo),
+          ],
+        ],
+      ),
+  );
+}
+
+List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
   final tableRef = refer('Table', kDriftImport);
 
   final List<Class> tableClasses = [];
@@ -203,16 +228,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
     );
     tableClasses.add(tableClass);
   }
-
-  return _buildLibCode(
-    (b) => b
-      ..body.addAll(
-        [
-          _getElectrifiedTablesField(tableClasses),
-          ...tableClasses,
-        ],
-      ),
-  );
+  return tableClasses;
 }
 
 Field _getElectrifiedTablesField(List<Class> tableClasses) {
@@ -332,13 +348,12 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
     case DriftElectricColumnType.uuid:
       return _customElectricTypeExpr('uuid');
     case DriftElectricColumnType.enumT:
-      final enumType = columnInfo.enumType!;
-      final enumNameCamel = enumType.pgName.camelCase;
+      final driftEnum = columnInfo.enumType!;
 
       // Generates `customType(ElectricEnumTypes.<enum>Type)`
-      final enumTypesClass = refer('ElectricEnumTypes');
+      final enumTypesClass = refer(kElectricEnumTypesClassName);
       return refer('customType', kDriftImport)
-          .call([enumTypesClass.property('${enumNameCamel}Type')]);
+          .call([enumTypesClass.property(driftEnum.driftTypeName)]);
   }
 }
 
