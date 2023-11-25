@@ -10,6 +10,7 @@ import 'package:satellite_dart_client/drift/database.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
 import 'package:satellite_dart_client/util/json.dart';
+import 'package:satellite_dart_client/util/pretty_output.dart';
 
 late String dbName;
 
@@ -420,24 +421,10 @@ Rows _toRows(List<QueryRow> rows) {
   return Rows(
     rows.map((r) {
       final data = r.data;
-      return _mapToRow(data);
+      return data;
     }).toList(),
   );
 }
-
-Row _mapToRow(Map<String, Object?> map) {
-  return map.map((key, value) {
-    final String newVal;
-    if (value is String) {
-      newVal = "'$value'";
-    } else {
-      newVal = value.toString();
-    }
-    return MapEntry(key, newVal);
-  });
-}
-
-typedef Row = Map<String, String>;
 
 List<Variable> dynamicArgsToVariables(List<Object?>? args) {
   return (args ?? const [])
@@ -469,57 +456,33 @@ List<Variable> dynamicArgsToVariables(List<Object?>? args) {
 }
 
 class Rows {
-  final List<Row> rows;
+  final List<Map<String, Object?>> rows;
 
   Rows(this.rows);
 
   @override
   String toString() {
-    if (rows.isEmpty) {
-      return "[]";
-    }
-
-    final buffer = StringBuffer();
-    buffer.writeln("[");
-    for (final row in rows) {
-      buffer.write("  ");
-      buffer.write(_rowToPrettyStr(row));
-      buffer.writeln(",");
-    }
-    buffer.writeln("]");
-    return buffer.toString();
+    return listToPrettyStr(rows, withNewLine: true);
   }
 }
 
 class SingleRow {
-  final Row row;
+  final Map<String, Object?> row;
 
   SingleRow(this.row);
 
   factory SingleRow.fromItem(Insertable item) {
-    return SingleRow(_mapToRow(toColumns(item)!));
+    return SingleRow(toColumns(item)!);
+  }
+
+  factory SingleRow.fromColumns(Map<String, Object?> cols) {
+    return SingleRow(cols);
   }
 
   @override
   String toString() {
-    return _rowToPrettyStr(row);
+    return mapToPrettyStr(row);
   }
-}
-
-String _rowToPrettyStr(Row row) {
-  final buffer = StringBuffer();
-  buffer.write("{ ");
-  final entries = row.entries.toList();
-  for (var i = 0; i < entries.length; i++) {
-    final entry = entries[i];
-    buffer.write("${entry.key}: ${entry.value}");
-
-    if (i != entries.length - 1) {
-      buffer.write(", ");
-    }
-  }
-  buffer.write(" }");
-  return buffer.toString();
 }
 
 Map<String, Object?>? toColumns(Insertable? o) {
