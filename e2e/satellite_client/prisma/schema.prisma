@@ -52,5 +52,11 @@ model Floats {
 
 model Enums {
   id String @id
-  c  String?
+  c  Color?
+}
+
+enum Color {
+  RED
+  GREEN
+  BLUE
 }

@@ -4,6 +4,7 @@
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
+import 'package:electricsql/electricsql.dart';
 import 'package:myapp/base_model.dart';
 
 const kElectrifiedTables = [
@@ -12,6 +13,7 @@ const kElectrifiedTables = [
   Datatypes,
   Weirdnames,
   GenOptsDriftTable,
+  Enums,
 ];
 
 class Project extends Table {
@@ -97,6 +99,9 @@ class Weirdnames extends Table {
 
   TextColumn get textCol => text().named('text')();
 
+  Column<DbInteger> get intCol =>
+      customType(ElectricEnumTypes.integer).named('int').nullable()();
+
   @override
   String? get tableName => 'weirdnames';
 
@@ -124,4 +129,66 @@ class GenOptsDriftTable extends Table {
 
   @override
   bool get withoutRowId => true;
+}
+
+class Enums extends Table {
+  TextColumn get id => text()();
+
+  Column<DbColor> get c => customType(ElectricEnumTypes.color).nullable()();
+
+  @override
+  String? get tableName => 'enums';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+// ------------------------------ ENUMS ------------------------------
+
+/// Dart enum for Postgres enum "color"
+enum DbColor { red, green, blue }
+
+/// Dart enum for Postgres enum "integer"
+enum DbInteger { int$, bool$, double$, $2Float }
+
+/// Codecs for Electric enums
+class ElectricEnumCodecs {
+  /// Codec for Dart enum "color"
+  static final color = ElectricEnumCodec<DbColor>(
+    dartEnumToPgEnum: <DbColor, String>{
+      DbColor.red: 'RED',
+      DbColor.green: 'GREEN',
+      DbColor.blue: 'BLUE',
+    },
+    values: DbColor.values,
+  );
+
+  /// Codec for Dart enum "integer"
+  static final integer = ElectricEnumCodec<DbInteger>(
+    dartEnumToPgEnum: <DbInteger, String>{
+      DbInteger.int$: 'int',
+      DbInteger.bool$: 'Bool',
+      DbInteger.double$: 'DOUBLE',
+      DbInteger.$2Float: '2Float',
+    },
+    values: DbInteger.values,
+  );
+}
+
+/// Drift custom types for Electric enums
+class ElectricEnumTypes {
+  /// Codec for Dart enum "color"
+  static final color = CustomElectricTypeGeneric(
+    codec: ElectricEnumCodecs.color,
+    typeName: 'color',
+  );
+
+  /// Codec for Dart enum "integer"
+  static final integer = CustomElectricTypeGeneric(
+    codec: ElectricEnumCodecs.integer,
+    typeName: 'integer',
+  );
 }

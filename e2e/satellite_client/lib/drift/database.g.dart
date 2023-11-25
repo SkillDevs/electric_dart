@@ -1697,9 +1697,9 @@ class $EnumsTable extends Enums with TableInfo<$EnumsTable, Enum> {
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _cMeta = const VerificationMeta('c');
   @override
-  late final GeneratedColumn<String> c = GeneratedColumn<String>(
+  late final GeneratedColumn<DbColor> c = GeneratedColumn<DbColor>(
       'c', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      type: ElectricEnumTypes.color, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [id, c];
   @override
@@ -1732,7 +1732,7 @@ class $EnumsTable extends Enums with TableInfo<$EnumsTable, Enum> {
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       c: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}c']),
+          .read(ElectricEnumTypes.color, data['${effectivePrefix}c']),
     );
   }
 
@@ -1747,14 +1747,14 @@ class $EnumsTable extends Enums with TableInfo<$EnumsTable, Enum> {
 
 class Enum extends DataClass implements Insertable<Enum> {
   final String id;
-  final String? c;
+  final DbColor? c;
   const Enum({required this.id, this.c});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || c != null) {
-      map['c'] = Variable<String>(c);
+      map['c'] = Variable<DbColor>(c);
     }
     return map;
   }
@@ -1771,7 +1771,7 @@ class Enum extends DataClass implements Insertable<Enum> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Enum(
       id: serializer.fromJson<String>(json['id']),
-      c: serializer.fromJson<String?>(json['c']),
+      c: serializer.fromJson<DbColor?>(json['c']),
     );
   }
   @override
@@ -1779,11 +1779,11 @@ class Enum extends DataClass implements Insertable<Enum> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'c': serializer.toJson<String?>(c),
+      'c': serializer.toJson<DbColor?>(c),
     };
   }
 
-  Enum copyWith({String? id, Value<String?> c = const Value.absent()}) => Enum(
+  Enum copyWith({String? id, Value<DbColor?> c = const Value.absent()}) => Enum(
         id: id ?? this.id,
         c: c.present ? c.value : this.c,
       );
@@ -1806,7 +1806,7 @@ class Enum extends DataClass implements Insertable<Enum> {
 
 class EnumsCompanion extends UpdateCompanion<Enum> {
   final Value<String> id;
-  final Value<String?> c;
+  final Value<DbColor?> c;
   const EnumsCompanion({
     this.id = const Value.absent(),
     this.c = const Value.absent(),
@@ -1817,7 +1817,7 @@ class EnumsCompanion extends UpdateCompanion<Enum> {
   }) : id = Value(id);
   static Insertable<Enum> custom({
     Expression<String>? id,
-    Expression<String>? c,
+    Expression<DbColor>? c,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1825,7 +1825,7 @@ class EnumsCompanion extends UpdateCompanion<Enum> {
     });
   }
 
-  EnumsCompanion copyWith({Value<String>? id, Value<String?>? c}) {
+  EnumsCompanion copyWith({Value<String>? id, Value<DbColor?>? c}) {
     return EnumsCompanion(
       id: id ?? this.id,
       c: c ?? this.c,
@@ -1839,7 +1839,7 @@ class EnumsCompanion extends UpdateCompanion<Enum> {
       map['id'] = Variable<String>(id.value);
     }
     if (c.present) {
-      map['c'] = Variable<String>(c.value);
+      map['c'] = Variable<DbColor>(c.value, ElectricEnumTypes.color);
     }
     return map;
   }
