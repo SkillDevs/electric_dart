@@ -9,6 +9,7 @@ import 'package:electricsql/util.dart';
 import 'package:satellite_dart_client/drift/database.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
+import 'package:satellite_dart_client/generated/electric/drift_schema.dart';
 import 'package:satellite_dart_client/util/json.dart';
 
 late String dbName;
@@ -293,18 +294,33 @@ Future<SingleRow> writeFloat(
 Future<SingleRow> getEnum(MyDriftElectricClient electric, String id) async {
   final item = await (electric.db.enums.select()..where((t) => t.id.equals(id)))
       .getSingle();
-  return SingleRow.fromItem(item);
+  return _enumClassToRawRow(item);
 }
 
 Future<SingleRow> writeEnum(
     MyDriftElectricClient electric, String id, String? enumStr) async {
+  final enumValue =
+      enumStr == null ? null : ElectricEnumCodecs.color.decode(enumStr);
+
   final item = await electric.db.enums.insertReturning(
     EnumsCompanion.insert(
       id: id,
-      c: Value(enumStr),
+      c: Value(enumValue),
     ),
   );
-  return SingleRow.fromItem(item);
+
+  return _enumClassToRawRow(item);
+}
+
+// Converts the dart enum into string for the Lux expected output
+SingleRow _enumClassToRawRow(Enum item) {
+  final driftCols = toColumns(item)!;
+  final colorEnum = driftCols['c'] as DbColor?;
+  if (colorEnum != null) {
+    driftCols['c'] = ElectricEnumCodecs.color.encode(colorEnum);
+  }
+
+  return SingleRow(_mapToRow(driftCols));
 }
 
 Future<Rows> getItemColumns(
