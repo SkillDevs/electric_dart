@@ -156,6 +156,42 @@ void main() async {
     });
   });
 
+  group('int8', () {
+    test('regular', () async {
+      await _testInt8(db, 2);
+    });
+
+    test('0', () async {
+      await _testInt8(db, 0);
+    });
+
+    test('max', () async {
+      await _testInt8(db, 9223372036854775807);
+    });
+
+    test('min', () async {
+      await _testInt8(db, -9223372036854775808);
+    });
+  });
+
+  group('int8 bigint', () {
+    test('regular', () async {
+      await _testInt8BigInt(db, BigInt.from(2));
+    });
+
+    test('0', () async {
+      await _testInt8BigInt(db, BigInt.from(0));
+    });
+
+    test('max', () async {
+      await _testInt8BigInt(db, BigInt.from(9223372036854775807));
+    });
+
+    test('min', () async {
+      await _testInt8BigInt(db, BigInt.from(-9223372036854775808));
+    });
+  });
+
   group('float8', () {
     test('regular', () async {
       await _testFloat8(db, 2.5);
@@ -333,6 +369,31 @@ Future<void> _testInt4(TestsDatabase db, int value) async {
       int4: Value(v),
     ),
     customT: ElectricTypes.int4,
+  );
+}
+
+Future<void> _testInt8(TestsDatabase db, int value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.int8,
+    insertCol: (c, v) => c.copyWith(
+      int8: Value(v),
+    ),
+    customT: ElectricTypes.int8,
+  );
+}
+
+Future<void> _testInt8BigInt(TestsDatabase db, BigInt value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.int8BigInt,
+    insertCol: (c, v) => c.copyWith(
+      int8BigInt: Value(v),
+    ),
+    // We can use Drift default BigInt type
+    customT: null,
   );
 }
 
