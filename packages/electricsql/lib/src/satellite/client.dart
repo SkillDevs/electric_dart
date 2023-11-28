@@ -1017,6 +1017,14 @@ class SatelliteClient implements Client {
               tags: tags,
             ),
           );
+        case DataChangeType.compensation:
+          changeOp = SatTransOp(
+            compensation: SatOpCompensation(
+              pkData: record,
+              relationId: relation.id,
+              tags: tags,
+            ),
+          );
       }
       ops.add(changeOp);
     }
