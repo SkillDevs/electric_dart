@@ -161,6 +161,7 @@ enum DataChangeType {
   insert,
   update,
   delete,
+  compensation,
 }
 
 typedef Record = Map<String, Object?>;
