@@ -227,7 +227,14 @@ void main() async {
     ).get();
 
     final List<(int id, Object float4, Object float8)> expected = [
-      (1, fround(1.234), 1.234),
+      // 1.234 cannot be stored exactly in a float4
+      // hence, there is a rounding error, which is observed when we
+      // read the float4 value back into a 64-bit JS number
+      // The value 1.2339999675750732 that we read back
+      // is also what Math.fround(1.234) returns
+      // as being the nearest 32-bit single precision
+      // floating point representation of 1.234
+      (1, 1.2339999675750732, 1.234),
       (2, 'NaN', 'NaN'),
       (3, double.infinity, double.infinity),
       (4, double.negativeInfinity, double.negativeInfinity),
