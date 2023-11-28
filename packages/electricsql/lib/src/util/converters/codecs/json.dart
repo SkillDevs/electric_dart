@@ -27,7 +27,7 @@ final class _Encoder extends Converter<Object, String> {
   @override
   String convert(Object input) {
     if (isJsonNull(input)) {
-      // user provided the special Prisma.JsonNull value
+      // user provided the special `kJsonNull` value
       // to indicate a JSON null value rather than a DB NULL
       return json.encode(null);
     } else {
