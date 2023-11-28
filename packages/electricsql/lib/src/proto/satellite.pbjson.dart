@@ -454,6 +454,15 @@ const SatTransOp$json = {
       '9': 0,
       '10': 'migrate'
     },
+    {
+      '1': 'compensation',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.Electric.Satellite.SatOpCompensation',
+      '9': 0,
+      '10': 'compensation'
+    },
   ],
   '8': [
     {'1': 'op'},
@@ -468,7 +477,9 @@ final $typed_data.Uint8List satTransOpDescriptor = $convert.base64Decode(
     'F0T3BVcGRhdGVIAFIGdXBkYXRlEjkKBmluc2VydBgEIAEoCzIfLkVsZWN0cmljLlNhdGVsbGl0'
     'ZS5TYXRPcEluc2VydEgAUgZpbnNlcnQSOQoGZGVsZXRlGAUgASgLMh8uRWxlY3RyaWMuU2F0ZW'
     'xsaXRlLlNhdE9wRGVsZXRlSABSBmRlbGV0ZRI8CgdtaWdyYXRlGAYgASgLMiAuRWxlY3RyaWMu'
-    'U2F0ZWxsaXRlLlNhdE9wTWlncmF0ZUgAUgdtaWdyYXRlQgQKAm9w');
+    'U2F0ZWxsaXRlLlNhdE9wTWlncmF0ZUgAUgdtaWdyYXRlEksKDGNvbXBlbnNhdGlvbhgHIAEoCz'
+    'IlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcENvbXBlbnNhdGlvbkgAUgxjb21wZW5zYXRpb25C'
+    'BAoCb3A=');
 
 @$core.Deprecated('Use satOpBeginDescriptor instead')
 const SatOpBegin$json = {
@@ -584,6 +595,29 @@ final $typed_data.Uint8List satOpDeleteDescriptor = $convert.base64Decode(
     'CgtTYXRPcERlbGV0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI+CgxvbGRfcm'
     '93X2RhdGEYAiABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdGES'
     'EgoEdGFncxgDIAMoCVIEdGFncw==');
+
+@$core.Deprecated('Use satOpCompensationDescriptor instead')
+const SatOpCompensation$json = {
+  '1': 'SatOpCompensation',
+  '2': [
+    {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
+    {
+      '1': 'pk_data',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.Electric.Satellite.SatOpRow',
+      '10': 'pkData'
+    },
+    {'1': 'tags', '3': 4, '4': 3, '5': 9, '10': 'tags'},
+  ],
+};
+
+/// Descriptor for `SatOpCompensation`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List satOpCompensationDescriptor = $convert.base64Decode(
+    'ChFTYXRPcENvbXBlbnNhdGlvbhIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI1Cg'
+    'dwa19kYXRhGAIgASgLMhwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wUm93UgZwa0RhdGESEgoE'
+    'dGFncxgEIAMoCVIEdGFncw==');
 
 @$core.Deprecated('Use satOpRowDescriptor instead')
 const SatOpRow$json = {

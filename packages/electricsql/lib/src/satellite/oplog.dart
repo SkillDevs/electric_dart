@@ -19,6 +19,7 @@ enum OpType {
   delete,
   insert,
   update,
+  compensation,
 }
 
 enum ChangesOpType {
@@ -96,6 +97,8 @@ OpType changeTypeToOpType(DataChangeType opTypeStr) {
       return OpType.update;
     case DataChangeType.delete:
       return OpType.delete;
+    case DataChangeType.compensation:
+      return OpType.compensation;
   }
 }
 
@@ -107,6 +110,8 @@ DataChangeType opTypeToChangeType(OpType opType) {
       return DataChangeType.insert;
     case OpType.update:
       return DataChangeType.update;
+    case OpType.compensation:
+      return DataChangeType.compensation;
   }
 }
 
@@ -120,6 +125,8 @@ OpType opTypeStrToOpType(String str) {
       return OpType.update;
     case 'insert':
       return OpType.insert;
+    case 'compensation':
+      return OpType.compensation;
   }
 
   assert(false, 'OpType $str not handled');
