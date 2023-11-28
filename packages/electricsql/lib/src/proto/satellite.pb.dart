@@ -1224,7 +1224,16 @@ class SatOpLog extends $pb.GeneratedMessage {
   $core.List<SatTransOp> get ops => $_getList(0);
 }
 
-enum SatTransOp_Op { begin, commit, update, insert, delete, migrate, notSet }
+enum SatTransOp_Op {
+  begin,
+  commit,
+  update,
+  insert,
+  delete,
+  migrate,
+  compensation,
+  notSet
+}
 
 /// (Producer) Single operation, should be only send as part of the SatOplog
 /// message
@@ -1236,6 +1245,7 @@ class SatTransOp extends $pb.GeneratedMessage {
     SatOpInsert? insert,
     SatOpDelete? delete,
     SatOpMigrate? migrate,
+    SatOpCompensation? compensation,
   }) {
     final $result = create();
     if (begin != null) {
@@ -1256,6 +1266,9 @@ class SatTransOp extends $pb.GeneratedMessage {
     if (migrate != null) {
       $result.migrate = migrate;
     }
+    if (compensation != null) {
+      $result.compensation = compensation;
+    }
     return $result;
   }
   SatTransOp._() : super();
@@ -1273,6 +1286,7 @@ class SatTransOp extends $pb.GeneratedMessage {
     4: SatTransOp_Op.insert,
     5: SatTransOp_Op.delete,
     6: SatTransOp_Op.migrate,
+    7: SatTransOp_Op.compensation,
     0: SatTransOp_Op.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
@@ -1280,7 +1294,7 @@ class SatTransOp extends $pb.GeneratedMessage {
       package:
           const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
       createEmptyInstance: create)
-    ..oo(0, [1, 2, 3, 4, 5, 6])
+    ..oo(0, [1, 2, 3, 4, 5, 6, 7])
     ..aOM<SatOpBegin>(1, _omitFieldNames ? '' : 'begin',
         subBuilder: SatOpBegin.create)
     ..aOM<SatOpCommit>(2, _omitFieldNames ? '' : 'commit',
@@ -1293,6 +1307,8 @@ class SatTransOp extends $pb.GeneratedMessage {
         subBuilder: SatOpDelete.create)
     ..aOM<SatOpMigrate>(6, _omitFieldNames ? '' : 'migrate',
         subBuilder: SatOpMigrate.create)
+    ..aOM<SatOpCompensation>(7, _omitFieldNames ? '' : 'compensation',
+        subBuilder: SatOpCompensation.create)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1402,6 +1418,20 @@ class SatTransOp extends $pb.GeneratedMessage {
   void clearMigrate() => clearField(6);
   @$pb.TagNumber(6)
   SatOpMigrate ensureMigrate() => $_ensure(5);
+
+  @$pb.TagNumber(7)
+  SatOpCompensation get compensation => $_getN(6);
+  @$pb.TagNumber(7)
+  set compensation(SatOpCompensation v) {
+    setField(7, v);
+  }
+
+  @$pb.TagNumber(7)
+  $core.bool hasCompensation() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCompensation() => clearField(7);
+  @$pb.TagNumber(7)
+  SatOpCompensation ensureCompensation() => $_ensure(6);
 }
 
 /// (Producer) Replication message that indicates transaction boundaries
@@ -1937,6 +1967,97 @@ class SatOpDelete extends $pb.GeneratedMessage {
 
   /// dependency information
   @$pb.TagNumber(3)
+  $core.List<$core.String> get tags => $_getList(2);
+}
+
+class SatOpCompensation extends $pb.GeneratedMessage {
+  factory SatOpCompensation({
+    $core.int? relationId,
+    SatOpRow? pkData,
+    $core.Iterable<$core.String>? tags,
+  }) {
+    final $result = create();
+    if (relationId != null) {
+      $result.relationId = relationId;
+    }
+    if (pkData != null) {
+      $result.pkData = pkData;
+    }
+    if (tags != null) {
+      $result.tags.addAll(tags);
+    }
+    return $result;
+  }
+  SatOpCompensation._() : super();
+  factory SatOpCompensation.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpCompensation.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatOpCompensation',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..a<$core.int>(1, _omitFieldNames ? '' : 'relationId', $pb.PbFieldType.OU3)
+    ..aOM<SatOpRow>(2, _omitFieldNames ? '' : 'pkData',
+        subBuilder: SatOpRow.create)
+    ..pPS(4, _omitFieldNames ? '' : 'tags')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpCompensation clone() => SatOpCompensation()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpCompensation copyWith(void Function(SatOpCompensation) updates) =>
+      super.copyWith((message) => updates(message as SatOpCompensation))
+          as SatOpCompensation;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatOpCompensation create() => SatOpCompensation._();
+  SatOpCompensation createEmptyInstance() => create();
+  static $pb.PbList<SatOpCompensation> createRepeated() =>
+      $pb.PbList<SatOpCompensation>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpCompensation getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpCompensation>(create);
+  static SatOpCompensation? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get relationId => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set relationId($core.int v) {
+    $_setUnsignedInt32(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasRelationId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRelationId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  SatOpRow get pkData => $_getN(1);
+  @$pb.TagNumber(2)
+  set pkData(SatOpRow v) {
+    setField(2, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasPkData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPkData() => clearField(2);
+  @$pb.TagNumber(2)
+  SatOpRow ensurePkData() => $_ensure(1);
+
+  /// dependency information
+  @$pb.TagNumber(4)
   $core.List<$core.String> get tags => $_getList(2);
 }
 
