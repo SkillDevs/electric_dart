@@ -501,4 +501,129 @@ void main() async {
         .getSingle();
     expect(fetchRes.float8, null);
   });
+
+  test('support int8 type', () async {
+    const validInt1 = 9223372036854775807;
+    const validInt2 = -9223372036854775808;
+
+    final List<({int id, int int8})> ints = [
+      (
+        id: 1,
+        int8: validInt1,
+      ),
+      (
+        id: 2,
+        int8: validInt2,
+      ),
+    ];
+
+    for (final entry in ints) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(entry.id),
+              int8: Value(entry.int8),
+            ),
+          );
+    }
+
+    // Check that we can read the big ints back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records = fetchRes.map((r) => (id: r.id, int8: r.int8)).toList();
+
+    expect(records, ints);
+  });
+
+  test('support null values for int8 type', () async {
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8: const Value(null),
+          ),
+        );
+
+    expect(res.id, 1);
+    expect(res.int8, null);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.int8, null);
+  });
+
+  test('support BigInt type', () async {
+    final validBigInt1 = BigInt.parse('9223372036854775807');
+    final validBigInt2 = BigInt.parse('-9223372036854775808');
+
+    final List<({int id, BigInt int8})> bigInts = [
+      (
+        id: 1,
+        int8: validBigInt1,
+      ),
+      (
+        id: 2,
+        int8: validBigInt2,
+      ),
+    ];
+
+    for (final entry in bigInts) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(entry.id),
+              int8BigInt: Value(entry.int8),
+            ),
+          );
+    }
+
+    // Check that we can read the big ints back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records =
+        fetchRes.map((r) => (id: r.id, int8: r.int8BigInt)).toList();
+
+    expect(records, bigInts);
+  });
+
+  test('support null values for bigint type', () async {
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8BigInt: const Value(null),
+          ),
+        );
+
+    expect(res.id, 1);
+    expect(res.int8BigInt, null);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.int8BigInt, null);
+  });
+
+  test('throw error when value is out of range for BigInt type', () async {
+    final invalidBigInt1 = BigInt.parse('9223372036854775808');
+    final invalidBigInt2 = BigInt.parse('-9223372036854775809');
+
+    // Check that it rejects invalid int8
+    final invalidBigInts = [invalidBigInt1, invalidBigInt2];
+    int id = 1;
+    for (final invalidInt in invalidBigInts) {
+      await expectLater(
+        () async => db.into(db.dataTypes).insertReturning(
+              DataTypesCompanion.insert(
+                id: Value(id++),
+                int8BigInt: Value(invalidInt),
+              ),
+            ),
+        throwsA(
+          isA<Exception>().having(
+            (p0) => p0.toString(),
+            'error',
+            contains(
+              'BigInt value exceeds the range of 64 bits',
+            ),
+          ),
+        ),
+      );
+    }
+  });
 }

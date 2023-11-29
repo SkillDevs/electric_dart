@@ -101,10 +101,10 @@ Map<String, Relation> kTestRelations = {
       ),
     ],
   ),
-  'floatTable': Relation(
+  'mergeTable': Relation(
     id: 3,
     schema: 'public',
-    table: 'floatTable',
+    table: 'mergeTable',
     tableType: SatRelation_RelationType.TABLE,
     columns: [
       RelationColumn(
@@ -114,8 +114,20 @@ Map<String, Relation> kTestRelations = {
         primaryKey: true,
       ),
       RelationColumn(
-        name: 'value',
+        name: 'real',
         type: 'REAL',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'int8',
+        type: 'INT8',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'bigint',
+        type: 'BIGINT',
         isNullable: true,
         primaryKey: false,
       ),
@@ -148,6 +160,12 @@ Map<String, Relation> kTestRelations = {
       RelationColumn(
         name: 'bmi',
         type: 'REAL',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'int8',
+        type: 'INT8',
         isNullable: true,
         primaryKey: false,
       ),
@@ -264,7 +282,7 @@ void migrateDb(Database db, Table table) {
   final tableName = table.tableName;
   // Create the table in the database
   final createTableSQL =
-      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL)';
+      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER)';
   db.execute(createTableSQL);
 
   // Apply the initial migration on the database
@@ -283,13 +301,14 @@ void migrateDb(Database db, Table table) {
 final kPersonTable = Table(
   namespace: 'main',
   tableName: 'personTable',
-  columns: ['id', 'name', 'age', 'bmi'],
+  columns: ['id', 'name', 'age', 'bmi', 'int8'],
   primary: ['id'],
   foreignKeys: [],
   columnTypes: {
-    'id': 'REAL',
-    'name': 'TEXT',
-    'age': 'INTEGER',
-    'bmi': 'REAL',
+    'id': (sqliteType: 'REAL', pgType: 'REAL'),
+    'name': (sqliteType: 'TEXT', pgType: 'TEXT'),
+    'age': (sqliteType: 'INTEGER', pgType: 'INTEGER'),
+    'bmi': (sqliteType: 'REAL', pgType: 'REAL'),
+    'int8': (sqliteType: 'INTEGER', pgType: 'INT8'),
   },
 );

@@ -32,6 +32,7 @@ model datatypes {
   c_int         Int
   c_int2        Int      @db.SmallInt
   c_int4        Int
+  c_int8        BigInt   @db.BigInt
   c_float8      Float
   c_bool        Boolean
   c_date        DateTime @db.Date

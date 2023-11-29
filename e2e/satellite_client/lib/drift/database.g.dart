@@ -1329,8 +1329,13 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   late final GeneratedColumn<int> i4 = GeneratedColumn<int>(
       'i4', aliasedName, true,
       type: ElectricTypes.int4, requiredDuringInsert: false);
+  static const VerificationMeta _i8Meta = const VerificationMeta('i8');
   @override
-  List<GeneratedColumn> get $columns => [id, i2, i4];
+  late final GeneratedColumn<BigInt> i8 = GeneratedColumn<BigInt>(
+      'i8', aliasedName, true,
+      type: DriftSqlType.bigInt, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, i2, i4, i8];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1352,6 +1357,9 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
     if (data.containsKey('i4')) {
       context.handle(_i4Meta, i4.isAcceptableOrUnknown(data['i4']!, _i4Meta));
     }
+    if (data.containsKey('i8')) {
+      context.handle(_i8Meta, i8.isAcceptableOrUnknown(data['i8']!, _i8Meta));
+    }
     return context;
   }
 
@@ -1367,6 +1375,8 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
           .read(ElectricTypes.int2, data['${effectivePrefix}i2']),
       i4: attachedDatabase.typeMapping
           .read(ElectricTypes.int4, data['${effectivePrefix}i4']),
+      i8: attachedDatabase.typeMapping
+          .read(DriftSqlType.bigInt, data['${effectivePrefix}i8']),
     );
   }
 
@@ -1383,7 +1393,8 @@ class Int extends DataClass implements Insertable<Int> {
   final String id;
   final int? i2;
   final int? i4;
-  const Int({required this.id, this.i2, this.i4});
+  final BigInt? i8;
+  const Int({required this.id, this.i2, this.i4, this.i8});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1394,6 +1405,9 @@ class Int extends DataClass implements Insertable<Int> {
     if (!nullToAbsent || i4 != null) {
       map['i4'] = Variable<int>(i4);
     }
+    if (!nullToAbsent || i8 != null) {
+      map['i8'] = Variable<BigInt>(i8);
+    }
     return map;
   }
 
@@ -1402,6 +1416,7 @@ class Int extends DataClass implements Insertable<Int> {
       id: Value(id),
       i2: i2 == null && nullToAbsent ? const Value.absent() : Value(i2),
       i4: i4 == null && nullToAbsent ? const Value.absent() : Value(i4),
+      i8: i8 == null && nullToAbsent ? const Value.absent() : Value(i8),
     );
   }
 
@@ -1412,6 +1427,7 @@ class Int extends DataClass implements Insertable<Int> {
       id: serializer.fromJson<String>(json['id']),
       i2: serializer.fromJson<int?>(json['i2']),
       i4: serializer.fromJson<int?>(json['i4']),
+      i8: serializer.fromJson<BigInt?>(json['i8']),
     );
   }
   @override
@@ -1421,71 +1437,85 @@ class Int extends DataClass implements Insertable<Int> {
       'id': serializer.toJson<String>(id),
       'i2': serializer.toJson<int?>(i2),
       'i4': serializer.toJson<int?>(i4),
+      'i8': serializer.toJson<BigInt?>(i8),
     };
   }
 
   Int copyWith(
           {String? id,
           Value<int?> i2 = const Value.absent(),
-          Value<int?> i4 = const Value.absent()}) =>
+          Value<int?> i4 = const Value.absent(),
+          Value<BigInt?> i8 = const Value.absent()}) =>
       Int(
         id: id ?? this.id,
         i2: i2.present ? i2.value : this.i2,
         i4: i4.present ? i4.value : this.i4,
+        i8: i8.present ? i8.value : this.i8,
       );
   @override
   String toString() {
     return (StringBuffer('Int(')
           ..write('id: $id, ')
           ..write('i2: $i2, ')
-          ..write('i4: $i4')
+          ..write('i4: $i4, ')
+          ..write('i8: $i8')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, i2, i4);
+  int get hashCode => Object.hash(id, i2, i4, i8);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Int &&
           other.id == this.id &&
           other.i2 == this.i2 &&
-          other.i4 == this.i4);
+          other.i4 == this.i4 &&
+          other.i8 == this.i8);
 }
 
 class IntsCompanion extends UpdateCompanion<Int> {
   final Value<String> id;
   final Value<int?> i2;
   final Value<int?> i4;
+  final Value<BigInt?> i8;
   const IntsCompanion({
     this.id = const Value.absent(),
     this.i2 = const Value.absent(),
     this.i4 = const Value.absent(),
+    this.i8 = const Value.absent(),
   });
   IntsCompanion.insert({
     required String id,
     this.i2 = const Value.absent(),
     this.i4 = const Value.absent(),
+    this.i8 = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Int> custom({
     Expression<String>? id,
     Expression<int>? i2,
     Expression<int>? i4,
+    Expression<BigInt>? i8,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (i2 != null) 'i2': i2,
       if (i4 != null) 'i4': i4,
+      if (i8 != null) 'i8': i8,
     });
   }
 
   IntsCompanion copyWith(
-      {Value<String>? id, Value<int?>? i2, Value<int?>? i4}) {
+      {Value<String>? id,
+      Value<int?>? i2,
+      Value<int?>? i4,
+      Value<BigInt?>? i8}) {
     return IntsCompanion(
       id: id ?? this.id,
       i2: i2 ?? this.i2,
       i4: i4 ?? this.i4,
+      i8: i8 ?? this.i8,
     );
   }
 
@@ -1501,6 +1531,9 @@ class IntsCompanion extends UpdateCompanion<Int> {
     if (i4.present) {
       map['i4'] = Variable<int>(i4.value, ElectricTypes.int4);
     }
+    if (i8.present) {
+      map['i8'] = Variable<BigInt>(i8.value);
+    }
     return map;
   }
 
@@ -1509,7 +1542,8 @@ class IntsCompanion extends UpdateCompanion<Int> {
     return (StringBuffer('IntsCompanion(')
           ..write('id: $id, ')
           ..write('i2: $i2, ')
-          ..write('i4: $i4')
+          ..write('i4: $i4, ')
+          ..write('i8: $i8')
           ..write(')'))
         .toString();
   }

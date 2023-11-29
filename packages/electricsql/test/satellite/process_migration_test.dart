@@ -539,7 +539,13 @@ void main() {
     ''',
       table: SatOpMigrate_Table(
         name: 'test_items',
-        columns: [SatOpMigrate_Column(name: 'id', sqliteType: 'TEXT')],
+        columns: [
+          SatOpMigrate_Column(
+            name: 'id',
+            sqliteType: 'TEXT',
+            pgType: SatOpMigrate_PgColumnType(name: 'TEXT'),
+          ),
+        ],
         fks: [],
         pks: ['id'],
       ),
@@ -557,8 +563,16 @@ void main() {
       table: SatOpMigrate_Table(
         name: 'test_other_items',
         columns: [
-          SatOpMigrate_Column(name: 'id', sqliteType: 'TEXT'),
-          SatOpMigrate_Column(name: 'item_id', sqliteType: 'TEXT'),
+          SatOpMigrate_Column(
+            name: 'id',
+            sqliteType: 'TEXT',
+            pgType: SatOpMigrate_PgColumnType(name: 'TEXT'),
+          ),
+          SatOpMigrate_Column(
+            name: 'item_id',
+            sqliteType: 'TEXT',
+            pgType: SatOpMigrate_PgColumnType(name: 'TEXT'),
+          ),
         ],
         fks: [
           SatOpMigrate_ForeignKey(
@@ -649,9 +663,21 @@ final createTable = SchemaChange(
   table: SatOpMigrate_Table(
     name: 'NewTable',
     columns: [
-      SatOpMigrate_Column(name: 'id', sqliteType: 'TEXT'),
-      SatOpMigrate_Column(name: 'foo', sqliteType: 'INTEGER'),
-      SatOpMigrate_Column(name: 'bar', sqliteType: 'TEXT'),
+      SatOpMigrate_Column(
+        name: 'id',
+        sqliteType: 'TEXT',
+        pgType: SatOpMigrate_PgColumnType(name: 'TEXT'),
+      ),
+      SatOpMigrate_Column(
+        name: 'foo',
+        sqliteType: 'INTEGER',
+        pgType: SatOpMigrate_PgColumnType(name: 'INTEGER'),
+      ),
+      SatOpMigrate_Column(
+        name: 'bar',
+        sqliteType: 'TEXT',
+        pgType: SatOpMigrate_PgColumnType(name: 'TEXT'),
+      ),
     ],
     fks: [],
     pks: ['id'],
@@ -670,10 +696,26 @@ final addColumn = SchemaChange(
   table: SatOpMigrate_Table(
     name: 'parent',
     columns: [
-      SatOpMigrate_Column(name: 'id', sqliteType: 'INTEGER'),
-      SatOpMigrate_Column(name: 'value', sqliteType: 'TEXT'),
-      SatOpMigrate_Column(name: 'other', sqliteType: 'INTEGER'),
-      SatOpMigrate_Column(name: 'baz', sqliteType: 'TEXT'),
+      SatOpMigrate_Column(
+        name: 'id',
+        sqliteType: 'INTEGER',
+        pgType: SatOpMigrate_PgColumnType(name: 'INTEGER'),
+      ),
+      SatOpMigrate_Column(
+        name: 'value',
+        sqliteType: 'TEXT',
+        pgType: SatOpMigrate_PgColumnType(name: 'TEXT'),
+      ),
+      SatOpMigrate_Column(
+        name: 'other',
+        sqliteType: 'INTEGER',
+        pgType: SatOpMigrate_PgColumnType(name: 'INTEGER'),
+      ),
+      SatOpMigrate_Column(
+        name: 'baz',
+        sqliteType: 'TEXT',
+        pgType: SatOpMigrate_PgColumnType(name: 'TEXT'),
+      ),
     ],
     fks: [],
     pks: ['id'],

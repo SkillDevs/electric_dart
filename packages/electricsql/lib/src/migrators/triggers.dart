@@ -14,7 +14,9 @@ class ForeignKey {
 
 typedef ColumnName = String;
 typedef SQLiteType = String;
-typedef ColumnTypes = Map<ColumnName, SQLiteType>;
+typedef PgTypeStr = String;
+typedef ColumnType = ({SQLiteType sqliteType, PgTypeStr pgType});
+typedef ColumnTypes = Map<ColumnName, ColumnType>;
 
 class Table {
   String tableName;
@@ -235,6 +237,7 @@ List<Statement> generateTriggers(Tables tables) {
 /// Joins the column names and values into a string of pairs of the form `'col1', val1, 'col2', val2, ...`
 /// that can be used to build a JSON object in a SQLite `json_object` function call.
 /// Values of type REAL are cast to text to avoid a bug in SQLite's `json_object` function (see below).
+/// Similarly, values of type INT8 (i.e. BigInts) are cast to text because JSON does not support BigInts.
 ///
 /// NOTE: There is a bug with SQLite's `json_object` function up to version 3.41.2
 ///       that causes it to return an invalid JSON object if some value is +Infinity or -Infinity.
@@ -282,7 +285,14 @@ String joinColsForJSON(
   // casts the value to TEXT if it is of type REAL
   // to work around the bug in SQLite's `json_object` function
   String castIfNeeded(String col, String targettedCol) {
-    if (colTypes[col] == 'REAL') {
+    final tpes = colTypes[col]!;
+    final sqliteType = tpes.sqliteType;
+    final pgType = tpes.pgType;
+    if (
+        // REAL has a special handling for NaN and Infinities
+        sqliteType == 'REAL' ||
+            // INT8 and BIGINT encoded as string in oplog JSON
+            (pgType == 'INT8' || pgType == 'BIGINT')) {
       return 'cast($targettedCol as TEXT)';
     } else {
       return targettedCol;
