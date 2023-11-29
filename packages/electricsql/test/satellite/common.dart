@@ -1,10 +1,15 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
 
+import 'package:drift/drift.dart' show DatabaseConnectionUser;
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
+import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
+import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/schema.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
@@ -12,7 +17,6 @@ import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
-import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -21,6 +25,12 @@ import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 import '../util/sqlite.dart';
+
+// Speed up the intervals for testing.
+final opts = kSatelliteDefaults.copyWith(
+  minSnapshotWindow: const Duration(milliseconds: 40),
+  pollingInterval: const Duration(milliseconds: 200),
+);
 
 DBSchema kTestDbDescription = DBSchemaRaw(
   fields: {
@@ -173,12 +183,6 @@ Map<String, Relation> kTestRelations = {
   ),
 };
 
-// Speed up the intervals for testing.
-final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: const Duration(milliseconds: 40),
-  pollingInterval: const Duration(milliseconds: 200),
-);
-
 Future<SatelliteTestContext> makeContext({
   SatelliteOpts? options,
 }) async {
@@ -263,6 +267,43 @@ class SatelliteTestContext {
   Future<void> cleanAndStopSatellite() async {
     await cleanAndStopSatelliteRaw(dbName: dbName, satellite: satellite);
   }
+}
+
+Future<ElectricClient> mockElectricClient(
+  DatabaseConnectionUser db,
+  Registry registry, {
+  required DbName dbName,
+  SatelliteOpts? options,
+}) async {
+  options ??= opts;
+
+  final adapter = DriftAdapter(db);
+  final migrator =
+      BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+  final notifier = MockNotifier(dbName);
+  final client = MockSatelliteClient();
+  final satellite = SatelliteProcess(
+    dbName: dbName,
+    adapter: adapter,
+    migrator: migrator,
+    notifier: notifier,
+    client: client,
+    opts: options,
+  );
+
+  await satellite.start(const AuthConfig(clientId: '', token: 'test-token'));
+  registry.satellites[dbName] = satellite;
+
+  // @ts-ignore Mock Electric client that does not contain the DAL
+  return ElectricClientImpl.internal(
+    dbName: dbName,
+    adapter: adapter,
+    notifier: notifier,
+    registry: registry,
+    satellite: satellite,
+    shapeManager: ShapeManagerMock(),
+    dbDescription: DBSchemaRaw(fields: {}, migrations: []),
+  );
 }
 
 Future<void> cleanAndStopSatelliteRaw({

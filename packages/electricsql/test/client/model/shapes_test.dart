@@ -204,6 +204,7 @@ Future<void> makeContext() async {
   migrator = BundleMigrator(adapter: adapter, migrations: migrations);
   dbName = '.tmp/test-${randomValue()}.db';
   final notifier = MockNotifier(dbName);
+  final registry = MockRegistry();
 
   satellite = SatelliteProcess(
     dbName: dbName,
@@ -220,10 +221,12 @@ Future<void> makeContext() async {
   );
 
   final baseElectricClient = ElectricClientImpl.create(
+    dbName: dbName,
     adapter: adapter,
     notifier: notifier,
     satellite: satellite,
     dbDescription: dbSchema,
+    registry: registry,
   );
   electric = DriftElectricClient(baseElectricClient, db);
 

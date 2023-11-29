@@ -1,27 +1,24 @@
-// NOTICE: Since we use drift, replicating this test file as in Electric upstream would be unnecessary. Drift already support
-// stream queries, and we don't explicitly trigger 'potentiallyChanged' when the write is made through Drift.
-
-/* import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
+import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/util.dart';
 import 'package:test/test.dart';
 
-import '../util/sqlite.dart';
-import 'generated/database.dart'; */
+import '../satellite/common.dart';
+import 'drift/database.dart';
+
+late TestsDatabase db;
 
 Future<void> main() async {
-  /*  final conn = openSqliteDbMemory();
   final config = ElectricConfig(
     auth: const AuthConfig(
       token: 'test-token',
     ),
-    logger: LoggerConfig(level: Level.debug),
   );
 
-  final db = TestsDatabase.memory();
+  db = TestsDatabase.memory();
 
   final electricClient = await electrify<TestsDatabase>(
     dbName: 'tests_db',
@@ -38,17 +35,25 @@ Future<void> main() async {
 
   Future<int> runAndCheckNotifications(Future<void> Function() f) async {
     int notifications = 0;
+    bool _hasListened = false;
     final sub = notifier.subscribeToPotentialDataChanges((_notification) {
+      _hasListened = true;
       notifications = notifications + 1;
     });
 
     await f();
 
+    // Let the notification run
+    await Future<void>.delayed(Duration.zero);
+    if (!_hasListened) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+
     notifier.unsubscribeFromPotentialDataChanges(sub);
     return notifications;
   }
 
-// Clean the DB environment
+  // Clean the DB environment
   Future<void> cleanDB() async {
     await adapter.run(Statement('DROP TABLE IF EXISTS Items'));
     await adapter.run(
@@ -58,12 +63,12 @@ Future<void> main() async {
     );
   }
 
-// Clean the DB before each test
+  // Clean the DB before each test
   setUp(() async {
     await cleanDB();
   });
 
-// Clean the DB after all tests
+  // Clean the DB after all tests
   tearDownAll(() async {
     await adapter.run(Statement('DROP TABLE IF EXISTS Items'));
   });
@@ -80,5 +85,106 @@ Future<void> main() async {
 
     final notifications = await runAndCheckNotifications(insert);
     expect(notifications, 1);
-  });  */
+  });
+
+  test('createMany runs potentiallyChanged', () async {
+    Future<void> insert() async {
+      await db.items.insertAll([
+        ItemsCompanion.insert(
+          value: 'foo',
+          nbr: const Value(5),
+        ),
+        ItemsCompanion.insert(
+          value: 'bar',
+          nbr: const Value(6),
+        ),
+      ]);
+    }
+
+    final notifications = await runAndCheckNotifications(insert);
+    expect(notifications, 1);
+  });
+
+  test('findUnique does not run potentiallyChanged', () async {
+    await populate();
+
+    Future<void> find() async {
+      await (db.items.select()..where((t) => t.value.equals('foo')))
+          .getSingle();
+    }
+
+    final notifications = await runAndCheckNotifications(find);
+    expect(notifications, 0);
+  });
+
+  test('update runs potentiallyChanged', () async {
+    await populate();
+
+    Future<void> update() async {
+      final q = db.items.update()..where((tbl) => tbl.value.equals('foo'));
+      await q.write(
+        const ItemsCompanion(
+          nbr: Value(18),
+        ),
+      );
+    }
+
+    final notifications = await runAndCheckNotifications(update);
+    expect(notifications, 1);
+  });
+
+  test('update runs potentiallyChanged', () async {
+    await populate();
+
+    Future<void> delete() async {
+      final q = db.items.delete()..where((tbl) => tbl.value.equals('foo'));
+      await q.go();
+    }
+
+    final notifications = await runAndCheckNotifications(delete);
+    expect(notifications, 1);
+  });
+
+  test(
+      'electrification registers process and unregisters on close thereby releasing resources',
+      () async {
+    const dbName = 'test_db';
+    final registry = MockRegistry();
+    final electric = await mockElectricClient(db, registry, dbName: dbName);
+
+    // Check that satellite is registered
+    final satellite = electric.satellite;
+    expect(registry.satellites[dbName], satellite);
+
+    // Check that the listeners are registered
+    final notifier = electric.notifier as EventNotifier;
+    expect(notifier.changeCallbacks.length, greaterThan(0));
+    expect(notifier.connectivityStatusCallbacks.length, greaterThan(0));
+
+    // Close the Electric client
+    await electric.close();
+
+    // Check that the listeners are unregistered
+    expect(notifier.changeCallbacks, isEmpty);
+    expect(notifier.connectivityStatusCallbacks, isEmpty);
+
+    // Check that the Satellite process is unregistered
+    expect(!registry.satellites.containsKey(dbName), true);
+  });
+}
+
+Future<void> populate() async {
+  await db.items.insertAll([
+    ItemsCompanion.insert(
+      value: 'foo',
+      nbr: const Value(5),
+    ),
+    ItemsCompanion.insert(
+      value: 'bar',
+      nbr: const Value(6),
+    ),
+  ]);
+
+  // Let the drift notification from the populate run
+  await Future<void>.delayed(Duration.zero);
 }

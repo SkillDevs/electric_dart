@@ -13,6 +13,7 @@ import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/types.dart';
 
 abstract class BaseRegistry implements Registry {
+  @override
   final Map<DbName, Satellite> satellites = {};
   final Map<DbName, Future<Satellite>> startingPromises = {};
   final Map<DbName, Future<void>> stoppingPromises = {};

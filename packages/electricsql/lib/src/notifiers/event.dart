@@ -31,7 +31,14 @@ class EventNotifier implements Notifier {
 
   late final Map<String, EventListener<dynamic>> _changeCallbacks;
 
+  @visibleForTesting
+  Map<String, EventListener<dynamic>> get changeCallbacks => _changeCallbacks;
+
   late final Map<String, EventListener<dynamic>> _connectivityStatusCallbacks;
+
+  @visibleForTesting
+  Map<String, EventListener<dynamic>> get connectivityStatusCallbacks =>
+      _connectivityStatusCallbacks;
 
   EventNotifier({required this.dbName, EventEmitter? eventEmitter}) {
     attachedDbIndex = AttachedDbIndex(
@@ -238,7 +245,7 @@ class EventNotifier implements Notifier {
 
     _unsubscribe(listener);
 
-    _changeCallbacks.remove(key);
+    _connectivityStatusCallbacks.remove(key);
   }
 
   List<DbName> _getDbNames() {
