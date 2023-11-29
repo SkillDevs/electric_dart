@@ -82,6 +82,7 @@ class DataTypes extends Table {
   IntColumn get int4 => customType(ElectricTypes.int4).nullable()();
   IntColumn get int8 => customType(ElectricTypes.int8).nullable()();
   Int64Column get int8BigInt => int64().nullable()();
+  RealColumn get float4 => customType(ElectricTypes.float4).nullable()();
   RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
 
   IntColumn get relatedId =>

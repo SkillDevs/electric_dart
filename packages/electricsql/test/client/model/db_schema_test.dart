@@ -34,6 +34,7 @@ void main() async {
       'int4': PgType.int4,
       'int8': PgType.int8,
       'int8_big_int': PgType.int8,
+      'float4': PgType.float4,
       'float8': PgType.float8,
       'relatedId': PgType.integer,
     });

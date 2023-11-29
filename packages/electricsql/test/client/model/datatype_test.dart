@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
@@ -625,5 +626,121 @@ void main() async {
         ),
       );
     }
+  });
+
+  test('support float4 type', () async {
+    const validFloat1 = 1.402823e36;
+    const validFloat2 = -1.402823e36;
+
+    const nanId = 5;
+
+    const List<({int id, double float4})> floats = [
+      (
+        id: 1,
+        float4: validFloat1,
+      ),
+      (
+        id: 2,
+        float4: validFloat2,
+      ),
+      (
+        id: 3,
+        float4: double.infinity,
+      ),
+      (
+        id: 4,
+        float4: double.negativeInfinity,
+      ),
+      (
+        id: nanId,
+        float4: double.nan,
+      ),
+    ];
+
+    for (final floatEntry in floats) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(floatEntry.id),
+              float4: Value(floatEntry.float4),
+            ),
+          );
+    }
+
+    // Check that we can read the floats back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records = fetchRes.map((r) => (id: r.id, float4: r.float4)).toList();
+
+    // NaN != NaN, so we need to filter it out and check it separately
+    final recordsNoNaN = records.where((r) => r.id != nanId).toList();
+    final floatsNoNaN = floats
+        .where((r) => r.id != nanId)
+        .map((e) => (id: e.id, float4: fround(e.float4)))
+        .toList();
+    expect(recordsNoNaN, floatsNoNaN);
+
+    // Expect NaN entry
+    final nanEntry = records.firstWhere((r) => r.id == nanId);
+    expect(nanEntry.float4!.isNaN, isTrue);
+  });
+
+  test('converts numbers outside float4 range', () async {
+    const tooPositive = 1.42724769270596e+45;
+    const tooNegative = -1.42724769270596e+45;
+    const tooSmallPositive = 7.006492321624085e-46;
+    const tooSmallNegative = -7.006492321624085e-46;
+
+    const floats = <({int id, double float4})>[
+      (
+        id: 1,
+        float4: tooPositive,
+      ),
+      (
+        id: 2,
+        float4: tooNegative,
+      ),
+      (
+        id: 3,
+        float4: tooSmallPositive,
+      ),
+      (
+        id: 4,
+        float4: tooSmallNegative,
+      ),
+    ];
+
+    for (final floatEntry in floats) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(floatEntry.id),
+              float4: Value(floatEntry.float4),
+            ),
+          );
+    }
+
+    // Check that we can read the floats back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records = fetchRes.map((r) => (id: r.id, float4: r.float4)).toList();
+
+    expect(
+      records,
+      <({int id, double float4})>[
+        (
+          id: 1,
+          float4: double.infinity,
+        ),
+        (
+          id: 2,
+          float4: double.negativeInfinity,
+        ),
+        (
+          id: 3,
+          float4: 0,
+        ),
+        (
+          id: 4,
+          float4: 0,
+        ),
+      ],
+    );
   });
 }

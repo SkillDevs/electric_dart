@@ -126,6 +126,8 @@ class Ints extends Table {
 class Floats extends Table {
   TextColumn get id => text()();
 
+  RealColumn get f4 => customType(ElectricTypes.float4).nullable()();
+
   RealColumn get f8 => customType(ElectricTypes.float8).nullable()();
 
   @override

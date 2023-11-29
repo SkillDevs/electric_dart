@@ -59,6 +59,7 @@ enum DriftElectricColumnType {
   int2,
   int4,
   int8,
+  float4,
   float8,
   string,
   bool,

@@ -14,6 +14,7 @@ class ElectricTypes {
   static const Int2Type int2 = Int2Type();
   static const Int4Type int4 = Int4Type();
   static const Int8Type int8 = Int8Type();
+  static const Float4Type float4 = Float4Type();
   static const Float8Type float8 = Float8Type();
 }
 
@@ -133,6 +134,20 @@ class Int8Type extends CustomElectricType<int, int> {
         );
 }
 
+class Float4Type extends CustomElectricType<double, Object> {
+  const Float4Type()
+      : super(
+          codec: TypeConverters.float4,
+          typeName: 'float4',
+          pgType: PgType.float4,
+        );
+
+  @override
+  String mapToSqlLiteral(double dartValue) {
+    return _doubleToSqlLiteral(codec, dartValue);
+  }
+}
+
 class Float8Type extends CustomElectricType<double, Object> {
   const Float8Type()
       : super(
@@ -143,14 +158,18 @@ class Float8Type extends CustomElectricType<double, Object> {
 
   @override
   String mapToSqlLiteral(double dartValue) {
-    final encoded = codec.encode(dartValue);
-
-    if (encoded is double && encoded.isInfinite) {
-      return encoded.isNegative ? '-9e999' : '9e999';
-    } else if (encoded is String) {
-      return "'$encoded'";
-    }
-
-    return '$encoded';
+    return _doubleToSqlLiteral(codec, dartValue);
   }
+}
+
+String _doubleToSqlLiteral(Codec<double, Object> codec, double dartValue) {
+  final encoded = codec.encode(dartValue);
+
+  if (encoded is double && encoded.isInfinite) {
+    return encoded.isNegative ? '-9e999' : '9e999';
+  } else if (encoded is String) {
+    return "'$encoded'";
+  }
+
+  return '$encoded';
 }

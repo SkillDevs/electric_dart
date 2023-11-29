@@ -314,6 +314,8 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
       return _customElectricTypeExpr('int4');
     case DriftElectricColumnType.int8:
       return _customElectricTypeExpr('int8');
+    case DriftElectricColumnType.float4:
+      return _customElectricTypeExpr('float4');
     case DriftElectricColumnType.float8:
       return _customElectricTypeExpr('float8');
     case DriftElectricColumnType.string:
@@ -350,6 +352,7 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
     case DriftElectricColumnType.int8:
       return refer('IntColumn', kDriftImport);
     case DriftElectricColumnType.float8:
+    case DriftElectricColumnType.float4:
       return refer('RealColumn', kDriftImport);
     case DriftElectricColumnType.uuid:
     case DriftElectricColumnType.string:

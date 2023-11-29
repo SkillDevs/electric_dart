@@ -261,6 +261,9 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
       }
       return DriftElectricColumnType.int4;
     case 'Float':
+      if (dbAttrName == 'Real') {
+        return DriftElectricColumnType.float4;
+      }
       return DriftElectricColumnType.float8;
     case 'String':
       if (dbAttrName != null) {
