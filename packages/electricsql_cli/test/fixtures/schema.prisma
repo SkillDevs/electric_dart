@@ -40,6 +40,8 @@ model datatypes {
   c_time        DateTime @db.Time
   c_timestamp   DateTime @db.Timestamp(6)
   c_timestamptz DateTime @db.Timestamptz(6)
+  c_json        Json     @db.Json
+  c_jsonb       Json     @db.JsonB
 }
 
 model weirdnames {

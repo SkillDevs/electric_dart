@@ -1755,6 +1755,213 @@ class FloatsCompanion extends UpdateCompanion<Float> {
   }
 }
 
+class $JsonsTable extends Jsons with TableInfo<$JsonsTable, Json> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $JsonsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _jsMeta = const VerificationMeta('js');
+  @override
+  late final GeneratedColumn<Object> js = GeneratedColumn<Object>(
+      'js', aliasedName, true,
+      type: ElectricTypes.json, requiredDuringInsert: false);
+  static const VerificationMeta _jsbMeta = const VerificationMeta('jsb');
+  @override
+  late final GeneratedColumn<Object> jsb = GeneratedColumn<Object>(
+      'jsb', aliasedName, true,
+      type: ElectricTypes.jsonb, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, js, jsb];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'jsons';
+  @override
+  VerificationContext validateIntegrity(Insertable<Json> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('js')) {
+      context.handle(_jsMeta, js.isAcceptableOrUnknown(data['js']!, _jsMeta));
+    }
+    if (data.containsKey('jsb')) {
+      context.handle(
+          _jsbMeta, jsb.isAcceptableOrUnknown(data['jsb']!, _jsbMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Json map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Json(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      js: attachedDatabase.typeMapping
+          .read(ElectricTypes.json, data['${effectivePrefix}js']),
+      jsb: attachedDatabase.typeMapping
+          .read(ElectricTypes.jsonb, data['${effectivePrefix}jsb']),
+    );
+  }
+
+  @override
+  $JsonsTable createAlias(String alias) {
+    return $JsonsTable(attachedDatabase, alias);
+  }
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Json extends DataClass implements Insertable<Json> {
+  final String id;
+  final Object? js;
+  final Object? jsb;
+  const Json({required this.id, this.js, this.jsb});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || js != null) {
+      map['js'] = Variable<Object>(js);
+    }
+    if (!nullToAbsent || jsb != null) {
+      map['jsb'] = Variable<Object>(jsb);
+    }
+    return map;
+  }
+
+  JsonsCompanion toCompanion(bool nullToAbsent) {
+    return JsonsCompanion(
+      id: Value(id),
+      js: js == null && nullToAbsent ? const Value.absent() : Value(js),
+      jsb: jsb == null && nullToAbsent ? const Value.absent() : Value(jsb),
+    );
+  }
+
+  factory Json.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Json(
+      id: serializer.fromJson<String>(json['id']),
+      js: serializer.fromJson<Object?>(json['js']),
+      jsb: serializer.fromJson<Object?>(json['jsb']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'js': serializer.toJson<Object?>(js),
+      'jsb': serializer.toJson<Object?>(jsb),
+    };
+  }
+
+  Json copyWith(
+          {String? id,
+          Value<Object?> js = const Value.absent(),
+          Value<Object?> jsb = const Value.absent()}) =>
+      Json(
+        id: id ?? this.id,
+        js: js.present ? js.value : this.js,
+        jsb: jsb.present ? jsb.value : this.jsb,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Json(')
+          ..write('id: $id, ')
+          ..write('js: $js, ')
+          ..write('jsb: $jsb')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, js, jsb);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Json &&
+          other.id == this.id &&
+          other.js == this.js &&
+          other.jsb == this.jsb);
+}
+
+class JsonsCompanion extends UpdateCompanion<Json> {
+  final Value<String> id;
+  final Value<Object?> js;
+  final Value<Object?> jsb;
+  const JsonsCompanion({
+    this.id = const Value.absent(),
+    this.js = const Value.absent(),
+    this.jsb = const Value.absent(),
+  });
+  JsonsCompanion.insert({
+    required String id,
+    this.js = const Value.absent(),
+    this.jsb = const Value.absent(),
+  }) : id = Value(id);
+  static Insertable<Json> custom({
+    Expression<String>? id,
+    Expression<Object>? js,
+    Expression<Object>? jsb,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (js != null) 'js': js,
+      if (jsb != null) 'jsb': jsb,
+    });
+  }
+
+  JsonsCompanion copyWith(
+      {Value<String>? id, Value<Object?>? js, Value<Object?>? jsb}) {
+    return JsonsCompanion(
+      id: id ?? this.id,
+      js: js ?? this.js,
+      jsb: jsb ?? this.jsb,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (js.present) {
+      map['js'] = Variable<Object>(js.value, ElectricTypes.json);
+    }
+    if (jsb.present) {
+      map['jsb'] = Variable<Object>(jsb.value, ElectricTypes.jsonb);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('JsonsCompanion(')
+          ..write('id: $id, ')
+          ..write('js: $js, ')
+          ..write('jsb: $jsb')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ClientDatabase extends GeneratedDatabase {
   _$ClientDatabase(QueryExecutor e) : super(e);
   late final $ItemsTable items = $ItemsTable(this);
@@ -1765,10 +1972,20 @@ abstract class _$ClientDatabase extends GeneratedDatabase {
   late final $UuidsTable uuids = $UuidsTable(this);
   late final $IntsTable ints = $IntsTable(this);
   late final $FloatsTable floats = $FloatsTable(this);
+  late final $JsonsTable jsons = $JsonsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [items, otherItems, timestamps, datetimes, bools, uuids, ints, floats];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        items,
+        otherItems,
+        timestamps,
+        datetimes,
+        bools,
+        uuids,
+        ints,
+        floats,
+        jsons
+      ];
 }

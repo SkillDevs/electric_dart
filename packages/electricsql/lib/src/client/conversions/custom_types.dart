@@ -16,6 +16,8 @@ class ElectricTypes {
   static const Int8Type int8 = Int8Type();
   static const Float4Type float4 = Float4Type();
   static const Float8Type float8 = Float8Type();
+  static const JsonType json = JsonType();
+  static const JsonBType jsonb = JsonBType();
 }
 
 abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
@@ -160,6 +162,24 @@ class Float8Type extends CustomElectricType<double, Object> {
   String mapToSqlLiteral(double dartValue) {
     return _doubleToSqlLiteral(codec, dartValue);
   }
+}
+
+class JsonType extends CustomElectricType<Object, String> {
+  const JsonType()
+      : super(
+          codec: TypeConverters.json,
+          typeName: 'json',
+          pgType: PgType.json,
+        );
+}
+
+class JsonBType extends CustomElectricType<Object, String> {
+  const JsonBType()
+      : super(
+          codec: TypeConverters.jsonb,
+          typeName: 'jsonb',
+          pgType: PgType.jsonb,
+        );
 }
 
 String _doubleToSqlLiteral(Codec<double, Object> codec, double dartValue) {

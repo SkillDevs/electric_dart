@@ -69,5 +69,7 @@ enum DriftElectricColumnType {
   timestamp,
   timestampTZ,
   uuid,
+  json,
+  jsonb,
   bigint,
 }

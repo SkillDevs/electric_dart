@@ -85,6 +85,11 @@ class Datatypes extends Table {
   Column<DateTime> get cTimestamptz =>
       customType(ElectricTypes.timestampTZ).named('c_timestamptz')();
 
+  Column<Object> get cJson => customType(ElectricTypes.json).named('c_json')();
+
+  Column<Object> get cJsonb =>
+      customType(ElectricTypes.jsonb).named('c_jsonb')();
+
   @override
   String? get tableName => 'datatypes';
 

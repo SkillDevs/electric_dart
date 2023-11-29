@@ -36,6 +36,7 @@ void main() async {
       'int8_big_int': PgType.int8,
       'float4': PgType.float4,
       'float8': PgType.float8,
+      'json': PgType.json,
       'relatedId': PgType.integer,
     });
 

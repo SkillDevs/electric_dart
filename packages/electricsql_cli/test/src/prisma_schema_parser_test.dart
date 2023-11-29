@@ -166,6 +166,13 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final timestamptzColumn =
       table.columns.firstWhere((c) => c.columnName == 'c_timestamptz');
   expect(timestamptzColumn.type, DriftElectricColumnType.timestampTZ);
+
+  final jsonColumn = table.columns.firstWhere((c) => c.columnName == 'c_json');
+  expect(jsonColumn.type, DriftElectricColumnType.json);
+
+  final jsonBColumn =
+      table.columns.firstWhere((c) => c.columnName == 'c_jsonb');
+  expect(jsonBColumn.type, DriftElectricColumnType.jsonb);
 }
 
 void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {

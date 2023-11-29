@@ -293,6 +293,49 @@ Future<SingleRow> writeFloat(
   return SingleRow.fromItem(item);
 }
 
+Future<String?> getJsonRaw(MyDriftElectricClient electric, String id) async {
+  final res = await electric.db.customSelect(
+    'SELECT js FROM jsons WHERE id = ?;',
+    variables: [Variable(id)],
+  ).get();
+  return res[0].read<String?>('js');
+}
+
+Future<String?> getJsonbRaw(MyDriftElectricClient electric, String id) async {
+  final res = await electric.db.customSelect(
+    'SELECT jsb FROM jsons WHERE id = ?;',
+    variables: [Variable(id)],
+  ).get();
+  return res[0].read<String?>('jsb');
+}
+
+Future<SingleRow> getJson(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.jsons.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  final cols = toColumns(item)!;
+  cols.remove('jsb');
+  return SingleRow.fromColumns(cols);
+}
+
+Future<SingleRow> getJsonb(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.jsons.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  final cols = toColumns(item)!;
+  cols.remove('js');
+  return SingleRow.fromColumns(cols);
+}
+
+Future<SingleRow> writeJson(
+    MyDriftElectricClient electric, String id, Object? js, Object? jsb) async {
+  final item = await electric.db.jsons.insertReturning(
+    JsonsCompanion.insert(
+      id: id,
+      jsb: Value(jsb),
+    ),
+  );
+  return SingleRow.fromItem(item);
+}
+
 Future<Rows> getItemColumns(
     DriftElectricClient electric, String table, String column) async {
   final rows = await electric.db

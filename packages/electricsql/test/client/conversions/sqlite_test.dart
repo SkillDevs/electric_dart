@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
@@ -314,5 +317,88 @@ void main() async {
       rawRes1[0].read<String>('timestamp'),
       '2023-08-07 16:28:35.421Z',
     );
+  });
+
+  test('json is converted correctly to SQLite', () async {
+    final json = {
+      'a': 1,
+      'b': true,
+      'c': {'d': 'nested'},
+      'e': [1, 2, 3],
+      'f': null,
+    };
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            json: Value(json),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+
+    expect(rawRes[0].read<String>('json'), jsonEncode(json));
+
+    // Also test null values
+    // this null value is not a JSON null
+    // but a DB NULL that indicates absence of a value
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(2),
+            json: const Value(null),
+          ),
+        );
+
+    final rawRes2 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(2)],
+    ).get();
+
+    expect(rawRes2[0].read<String?>('json'), null);
+
+    // Also test JSON null value
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(3),
+            json: const Value(kJsonNull),
+          ),
+        );
+
+    final rawRes3 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(3)],
+    ).get();
+    expect(rawRes3[0].read<String>('json'), 'null');
+    expect(rawRes3[0].read<String>('json'), jsonEncode(null));
+
+    // also test regular values
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(4),
+            json: const Value('foo'),
+          ),
+        );
+
+    final rawRes4 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(4)],
+    ).get();
+    expect(rawRes4[0].read<String>('json'), jsonEncode('foo'));
+
+    // also test arrays
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(5),
+            json: const Value([1, 2, 3]),
+          ),
+        );
+
+    final rawRes5 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(5)],
+    ).get();
+    expect(rawRes5[0].read<String>('json'), jsonEncode([1, 2, 3]));
   });
 }

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
+import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
@@ -742,5 +743,60 @@ void main() async {
         ),
       ],
     );
+  });
+
+  test('support JSON type', () async {
+    final json = {
+      'a': 1,
+      'b': true,
+      'c': {'d': 'nested'},
+      'e': [1, 2, 3],
+      'f': null,
+    };
+
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            json: Value(json),
+          ),
+        );
+
+    expect(res.json, json);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.json, json);
+
+    // Also test that we can write the special JsonNull value
+    final res2 = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(2),
+            json: const Value(kJsonNull),
+          ),
+        );
+
+    expect(res2.json, kJsonNull);
+
+    final fetchRes2 = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(2)))
+        .getSingle();
+    expect(fetchRes2.json, kJsonNull);
+  });
+
+  test('support null values for JSON type', () async {
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            json: const Value(null),
+          ),
+        );
+
+    expect(res.json, null);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.json, null);
   });
 }
