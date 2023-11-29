@@ -15,8 +15,8 @@ final class _Decoder extends Converter<String, Object> {
 
   @override
   Object convert(String input) {
-    // TODO(dart): Can we check json.decode == null?
-    if (input == json.encode(null)) return {'__is_electric_json_null__': true};
+    // json.encode(null) encodes as the text 'null' 
+    if (input == 'null') return {'__is_electric_json_null__': true};
     return json.decode(input) as Object;
   }
 }

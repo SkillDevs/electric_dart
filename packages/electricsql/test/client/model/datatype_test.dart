@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:test/test.dart';
 
@@ -501,6 +502,247 @@ void main() async {
           ..where((t) => t.id.equals(1)))
         .getSingle();
     expect(fetchRes.float8, null);
+  });
+
+  test('support int8 type', () async {
+    const validInt1 = 9223372036854775807;
+    const validInt2 = -9223372036854775808;
+
+    final List<({int id, int int8})> ints = [
+      (
+        id: 1,
+        int8: validInt1,
+      ),
+      (
+        id: 2,
+        int8: validInt2,
+      ),
+    ];
+
+    for (final entry in ints) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(entry.id),
+              int8: Value(entry.int8),
+            ),
+          );
+    }
+
+    // Check that we can read the big ints back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records = fetchRes.map((r) => (id: r.id, int8: r.int8)).toList();
+
+    expect(records, ints);
+  });
+
+  test('support null values for int8 type', () async {
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8: const Value(null),
+          ),
+        );
+
+    expect(res.id, 1);
+    expect(res.int8, null);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.int8, null);
+  });
+
+  test('support BigInt type', () async {
+    final validBigInt1 = BigInt.parse('9223372036854775807');
+    final validBigInt2 = BigInt.parse('-9223372036854775808');
+
+    final List<({int id, BigInt int8})> bigInts = [
+      (
+        id: 1,
+        int8: validBigInt1,
+      ),
+      (
+        id: 2,
+        int8: validBigInt2,
+      ),
+    ];
+
+    for (final entry in bigInts) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(entry.id),
+              int8BigInt: Value(entry.int8),
+            ),
+          );
+    }
+
+    // Check that we can read the big ints back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records =
+        fetchRes.map((r) => (id: r.id, int8: r.int8BigInt)).toList();
+
+    expect(records, bigInts);
+  });
+
+  test('support null values for bigint type', () async {
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8BigInt: const Value(null),
+          ),
+        );
+
+    expect(res.id, 1);
+    expect(res.int8BigInt, null);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.int8BigInt, null);
+  });
+
+  test('throw error when value is out of range for BigInt type', () async {
+    final invalidBigInt1 = BigInt.parse('9223372036854775808');
+    final invalidBigInt2 = BigInt.parse('-9223372036854775809');
+
+    // Check that it rejects invalid int8
+    final invalidBigInts = [invalidBigInt1, invalidBigInt2];
+    int id = 1;
+    for (final invalidInt in invalidBigInts) {
+      await expectLater(
+        () async => db.into(db.dataTypes).insertReturning(
+              DataTypesCompanion.insert(
+                id: Value(id++),
+                int8BigInt: Value(invalidInt),
+              ),
+            ),
+        throwsA(
+          isA<Exception>().having(
+            (p0) => p0.toString(),
+            'error',
+            contains(
+              'BigInt value exceeds the range of 64 bits',
+            ),
+          ),
+        ),
+      );
+    }
+  });
+
+  test('support float4 type', () async {
+    const validFloat1 = 1.402823e36;
+    const validFloat2 = -1.402823e36;
+
+    const nanId = 5;
+
+    const List<({int id, double float4})> floats = [
+      (
+        id: 1,
+        float4: validFloat1,
+      ),
+      (
+        id: 2,
+        float4: validFloat2,
+      ),
+      (
+        id: 3,
+        float4: double.infinity,
+      ),
+      (
+        id: 4,
+        float4: double.negativeInfinity,
+      ),
+      (
+        id: nanId,
+        float4: double.nan,
+      ),
+    ];
+
+    for (final floatEntry in floats) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(floatEntry.id),
+              float4: Value(floatEntry.float4),
+            ),
+          );
+    }
+
+    // Check that we can read the floats back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records = fetchRes.map((r) => (id: r.id, float4: r.float4)).toList();
+
+    // NaN != NaN, so we need to filter it out and check it separately
+    final recordsNoNaN = records.where((r) => r.id != nanId).toList();
+    final floatsNoNaN = floats
+        .where((r) => r.id != nanId)
+        .map((e) => (id: e.id, float4: fround(e.float4)))
+        .toList();
+    expect(recordsNoNaN, floatsNoNaN);
+
+    // Expect NaN entry
+    final nanEntry = records.firstWhere((r) => r.id == nanId);
+    expect(nanEntry.float4!.isNaN, isTrue);
+  });
+
+  test('converts numbers outside float4 range', () async {
+    const tooPositive = 1.42724769270596e+45;
+    const tooNegative = -1.42724769270596e+45;
+    const tooSmallPositive = 7.006492321624085e-46;
+    const tooSmallNegative = -7.006492321624085e-46;
+
+    const floats = <({int id, double float4})>[
+      (
+        id: 1,
+        float4: tooPositive,
+      ),
+      (
+        id: 2,
+        float4: tooNegative,
+      ),
+      (
+        id: 3,
+        float4: tooSmallPositive,
+      ),
+      (
+        id: 4,
+        float4: tooSmallNegative,
+      ),
+    ];
+
+    for (final floatEntry in floats) {
+      await db.into(db.dataTypes).insert(
+            DataTypesCompanion.insert(
+              id: Value(floatEntry.id),
+              float4: Value(floatEntry.float4),
+            ),
+          );
+    }
+
+    // Check that we can read the floats back
+    final fetchRes = await db.select(db.dataTypes).get();
+    final records = fetchRes.map((r) => (id: r.id, float4: r.float4)).toList();
+
+    expect(
+      records,
+      <({int id, double float4})>[
+        (
+          id: 1,
+          float4: double.infinity,
+        ),
+        (
+          id: 2,
+          float4: double.negativeInfinity,
+        ),
+        (
+          id: 3,
+          float4: 0,
+        ),
+        (
+          id: 4,
+          float4: 0,
+        ),
+      ],
+    );
   });
 
   test('support JSON type', () async {

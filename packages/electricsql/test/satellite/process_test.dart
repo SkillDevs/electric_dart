@@ -1446,6 +1446,38 @@ void main() {
     }
   });
 
+  test(
+      '(regression) shape subscription succeeds even if subscription data is delivered before the SatSubsReq RPC call receives its SatSubsResp answer',
+      () async {
+    await runMigrations();
+
+    const tablename = 'parent';
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
+
+    satellite.relations = kTestRelations;
+
+    // Enable the deliver first flag in the mock client
+    // such that the subscription data is delivered before the
+    // subscription promise is resolved
+    final mockClient = satellite.client as MockSatelliteClient;
+    mockClient.enableDeliverFirst();
+
+    final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
+    await synced;
+
+    // doesn't throw
+  });
+
   test('multiple subscriptions for the same shape are deduplicated', () async {
     await runMigrations();
 
@@ -1643,7 +1675,6 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    await satellite.subscribe([shapeDef1, shapeDef2]);
 
     final completer = Completer<void>();
     client.subscribeToSubscriptionEvents(
@@ -1669,6 +1700,9 @@ void main() {
       },
       (_) {},
     );
+
+    await satellite.subscribe([shapeDef1, shapeDef2]);
+
     await completer.future;
   });
 

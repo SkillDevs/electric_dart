@@ -261,13 +261,14 @@ Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeInt(
-    MyDriftElectricClient electric, String id, int i2, int i4) async {
+Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int i2,
+    int i4, BigInt i8) async {
   final item = await electric.db.ints.insertReturning(
     IntsCompanion.insert(
       id: id,
       i2: Value(i2),
       i4: Value(i4),
+      i8: Value(i8),
     ),
   );
   return SingleRow.fromItem(item);
@@ -281,10 +282,11 @@ Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
 }
 
 Future<SingleRow> writeFloat(
-    MyDriftElectricClient electric, String id, double f8) async {
+    MyDriftElectricClient electric, String id, double f4, double f8) async {
   final item = await electric.db.floats.insertReturning(
     FloatsCompanion.insert(
       id: id,
+      f4: Value(f4),
       f8: Value(f8),
     ),
   );

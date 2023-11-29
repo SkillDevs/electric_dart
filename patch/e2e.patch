@@ -340,57 +340,100 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.16_node_satell
  [cleanup]
    [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.17_node_satellite_can_sync_ints.lux dart/tests/03.17_node_satellite_can_sync_ints.lux
---- electric/tests/03.17_node_satellite_can_sync_ints.lux	2023-11-29 10:36:30.084760564 +0100
-+++ dart/tests/03.17_node_satellite_can_sync_ints.lux	2023-11-29 10:29:33.332000667 +0100
-@@ -34,7 +34,7 @@
-     [invoke node_get_int "row2" 32767 2147483647]
+--- electric/tests/03.17_node_satellite_can_sync_ints.lux	2023-11-29 16:47:20.614959992 +0100
++++ dart/tests/03.17_node_satellite_can_sync_ints.lux	2023-11-29 16:33:28.484541945 +0100
+@@ -39,11 +39,11 @@
+     [invoke node_get_int "row2" 32767 2147483647 9223372036854775807]
  
      # Can write valid ints to the DB
--    !await client.write_int(db, 'row3', 0, 0)
-+    !write_int db 'row3' 0 0
-     ??{ id: 'row3', i2: 0, i4: 0 }
+-    !await client.write_int(db, 'row3', 0, 0, 0)
++    !write_int db 'row3' 0 0 0
+     ??{ id: 'row3', i2: 0, i4: 0, i8: 0n }
      ?$node
  
-@@ -63,11 +63,11 @@
+-    !await client.write_int(db, 'row4', 0, 0, 9223372036854775806n)
++    !write_int db 'row4' 0 0 9223372036854775806
+     ??{ id: 'row4', i2: 0, i4: 0, i8: 9223372036854775806n }
+     ?$node
+ 
+@@ -74,14 +74,14 @@
      # Reset the failure pattern because we don't want it to match the errors below
      -
      # Can't write invalid ints to the DB
--    !await client.write_int(db, 'row4', 32768, 5)
+-    !await client.write_int(db, 'row5', 32768, 5, 0)
 -    ??Number must be less than or equal to 32767
-+    !write_int db 'row4' 32768 5
++    !write_int db 'row5' 32768 5 0
 +    ??RangeError: Invalid value: Not in inclusive range -32768..32767: 32768
  
--    !await client.write_int(db, 'row4', 5, 2147483648)
+-    !await client.write_int(db, 'row5', 5, 2147483648, 0)
 -    ??Number must be less than or equal to 2147483647
-+    !write_int db 'row4' 5 2147483648
++    !write_int db 'row5' 5 2147483648 0
 +    ??RangeError: Invalid value: Not in inclusive range -2147483648..2147483647: 2147483648
+ 
+-    !await client.write_int(db, 'row5', 5, 0, 9223372036854775808n)
+-    ??BigInt must be less than or equal to 9223372036854775807
++    !write_int db 'row5' 5 0 '9223372036854775808'
++    ??BigInt value exceeds the range of 64 bits
  
  [cleanup]
    [invoke teardown]
-diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.18_node_satellite_can_sync_float8.lux dart/tests/03.18_node_satellite_can_sync_float8.lux
---- electric/tests/03.18_node_satellite_can_sync_float8.lux	2023-11-29 10:36:30.084760564 +0100
-+++ dart/tests/03.18_node_satellite_can_sync_float8.lux	2023-11-29 10:29:33.333000669 +0100
-@@ -47,7 +47,7 @@
-     [invoke node_get_float "row6" NaN]
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.18_node_satellite_can_sync_float.lux dart/tests/03.18_node_satellite_can_sync_float.lux
+--- electric/tests/03.18_node_satellite_can_sync_float.lux	2023-11-29 16:20:07.287280474 +0100
++++ dart/tests/03.18_node_satellite_can_sync_float.lux	2023-11-29 16:33:28.484541945 +0100
+@@ -45,7 +45,7 @@
+     [invoke node_get_float "row2" -1.4020000137922178e+36 -1.797e+308]
  
-     [invoke node_write_float "row7" -0]
--    [invoke node_get_float "row7" 0]
-+    [invoke node_get_float "row7" 0.0]
+     [invoke node_write_float "row3" -1e10 5.006]
+-    [invoke node_get_float "row3" -10000000000 5.006]
++    [invoke node_get_float "row3" -10000000000.0 5.006]
+ 
+     [invoke node_write_float "row4" 3.402e+39 Infinity]
+     [invoke node_get_float "row4" Infinity Infinity]
+@@ -53,11 +53,11 @@
+     [invoke node_write_float "row5" -3.402e+39 -1.797e+309]
+     [invoke node_get_float "row5" -Infinity -Infinity]
+ 
+-    [invoke node_write_float "row6" "2 * {}" NaN]
++    [invoke node_write_float "row6" NaN NaN]
+     [invoke node_get_float "row6" NaN NaN]
+ 
+     [invoke node_write_float "row7" -0 -0]
+-    [invoke node_get_float "row7" 0 0]
++    [invoke node_get_float "row7" 0.0 0.0]
  
  [shell pg_1]
      [invoke wait-for "SELECT * FROM public.floats;" "row7" 10 $psql]
-@@ -77,7 +77,7 @@
-     [invoke node_get_float "row4" Infinity]
-     [invoke node_get_float "row5" -Infinity]
-     [invoke node_get_float "row6" NaN]
--    [invoke node_get_float "row7" 0]
-+    [invoke node_get_float "row7" 0.0]
+@@ -85,11 +85,11 @@
+ 
+     [invoke node_get_float "row1" 1.4020000137922178e+36 1.797e+308]
+     [invoke node_get_float "row2" -1.4020000137922178e+36 -1.797e+308]
+-    [invoke node_get_float "row3" -10000000000 5.006]
++    [invoke node_get_float "row3" -10000000000.0 5.006]
+     [invoke node_get_float "row4" Infinity Infinity]
+     [invoke node_get_float "row5" -Infinity -Infinity]
+     [invoke node_get_float "row6" NaN NaN]
+-    [invoke node_get_float "row7" 0 0]
++    [invoke node_get_float "row7" 0.0 0.0]
  
  [cleanup]
    [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satellite_can_sync_json.lux dart/tests/03.19_node_satellite_can_sync_json.lux
---- electric/tests/03.19_node_satellite_can_sync_json.lux	2023-11-29 10:36:30.084760564 +0100
-+++ dart/tests/03.19_node_satellite_can_sync_json.lux	2023-11-29 10:33:22.294402006 +0100
+--- electric/tests/03.19_node_satellite_can_sync_json.lux	2023-11-29 16:47:20.614959992 +0100
++++ dart/tests/03.19_node_satellite_can_sync_json.lux	2023-11-29 16:33:19.110514712 +0100
+@@ -30,11 +30,11 @@
+ [shell satellite_1]
+     # Wait for the rows to arrive
+     [invoke node_await_get_json "row1"]
+-
++        
+     # read raw JSON that is stored in the DB
+     # json must preserve whitespace and key ordering
+     #[invoke node_get_json_raw "row1" "{ a: 1, c:    true, b: \"foo\", d: null, e: [1,2,3] }"]
+-    # when parsed as JSON, whitespace is trimmed but key order is kept
++    # when parsed as JSON, whitespace is trimmed but key order is kept 
+     #[invoke node_get_json "row1" "{ a: 1, c: true, b: \"foo\", d: null, e: [1,2,3] }"]
+     # jsonb trims white space and sorts keys
+     [invoke node_get_jsonb_raw "row1" "[{\"a\": 1}, {\"b\": 5, \"d\": false}]"]
 @@ -60,7 +60,7 @@
      # [invoke node_get_json "row5" "'bar'"]
      [invoke node_get_jsonb "row5" "[ 1, { a: 'foo' }, true ]"]
@@ -400,9 +443,39 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satell
      [invoke node_get_jsonb "row6" "[ \"it's ⚡\", {}, '☃ under ☂' ]"]
  
      # Even though JSON can encode the NUL code point and unpaired surrogates, those will fail Postgres' jsonb validation.
+@@ -110,7 +110,7 @@
+     # read raw JSON that is stored in the DB
+     # json must preserve whitespace and key ordering
+     #[invoke node_get_json_raw "row1" "{ a: 1, c:    true, b: \"foo\", d: null, e: [1,2,3] }"]
+-    # when parsed as JSON, whitespace is trimmed but key order is kept
++    # when parsed as JSON, whitespace is trimmed but key order is kept 
+     #[invoke node_get_json "row1" "{ a: 1, c: true, b: \"foo\", d: null, e: [1,2,3] }"]
+     # jsonb trims white space and sorts keys
+     [invoke node_get_jsonb_raw "row1" "[{\"a\": 1}, {\"b\": 5, \"d\": false}]"]
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/05.05_compensations_within_same_tx_are_fine.lux dart/tests/05.05_compensations_within_same_tx_are_fine.lux
+--- electric/tests/05.05_compensations_within_same_tx_are_fine.lux	2023-11-29 16:47:20.614959992 +0100
++++ dart/tests/05.05_compensations_within_same_tx_are_fine.lux	2023-11-29 10:29:32.861999825 +0100
+@@ -26,7 +26,7 @@
+     [invoke start_elixir_test 1]
+     [invoke client_session 1 1]
+     
+-    !alias Electric.Satellite.{SatRelation, SatRelationColumn, SatOpInsert, SatOpUpdate, SatOpCompensation, SatOpRow}
++    !alias Electric.Satellite.{SatRelation, SatRelationColumn, SatOpInsert, SatOpUpdate, SatOpRow}
+ 
+     """!
+     Satellite.TestWsClient.send_data(conn, %SatRelation{
+@@ -58,7 +58,7 @@
+     """!
+     Satellite.TestWsClient.send_data(conn, ProtocolHelpers.transaction("1", DateTime.to_unix(DateTime.utc_now(), :millisecond), [
+         %SatOpInsert{relation_id: 1, row_data: %SatOpRow{nulls_bitmask: <<0>>, values: ["00000000-0000-0000-0000-000000000000", "test_content"]}},
+-        %SatOpCompensation{relation_id: 1, pk_data: %SatOpRow{nulls_bitmask: <<0::1, 1::1, 0::6>>, values: ["00000000-0000-0000-0000-000000000000", ""]}},
++        %SatOpUpdate{relation_id: 1, row_data: %SatOpRow{nulls_bitmask: <<0::1, 1::1, 0::6>>, values: ["00000000-0000-0000-0000-000000000000", ""]}},
+         %SatOpInsert{relation_id: 2, row_data: %SatOpRow{nulls_bitmask: <<0>>, values: ["00000000-0000-0000-0000-000000000001", "child content", "00000000-0000-0000-0000-000000000000"]}},
+     ]))
+     """
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
---- electric/tests/_satellite_macros.luxinc	2023-11-29 10:36:30.085760566 +0100
-+++ dart/tests/_satellite_macros.luxinc	2023-11-29 10:29:33.333000669 +0100
+--- electric/tests/_satellite_macros.luxinc	2023-11-29 16:47:20.615959995 +0100
++++ dart/tests/_satellite_macros.luxinc	2023-11-29 16:35:12.255843404 +0100
 @@ -1,23 +1,20 @@
  [global node=>]
  
@@ -469,11 +542,11 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
 +    [invoke wait-for "get_jsonb db '${id}'" "${id}" 10 $node]
  [endmacro]
  
- [macro node_write_float id value]
+ [macro node_write_float id f4_value f8_value]
      # Can write valid floats to the DB
--    !await client.write_float(db, '${id}', ${value})
-+    !write_float db '${id}' ${value}
-     ??{ id: '${id}', f8:
+-    !await client.write_float(db, '${id}', ${f4_value}, ${f8_value})
++    !write_float db '${id}' ${f4_value} ${f8_value}
+     ??{ id: '${id}',
      ??$node
  [endmacro]
  
@@ -484,17 +557,17 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
      ??$node
  [endmacro]
  
- [macro node_get_int id expected_int2 expected_int4]
+ [macro node_get_int id expected_int2 expected_int4 expected_int8]
 -    !await client.get_int(db, '${id}')
 +    !get_int db '${id}'
-     ??{ id: '${id}', i2: ${expected_int2}, i4: ${expected_int4} }
+     ??{ id: '${id}', i2: ${expected_int2}, i4: ${expected_int4}, i8: ${expected_int8}n }
      ??$node
  [endmacro]
  
- [macro node_get_float id expected_float8]
+ [macro node_get_float id expected_float4 expected_float8]
 -    !await client.get_float(db, '${id}')
 +    !get_float db '${id}'
-     ??{ id: '${id}', f8: ${expected_float8} }
+     ??{ id: '${id}', f4: ${expected_float4}, f8: ${expected_float8} }
      ??$node
  [endmacro]
  

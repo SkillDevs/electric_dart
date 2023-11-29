@@ -36,7 +36,7 @@ PgType pgTypeFromColumnType(String columnType) {
   final pgType = _pgTypeMap[key];
 
   if (pgType == null) {
-    throw Exception('Unknown PG type: $key');
+    throw Exception("Unknown PG type: '$key'");
   }
 
   return pgType;

@@ -13,6 +13,8 @@ class ElectricTypes {
   static const UUIDType uuid = UUIDType();
   static const Int2Type int2 = Int2Type();
   static const Int4Type int4 = Int4Type();
+  static const Int8Type int8 = Int8Type();
+  static const Float4Type float4 = Float4Type();
   static const Float8Type float8 = Float8Type();
   static const JsonType json = JsonType();
   static const JsonBType jsonb = JsonBType();
@@ -125,6 +127,29 @@ class Int4Type extends CustomElectricType<int, int> {
         );
 }
 
+class Int8Type extends CustomElectricType<int, int> {
+  const Int8Type()
+      : super(
+          codec: TypeConverters.int8,
+          typeName: 'int8',
+          pgType: PgType.int8,
+        );
+}
+
+class Float4Type extends CustomElectricType<double, Object> {
+  const Float4Type()
+      : super(
+          codec: TypeConverters.float4,
+          typeName: 'float4',
+          pgType: PgType.float4,
+        );
+
+  @override
+  String mapToSqlLiteral(double dartValue) {
+    return _doubleToSqlLiteral(codec, dartValue);
+  }
+}
+
 class Float8Type extends CustomElectricType<double, Object> {
   const Float8Type()
       : super(
@@ -135,15 +160,7 @@ class Float8Type extends CustomElectricType<double, Object> {
 
   @override
   String mapToSqlLiteral(double dartValue) {
-    final encoded = codec.encode(dartValue);
-
-    if (encoded is double && encoded.isInfinite) {
-      return encoded.isNegative ? '-9e999' : '9e999';
-    } else if (encoded is String) {
-      return "'$encoded'";
-    }
-
-    return '$encoded';
+    return _doubleToSqlLiteral(codec, dartValue);
   }
 }
 
@@ -163,4 +180,16 @@ class JsonBType extends CustomElectricType<Object, String> {
           typeName: 'jsonb',
           pgType: PgType.jsonb,
         );
+}
+
+String _doubleToSqlLiteral(Codec<double, Object> codec, double dartValue) {
+  final encoded = codec.encode(dartValue);
+
+  if (encoded is double && encoded.isInfinite) {
+    return encoded.isNegative ? '-9e999' : '9e999';
+  } else if (encoded is String) {
+    return "'$encoded'";
+  }
+
+  return '$encoded';
 }

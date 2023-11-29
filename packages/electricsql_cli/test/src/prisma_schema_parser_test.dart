@@ -139,6 +139,13 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final int4Column = table.columns.firstWhere((c) => c.columnName == 'c_int4');
   expect(int4Column.type, DriftElectricColumnType.int4);
 
+  final int8Column = table.columns.firstWhere((c) => c.columnName == 'c_int8');
+  expect(int8Column.type, DriftElectricColumnType.int8);
+
+  final float4Column =
+      table.columns.firstWhere((c) => c.columnName == 'c_float4');
+  expect(float4Column.type, DriftElectricColumnType.float4);
+
   final float8Column =
       table.columns.firstWhere((c) => c.columnName == 'c_float8');
   expect(float8Column.type, DriftElectricColumnType.float8);

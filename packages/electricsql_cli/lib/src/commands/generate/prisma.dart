@@ -233,7 +233,7 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     yield DriftColumn(
       columnName: columnName,
       dartName: dartName,
-      type: _convertPrismaTypeToDrift(field.type, field.attributes),
+      type: _convertPrismaTypeToDrift(field.type, field.attributes, genOpts),
       isNullable: field.type.endsWith('?'),
       isPrimaryKey: isPrimaryKey,
     );
@@ -243,6 +243,7 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
 DriftElectricColumnType _convertPrismaTypeToDrift(
   String prismaType,
   List<Attribute> attrs,
+  ElectricDriftGenOpts? genOpts,
 ) {
   final nonNullableType = prismaType.endsWith('?')
       ? prismaType.substring(0, prismaType.length - 1)
@@ -260,6 +261,9 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
       }
       return DriftElectricColumnType.int4;
     case 'Float':
+      if (dbAttrName == 'Real') {
+        return DriftElectricColumnType.float4;
+      }
       return DriftElectricColumnType.float8;
     case 'String':
       if (dbAttrName != null) {
@@ -303,6 +307,11 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
         default:
           throw Exception('Unknown Json @db. attribute: $dbAttrName');
       }
+    case 'BigInt':
+      if (genOpts?.int8AsBigInt == true) {
+        return DriftElectricColumnType.bigint;
+      }
+      return DriftElectricColumnType.int8;
     default:
       throw Exception('Unknown Prisma type: $nonNullableType');
   }

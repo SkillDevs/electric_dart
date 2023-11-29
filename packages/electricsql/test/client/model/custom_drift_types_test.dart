@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
+import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:test/test.dart';
 
@@ -156,6 +157,100 @@ void main() async {
 
     test('min', () async {
       await _testInt4(db, -2147483648);
+    });
+  });
+
+  group('int8', () {
+    test('regular', () async {
+      await _testInt8(db, 2);
+    });
+
+    test('0', () async {
+      await _testInt8(db, 0);
+    });
+
+    test('max', () async {
+      await _testInt8(db, 9223372036854775807);
+    });
+
+    test('min', () async {
+      await _testInt8(db, -9223372036854775808);
+    });
+  });
+
+  group('int8 bigint', () {
+    test('regular', () async {
+      await _testInt8BigInt(db, BigInt.from(2));
+    });
+
+    test('0', () async {
+      await _testInt8BigInt(db, BigInt.from(0));
+    });
+
+    test('max', () async {
+      await _testInt8BigInt(db, BigInt.from(9223372036854775807));
+    });
+
+    test('min', () async {
+      await _testInt8BigInt(db, BigInt.from(-9223372036854775808));
+    });
+
+    test('invalid', () async {
+      await expectLater(
+        () async => _testInt8BigInt(db, BigInt.parse('9223372036854775808')),
+        throwsA(isA<Exception>()),
+      );
+
+      await expectLater(
+        () async => _testInt8BigInt(db, BigInt.parse('-9223372036854775809')),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  group('float4', () {
+    test('regular', () async {
+      await _testFloat4(
+        db,
+        1.402823e36,
+        expected: fround(1.402823e36),
+      );
+    });
+
+    test('0', () async {
+      await _testFloat4(db, 0);
+    });
+
+    test('too positive', () async {
+      await _testFloat4(db, 1.42724769270596e+45, expected: double.infinity);
+    });
+
+    test('too negative', () async {
+      await _testFloat4(
+        db,
+        -1.42724769270596e+45,
+        expected: double.negativeInfinity,
+      );
+    });
+
+    test('too small positive', () async {
+      await _testFloat4(db, 7.006492321624085e-46, expected: 0);
+    });
+
+    test('too small negative', () async {
+      await _testFloat4(db, -7.006492321624085e-46, expected: 0);
+    });
+
+    test('infinite', () async {
+      await _testFloat4(db, double.infinity);
+    });
+
+    test('negative infinite', () async {
+      await _testFloat4(db, double.negativeInfinity);
+    });
+
+    test('NaN', () async {
+      await _testFloat4(db, double.nan);
     });
   });
 
@@ -376,6 +471,31 @@ Future<void> _testInt4(TestsDatabase db, int value) async {
   );
 }
 
+Future<void> _testInt8(TestsDatabase db, int value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.int8,
+    insertCol: (c, v) => c.copyWith(
+      int8: Value(v),
+    ),
+    customT: ElectricTypes.int8,
+  );
+}
+
+Future<void> _testInt8BigInt(TestsDatabase db, BigInt value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.int8BigInt,
+    insertCol: (c, v) => c.copyWith(
+      int8BigInt: Value(v),
+    ),
+    // We can use Drift default BigInt type
+    customT: null,
+  );
+}
+
 Future<void> _testFloat8(TestsDatabase db, double value) async {
   await _testCustomType(
     db,
@@ -385,6 +505,23 @@ Future<void> _testFloat8(TestsDatabase db, double value) async {
       float8: Value(v),
     ),
     customT: ElectricTypes.float8,
+  );
+}
+
+Future<void> _testFloat4(
+  TestsDatabase db,
+  double value, {
+  double? expected,
+}) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.float4,
+    insertCol: (c, v) => c.copyWith(
+      float4: Value(v),
+    ),
+    customT: ElectricTypes.float4,
+    expected: expected,
   );
 }
 

@@ -19,10 +19,17 @@ Future<void> main() async {
 
   final schemaInfo = extractInfoFromPrismaSchema(
     prismaSchemaContent,
-    genOpts: null,
+    genOpts: E2EDriftGenOpts(),
   );
 
   final driftSchemaFile =
       File(join(projectDir.path, "lib/generated/electric/drift_schema.dart"));
   await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
+}
+
+class E2EDriftGenOpts extends ElectricDriftGenOpts {
+  /// We want BigInts in E2E, because int8 with regular int is equivalent to
+  /// the int4 test suite
+  @override
+  bool? get int8AsBigInt => true;
 }
