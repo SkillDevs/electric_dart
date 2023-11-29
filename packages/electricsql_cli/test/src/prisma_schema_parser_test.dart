@@ -114,7 +114,7 @@ ALTER TABLE datatypes ENABLE ELECTRIC;
 void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[2];
 
-  expect(table.columns.length, 13);
+  expect(table.columns.length, 15);
 
   expect(table.tableName, 'datatypes');
   expect(table.dartClassName, 'Datatypes');
