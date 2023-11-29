@@ -312,6 +312,8 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
       return _customElectricTypeExpr('int2');
     case DriftElectricColumnType.int4:
       return _customElectricTypeExpr('int4');
+    case DriftElectricColumnType.int8:
+      return _customElectricTypeExpr('int8');
     case DriftElectricColumnType.float4:
       return _customElectricTypeExpr('float4');
     case DriftElectricColumnType.float8:
@@ -332,6 +334,8 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
       return _customElectricTypeExpr('timestampTZ');
     case DriftElectricColumnType.uuid:
       return _customElectricTypeExpr('uuid');
+    case DriftElectricColumnType.bigint:
+      return refer('int64', kDriftImport).call([]);
   }
 }
 
@@ -345,6 +349,7 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
   switch (columnInfo.type) {
     case DriftElectricColumnType.int2:
     case DriftElectricColumnType.int4:
+    case DriftElectricColumnType.int8:
       return refer('IntColumn', kDriftImport);
     case DriftElectricColumnType.float8:
     case DriftElectricColumnType.float4:
@@ -360,6 +365,8 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
     case DriftElectricColumnType.timestamp:
     case DriftElectricColumnType.timestampTZ:
       return refer('Column<DateTime>', kDriftImport);
+    case DriftElectricColumnType.bigint:
+      return refer('Int64Column', kDriftImport);
   }
 }
 

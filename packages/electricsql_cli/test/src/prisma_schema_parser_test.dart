@@ -114,7 +114,7 @@ ALTER TABLE datatypes ENABLE ELECTRIC;
 void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[2];
 
-  expect(table.columns.length, 12);
+  expect(table.columns.length, 13);
 
   expect(table.tableName, 'datatypes');
   expect(table.dartClassName, 'Datatypes');
@@ -138,6 +138,9 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
 
   final int4Column = table.columns.firstWhere((c) => c.columnName == 'c_int4');
   expect(int4Column.type, DriftElectricColumnType.int4);
+
+  final int8Column = table.columns.firstWhere((c) => c.columnName == 'c_int8');
+  expect(int8Column.type, DriftElectricColumnType.int8);
 
   final float4Column =
       table.columns.firstWhere((c) => c.columnName == 'c_float4');

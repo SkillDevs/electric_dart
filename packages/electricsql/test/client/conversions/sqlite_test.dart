@@ -251,6 +251,49 @@ void main() async {
     expect(rowsRecords, expected);
   });
 
+  test('Int8s are converted correctly to SQLite', () async {
+    const int8 = 9223372036854775807;
+
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8: const Value(int8),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT id, int8 FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+
+    final row = rawRes[0].data;
+    expect(row['id'], 1);
+    expect(row['int8'], int8);
+  });
+
+  test('BigInts are converted correctly to SQLite', () async {
+    final bigInt = BigInt.parse('9223372036854775807');
+
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8BigInt: Value(bigInt),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT id, int8_big_int FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+
+    // because we are executing a raw query,
+    // the returned BigInt for the `id`
+    // is not converted into a regular number
+    final row = rawRes[0].data;
+    expect(row['id'], 1);
+    expect((row['int8_big_int'] as int).toString(), bigInt.toString());
+  });
+
   test('drift files serialization/deserialization', () async {
     final date = DateTime.parse('2023-08-07 18:28:35.421+02');
 

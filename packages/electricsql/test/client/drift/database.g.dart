@@ -1305,6 +1305,17 @@ class $DataTypesTable extends DataTypes
   late final GeneratedColumn<int> int4 = GeneratedColumn<int>(
       'int4', aliasedName, true,
       type: ElectricTypes.int4, requiredDuringInsert: false);
+  static const VerificationMeta _int8Meta = const VerificationMeta('int8');
+  @override
+  late final GeneratedColumn<int> int8 = GeneratedColumn<int>(
+      'int8', aliasedName, true,
+      type: ElectricTypes.int8, requiredDuringInsert: false);
+  static const VerificationMeta _int8BigIntMeta =
+      const VerificationMeta('int8BigInt');
+  @override
+  late final GeneratedColumn<BigInt> int8BigInt = GeneratedColumn<BigInt>(
+      'int8_big_int', aliasedName, true,
+      type: DriftSqlType.bigInt, requiredDuringInsert: false);
   static const VerificationMeta _float4Meta = const VerificationMeta('float4');
   @override
   late final GeneratedColumn<double> float4 = GeneratedColumn<double>(
@@ -1336,6 +1347,8 @@ class $DataTypesTable extends DataTypes
         uuid,
         int2,
         int4,
+        int8,
+        int8BigInt,
         float4,
         float8,
         relatedId
@@ -1391,6 +1404,16 @@ class $DataTypesTable extends DataTypes
       context.handle(
           _int4Meta, int4.isAcceptableOrUnknown(data['int4']!, _int4Meta));
     }
+    if (data.containsKey('int8')) {
+      context.handle(
+          _int8Meta, int8.isAcceptableOrUnknown(data['int8']!, _int8Meta));
+    }
+    if (data.containsKey('int8_big_int')) {
+      context.handle(
+          _int8BigIntMeta,
+          int8BigInt.isAcceptableOrUnknown(
+              data['int8_big_int']!, _int8BigIntMeta));
+    }
     if (data.containsKey('float4')) {
       context.handle(_float4Meta,
           float4.isAcceptableOrUnknown(data['float4']!, _float4Meta));
@@ -1432,6 +1455,10 @@ class $DataTypesTable extends DataTypes
           .read(ElectricTypes.int2, data['${effectivePrefix}int2']),
       int4: attachedDatabase.typeMapping
           .read(ElectricTypes.int4, data['${effectivePrefix}int4']),
+      int8: attachedDatabase.typeMapping
+          .read(ElectricTypes.int8, data['${effectivePrefix}int8']),
+      int8BigInt: attachedDatabase.typeMapping
+          .read(DriftSqlType.bigInt, data['${effectivePrefix}int8_big_int']),
       float4: attachedDatabase.typeMapping
           .read(ElectricTypes.float4, data['${effectivePrefix}float4']),
       float8: attachedDatabase.typeMapping
@@ -1458,6 +1485,8 @@ class DataType extends DataClass implements Insertable<DataType> {
   final String? uuid;
   final int? int2;
   final int? int4;
+  final int? int8;
+  final BigInt? int8BigInt;
   final double? float4;
   final double? float8;
   final int? relatedId;
@@ -1472,6 +1501,8 @@ class DataType extends DataClass implements Insertable<DataType> {
       this.uuid,
       this.int2,
       this.int4,
+      this.int8,
+      this.int8BigInt,
       this.float4,
       this.float8,
       this.relatedId});
@@ -1506,6 +1537,12 @@ class DataType extends DataClass implements Insertable<DataType> {
     if (!nullToAbsent || int4 != null) {
       map['int4'] = Variable<int>(int4);
     }
+    if (!nullToAbsent || int8 != null) {
+      map['int8'] = Variable<int>(int8);
+    }
+    if (!nullToAbsent || int8BigInt != null) {
+      map['int8_big_int'] = Variable<BigInt>(int8BigInt);
+    }
     if (!nullToAbsent || float4 != null) {
       map['float4'] = Variable<double>(float4);
     }
@@ -1537,6 +1574,10 @@ class DataType extends DataClass implements Insertable<DataType> {
       uuid: uuid == null && nullToAbsent ? const Value.absent() : Value(uuid),
       int2: int2 == null && nullToAbsent ? const Value.absent() : Value(int2),
       int4: int4 == null && nullToAbsent ? const Value.absent() : Value(int4),
+      int8: int8 == null && nullToAbsent ? const Value.absent() : Value(int8),
+      int8BigInt: int8BigInt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(int8BigInt),
       float4:
           float4 == null && nullToAbsent ? const Value.absent() : Value(float4),
       float8:
@@ -1561,6 +1602,8 @@ class DataType extends DataClass implements Insertable<DataType> {
       uuid: serializer.fromJson<String?>(json['uuid']),
       int2: serializer.fromJson<int?>(json['int2']),
       int4: serializer.fromJson<int?>(json['int4']),
+      int8: serializer.fromJson<int?>(json['int8']),
+      int8BigInt: serializer.fromJson<BigInt?>(json['int8BigInt']),
       float4: serializer.fromJson<double?>(json['float4']),
       float8: serializer.fromJson<double?>(json['float8']),
       relatedId: serializer.fromJson<int?>(json['relatedId']),
@@ -1580,6 +1623,8 @@ class DataType extends DataClass implements Insertable<DataType> {
       'uuid': serializer.toJson<String?>(uuid),
       'int2': serializer.toJson<int?>(int2),
       'int4': serializer.toJson<int?>(int4),
+      'int8': serializer.toJson<int?>(int8),
+      'int8BigInt': serializer.toJson<BigInt?>(int8BigInt),
       'float4': serializer.toJson<double?>(float4),
       'float8': serializer.toJson<double?>(float8),
       'relatedId': serializer.toJson<int?>(relatedId),
@@ -1597,6 +1642,8 @@ class DataType extends DataClass implements Insertable<DataType> {
           Value<String?> uuid = const Value.absent(),
           Value<int?> int2 = const Value.absent(),
           Value<int?> int4 = const Value.absent(),
+          Value<int?> int8 = const Value.absent(),
+          Value<BigInt?> int8BigInt = const Value.absent(),
           Value<double?> float4 = const Value.absent(),
           Value<double?> float8 = const Value.absent(),
           Value<int?> relatedId = const Value.absent()}) =>
@@ -1611,6 +1658,8 @@ class DataType extends DataClass implements Insertable<DataType> {
         uuid: uuid.present ? uuid.value : this.uuid,
         int2: int2.present ? int2.value : this.int2,
         int4: int4.present ? int4.value : this.int4,
+        int8: int8.present ? int8.value : this.int8,
+        int8BigInt: int8BigInt.present ? int8BigInt.value : this.int8BigInt,
         float4: float4.present ? float4.value : this.float4,
         float8: float8.present ? float8.value : this.float8,
         relatedId: relatedId.present ? relatedId.value : this.relatedId,
@@ -1628,6 +1677,8 @@ class DataType extends DataClass implements Insertable<DataType> {
           ..write('uuid: $uuid, ')
           ..write('int2: $int2, ')
           ..write('int4: $int4, ')
+          ..write('int8: $int8, ')
+          ..write('int8BigInt: $int8BigInt, ')
           ..write('float4: $float4, ')
           ..write('float8: $float8, ')
           ..write('relatedId: $relatedId')
@@ -1636,8 +1687,22 @@ class DataType extends DataClass implements Insertable<DataType> {
   }
 
   @override
-  int get hashCode => Object.hash(id, date, time, timetz, timestamp,
-      timestamptz, boolCol, uuid, int2, int4, float4, float8, relatedId);
+  int get hashCode => Object.hash(
+      id,
+      date,
+      time,
+      timetz,
+      timestamp,
+      timestamptz,
+      boolCol,
+      uuid,
+      int2,
+      int4,
+      int8,
+      int8BigInt,
+      float4,
+      float8,
+      relatedId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1652,6 +1717,8 @@ class DataType extends DataClass implements Insertable<DataType> {
           other.uuid == this.uuid &&
           other.int2 == this.int2 &&
           other.int4 == this.int4 &&
+          other.int8 == this.int8 &&
+          other.int8BigInt == this.int8BigInt &&
           other.float4 == this.float4 &&
           other.float8 == this.float8 &&
           other.relatedId == this.relatedId);
@@ -1668,6 +1735,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
   final Value<String?> uuid;
   final Value<int?> int2;
   final Value<int?> int4;
+  final Value<int?> int8;
+  final Value<BigInt?> int8BigInt;
   final Value<double?> float4;
   final Value<double?> float8;
   final Value<int?> relatedId;
@@ -1682,6 +1751,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.uuid = const Value.absent(),
     this.int2 = const Value.absent(),
     this.int4 = const Value.absent(),
+    this.int8 = const Value.absent(),
+    this.int8BigInt = const Value.absent(),
     this.float4 = const Value.absent(),
     this.float8 = const Value.absent(),
     this.relatedId = const Value.absent(),
@@ -1697,6 +1768,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.uuid = const Value.absent(),
     this.int2 = const Value.absent(),
     this.int4 = const Value.absent(),
+    this.int8 = const Value.absent(),
+    this.int8BigInt = const Value.absent(),
     this.float4 = const Value.absent(),
     this.float8 = const Value.absent(),
     this.relatedId = const Value.absent(),
@@ -1712,6 +1785,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     Expression<String>? uuid,
     Expression<int>? int2,
     Expression<int>? int4,
+    Expression<int>? int8,
+    Expression<BigInt>? int8BigInt,
     Expression<double>? float4,
     Expression<double>? float8,
     Expression<int>? relatedId,
@@ -1727,6 +1802,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       if (uuid != null) 'uuid': uuid,
       if (int2 != null) 'int2': int2,
       if (int4 != null) 'int4': int4,
+      if (int8 != null) 'int8': int8,
+      if (int8BigInt != null) 'int8_big_int': int8BigInt,
       if (float4 != null) 'float4': float4,
       if (float8 != null) 'float8': float8,
       if (relatedId != null) 'relatedId': relatedId,
@@ -1744,6 +1821,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       Value<String?>? uuid,
       Value<int?>? int2,
       Value<int?>? int4,
+      Value<int?>? int8,
+      Value<BigInt?>? int8BigInt,
       Value<double?>? float4,
       Value<double?>? float8,
       Value<int?>? relatedId}) {
@@ -1758,6 +1837,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       uuid: uuid ?? this.uuid,
       int2: int2 ?? this.int2,
       int4: int4 ?? this.int4,
+      int8: int8 ?? this.int8,
+      int8BigInt: int8BigInt ?? this.int8BigInt,
       float4: float4 ?? this.float4,
       float8: float8 ?? this.float8,
       relatedId: relatedId ?? this.relatedId,
@@ -1799,6 +1880,12 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     if (int4.present) {
       map['int4'] = Variable<int>(int4.value, ElectricTypes.int4);
     }
+    if (int8.present) {
+      map['int8'] = Variable<int>(int8.value, ElectricTypes.int8);
+    }
+    if (int8BigInt.present) {
+      map['int8_big_int'] = Variable<BigInt>(int8BigInt.value);
+    }
     if (float4.present) {
       map['float4'] = Variable<double>(float4.value, ElectricTypes.float4);
     }
@@ -1824,6 +1911,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
           ..write('uuid: $uuid, ')
           ..write('int2: $int2, ')
           ..write('int4: $int4, ')
+          ..write('int8: $int8, ')
+          ..write('int8BigInt: $int8BigInt, ')
           ..write('float4: $float4, ')
           ..write('float8: $float8, ')
           ..write('relatedId: $relatedId')

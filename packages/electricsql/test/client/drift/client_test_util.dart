@@ -27,6 +27,6 @@ Future<void> initClientTestsDb(TestsDatabase db) async {
   await db.customStatement('DROP TABLE IF EXISTS DataTypes');
   await db.customStatement(
     "CREATE TABLE DataTypes('id' int PRIMARY KEY, 'date' varchar, 'time' varchar, 'timetz' varchar, 'timestamp' varchar, "
-    "'timestamptz' varchar, 'bool' int, 'uuid' varchar, 'int2' int2, 'int4' int4, 'float4' real, 'float8' real, 'relatedId' int);",
+    "'timestamptz' varchar, 'bool' int, 'uuid' varchar, 'int2' int2, 'int4' int4, 'int8' integer, 'int8_big_int' integer, 'float4' real, 'float8' real, 'relatedId' int);",
   );
 }

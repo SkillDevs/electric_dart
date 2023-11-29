@@ -1,6 +1,10 @@
 import 'package:code_builder/code_builder.dart';
 
 abstract class ElectricDriftGenOpts {
+  ElectricDriftGenOpts({
+    this.int8AsBigInt,
+  });
+
   /// Customize the way the Drift Table class is generated
   /// Returning null means use the default
   /// [sqlTableName] is the name of the table in the database
@@ -15,6 +19,13 @@ abstract class ElectricDriftGenOpts {
   DriftColumnGenOpts? columnGenOpts(String sqlTableName, String sqlColumnName) {
     return null;
   }
+
+  /// Whether to use BigInt Dart type for INT8 columns.
+  /// If you need to support values larger than 2^52 on web, you need
+  /// to set this to true.
+  /// If you are not targetting the web, all INT8 space fits in regular Dart integers.
+  /// More information: https://drift.simonbinder.eu/docs/getting-started/advanced_dart_tables/#bigint-support
+  final bool? int8AsBigInt;
 }
 
 class DriftTableGenOpts {
