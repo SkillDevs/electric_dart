@@ -370,24 +370,39 @@ This means there is a notifier subscription leak.`''');
     // this could especially happen in unit tests
     subscriptionNotifiers[subId] = completer;
 
-    final SubscribeResponse(:subscriptionId, :error) =
-        await client.subscribe(subId, shapeReqs);
-    if (subId != subscriptionId) {
+    // store the promise because by the time the
+    // `await this.client.subscribe(subId, shapeReqs)` call resolves
+    // the `subId` entry in the `subscriptionNotifiers` may have been deleted
+    // so we can no longer access it
+    final subProm = subscriptionNotifiers[subId]!.future;
+
+    // `clearSubAndThrow` deletes the listeners and cancels the subscription
+    Never clearSubAndThrow(Object error) {
       subscriptionNotifiers.remove(subId);
       subscriptions.subscriptionCancelled(subId);
-      throw Exception(
-        'Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId',
-      );
+      throw error;
     }
 
-    if (error != null) {
-      subscriptionNotifiers.remove(subId);
-      subscriptions.subscriptionCancelled(subscriptionId);
-      throw error;
-    } else {
-      return ShapeSubscription(
-        synced: subscriptionNotifiers[subId]!.future,
-      );
+    try {
+      final SubscribeResponse(:subscriptionId, :error) =
+          await client.subscribe(subId, shapeReqs);
+      if (subId != subscriptionId) {
+        clearSubAndThrow(
+          Exception(
+            'Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId',
+          ),
+        );
+      }
+
+      if (error != null) {
+        clearSubAndThrow(error);
+      } else {
+        return ShapeSubscription(
+          synced: subProm,
+        );
+      }
+    } catch (e) {
+      clearSubAndThrow(e);
     }
   }
 
