@@ -13,6 +13,8 @@ import 'package:events_emitter/events_emitter.dart';
 export 'package:electricsql/src/satellite/process.dart' show ShapeSubscription;
 
 abstract class Registry {
+  Map<DbName, Satellite> get satellites;
+
   Future<Satellite> ensureStarted({
     required DbName dbName,
     required DBSchema dbDescription,

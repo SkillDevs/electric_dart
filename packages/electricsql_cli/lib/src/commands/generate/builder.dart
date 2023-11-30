@@ -329,6 +329,10 @@ Expression _getInitialColumnBuilder(
       return _customElectricTypeExpr('int2');
     case DriftElectricColumnType.int4:
       return _customElectricTypeExpr('int4');
+    case DriftElectricColumnType.int8:
+      return _customElectricTypeExpr('int8');
+    case DriftElectricColumnType.float4:
+      return _customElectricTypeExpr('float4');
     case DriftElectricColumnType.float8:
       return _customElectricTypeExpr('float8');
     case DriftElectricColumnType.string:
@@ -354,6 +358,12 @@ Expression _getInitialColumnBuilder(
       final enumTypesClass = refer(kElectricEnumTypesClassName);
       return refer('customType', kDriftImport)
           .call([enumTypesClass.property(driftEnum.driftTypeName)]);
+    case DriftElectricColumnType.json:
+      return _customElectricTypeExpr('json');
+    case DriftElectricColumnType.jsonb:
+      return _customElectricTypeExpr('jsonb');
+    case DriftElectricColumnType.bigint:
+      return refer('int64', kDriftImport).call([]);
   }
 }
 
@@ -370,8 +380,10 @@ Reference _getOutColumnTypeFromColumnInfo(
   switch (columnInfo.type) {
     case DriftElectricColumnType.int2:
     case DriftElectricColumnType.int4:
+    case DriftElectricColumnType.int8:
       return refer('IntColumn', kDriftImport);
     case DriftElectricColumnType.float8:
+    case DriftElectricColumnType.float4:
       return refer('RealColumn', kDriftImport);
     case DriftElectricColumnType.uuid:
     case DriftElectricColumnType.string:
@@ -388,6 +400,11 @@ Reference _getOutColumnTypeFromColumnInfo(
       final driftEnum = schemaInfo.enums[columnInfo.enumPgType!]!;
       final enumDartType = driftEnum.dartEnumName;
       return refer('Column<$enumDartType>', kDriftImport);
+    case DriftElectricColumnType.json:
+    case DriftElectricColumnType.jsonb:
+      return refer('Column<Object>', kDriftImport);
+    case DriftElectricColumnType.bigint:
+      return refer('Int64Column', kDriftImport);
   }
 }
 

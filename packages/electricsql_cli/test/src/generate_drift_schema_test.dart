@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:code_builder/code_builder.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
+import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:electricsql_cli/src/drift_gen_util.dart';
 import 'package:path/path.dart';
@@ -30,6 +31,37 @@ void main() {
     // File("out.dart").writeAsStringSync(contents);
 
     expect(contents, await File(expectedFile).readAsString());
+  });
+
+  test('generate drift schema code with BigInts', () async {
+    const _prismaSchema = '''
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model sample {
+  c_id          String   @id @db.Uuid
+  c_bigint      BigInt   @db.BigInt
+}
+''';
+    final schemaInfo = extractInfoFromPrismaSchema(
+      _prismaSchema,
+      genOpts: UseBigIntsGenOps(),
+    );
+
+    final contents = generateDriftSchemaDartCode(schemaInfo);
+
+    expect(
+      contents,
+      contains("Int64Column get cBigint => int64().named('c_bigint')();"),
+    );
+
+    final table =
+        schemaInfo.tables.firstWhere((info) => info.tableName == 'sample');
+    final column =
+        table.columns.firstWhere((element) => element.columnName == 'c_bigint');
+    expect(column.type, DriftElectricColumnType.bigint);
   });
 }
 
@@ -68,4 +100,9 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
 
     return null;
   }
+}
+
+class UseBigIntsGenOps extends ElectricDriftGenOpts {
+  @override
+  bool? get int8AsBigInt => true;
 }

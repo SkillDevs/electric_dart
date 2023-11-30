@@ -38,7 +38,7 @@ class _Entrypoint extends HookWidget {
       // Cleanup resources on app unmount
       return () {
         initData?.connectivityStateController.dispose();
-        initData?.electricClient.dispose();
+        initData?.electricClient.close();
       };
     }, [initData]);
 

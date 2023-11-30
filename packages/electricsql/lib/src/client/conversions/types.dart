@@ -12,6 +12,8 @@ enum PgType {
   varchar('VARCHAR'),
   char('CHAR'),
   uuid('UUID'),
+  json('JSON'),
+  jsonb('JSONB'),
   // DATES
   timestamp('TIMESTAMP'),
   timestampTz('TIMESTAMPTZ'),

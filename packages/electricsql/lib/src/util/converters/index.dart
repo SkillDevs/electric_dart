@@ -1,1 +1,1 @@
-export 'type_converters.dart' show ElectricEnumCodec, TypeConverters;
+export 'type_converters.dart' show ElectricEnumCodec, TypeConverters, kJsonNull;

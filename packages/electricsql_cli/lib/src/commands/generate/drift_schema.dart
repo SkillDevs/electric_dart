@@ -16,8 +16,13 @@ class DriftSchemaInfo {
 }
 
 class DriftTableInfo {
+  /// The name of the table in the database
   final String tableName;
+
+  /// The name of the Dart Table class in the Drift schema
   final String dartClassName;
+
+  /// Information for the columns
   final List<DriftColumn> columns;
 
   DriftTableInfo({
@@ -77,6 +82,8 @@ class DriftEnum {
 enum DriftElectricColumnType {
   int2,
   int4,
+  int8,
+  float4,
   float8,
   string,
   bool,
@@ -86,5 +93,8 @@ enum DriftElectricColumnType {
   timestamp,
   timestampTZ,
   uuid,
+  json,
+  jsonb,
+  bigint,
   enumT,
 }

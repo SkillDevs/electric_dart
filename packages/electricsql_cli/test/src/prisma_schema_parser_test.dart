@@ -116,7 +116,7 @@ ALTER TABLE datatypes ENABLE ELECTRIC;
 void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[2];
 
-  expect(table.columns.length, 11);
+  expect(table.columns.length, 15);
 
   expect(table.tableName, 'datatypes');
   expect(table.dartClassName, 'Datatypes');
@@ -141,6 +141,13 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final int4Column = table.columns.firstWhere((c) => c.columnName == 'c_int4');
   expect(int4Column.type, DriftElectricColumnType.int4);
 
+  final int8Column = table.columns.firstWhere((c) => c.columnName == 'c_int8');
+  expect(int8Column.type, DriftElectricColumnType.int8);
+
+  final float4Column =
+      table.columns.firstWhere((c) => c.columnName == 'c_float4');
+  expect(float4Column.type, DriftElectricColumnType.float4);
+
   final float8Column =
       table.columns.firstWhere((c) => c.columnName == 'c_float8');
   expect(float8Column.type, DriftElectricColumnType.float8);
@@ -161,6 +168,13 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final timestamptzColumn =
       table.columns.firstWhere((c) => c.columnName == 'c_timestamptz');
   expect(timestamptzColumn.type, DriftElectricColumnType.timestampTZ);
+
+  final jsonColumn = table.columns.firstWhere((c) => c.columnName == 'c_json');
+  expect(jsonColumn.type, DriftElectricColumnType.json);
+
+  final jsonBColumn =
+      table.columns.firstWhere((c) => c.columnName == 'c_jsonb');
+  expect(jsonBColumn.type, DriftElectricColumnType.jsonb);
 }
 
 void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {

@@ -46,6 +46,14 @@ Optional argument to specify where to write the generated files.
 If this argument is not provided they are written to
 `lib/generated/electric`''',
         valueHelp: 'file_path',
+      )
+      ..addFlag(
+        'int8AsBigInt',
+        help: '''
+Optional argument to specify whether to use BigInt Dart type for INT8 columns. Defaults to `false`.
+More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_dart_tables/#bigint-support''',
+        defaultsTo: false,
+        negatable: false,
       );
   }
 
@@ -64,6 +72,11 @@ If this argument is not provided they are written to
     final String? service = argResults?['service'] as String?;
     final String? outFolder = argResults?['out'] as String?;
     final String? proxy = argResults?['proxy'] as String?;
+    final bool int8AsBigInt = argResults?['int8AsBigInt'] as bool;
+
+    final _cliDriftGenOpts = _CLIDriftGenOpts(
+      int8AsBigInt: int8AsBigInt,
+    );
 
     try {
       await runElectricCodeGeneration(
@@ -71,12 +84,19 @@ If this argument is not provided they are written to
         outFolder: outFolder,
         proxy: proxy,
         logger: _logger,
+        driftSchemaGenOpts: _cliDriftGenOpts,
       );
       return ExitCode.success.code;
     } on ConfigException catch (_) {
       return ExitCode.config.code;
     }
   }
+}
+
+class _CLIDriftGenOpts extends ElectricDriftGenOpts {
+  _CLIDriftGenOpts({
+    required super.int8AsBigInt,
+  });
 }
 
 const String defaultMigrationsFileName = 'migrations.dart';

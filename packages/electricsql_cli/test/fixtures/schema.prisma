@@ -32,12 +32,16 @@ model datatypes {
   c_int         Int
   c_int2        Int      @db.SmallInt
   c_int4        Int
+  c_int8        BigInt   @db.BigInt
+  c_float4      Float    @db.Real 
   c_float8      Float
   c_bool        Boolean
   c_date        DateTime @db.Date
   c_time        DateTime @db.Time
   c_timestamp   DateTime @db.Timestamp(6)
   c_timestamptz DateTime @db.Timestamptz(6)
+  c_json        Json     @db.Json
+  c_jsonb       Json     @db.JsonB
 }
 
 model weirdnames {

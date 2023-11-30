@@ -135,6 +135,8 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
   Map<String, List<DataRecord>> relationData = {};
 
+  bool deliverFirst = false;
+
   void setRelations(RelationsCache relations) {
     this.relations = relations;
 
@@ -153,6 +155,10 @@ class MockSatelliteClient extends EventEmitter implements Client {
     final data = relationData[tablename]!;
 
     data.add(record);
+  }
+
+  void enableDeliverFirst() {
+    deliverFirst = true;
   }
 
   @override
@@ -198,22 +204,38 @@ class MockSatelliteClient extends EventEmitter implements Client {
     }
 
     return Future(() {
-      Timer(const Duration(milliseconds: 1), () {
-        emit(
-          kSubscriptionDelivered,
-          SubscriptionData(
+      bool emitDelivered() => emit(
+            kSubscriptionDelivered,
+            SubscriptionData(
+              subscriptionId: subscriptionId,
+              lsn: base64.decode('MTIz'), // base64.encode("123")
+              data: data,
+              shapeReqToUuid: shapeReqToUuid,
+            ),
+          );
+
+      final completer = Completer<SubscribeResponse>();
+      void resolve() {
+        completer.complete(
+          SubscribeResponse(
             subscriptionId: subscriptionId,
-            lsn: base64.decode('MTIz'), // base64.encode("123")
-            data: data,
-            shapeReqToUuid: shapeReqToUuid,
+            error: null,
           ),
         );
-      });
+      }
 
-      return SubscribeResponse(
-        subscriptionId: subscriptionId,
-        error: null,
-      );
+      if (deliverFirst) {
+        // When the `deliverFirst` flag is set,
+        // we deliver the subscription before resolving the promise.
+        emitDelivered();
+        Timer(const Duration(milliseconds: 1), resolve);
+      } else {
+        // Otherwise, we resolve the promise before delivering the subscription.
+        Timer(const Duration(milliseconds: 1), emitDelivered);
+        resolve();
+      }
+
+      return completer.future;
     });
   }
 

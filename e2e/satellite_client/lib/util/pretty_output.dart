@@ -81,6 +81,9 @@ Object? _getDistinctiveValue(Object? value) {
   if (value is String) {
     final quote = value.contains("'") ? '"' : "'";
     return "$quote$value$quote";
+  } else if (value is BigInt) {
+    // To match JS bigint output
+    return "${value}n";
   } else {
     return value;
   }

@@ -88,10 +88,12 @@ Future<ElectricClient> electrifyBase<DB extends DBSchema>({
   );
 
   final electric = ElectricClientImpl.create(
+    dbName: dbName,
     adapter: adapter,
     notifier: notifier,
     satellite: satellite,
     dbDescription: dbDescription,
+    registry: registry,
   );
 
   if (satellite.connectivityState != null) {

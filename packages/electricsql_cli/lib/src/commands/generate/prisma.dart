@@ -267,6 +267,7 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
       nonNullableType,
       field.attributes,
       driftEnums,
+      genOpts,
     );
     String? enumPgType;
     if (driftType == DriftElectricColumnType.enumT) {
@@ -290,6 +291,7 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
   String nonNullableType,
   List<Attribute> attrs,
   Map<String, DriftEnum> driftEnums,
+  ElectricDriftGenOpts? genOpts,
 ) {
   final dbAttr = attrs.where((a) => a.type.startsWith('@db.')).firstOrNull;
   final dbAttrName = dbAttr?.type.substring('@db.'.length);
@@ -307,6 +309,9 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
       }
       return DriftElectricColumnType.int4;
     case 'Float':
+      if (dbAttrName == 'Real') {
+        return DriftElectricColumnType.float4;
+      }
       return DriftElectricColumnType.float8;
     case 'String':
       if (dbAttrName != null) {
@@ -319,10 +324,10 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
       return DriftElectricColumnType.bool;
     case 'DateTime':
       // Expect to have a db. attribute with a PG type
-      if (dbAttr == null) {
+      if (dbAttrName == null) {
         throw Exception('Expected DateTime field to have a @db. attribute');
       }
-      final dbAttrName = dbAttr.type.substring('@db.'.length);
+
       switch (dbAttrName) {
         case 'Date':
           return DriftElectricColumnType.date;
@@ -337,6 +342,24 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
         default:
           throw Exception('Unknown DateTime @db. attribute: $dbAttrName');
       }
+    case 'Json':
+      if (dbAttrName == null) {
+        return DriftElectricColumnType.jsonb;
+      }
+
+      switch (dbAttrName) {
+        case 'Json':
+          return DriftElectricColumnType.json;
+        case 'JsonB':
+          return DriftElectricColumnType.jsonb;
+        default:
+          throw Exception('Unknown Json @db. attribute: $dbAttrName');
+      }
+    case 'BigInt':
+      if (genOpts?.int8AsBigInt == true) {
+        return DriftElectricColumnType.bigint;
+      }
+      return DriftElectricColumnType.int8;
     default:
       throw Exception('Unknown Prisma type: $nonNullableType');
   }

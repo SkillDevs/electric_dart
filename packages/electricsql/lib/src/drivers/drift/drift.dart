@@ -62,8 +62,8 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  void dispose() {
-    _baseClient.dispose();
+  Future<void> close() async {
+    await _baseClient.close();
 
     _disposeHook?.call();
     _disposeHook = null;
@@ -107,6 +107,12 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
 
   @override
   Notifier get notifier => _baseClient.notifier;
+
+  @override
+  String get dbName => _baseClient.dbName;
+
+  @override
+  Registry get registry => _baseClient.registry;
 
   @override
   void potentiallyChanged() {

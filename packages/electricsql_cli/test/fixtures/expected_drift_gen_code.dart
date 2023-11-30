@@ -65,6 +65,11 @@ class Datatypes extends Table {
 
   IntColumn get cInt4 => customType(ElectricTypes.int4).named('c_int4')();
 
+  IntColumn get cInt8 => customType(ElectricTypes.int8).named('c_int8')();
+
+  RealColumn get cFloat4 =>
+      customType(ElectricTypes.float4).named('c_float4')();
+
   RealColumn get cFloat8 =>
       customType(ElectricTypes.float8).named('c_float8')();
 
@@ -81,6 +86,11 @@ class Datatypes extends Table {
 
   Column<DateTime> get cTimestamptz =>
       customType(ElectricTypes.timestampTZ).named('c_timestamptz')();
+
+  Column<Object> get cJson => customType(ElectricTypes.json).named('c_json')();
+
+  Column<Object> get cJsonb =>
+      customType(ElectricTypes.jsonb).named('c_jsonb')();
 
   @override
   String? get tableName => 'datatypes';

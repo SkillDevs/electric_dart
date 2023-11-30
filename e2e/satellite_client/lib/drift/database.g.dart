@@ -1329,8 +1329,13 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   late final GeneratedColumn<int> i4 = GeneratedColumn<int>(
       'i4', aliasedName, true,
       type: ElectricTypes.int4, requiredDuringInsert: false);
+  static const VerificationMeta _i8Meta = const VerificationMeta('i8');
   @override
-  List<GeneratedColumn> get $columns => [id, i2, i4];
+  late final GeneratedColumn<BigInt> i8 = GeneratedColumn<BigInt>(
+      'i8', aliasedName, true,
+      type: DriftSqlType.bigInt, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, i2, i4, i8];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1352,6 +1357,9 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
     if (data.containsKey('i4')) {
       context.handle(_i4Meta, i4.isAcceptableOrUnknown(data['i4']!, _i4Meta));
     }
+    if (data.containsKey('i8')) {
+      context.handle(_i8Meta, i8.isAcceptableOrUnknown(data['i8']!, _i8Meta));
+    }
     return context;
   }
 
@@ -1367,6 +1375,8 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
           .read(ElectricTypes.int2, data['${effectivePrefix}i2']),
       i4: attachedDatabase.typeMapping
           .read(ElectricTypes.int4, data['${effectivePrefix}i4']),
+      i8: attachedDatabase.typeMapping
+          .read(DriftSqlType.bigInt, data['${effectivePrefix}i8']),
     );
   }
 
@@ -1383,7 +1393,8 @@ class Int extends DataClass implements Insertable<Int> {
   final String id;
   final int? i2;
   final int? i4;
-  const Int({required this.id, this.i2, this.i4});
+  final BigInt? i8;
+  const Int({required this.id, this.i2, this.i4, this.i8});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1394,6 +1405,9 @@ class Int extends DataClass implements Insertable<Int> {
     if (!nullToAbsent || i4 != null) {
       map['i4'] = Variable<int>(i4);
     }
+    if (!nullToAbsent || i8 != null) {
+      map['i8'] = Variable<BigInt>(i8);
+    }
     return map;
   }
 
@@ -1402,6 +1416,7 @@ class Int extends DataClass implements Insertable<Int> {
       id: Value(id),
       i2: i2 == null && nullToAbsent ? const Value.absent() : Value(i2),
       i4: i4 == null && nullToAbsent ? const Value.absent() : Value(i4),
+      i8: i8 == null && nullToAbsent ? const Value.absent() : Value(i8),
     );
   }
 
@@ -1412,6 +1427,7 @@ class Int extends DataClass implements Insertable<Int> {
       id: serializer.fromJson<String>(json['id']),
       i2: serializer.fromJson<int?>(json['i2']),
       i4: serializer.fromJson<int?>(json['i4']),
+      i8: serializer.fromJson<BigInt?>(json['i8']),
     );
   }
   @override
@@ -1421,71 +1437,85 @@ class Int extends DataClass implements Insertable<Int> {
       'id': serializer.toJson<String>(id),
       'i2': serializer.toJson<int?>(i2),
       'i4': serializer.toJson<int?>(i4),
+      'i8': serializer.toJson<BigInt?>(i8),
     };
   }
 
   Int copyWith(
           {String? id,
           Value<int?> i2 = const Value.absent(),
-          Value<int?> i4 = const Value.absent()}) =>
+          Value<int?> i4 = const Value.absent(),
+          Value<BigInt?> i8 = const Value.absent()}) =>
       Int(
         id: id ?? this.id,
         i2: i2.present ? i2.value : this.i2,
         i4: i4.present ? i4.value : this.i4,
+        i8: i8.present ? i8.value : this.i8,
       );
   @override
   String toString() {
     return (StringBuffer('Int(')
           ..write('id: $id, ')
           ..write('i2: $i2, ')
-          ..write('i4: $i4')
+          ..write('i4: $i4, ')
+          ..write('i8: $i8')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, i2, i4);
+  int get hashCode => Object.hash(id, i2, i4, i8);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Int &&
           other.id == this.id &&
           other.i2 == this.i2 &&
-          other.i4 == this.i4);
+          other.i4 == this.i4 &&
+          other.i8 == this.i8);
 }
 
 class IntsCompanion extends UpdateCompanion<Int> {
   final Value<String> id;
   final Value<int?> i2;
   final Value<int?> i4;
+  final Value<BigInt?> i8;
   const IntsCompanion({
     this.id = const Value.absent(),
     this.i2 = const Value.absent(),
     this.i4 = const Value.absent(),
+    this.i8 = const Value.absent(),
   });
   IntsCompanion.insert({
     required String id,
     this.i2 = const Value.absent(),
     this.i4 = const Value.absent(),
+    this.i8 = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Int> custom({
     Expression<String>? id,
     Expression<int>? i2,
     Expression<int>? i4,
+    Expression<BigInt>? i8,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (i2 != null) 'i2': i2,
       if (i4 != null) 'i4': i4,
+      if (i8 != null) 'i8': i8,
     });
   }
 
   IntsCompanion copyWith(
-      {Value<String>? id, Value<int?>? i2, Value<int?>? i4}) {
+      {Value<String>? id,
+      Value<int?>? i2,
+      Value<int?>? i4,
+      Value<BigInt?>? i8}) {
     return IntsCompanion(
       id: id ?? this.id,
       i2: i2 ?? this.i2,
       i4: i4 ?? this.i4,
+      i8: i8 ?? this.i8,
     );
   }
 
@@ -1501,6 +1531,9 @@ class IntsCompanion extends UpdateCompanion<Int> {
     if (i4.present) {
       map['i4'] = Variable<int>(i4.value, ElectricTypes.int4);
     }
+    if (i8.present) {
+      map['i8'] = Variable<BigInt>(i8.value);
+    }
     return map;
   }
 
@@ -1509,7 +1542,8 @@ class IntsCompanion extends UpdateCompanion<Int> {
     return (StringBuffer('IntsCompanion(')
           ..write('id: $id, ')
           ..write('i2: $i2, ')
-          ..write('i4: $i4')
+          ..write('i4: $i4, ')
+          ..write('i8: $i8')
           ..write(')'))
         .toString();
   }
@@ -1525,13 +1559,18 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _f4Meta = const VerificationMeta('f4');
+  @override
+  late final GeneratedColumn<double> f4 = GeneratedColumn<double>(
+      'f4', aliasedName, true,
+      type: ElectricTypes.float4, requiredDuringInsert: false);
   static const VerificationMeta _f8Meta = const VerificationMeta('f8');
   @override
   late final GeneratedColumn<double> f8 = GeneratedColumn<double>(
       'f8', aliasedName, true,
       type: ElectricTypes.float8, requiredDuringInsert: false);
   @override
-  List<GeneratedColumn> get $columns => [id, f8];
+  List<GeneratedColumn> get $columns => [id, f4, f8];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1547,6 +1586,9 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
     } else if (isInserting) {
       context.missing(_idMeta);
     }
+    if (data.containsKey('f4')) {
+      context.handle(_f4Meta, f4.isAcceptableOrUnknown(data['f4']!, _f4Meta));
+    }
     if (data.containsKey('f8')) {
       context.handle(_f8Meta, f8.isAcceptableOrUnknown(data['f8']!, _f8Meta));
     }
@@ -1561,6 +1603,8 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
     return Float(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      f4: attachedDatabase.typeMapping
+          .read(ElectricTypes.float4, data['${effectivePrefix}f4']),
       f8: attachedDatabase.typeMapping
           .read(ElectricTypes.float8, data['${effectivePrefix}f8']),
     );
@@ -1577,12 +1621,16 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
 
 class Float extends DataClass implements Insertable<Float> {
   final String id;
+  final double? f4;
   final double? f8;
-  const Float({required this.id, this.f8});
+  const Float({required this.id, this.f4, this.f8});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    if (!nullToAbsent || f4 != null) {
+      map['f4'] = Variable<double>(f4);
+    }
     if (!nullToAbsent || f8 != null) {
       map['f8'] = Variable<double>(f8);
     }
@@ -1592,6 +1640,7 @@ class Float extends DataClass implements Insertable<Float> {
   FloatsCompanion toCompanion(bool nullToAbsent) {
     return FloatsCompanion(
       id: Value(id),
+      f4: f4 == null && nullToAbsent ? const Value.absent() : Value(f4),
       f8: f8 == null && nullToAbsent ? const Value.absent() : Value(f8),
     );
   }
@@ -1601,6 +1650,7 @@ class Float extends DataClass implements Insertable<Float> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Float(
       id: serializer.fromJson<String>(json['id']),
+      f4: serializer.fromJson<double?>(json['f4']),
       f8: serializer.fromJson<double?>(json['f8']),
     );
   }
@@ -1609,56 +1659,72 @@ class Float extends DataClass implements Insertable<Float> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'f4': serializer.toJson<double?>(f4),
       'f8': serializer.toJson<double?>(f8),
     };
   }
 
-  Float copyWith({String? id, Value<double?> f8 = const Value.absent()}) =>
+  Float copyWith(
+          {String? id,
+          Value<double?> f4 = const Value.absent(),
+          Value<double?> f8 = const Value.absent()}) =>
       Float(
         id: id ?? this.id,
+        f4: f4.present ? f4.value : this.f4,
         f8: f8.present ? f8.value : this.f8,
       );
   @override
   String toString() {
     return (StringBuffer('Float(')
           ..write('id: $id, ')
+          ..write('f4: $f4, ')
           ..write('f8: $f8')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, f8);
+  int get hashCode => Object.hash(id, f4, f8);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Float && other.id == this.id && other.f8 == this.f8);
+      (other is Float &&
+          other.id == this.id &&
+          other.f4 == this.f4 &&
+          other.f8 == this.f8);
 }
 
 class FloatsCompanion extends UpdateCompanion<Float> {
   final Value<String> id;
+  final Value<double?> f4;
   final Value<double?> f8;
   const FloatsCompanion({
     this.id = const Value.absent(),
+    this.f4 = const Value.absent(),
     this.f8 = const Value.absent(),
   });
   FloatsCompanion.insert({
     required String id,
+    this.f4 = const Value.absent(),
     this.f8 = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Float> custom({
     Expression<String>? id,
+    Expression<double>? f4,
     Expression<double>? f8,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (f4 != null) 'f4': f4,
       if (f8 != null) 'f8': f8,
     });
   }
 
-  FloatsCompanion copyWith({Value<String>? id, Value<double?>? f8}) {
+  FloatsCompanion copyWith(
+      {Value<String>? id, Value<double?>? f4, Value<double?>? f8}) {
     return FloatsCompanion(
       id: id ?? this.id,
+      f4: f4 ?? this.f4,
       f8: f8 ?? this.f8,
     );
   }
@@ -1668,6 +1734,9 @@ class FloatsCompanion extends UpdateCompanion<Float> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (f4.present) {
+      map['f4'] = Variable<double>(f4.value, ElectricTypes.float4);
     }
     if (f8.present) {
       map['f8'] = Variable<double>(f8.value, ElectricTypes.float8);
@@ -1679,7 +1748,215 @@ class FloatsCompanion extends UpdateCompanion<Float> {
   String toString() {
     return (StringBuffer('FloatsCompanion(')
           ..write('id: $id, ')
+          ..write('f4: $f4, ')
           ..write('f8: $f8')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $JsonsTable extends Jsons with TableInfo<$JsonsTable, Json> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $JsonsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _jsMeta = const VerificationMeta('js');
+  @override
+  late final GeneratedColumn<Object> js = GeneratedColumn<Object>(
+      'js', aliasedName, true,
+      type: ElectricTypes.json, requiredDuringInsert: false);
+  static const VerificationMeta _jsbMeta = const VerificationMeta('jsb');
+  @override
+  late final GeneratedColumn<Object> jsb = GeneratedColumn<Object>(
+      'jsb', aliasedName, true,
+      type: ElectricTypes.jsonb, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, js, jsb];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'jsons';
+  @override
+  VerificationContext validateIntegrity(Insertable<Json> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('js')) {
+      context.handle(_jsMeta, js.isAcceptableOrUnknown(data['js']!, _jsMeta));
+    }
+    if (data.containsKey('jsb')) {
+      context.handle(
+          _jsbMeta, jsb.isAcceptableOrUnknown(data['jsb']!, _jsbMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Json map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Json(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      js: attachedDatabase.typeMapping
+          .read(ElectricTypes.json, data['${effectivePrefix}js']),
+      jsb: attachedDatabase.typeMapping
+          .read(ElectricTypes.jsonb, data['${effectivePrefix}jsb']),
+    );
+  }
+
+  @override
+  $JsonsTable createAlias(String alias) {
+    return $JsonsTable(attachedDatabase, alias);
+  }
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Json extends DataClass implements Insertable<Json> {
+  final String id;
+  final Object? js;
+  final Object? jsb;
+  const Json({required this.id, this.js, this.jsb});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || js != null) {
+      map['js'] = Variable<Object>(js);
+    }
+    if (!nullToAbsent || jsb != null) {
+      map['jsb'] = Variable<Object>(jsb);
+    }
+    return map;
+  }
+
+  JsonsCompanion toCompanion(bool nullToAbsent) {
+    return JsonsCompanion(
+      id: Value(id),
+      js: js == null && nullToAbsent ? const Value.absent() : Value(js),
+      jsb: jsb == null && nullToAbsent ? const Value.absent() : Value(jsb),
+    );
+  }
+
+  factory Json.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Json(
+      id: serializer.fromJson<String>(json['id']),
+      js: serializer.fromJson<Object?>(json['js']),
+      jsb: serializer.fromJson<Object?>(json['jsb']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'js': serializer.toJson<Object?>(js),
+      'jsb': serializer.toJson<Object?>(jsb),
+    };
+  }
+
+  Json copyWith(
+          {String? id,
+          Value<Object?> js = const Value.absent(),
+          Value<Object?> jsb = const Value.absent()}) =>
+      Json(
+        id: id ?? this.id,
+        js: js.present ? js.value : this.js,
+        jsb: jsb.present ? jsb.value : this.jsb,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Json(')
+          ..write('id: $id, ')
+          ..write('js: $js, ')
+          ..write('jsb: $jsb')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, js, jsb);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Json &&
+          other.id == this.id &&
+          other.js == this.js &&
+          other.jsb == this.jsb);
+}
+
+class JsonsCompanion extends UpdateCompanion<Json> {
+  final Value<String> id;
+  final Value<Object?> js;
+  final Value<Object?> jsb;
+  const JsonsCompanion({
+    this.id = const Value.absent(),
+    this.js = const Value.absent(),
+    this.jsb = const Value.absent(),
+  });
+  JsonsCompanion.insert({
+    required String id,
+    this.js = const Value.absent(),
+    this.jsb = const Value.absent(),
+  }) : id = Value(id);
+  static Insertable<Json> custom({
+    Expression<String>? id,
+    Expression<Object>? js,
+    Expression<Object>? jsb,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (js != null) 'js': js,
+      if (jsb != null) 'jsb': jsb,
+    });
+  }
+
+  JsonsCompanion copyWith(
+      {Value<String>? id, Value<Object?>? js, Value<Object?>? jsb}) {
+    return JsonsCompanion(
+      id: id ?? this.id,
+      js: js ?? this.js,
+      jsb: jsb ?? this.jsb,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (js.present) {
+      map['js'] = Variable<Object>(js.value, ElectricTypes.json);
+    }
+    if (jsb.present) {
+      map['jsb'] = Variable<Object>(jsb.value, ElectricTypes.jsonb);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('JsonsCompanion(')
+          ..write('id: $id, ')
+          ..write('js: $js, ')
+          ..write('jsb: $jsb')
           ..write(')'))
         .toString();
   }
@@ -1864,6 +2141,7 @@ abstract class _$ClientDatabase extends GeneratedDatabase {
   late final $UuidsTable uuids = $UuidsTable(this);
   late final $IntsTable ints = $IntsTable(this);
   late final $FloatsTable floats = $FloatsTable(this);
+  late final $JsonsTable jsons = $JsonsTable(this);
   late final $EnumsTable enums = $EnumsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -1878,6 +2156,7 @@ abstract class _$ClientDatabase extends GeneratedDatabase {
         uuids,
         ints,
         floats,
+        jsons,
         enums
       ];
 }
