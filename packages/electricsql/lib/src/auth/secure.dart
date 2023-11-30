@@ -49,7 +49,7 @@ Future<String> mockSecureAuthToken({
   final mockKey = key ?? 'integration-tests-signing-key-example';
 
   return secureAuthToken(
-    claims: {'user_id': 'test-user'},
+    claims: {'sub': 'test-user'},
     iss: mockIss,
     key: mockKey,
   );
