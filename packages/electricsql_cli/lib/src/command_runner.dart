@@ -1,6 +1,7 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
+import 'package:electricsql_cli/src/commands/docker_commands/command_status.dart';
 import 'package:electricsql_cli/src/commands/generate/command.dart';
 import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
@@ -37,6 +38,7 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
 
     // Add sub commands
     addCommand(GenerateMigrationsCommand(logger: _logger));
+    addCommand(DockerStatusCommand(logger: _logger));
   }
 
   @override

@@ -286,6 +286,14 @@ packages:
       relative: true
     source: path
     version: "0.3.0"
+  embed_annotation:
+    dependency: transitive
+    description:
+      name: embed_annotation
+      sha256: "648c3dbc8f26c2feb3b893666a322d1ae9ac455366196fbc3cf203ce00982dbb"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   equatable:
     dependency: transitive
     description:
