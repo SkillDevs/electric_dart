@@ -15,7 +15,7 @@ class Todo extends Table {
 
   TextColumn get listid => text().nullable()();
 
-  TextColumn get textCol => text().named('text').nullable()();
+  TextColumn get text$ => text().named('text').nullable()();
 
   BoolColumn get completed => boolean()();
 

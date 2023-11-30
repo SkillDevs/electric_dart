@@ -28,7 +28,7 @@ class DriftRepository implements m.TodosRepository {
   Future<List<m.Todo>> fetchTodos() async {
     return (db.todo.select()
           ..orderBy(
-            [(tbl) => OrderingTerm(expression: tbl.textCol.lower())],
+            [(tbl) => OrderingTerm(expression: tbl.text$.lower())],
           ))
         .map(
           (todo) => m.Todo(
@@ -36,7 +36,7 @@ class DriftRepository implements m.TodosRepository {
             id: todo.id,
             listId: todo.listid,
             editedAt: todo.editedAt,
-            text: todo.textCol!,
+            text: todo.text$!,
           ),
         )
         .get();
@@ -49,7 +49,7 @@ class DriftRepository implements m.TodosRepository {
         id: todo.id,
         completed: todo.completed,
         listid: Value(todo.listId),
-        textCol: Value(todo.text),
+        text$: Value(todo.text),
         editedAt: todo.editedAt,
       ),
     );
@@ -70,7 +70,7 @@ class DriftRepository implements m.TodosRepository {
       TodoCompanion(
         completed: Value(item.completed),
         listid: Value(item.listId),
-        textCol: Value(item.text),
+        text$: Value(item.text),
         editedAt: Value(DateTime.now()),
       ),
     );
@@ -80,7 +80,7 @@ class DriftRepository implements m.TodosRepository {
   Stream<List<m.Todo>> watchTodos() {
     return (db.todo.select()
           ..orderBy(
-            [(tbl) => OrderingTerm(expression: tbl.textCol.lower())],
+            [(tbl) => OrderingTerm(expression: tbl.text$.lower())],
           ))
         .map(
           (todo) => m.Todo(
@@ -88,7 +88,7 @@ class DriftRepository implements m.TodosRepository {
             id: todo.id,
             listId: todo.listid,
             editedAt: todo.editedAt,
-            text: todo.textCol!,
+            text: todo.text$!,
           ),
         )
         .watch();
