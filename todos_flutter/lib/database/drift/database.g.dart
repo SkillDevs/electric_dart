@@ -18,7 +18,7 @@ class $TodoTable extends Todo with TableInfo<$TodoTable, TodoData> {
   late final GeneratedColumn<String> listid = GeneratedColumn<String>(
       'listid', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _text$Meta = const VerificationMeta(r'text$');
+  static const VerificationMeta _text$Meta = const VerificationMeta('text\$');
   @override
   late final GeneratedColumn<String> text$ = GeneratedColumn<String>(
       'text', aliasedName, true,
@@ -152,7 +152,7 @@ class TodoData extends DataClass implements Insertable<TodoData> {
     return TodoData(
       id: serializer.fromJson<String>(json['id']),
       listid: serializer.fromJson<String?>(json['listid']),
-      text$: serializer.fromJson<String?>(json[r'text$']),
+      text$: serializer.fromJson<String?>(json['text\$']),
       completed: serializer.fromJson<bool>(json['completed']),
       editedAt: serializer.fromJson<DateTime>(json['editedAt']),
     );
@@ -163,7 +163,7 @@ class TodoData extends DataClass implements Insertable<TodoData> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'listid': serializer.toJson<String?>(listid),
-      r'text$': serializer.toJson<String?>(text$),
+      'text\$': serializer.toJson<String?>(text$),
       'completed': serializer.toJson<bool>(completed),
       'editedAt': serializer.toJson<DateTime>(editedAt),
     };

@@ -117,10 +117,10 @@ packages:
     dependency: "direct dev"
     description:
       name: build_runner
-      sha256: "10c6bcdbf9d049a0b666702cf1cee4ddfdc38f02a19d35ae392863b47519848b"
+      sha256: "67d591d602906ef9201caf93452495ad1812bea2074f04e25dbd7c133785821b"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.6"
+    version: "2.4.7"
   build_runner_core:
     dependency: transitive
     description:
@@ -244,19 +244,21 @@ packages:
   drift:
     dependency: "direct main"
     description:
-      name: drift
-      sha256: d542088d353585a252f015b81c1e7603c57c996ba59a80d53a3f4644cc47f543
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.13.2"
+      path: drift
+      ref: develop
+      resolved-ref: "633cc521293de3ac29f5645a4adaaa42cf42c037"
+      url: "https://github.com/simolus3/drift.git"
+    source: git
+    version: "2.14.0"
   drift_dev:
     dependency: "direct dev"
     description:
-      name: drift_dev
-      sha256: "369d2769d84e0c2d2cb4cd420e4fdb4f975852c83ebb934733c3b382c62961cd"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.13.2"
+      path: drift_dev
+      ref: develop
+      resolved-ref: "633cc521293de3ac29f5645a4adaaa42cf42c037"
+      url: "https://github.com/simolus3/drift.git"
+    source: git
+    version: "2.14.0"
   ed25519_edwards:
     dependency: transitive
     description:
@@ -620,10 +622,10 @@ packages:
     dependency: transitive
     description:
       name: petitparser
-      sha256: eeb2d1428ee7f4170e2bd498827296a18d4e7fc462b71727d111c0ac7707cfa6
+      sha256: c15605cd28af66339f8eb6fbe0e541bfe2d1b72d5825efc6598f3e0a31b9ad27
       url: "https://pub.dev"
     source: hosted
-    version: "6.0.1"
+    version: "6.0.2"
   platform:
     dependency: transitive
     description:
@@ -790,13 +792,14 @@ packages:
     source: hosted
     version: "0.5.18"
   sqlparser:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: sqlparser
-      sha256: db6354e8ba71acc50bc4afeafff2a248710ae2c00c9412e2c8b796916d4b1c45
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.32.1"
+      path: sqlparser
+      ref: develop
+      resolved-ref: "633cc521293de3ac29f5645a4adaaa42cf42c037"
+      url: "https://github.com/simolus3/drift.git"
+    source: git
+    version: "0.33.0"
   stack_trace:
     dependency: transitive
     description:
@@ -945,10 +948,10 @@ packages:
     dependency: transitive
     description:
       name: win32
-      sha256: "7c99c0e1e2fa190b48d25c81ca5e42036d5cac81430ef249027d97b0935c553f"
+      sha256: b0f37db61ba2f2e9b7a78a1caece0052564d1bc70668156cf3a29d676fe4e574
       url: "https://pub.dev"
     source: hosted
-    version: "5.1.0"
+    version: "5.1.1"
   xdg_directories:
     dependency: transitive
     description:
@@ -961,10 +964,10 @@ packages:
     dependency: transitive
     description:
       name: xml
-      sha256: af5e77e9b83f2f4adc5d3f0a4ece1c7f45a2467b695c2540381bac793e34e556
+      sha256: b015a8ad1c488f66851d762d3090a21c600e479dc75e68328c52774040cf9226
       url: "https://pub.dev"
     source: hosted
-    version: "6.4.2"
+    version: "6.5.0"
   yaml:
     dependency: transitive
     description:
