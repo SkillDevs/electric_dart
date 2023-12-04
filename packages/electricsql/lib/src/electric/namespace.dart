@@ -11,7 +11,7 @@ class ElectricNamespace {
   bool _isConnected = false;
   bool get isConnected => _isConnected;
 
-  late final String _stateChangeSubscription;
+  late final UnsubscribeFunction _unsubscribeStateChanges;
 
   ElectricNamespace({
     required this.dbName,
@@ -19,7 +19,7 @@ class ElectricNamespace {
     required this.notifier,
     required this.registry,
   }) {
-    _stateChangeSubscription =
+    _unsubscribeStateChanges =
         notifier.subscribeToConnectivityStateChanges((notification) {
       setIsConnected(notification.connectivityState);
     });
@@ -38,9 +38,7 @@ class ElectricNamespace {
 
   /// Cleans up the resources used by the `ElectricNamespace`.
   Future<void> close() async {
-    notifier.unsubscribeFromConnectivityStateChanges(
-      _stateChangeSubscription,
-    );
+    _unsubscribeStateChanges();
     await registry.stop(dbName);
   }
 }

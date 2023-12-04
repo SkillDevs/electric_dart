@@ -25,7 +25,7 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
 * Version `v0.7.1-dev`
-* Commit: `fb773fbb33201e10d3677937127fa1cdf0cae685`
+* Commit: `e091bbfb95cb7af2c0bdfe8b12427b1f45e14ae9`
 
 
 ### What's Electric?

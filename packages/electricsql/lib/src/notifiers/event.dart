@@ -2,7 +2,6 @@ import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
-import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:events_emitter/events_emitter.dart';
@@ -29,17 +28,6 @@ class EventNotifier implements Notifier {
 
   late final EventEmitter events;
 
-  late final Map<String, EventListener<dynamic>> _changeCallbacks;
-
-  @visibleForTesting
-  Map<String, EventListener<dynamic>> get changeCallbacks => _changeCallbacks;
-
-  late final Map<String, EventListener<dynamic>> _connectivityStatusCallbacks;
-
-  @visibleForTesting
-  Map<String, EventListener<dynamic>> get connectivityStatusCallbacks =>
-      _connectivityStatusCallbacks;
-
   EventNotifier({required this.dbName, EventEmitter? eventEmitter}) {
     attachedDbIndex = AttachedDbIndex(
       byAlias: {},
@@ -47,9 +35,6 @@ class EventNotifier implements Notifier {
     );
 
     events = eventEmitter ?? globalEmitter;
-
-    _changeCallbacks = {};
-    _connectivityStatusCallbacks = {};
   }
 
   @override
@@ -101,28 +86,12 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  String subscribeToAuthStateChanges(AuthStateCallback callback) {
-    final key = randomValue();
-
+  UnsubscribeFunction subscribeToAuthStateChanges(AuthStateCallback callback) {
     final eventListener = EventListener(EventNames.authChange, callback);
 
-    _changeCallbacks[key] = eventListener;
     _subscribe(eventListener);
 
-    return key;
-  }
-
-  @override
-  void unsubscribeFromAuthStateChanges(String key) {
-    final listener = _changeCallbacks[key];
-
-    if (listener == null) {
-      return;
-    }
-
-    _unsubscribe(listener);
-
-    _changeCallbacks.remove(key);
+    return () => _unsubscribe(eventListener);
   }
 
   @override
@@ -143,9 +112,9 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  String subscribeToPotentialDataChanges(PotentialChangeCallback callback) {
-    final key = randomValue();
-
+  UnsubscribeFunction subscribeToPotentialDataChanges(
+    PotentialChangeCallback callback,
+  ) {
     void wrappedCallback(PotentialChangeNotification notification) {
       if (_hasDbName(notification.dbName)) {
         callback(notification);
@@ -155,29 +124,13 @@ class EventNotifier implements Notifier {
     final eventListener =
         EventListener(EventNames.potentialDataChange, wrappedCallback);
 
-    _changeCallbacks[key] = eventListener;
     _subscribe(eventListener);
 
-    return key;
+    return () => _unsubscribe(eventListener);
   }
 
   @override
-  void unsubscribeFromPotentialDataChanges(String key) {
-    final listener = _changeCallbacks[key];
-
-    if (listener == null) {
-      return;
-    }
-
-    _unsubscribe(listener);
-
-    _changeCallbacks.remove(key);
-  }
-
-  @override
-  String subscribeToDataChanges(ChangeCallback callback) {
-    final key = randomValue();
-
+  UnsubscribeFunction subscribeToDataChanges(ChangeCallback callback) {
     void wrappedCallback(ChangeNotification notification) {
       if (_hasDbName(notification.dbName)) {
         callback(notification);
@@ -186,23 +139,9 @@ class EventNotifier implements Notifier {
 
     final eventListener =
         EventListener(EventNames.actualDataChange, wrappedCallback);
-    _changeCallbacks[key] = eventListener;
     _subscribe(eventListener);
 
-    return key;
-  }
-
-  @override
-  void unsubscribeFromDataChanges(String key) {
-    final listener = _changeCallbacks[key];
-
-    if (listener == null) {
-      return;
-    }
-
-    _unsubscribe(listener);
-
-    _changeCallbacks.remove(key);
+    return () => _unsubscribe(eventListener);
   }
 
   @override
@@ -215,11 +154,9 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  String subscribeToConnectivityStateChanges(
+  UnsubscribeFunction subscribeToConnectivityStateChanges(
     ConnectivityStateChangeCallback callback,
   ) {
-    final key = randomValue();
-
     void wrappedCallback(ConnectivityStateChangeNotification notification) {
       if (_hasDbName(notification.dbName)) {
         callback(notification);
@@ -229,23 +166,9 @@ class EventNotifier implements Notifier {
 
     final eventListener =
         EventListener(EventNames.connectivityStateChange, wrappedCallback);
-    _connectivityStatusCallbacks[key] = eventListener;
     _subscribe(eventListener);
 
-    return key;
-  }
-
-  @override
-  void unsubscribeFromConnectivityStateChanges(String key) {
-    final listener = _connectivityStatusCallbacks[key];
-
-    if (listener == null) {
-      return;
-    }
-
-    _unsubscribe(listener);
-
-    _connectivityStatusCallbacks.remove(key);
+    return () => _unsubscribe(eventListener);
   }
 
   List<DbName> _getDbNames() {

@@ -72,6 +72,8 @@ typedef ConnectivityStateChangeCallback = void Function(
 
 typedef NotificationCallback = void Function(Notification notification);
 
+typedef UnsubscribeFunction = void Function();
+
 abstract class Notifier {
   // The name of the primary database that components communicating via this
   // notifier have open and are using.
@@ -96,8 +98,7 @@ abstract class Notifier {
   // Calling `authStateChanged` notifies the Satellite process that the
   // user's authentication credentials have changed.
   void authStateChanged(AuthState authState);
-  String subscribeToAuthStateChanges(AuthStateCallback callback);
-  void unsubscribeFromAuthStateChanges(String key);
+  UnsubscribeFunction subscribeToAuthStateChanges(AuthStateCallback callback);
 
   // The data change notification workflow starts by the electric database
   // clients (or the user manually) calling `potentiallyChanged` whenever
@@ -108,8 +109,9 @@ abstract class Notifier {
   // Satellite processes subscribe to these "data has potentially changed"
   // notifications. When they get one, they check the `_oplog` table in the
   // database for *actual* changes persisted by the triggers.
-  String subscribeToPotentialDataChanges(PotentialChangeCallback callback);
-  void unsubscribeFromPotentialDataChanges(String key);
+  UnsubscribeFunction subscribeToPotentialDataChanges(
+    PotentialChangeCallback callback,
+  );
 
   // When Satellite detects actual data changes in the oplog for a given
   // database, it replicates it and calls  `actuallyChanged` with the list
@@ -120,8 +122,7 @@ abstract class Notifier {
   // using the info to trigger re-queries, if the changes affect databases and
   // tables that their queries depend on. This then trigger re-rendering iff
   // the query results are actually affected by the data changes.
-  String subscribeToDataChanges(ChangeCallback callback);
-  void unsubscribeFromDataChanges(String key);
+  UnsubscribeFunction subscribeToDataChanges(ChangeCallback callback);
 
   // Notification for network connectivity state changes.
   // A connectivity change s can be triggered manually,
@@ -131,10 +132,9 @@ abstract class Notifier {
   // 'disconnected': Electric is unreachable, or network is unavailable
   // 'error': disconnected with an error (TODO: add error info)
   void connectivityStateChanged(String dbName, ConnectivityState state);
-  String subscribeToConnectivityStateChanges(
+  UnsubscribeFunction subscribeToConnectivityStateChanges(
     ConnectivityStateChangeCallback callback,
   );
-  void unsubscribeFromConnectivityStateChanges(String key);
 }
 
 class AttachedDbIndex {

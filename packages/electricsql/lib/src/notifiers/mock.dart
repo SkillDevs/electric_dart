@@ -5,7 +5,7 @@ import 'package:electricsql/src/util/types.dart';
 class MockNotifier extends EventNotifier {
   List<Notification> notifications = [];
 
-  MockNotifier(DbName dbName) : super(dbName: dbName);
+  MockNotifier(DbName dbName, {super.eventEmitter}) : super(dbName: dbName);
 
   @override
   void emit(String eventName, Notification notification) {
