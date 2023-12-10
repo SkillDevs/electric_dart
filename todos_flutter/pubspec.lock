@@ -117,10 +117,10 @@ packages:
     dependency: "direct dev"
     description:
       name: build_runner
-      sha256: "10c6bcdbf9d049a0b666702cf1cee4ddfdc38f02a19d35ae392863b47519848b"
+      sha256: "67d591d602906ef9201caf93452495ad1812bea2074f04e25dbd7c133785821b"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.6"
+    version: "2.4.7"
   build_runner_core:
     dependency: transitive
     description:
@@ -246,7 +246,7 @@ packages:
     description:
       path: drift
       ref: develop
-      resolved-ref: "5115bc152509e18751bb972e0b85c1650f85e8fc"
+      resolved-ref: "417d1f59d97bb8d21ca2989fc4c28522b181a3c8"
       url: "https://github.com/simolus3/drift.git"
     source: git
     version: "2.14.0"
@@ -255,10 +255,10 @@ packages:
     description:
       path: drift_dev
       ref: develop
-      resolved-ref: "5115bc152509e18751bb972e0b85c1650f85e8fc"
+      resolved-ref: "417d1f59d97bb8d21ca2989fc4c28522b181a3c8"
       url: "https://github.com/simolus3/drift.git"
     source: git
-    version: "2.14.0"
+    version: "2.14.1"
   ed25519_edwards:
     dependency: transitive
     description:
@@ -321,7 +321,7 @@ packages:
     source: hosted
     version: "2.1.0"
   file:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: file
       sha256: "5fc22d7c25582e38ad9a8515372cd9a93834027aacf1801cf01164dac0ffa08c"
@@ -526,10 +526,10 @@ packages:
     dependency: "direct main"
     description:
       name: material_symbols_icons
-      sha256: "16463f7bbd312404f21e6dd8bd35af9ae16d34571fdd5894a71c2b9052c278ef"
+      sha256: f61d6f345f3b520eb475fddcaec184de94f37b1f0d7a659265904715df1b1d6a
       url: "https://pub.dev"
     source: hosted
-    version: "4.2711.0"
+    version: "4.2713.0"
   meta:
     dependency: transitive
     description:
@@ -622,12 +622,12 @@ packages:
     dependency: transitive
     description:
       name: petitparser
-      sha256: eeb2d1428ee7f4170e2bd498827296a18d4e7fc462b71727d111c0ac7707cfa6
+      sha256: c15605cd28af66339f8eb6fbe0e541bfe2d1b72d5825efc6598f3e0a31b9ad27
       url: "https://pub.dev"
     source: hosted
-    version: "6.0.1"
+    version: "6.0.2"
   platform:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: platform
       sha256: "0a279f0707af40c890e80b1e9df8bb761694c074ba7e1d4ab1bc4b728e200b59"
@@ -675,7 +675,7 @@ packages:
     source: hosted
     version: "3.1.0"
   pub_semver:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: pub_semver
       sha256: "40d3ab1bbd474c4c2328c91e3a7df8c6dd629b79ece4c4bd04bee496a224fb0c"
@@ -796,7 +796,7 @@ packages:
     description:
       path: sqlparser
       ref: develop
-      resolved-ref: "5115bc152509e18751bb972e0b85c1650f85e8fc"
+      resolved-ref: "417d1f59d97bb8d21ca2989fc4c28522b181a3c8"
       url: "https://github.com/simolus3/drift.git"
     source: git
     version: "0.33.0"
@@ -921,7 +921,7 @@ packages:
     source: hosted
     version: "2.1.4"
   watcher:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: watcher
       sha256: "3d2ad6751b3c16cf07c7fca317a1413b3f26530319181b37e3b9039b84fc01d8"
@@ -948,10 +948,10 @@ packages:
     dependency: transitive
     description:
       name: win32
-      sha256: "7c99c0e1e2fa190b48d25c81ca5e42036d5cac81430ef249027d97b0935c553f"
+      sha256: b0f37db61ba2f2e9b7a78a1caece0052564d1bc70668156cf3a29d676fe4e574
       url: "https://pub.dev"
     source: hosted
-    version: "5.1.0"
+    version: "5.1.1"
   xdg_directories:
     dependency: transitive
     description:
@@ -964,10 +964,10 @@ packages:
     dependency: transitive
     description:
       name: xml
-      sha256: af5e77e9b83f2f4adc5d3f0a4ece1c7f45a2467b695c2540381bac793e34e556
+      sha256: b015a8ad1c488f66851d762d3090a21c600e479dc75e68328c52774040cf9226
       url: "https://pub.dev"
     source: hosted
-    version: "6.4.2"
+    version: "6.5.0"
   yaml:
     dependency: transitive
     description:
