@@ -1,3 +1,13 @@
+## 0.4.0
+
+* Code based on official Typescript client [v0.8.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.0) and [v0.8.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.1)
+* Breaking change: Compatible with the Electric service v0.8.0+
+* Added support for additional data types from Postgres, replicated in the local SQLite and mapped as Dart types in the `drift` schema:
+    - `jsonb`
+    - `int8`
+    - `float4`
+
+
 ## 0.3.1
 
 * Code based on official Typescript client [v0.7.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.7.1)

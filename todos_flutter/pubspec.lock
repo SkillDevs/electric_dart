@@ -244,19 +244,21 @@ packages:
   drift:
     dependency: "direct main"
     description:
-      name: drift
-      sha256: d542088d353585a252f015b81c1e7603c57c996ba59a80d53a3f4644cc47f543
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.13.2"
+      path: drift
+      ref: develop
+      resolved-ref: "5115bc152509e18751bb972e0b85c1650f85e8fc"
+      url: "https://github.com/simolus3/drift.git"
+    source: git
+    version: "2.14.0"
   drift_dev:
     dependency: "direct dev"
     description:
-      name: drift_dev
-      sha256: "369d2769d84e0c2d2cb4cd420e4fdb4f975852c83ebb934733c3b382c62961cd"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.13.2"
+      path: drift_dev
+      ref: develop
+      resolved-ref: "5115bc152509e18751bb972e0b85c1650f85e8fc"
+      url: "https://github.com/simolus3/drift.git"
+    source: git
+    version: "2.14.0"
   ed25519_edwards:
     dependency: transitive
     description:
@@ -271,21 +273,21 @@ packages:
       path: "../packages/electricsql"
       relative: true
     source: path
-    version: "0.3.1"
+    version: "0.4.0"
   electricsql_cli:
     dependency: "direct dev"
     description:
       path: "../packages/electricsql_cli"
       relative: true
     source: path
-    version: "0.3.1"
+    version: "0.4.0"
   electricsql_flutter:
     dependency: "direct main"
     description:
       path: "../packages/electricsql_flutter"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.0"
   equatable:
     dependency: transitive
     description:
@@ -777,10 +779,10 @@ packages:
     dependency: "direct main"
     description:
       name: sqlite3
-      sha256: db65233e6b99e99b2548932f55a987961bc06d82a31a0665451fa0b4fff4c3fb
+      sha256: "8922805564b78eb7aa9386c10056d377a541ac7270dc6a1589176277ebb4d15d"
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.0"
+    version: "2.2.0"
   sqlite3_flutter_libs:
     dependency: "direct main"
     description:
@@ -790,13 +792,14 @@ packages:
     source: hosted
     version: "0.5.18"
   sqlparser:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: sqlparser
-      sha256: db6354e8ba71acc50bc4afeafff2a248710ae2c00c9412e2c8b796916d4b1c45
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.32.1"
+      path: sqlparser
+      ref: develop
+      resolved-ref: "5115bc152509e18751bb972e0b85c1650f85e8fc"
+      url: "https://github.com/simolus3/drift.git"
+    source: git
+    version: "0.33.0"
   stack_trace:
     dependency: transitive
     description:
