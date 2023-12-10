@@ -6,7 +6,7 @@
 [![pub package](https://img.shields.io/pub/v/electricsql_cli.svg?label=electricsql_cli&color=blue)](https://pub.dartlang.org/packages/electricsql_cli)
 
 <h1>
-    <img align="center" height="60" src="https://github.com/SkillDevs/electric_dart/blob/master/resources/electric_dart_icon.png"/>
+    <img align="center" height="60" src="https://raw.githubusercontent.com/SkillDevs/electric_dart/master/resources/electric_dart_icon.png"/>
     Electric Dart
 </h1>
 
