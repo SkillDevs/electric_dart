@@ -51,3 +51,10 @@ scripts:
         dart pub downgrade
     description: |
       Run `dart pub downgrade` in all packages. This will downgrade all dependencies to the lowest possible version.
+  
+  deps_upgrade:
+    run: |
+      melos exec -c 1 -- \
+        dart pub upgrade
+    description: |
+      Run `dart pub upgrade` in all packages.
