@@ -13,6 +13,7 @@ import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/schema.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
+import 'package:electricsql/src/notifiers/index.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -280,7 +281,7 @@ Future<ElectricClient> mockElectricClient(
   final adapter = DriftAdapter(db);
   final migrator =
       BundleMigrator(adapter: adapter, migrations: kTestMigrations);
-  final notifier = MockNotifier(dbName);
+  final notifier = MockNotifier(dbName, eventEmitter: EventEmitter());
   final client = MockSatelliteClient();
   final satellite = SatelliteProcess(
     dbName: dbName,

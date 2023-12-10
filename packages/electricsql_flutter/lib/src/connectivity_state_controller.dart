@@ -8,13 +8,13 @@ class ConnectivityStateController with ChangeNotifier {
   ConnectivityState _connectivityState = ConnectivityState.disconnected;
   ConnectivityState get connectivityState => _connectivityState;
 
-  String? _connectivityChangeSubscriptionId;
+  void Function()? _unsubConnectivityChange;
   bool _shouldStop = false;
 
   ConnectivityStateController(this.electric);
 
   void init() {
-    assert(_connectivityChangeSubscriptionId == null, 'Already initialized');
+    assert(_unsubConnectivityChange == null, 'Already initialized');
 
     setConnectivityState(_getElectricState(electric));
 
@@ -26,18 +26,16 @@ class ConnectivityStateController with ChangeNotifier {
       setConnectivityState(getValidState(state));
     }
 
-    _connectivityChangeSubscriptionId =
+    _unsubConnectivityChange =
         electric.notifier.subscribeToConnectivityStateChanges(handler);
   }
 
   @override
   void dispose() {
     _shouldStop = true;
-    if (_connectivityChangeSubscriptionId != null) {
-      electric.notifier.unsubscribeFromConnectivityStateChanges(
-        _connectivityChangeSubscriptionId!,
-      );
-      _connectivityChangeSubscriptionId = null;
+    if (_unsubConnectivityChange != null) {
+      _unsubConnectivityChange?.call();
+      _unsubConnectivityChange = null;
     }
     super.dispose();
   }

@@ -1,3 +1,9 @@
+## 0.4.0
+
+* Code based on official Typescript client [v0.8.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.0) and [v0.8.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.1)
+* Added additional CLI parameter, `int8AsBigInt` to configure how to treat the INT8 type in Dart code, either as a `BigInt` or as `int`. `BigInt` can be useful if you need the full INT8 range in Flutter Web. Otherwise, Dart `int` is capable of storing the full INT8 range for all other platforms.
+
+
 ## 0.3.1
 
 * Code based on official Typescript client [v0.7.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.7.1)

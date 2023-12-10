@@ -19,7 +19,7 @@ class SqliteAdapter implements adp.DatabaseAdapter {
   @override
   Future<RunResult> run(Statement statement) async {
     db.execute(statement.sql, statement.args ?? []);
-    final rowsAffected = db.getUpdatedRows();
+    final rowsAffected = db.updatedRows;
 
     return RunResult(rowsAffected: rowsAffected);
   }
@@ -35,7 +35,7 @@ class SqliteAdapter implements adp.DatabaseAdapter {
         int rowsAffected = 0;
         for (final statement in statements) {
           db.execute(statement.sql, statement.args ?? []);
-          rowsAffected += db.getUpdatedRows();
+          rowsAffected += db.updatedRows;
         }
 
         db.execute('COMMIT');
@@ -81,7 +81,7 @@ class SqliteAdapter implements adp.DatabaseAdapter {
   Future<RunResult> _runUncoordinated(Statement stmt) async {
     db.execute(stmt.sql, stmt.args ?? []);
     return RunResult(
-      rowsAffected: db.getUpdatedRows(),
+      rowsAffected: db.updatedRows,
     );
   }
 
