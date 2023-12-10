@@ -26,8 +26,8 @@ dependencies:
   material_design_icons_flutter: ^7.0.7296
   material_symbols_icons: ^4.2668.0
   path: ^1.8.2
-  path_provider: ^2.0.14
-  sqlite3: ^2.1.0
+  path_provider: ^2.1.1
+  sqlite3: ^2.2.0
   # Pinned, because the web requires an extra file per version
   # https://github.com/simolus3/sqlite3.dart/releases?q=sqlite3_flutter_libs&expanded=true
   sqlite3_flutter_libs: 0.5.18
@@ -37,10 +37,15 @@ dev_dependencies:
   drift_dev: ^2.14.0
   electricsql_cli:
     path: ../packages/electricsql_cli
+  file: ^7.0.0 # Lowest version supported
 
   flutter_lints: ^3.0.1
   flutter_test:
     sdk: flutter
+
+  platform: ^3.1.3 # Lowest version supported
+  pub_semver: ^2.1.4 # Lowest version supported
+  watcher: ^1.1.0 # Lowest version supported
 
 flutter:
   uses-material-design: true

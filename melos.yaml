@@ -44,3 +44,10 @@ scripts:
         "protoc --dart_out=lib/src proto/satellite.proto && dart format lib/src/proto"
     packageFilters:
       scope: 'electricsql'
+
+  deps_downgrade:
+    run: |
+      melos exec -c 1 -- \
+        dart pub downgrade
+    description: |
+      Run `dart pub downgrade` in all packages. This will downgrade all dependencies to the lowest possible version.
