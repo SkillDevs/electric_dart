@@ -39,6 +39,8 @@ cd backend
 
 In this demo we used [dbmate](https://github.com/amacneil/dbmate) to apply the migrations automatically into Postgres.
 
+Before continuing, make sure to wait a few seconds before the last command to ensure that Electric is ready to handle your migrations.
+
 ```sh
 cd backend
 ./apply-migrations.sh # Under the hood this runs `dbmate` as follows:
