@@ -60,7 +60,7 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
   @override
   String get description =>
       'Fetches the migrations from Electric and generates '
-      'the migrations file';
+      'the drift schema and the Electric migrations';
 
   @override
   String get name => 'generate';
