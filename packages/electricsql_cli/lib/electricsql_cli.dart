@@ -9,6 +9,8 @@
 /// ```
 library electricsql_cli;
 
+// TODO(dart): proxy-tunnel command not implemented
+
 export 'package:code_builder/code_builder.dart';
 export 'package:electricsql_cli/src/commands/generate/builder.dart'
     show buildDriftSchemaDartFile;

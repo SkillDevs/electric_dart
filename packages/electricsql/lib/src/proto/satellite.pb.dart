@@ -504,10 +504,18 @@ class SatAuthResp extends $pb.GeneratedMessage {
 class SatErrorResp extends $pb.GeneratedMessage {
   factory SatErrorResp({
     SatErrorResp_ErrorCode? errorType,
+    $core.List<$core.int>? lsn,
+    $core.String? message,
   }) {
     final $result = create();
     if (errorType != null) {
       $result.errorType = errorType;
+    }
+    if (lsn != null) {
+      $result.lsn = lsn;
+    }
+    if (message != null) {
+      $result.message = message;
     }
     return $result;
   }
@@ -529,6 +537,9 @@ class SatErrorResp extends $pb.GeneratedMessage {
         defaultOrMaker: SatErrorResp_ErrorCode.INTERNAL,
         valueOf: SatErrorResp_ErrorCode.valueOf,
         enumValues: SatErrorResp_ErrorCode.values)
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'lsn', $pb.PbFieldType.OY)
+    ..aOS(3, _omitFieldNames ? '' : 'message')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -565,6 +576,32 @@ class SatErrorResp extends $pb.GeneratedMessage {
   $core.bool hasErrorType() => $_has(0);
   @$pb.TagNumber(1)
   void clearErrorType() => clearField(1);
+
+  /// lsn of the txn that caused the problem, if available
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get lsn => $_getN(1);
+  @$pb.TagNumber(2)
+  set lsn($core.List<$core.int> v) {
+    $_setBytes(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasLsn() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLsn() => clearField(2);
+
+  /// human readable explanation of what went wrong
+  @$pb.TagNumber(3)
+  $core.String get message => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set message($core.String v) {
+    $_setString(2, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasMessage() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMessage() => clearField(3);
 }
 
 /// (Consumer) Starts replication stream from producer to consumer

@@ -149,8 +149,22 @@ const SatErrorResp$json = {
       '6': '.Electric.Satellite.SatErrorResp.ErrorCode',
       '10': 'errorType'
     },
+    {'1': 'lsn', '3': 2, '4': 1, '5': 12, '9': 0, '10': 'lsn', '17': true},
+    {
+      '1': 'message',
+      '3': 3,
+      '4': 1,
+      '5': 9,
+      '9': 1,
+      '10': 'message',
+      '17': true
+    },
   ],
   '4': [SatErrorResp_ErrorCode$json],
+  '8': [
+    {'1': '_lsn'},
+    {'1': '_message'},
+  ],
 };
 
 @$core.Deprecated('Use satErrorRespDescriptor instead')
@@ -170,10 +184,11 @@ const SatErrorResp_ErrorCode$json = {
 /// Descriptor for `SatErrorResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satErrorRespDescriptor = $convert.base64Decode(
     'CgxTYXRFcnJvclJlc3ASSQoKZXJyb3JfdHlwZRgBIAEoDjIqLkVsZWN0cmljLlNhdGVsbGl0ZS'
-    '5TYXRFcnJvclJlc3AuRXJyb3JDb2RlUgllcnJvclR5cGUimwEKCUVycm9yQ29kZRIMCghJTlRF'
-    'Uk5BTBAAEhEKDUFVVEhfUkVRVUlSRUQQARIPCgtBVVRIX0ZBSUxFRBACEhYKElJFUExJQ0FUSU'
-    '9OX0ZBSUxFRBADEhMKD0lOVkFMSURfUkVRVUVTVBAEEhYKElBST1RPX1ZTTl9NSVNNQVRDSBAF'
-    'EhcKE1NDSEVNQV9WU05fTUlTTUFUQ0gQBg==');
+    '5TYXRFcnJvclJlc3AuRXJyb3JDb2RlUgllcnJvclR5cGUSFQoDbHNuGAIgASgMSABSA2xzbogB'
+    'ARIdCgdtZXNzYWdlGAMgASgJSAFSB21lc3NhZ2WIAQEimwEKCUVycm9yQ29kZRIMCghJTlRFUk'
+    '5BTBAAEhEKDUFVVEhfUkVRVUlSRUQQARIPCgtBVVRIX0ZBSUxFRBACEhYKElJFUExJQ0FUSU9O'
+    'X0ZBSUxFRBADEhMKD0lOVkFMSURfUkVRVUVTVBAEEhYKElBST1RPX1ZTTl9NSVNNQVRDSBAFEh'
+    'cKE1NDSEVNQV9WU05fTUlTTUFUQ0gQBkIGCgRfbHNuQgoKCF9tZXNzYWdl');
 
 @$core.Deprecated('Use satInStartReplicationReqDescriptor instead')
 const SatInStartReplicationReq$json = {
