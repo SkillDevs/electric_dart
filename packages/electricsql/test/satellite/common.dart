@@ -182,6 +182,20 @@ Map<String, Relation> kTestRelations = {
       ),
     ],
   ),
+  'bigIntTable': Relation(
+    id: 5,
+    schema: 'public',
+    table: 'bigIntTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'value',
+        type: 'INT8',
+        isNullable: false,
+        primaryKey: true,
+      ),
+    ],
+  ),
 };
 
 Future<SatelliteTestContext> makeContext({

@@ -282,6 +282,33 @@ void main() {
     expect(resultingValue, null);
   });
 
+  test('snapshot of INSERT with bigint', () async {
+    await runMigrations();
+
+    await adapter.run(
+      Statement(
+        'INSERT INTO bigIntTable(value) VALUES (1)',
+      ),
+    );
+
+    await satellite.setAuthState(authState);
+    await satellite.performSnapshot();
+    final entries = await satellite.getEntries();
+    final clientId = satellite.authState!.clientId;
+
+    final merged = localOperationsToTableChanges(
+      entries,
+      (timestamp) {
+        return generateTag(clientId, timestamp);
+      },
+      kTestRelations,
+    );
+    final opLogTableChange = merged['main.bigIntTable']!['{"value":"1"}']!;
+    final keyChanges = opLogTableChange.oplogEntryChanges;
+    final resultingValue = keyChanges.changes['value']!.value;
+    expect(resultingValue, BigInt.from(1));
+  });
+
   test('take snapshot and merge local wins', () async {
     await runMigrations();
 
