@@ -277,7 +277,6 @@ This means there is a notifier subscription leak.`''');
   void setClientListeners() {
     client.subscribeToError(_handleClientError);
     client.subscribeToRelations(updateRelations);
-    // FIXME: calling an async function in an event emitter
     client.subscribeToTransactions(applyTransaction);
     client.subscribeToOutboundStarted((_) => throttledSnapshot());
 

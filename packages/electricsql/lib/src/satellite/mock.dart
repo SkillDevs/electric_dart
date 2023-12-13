@@ -14,10 +14,10 @@ import 'package:electricsql/src/satellite/registry.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
+import 'package:electricsql/src/util/async_event_emitter.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:events_emitter/events_emitter.dart';
 import 'package:meta/meta.dart';
 
 typedef DataRecord = Record;
@@ -118,7 +118,7 @@ class MockRegistry extends BaseRegistry {
   }
 }
 
-class MockSatelliteClient extends EventEmitter implements Client {
+class MockSatelliteClient extends AsyncEventEmitter implements Client {
   bool isDown = false;
   bool replicating = false;
   bool disconnected = true;
@@ -204,7 +204,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
     }
 
     return Future(() {
-      bool emitDelivered() => emit(
+      void emitDelivered() => enqueueEmit(
             kSubscriptionDelivered,
             SubscriptionData(
               subscriptionId: subscriptionId,
@@ -249,29 +249,24 @@ class MockSatelliteClient extends EventEmitter implements Client {
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   ) {
-    final successListener = on(kSubscriptionDelivered, successCallback);
-    final errorListener = on(kSubscriptionError, errorCallback);
+    final removeSuccessListener = _on(kSubscriptionDelivered, successCallback);
+    final removeErrorListener = _on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
-      successEventListener: successListener,
-      errorEventListener: errorListener,
+      removeSuccessListener: removeSuccessListener,
+      removeErrorListener: removeErrorListener,
     );
   }
 
   @override
   void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners) {
-    removeEventListener(listeners.successEventListener);
-    removeEventListener(listeners.errorEventListener);
+    listeners.removeSuccessListener();
+    listeners.removeErrorListener();
   }
 
   @override
-  EventListener<SatelliteException> subscribeToError(ErrorCallback callback) {
-    return on('error', callback);
-  }
-
-  @override
-  void unsubscribeToError(EventListener<SatelliteException> eventListener) {
-    removeEventListener(eventListener);
+  void Function() subscribeToError(ErrorCallback callback) {
+    return _on('error', callback);
   }
 
   @override
@@ -312,14 +307,6 @@ class MockSatelliteClient extends EventEmitter implements Client {
     return;
   }
 
-  // ignore: unused_element
-  void _removeAllListeners() {
-    // Prevent concurrent modification
-    for (final listener in [...listeners]) {
-      removeEventListener(listener);
-    }
-  }
-
   @override
   Future<AuthResponse> authenticate(
     AuthState _authState,
@@ -342,7 +329,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
     final t = Timer(
       const Duration(milliseconds: 100),
-      () => emit<void>('outbound_started'),
+      () => enqueueEmit<void>('outbound_started', null),
     );
     timeouts.add(t);
 
@@ -378,27 +365,25 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToRelations(void Function(Relation relation) callback) {
+  void Function() subscribeToRelations(
+    void Function(Relation relation) callback,
+  ) {
     relationsCb = callback;
+
+    return () {
+      relationsCb = null;
+    };
   }
 
   @override
-  void unsubscribeToRelations(EventListener<Relation> eventListener) {
-    relationsCb = null;
-  }
-
-  @override
-  void subscribeToTransactions(
+  void Function() subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   ) {
     transactionsCb = callback;
-  }
 
-  @override
-  void unsubscribeToTransactions(
-    EventListener<TransactionEvent> eventListener,
-  ) {
-    throw Exception('Method not implemented.');
+    return () {
+      transactionsCb = null;
+    };
   }
 
   @override
@@ -409,15 +394,10 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  EventListener<LSN> subscribeToOutboundStarted(
+  void Function() subscribeToOutboundStarted(
     OutboundStartedCallback callback,
   ) {
-    return on<LSN>('outbound_started', callback);
-  }
-
-  @override
-  void unsubscribeToOutboundStarted(EventListener<void> eventListener) {
-    throw Exception('Method not implemented.');
+    return _on<void>('outbound_started', callback);
   }
 
   void sendErrorAfterTimeout(String subscriptionId, int timeoutMillis) {
@@ -436,10 +416,25 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
 
       final satError = subsDataErrorToSatelliteError(satSubsError);
-      emit(
+      enqueueEmit(
         kSubscriptionError,
         SubscriptionErrorData(subscriptionId: subscriptionId, error: satError),
       );
     });
+  }
+
+  void Function() _on<T>(
+    String eventName,
+    FutureOr<void> Function(T) callback,
+  ) {
+    FutureOr<void> wrapper(dynamic data) {
+      return callback(data as T);
+    }
+
+    on(eventName, wrapper);
+
+    return () {
+      removeListener(eventName, wrapper);
+    };
   }
 }

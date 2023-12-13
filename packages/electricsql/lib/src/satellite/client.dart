@@ -13,13 +13,13 @@ import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/cache.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
+import 'package:electricsql/src/util/async_event_emitter.dart';
 import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:events_emitter/events_emitter.dart';
 import 'package:meta/meta.dart';
 import 'package:synchronized/synchronized.dart';
 
@@ -42,19 +42,17 @@ const subscriptionError = {
 };
 
 abstract interface class SafeEventEmitter {
-  EventListener<SatelliteException> onError(ErrorCallback callback);
-  EventListener<Relation> onRelation(RelationCallback callback);
-  EventListener<TransactionEvent> onTransaction(
+  void Function() onError(ErrorCallback callback);
+  void Function() onRelation(RelationCallback callback);
+  void Function() onTransaction(
     IncomingTransactionCallback callback,
   );
-  EventListener<LSN> onOutboundStarted(OutboundStartedCallback callback);
+  void Function() onOutboundStarted(OutboundStartedCallback callback);
 
-  bool emitError(SatelliteException error);
-  bool emitRelation(Relation relation);
-  bool emitTransaction(TransactionEvent transactionEvent);
-  bool emitOutboundStarted(LSN lsn);
-
-  void removeListener<T>(EventListener<T> eventListener);
+  void enqueueEmitError(SatelliteException error);
+  void enqueueEmitRelation(Relation relation);
+  void enqueueEmitTransaction(TransactionEvent transactionEvent);
+  void enqueueEmitOutboundStarted(LSN lsn);
 
   void removeAllListeners();
 
@@ -208,14 +206,14 @@ class SatelliteClient implements Client {
             'socket error but no listener is attached: $error',
           );
         }
-        _emitter.emitError(error);
+        _emitter.enqueueEmitError(error);
       });
       socket.onClose(() {
         disconnect();
         if (_emitter.listenerCount('error') == 0) {
           logger.error('socket closed but no listener is attached');
         }
-        _emitter.emitError(
+        _emitter.enqueueEmitError(
           SatelliteException(SatelliteErrorCode.socketError, 'socket closed'),
         );
       });
@@ -304,7 +302,7 @@ class SatelliteClient implements Client {
       if (error is SatelliteException) {
         // subscription errors are emitted through specific event
         if (!subscriptionError.contains(error.code)) {
-          _emitter.emitError(error);
+          _emitter.enqueueEmitError(error);
         }
       } else {
         // This is an unexpected runtime error
@@ -326,34 +324,20 @@ class SatelliteClient implements Client {
   }
 
   @override
-  void subscribeToTransactions(
+  void Function() subscribeToTransactions(
     TransactionCallback callback,
   ) {
-    _emitter.onTransaction((txnEvent) async {
+    return _emitter.onTransaction((txnEvent) async {
       await callback(txnEvent.transaction);
       txnEvent.ackCb();
     });
   }
 
   @override
-  void unsubscribeToTransactions(
-    EventListener<TransactionEvent> eventListener,
-  ) {
-    _emitter.removeListener(eventListener);
-  }
-
-  @override
-  void subscribeToRelations(
+  void Function() subscribeToRelations(
     RelationCallback callback,
   ) {
-    _emitter.onRelation(callback);
-  }
-
-  @override
-  void unsubscribeToRelations(
-    EventListener<Relation> eventListener,
-  ) {
-    _emitter.removeListener(eventListener);
+    return _emitter.onRelation(callback);
   }
 
   @override
@@ -552,10 +536,10 @@ class SatelliteClient implements Client {
       throttledPushTransaction =
           Throttle(pushTransactions, Duration(milliseconds: opts.pushPeriod));
 
-      _emitter.emitOutboundStarted(message.lsn);
+      _emitter.enqueueEmitOutboundStarted(message.lsn);
       return SatInStartReplicationResp();
     } else {
-      _emitter.emitError(
+      _emitter.enqueueEmitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${outbound.isReplicating} handling 'start' request",
@@ -587,25 +571,15 @@ class SatelliteClient implements Client {
   }
 
   @override
-  EventListener<SatelliteException> subscribeToError(ErrorCallback callback) {
+  void Function() subscribeToError(ErrorCallback callback) {
     return _emitter.onError(callback);
   }
 
   @override
-  void unsubscribeToError(EventListener<SatelliteException> eventListener) {
-    _emitter.removeListener(eventListener);
-  }
-
-  @override
-  EventListener<void> subscribeToOutboundStarted(
+  void Function() subscribeToOutboundStarted(
     OutboundStartedCallback callback,
   ) {
     return _emitter.onOutboundStarted(callback);
-  }
-
-  @override
-  void unsubscribeToOutboundStarted(EventListener<void> eventListener) {
-    _emitter.removeListener(eventListener);
   }
 
   @override
@@ -619,8 +593,8 @@ class SatelliteClient implements Client {
         _subscriptionsDataCache.on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
-      successEventListener: successListener,
-      errorEventListener: errorListener,
+      removeSuccessListener: () => successListener.cancel(),
+      removeErrorListener: () => errorListener.cancel(),
     );
   }
 
@@ -628,12 +602,8 @@ class SatelliteClient implements Client {
   void unsubscribeToSubscriptionEvents(
     SubscriptionEventListeners listeners,
   ) {
-    _subscriptionsDataCache.removeEventListener(
-      listeners.successEventListener,
-    );
-    _subscriptionsDataCache.removeEventListener(
-      listeners.errorEventListener,
-    );
+    listeners.removeSuccessListener();
+    listeners.removeErrorListener();
   }
 
   @override
@@ -721,7 +691,7 @@ class SatelliteClient implements Client {
 
       return SatInStopReplicationResp();
     } else {
-      _emitter.emitError(
+      _emitter.enqueueEmitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'stop' request",
@@ -750,7 +720,7 @@ class SatelliteClient implements Client {
 
   void handleRelation(SatRelation message) {
     if (inbound.isReplicating != ReplicationStatus.active) {
-      _emitter.emitError(
+      _emitter.enqueueEmitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'relation' message",
@@ -777,7 +747,7 @@ class SatelliteClient implements Client {
     );
 
     inbound.relations[relation.id] = relation;
-    _emitter.emitRelation(relation);
+    _emitter.enqueueEmitRelation(relation);
   }
 
   void handleTransaction(SatOpLog message) {
@@ -793,7 +763,7 @@ class SatelliteClient implements Client {
   }
 
   void handleErrorResp(SatErrorResp error) {
-    _emitter.emitError(
+    _emitter.enqueueEmitError(
       serverErrorToSatelliteError(error),
     );
   }
@@ -863,7 +833,7 @@ class SatelliteClient implements Client {
           origin: lastTx.origin,
           migrationVersion: lastTx.migrationVersion,
         );
-        _emitter.emitTransaction(
+        _emitter.enqueueEmitTransaction(
           TransactionEvent(
             transaction,
             () => inbound.lastLsn = transaction.lsn,
@@ -1213,75 +1183,78 @@ DecodedMessage toMessage(Uint8List data) {
 }
 
 class SatelliteClientEventEmitter implements SafeEventEmitter {
-  final EventEmitter _emitter = EventEmitter();
+  final AsyncEventEmitter _emitter = AsyncEventEmitter();
 
   SatelliteClientEventEmitter();
 
   @override
-  bool emitError(SatelliteException error) {
-    return _emit('error', error);
+  void enqueueEmitError(SatelliteException error) {
+    return _enqueueEmit('error', error);
   }
 
   @override
-  bool emitRelation(Relation relation) {
-    return _emit('relation', relation);
+  void enqueueEmitRelation(Relation relation) {
+    return _enqueueEmit('relation', relation);
   }
 
   @override
-  bool emitTransaction(TransactionEvent transactionEvent) {
-    return _emit('transaction', transactionEvent);
+  void enqueueEmitTransaction(TransactionEvent transactionEvent) {
+    return _enqueueEmit('transaction', transactionEvent);
   }
 
   @override
-  bool emitOutboundStarted(LSN lsn) {
-    return _emit('outbound_started', lsn);
+  void enqueueEmitOutboundStarted(LSN lsn) {
+    return _enqueueEmit('outbound_started', lsn);
   }
 
   @override
-  EventListener<SatelliteException> onError(ErrorCallback callback) {
+  void Function() onError(ErrorCallback callback) {
     return _on('error', callback);
   }
 
   @override
-  EventListener<Relation> onRelation(RelationCallback callback) {
+  void Function() onRelation(RelationCallback callback) {
     return _on('relation', callback);
   }
 
   @override
-  EventListener<TransactionEvent> onTransaction(
+  void Function() onTransaction(
     IncomingTransactionCallback callback,
   ) {
     return _on('transaction', callback);
   }
 
   @override
-  EventListener<LSN> onOutboundStarted(OutboundStartedCallback callback) {
+  void Function() onOutboundStarted(OutboundStartedCallback callback) {
     return _on('outbound_started', callback);
   }
 
   @override
   int listenerCount(String event) {
-    return _emitter.listeners.where((l) => l.type == event).length;
+    return _emitter.listenerCount(event);
   }
 
   @override
   void removeAllListeners() {
-    // Prevent concurrent modification
-    for (final listener in [..._emitter.listeners]) {
-      _emitter.removeEventListener(listener);
+    _emitter.removeAllListeners(null);
+  }
+
+  void Function() _on<T>(
+    String eventName,
+    FutureOr<void> Function(T) callback,
+  ) {
+    FutureOr<void> wrapper(dynamic data) {
+      return callback(data as T);
     }
+
+    _emitter.on(eventName, wrapper);
+
+    return () {
+      _emitter.removeListener(eventName, wrapper);
+    };
   }
 
-  @override
-  void removeListener<T>(EventListener<T> eventListener) {
-    _emitter.removeEventListener(eventListener);
-  }
-
-  EventListener<T> _on<T>(String eventName, void Function(T) callback) {
-    return _emitter.on<T>(eventName, callback);
-  }
-
-  bool _emit<T>(String eventName, T data) {
-    return _emitter.emit<T>(eventName, data);
+  void _enqueueEmit<T>(String eventName, T data) {
+    return _emitter.enqueueEmit<T>(eventName, data);
   }
 }
