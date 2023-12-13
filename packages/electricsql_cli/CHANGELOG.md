@@ -1,3 +1,9 @@
+## 0.4.1
+
+* Code based on official Typescript client [v0.8.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.2)
+* New "proxy-tunnel" command that tunnels a Postgres TCP connection over a websocket for the Postgres Proxy.
+
+
 ## 0.4.0
 
 * Code based on official Typescript client [v0.8.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.0) and [v0.8.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.1)
