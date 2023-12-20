@@ -201,6 +201,7 @@ void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   expect(textColumn.dartName, 'textCol');
 
   // Conflict when using curly brances in the field definition
-  final bracesColumn = table.columns.firstWhere((c) => c.columnName == 'braces');
+  final bracesColumn =
+      table.columns.firstWhere((c) => c.columnName == 'braces');
   expect(bracesColumn.type, DriftElectricColumnType.json);
 }
