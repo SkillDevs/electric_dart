@@ -178,7 +178,7 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
 void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[3];
 
-  expect(table.columns.length, 3);
+  expect(table.columns.length, 4);
 
   expect(table.tableName, 'weirdnames');
   expect(table.dartClassName, 'Weirdnames');
@@ -199,4 +199,8 @@ void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   final textColumn = table.columns.firstWhere((c) => c.columnName == 'text');
   expect(textColumn.type, DriftElectricColumnType.string);
   expect(textColumn.dartName, 'textCol');
+
+  // Conflict when using curly brances in the field definition
+  final bracesColumn = table.columns.firstWhere((c) => c.columnName == 'braces');
+  expect(bracesColumn.type, DriftElectricColumnType.json);
 }
