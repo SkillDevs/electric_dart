@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:electricsql_cli/src/assets.dart';
 import 'package:electricsql_cli/src/exit_signals.dart';
 import 'package:path/path.dart' as path;
@@ -20,9 +21,8 @@ Future<int> dockerCompose(
   const appName = 'electric';
   //const appName = getAppName() ?? 'electric'
 
-  final tempDir = Directory.systemTemp.createTempSync('electric_sql_cli');
-  final composeFile = File(path.join(tempDir.path, 'compose.yaml'));
-  await composeFile.writeAsString(kComposeYaml);
+  final assetsDir = await getElectricCLIAssetsDir();
+  final composeFile = File(path.join(assetsDir.path, 'docker/compose.yaml'));
 
   final args = <String>[
     'compose',
@@ -42,6 +42,7 @@ Future<int> dockerCompose(
       ...Platform.environment,
       'APP_NAME': appName,
       'COMPOSE_PROJECT_NAME': appName,
+      ...env,
     },
   );
 
@@ -56,10 +57,6 @@ Future<int> dockerCompose(
     final exitCode = await proc.exitCode;
     return exitCode;
   } finally {
-    if (tempDir.existsSync()) {
-      tempDir.deleteSync(recursive: true);
-    }
-
     await disposeExitSignals();
   }
 }

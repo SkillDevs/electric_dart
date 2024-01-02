@@ -20,10 +20,7 @@ class DockerStatusCommand extends Command<int> {
 
   @override
   FutureOr<int>? run() async {
-    print("STATUS!");
-
     await dockerCompose('ps', []);
-
     return 0;
   }
 }
