@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:io';
 import 'package:electricsql_cli/src/assets.dart';
+import 'package:electricsql_cli/src/exit_signals.dart';
 import 'package:path/path.dart' as path;
 
 // final String currentScriptDir = Platform.script.path;
@@ -44,7 +45,7 @@ Future<int> dockerCompose(
     },
   );
 
-  final disposeExitSignals = _handleExitSignals(
+  final disposeExitSignals = handleExitSignals(
     onExit: (_) async {
       // Don't exit, let the docker subprocess handle it
       return false;
@@ -61,37 +62,4 @@ Future<int> dockerCompose(
 
     await disposeExitSignals();
   }
-}
-
-typedef DisposeFun = Future<void> Function();
-
-DisposeFun _handleExitSignals({
-  required Future<bool> Function(ProcessSignal) onExit,
-}) {
-  StreamSubscription<ProcessSignal>? s1, s2;
-
-  Future<void> dispose() async {
-    await s1?.cancel();
-    await s2?.cancel();
-  }
-
-  Future<void> effectiveOnExit(ProcessSignal signal) async {
-    final exitRes = await onExit(signal);
-
-    if (exitRes) {
-      await dispose();
-      print("Exit syscall has been called");
-      exit(1);
-    }
-  }
-
-  s1 = ProcessSignal.sigint.watch().listen(effectiveOnExit);
-
-  // SIGTERM is not supported on Windows. Attempting to register a SIGTERM
-  // handler raises an exception.
-  if (!Platform.isWindows) {
-    s2 = ProcessSignal.sigterm.watch().listen(effectiveOnExit);
-  }
-
-  return dispose;
 }

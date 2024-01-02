@@ -107,6 +107,8 @@ class Weirdnames extends Table {
 
   TextColumn get textCol => text().named('text')();
 
+  Column<Object> get braces => customType(ElectricTypes.json)();
+
   @override
   String? get tableName => 'weirdnames';
 

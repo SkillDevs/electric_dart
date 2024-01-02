@@ -15,12 +15,10 @@ FROM dart:stable AS build
 # Copy electricsql core source code
 WORKDIR /repo/packages/electricsql
 COPY packages/electricsql/pubspec.* ./
-RUN dart pub get
 
 # Copy CLI source code
 WORKDIR /repo/packages/electricsql_cli
 COPY packages/electricsql_cli/pubspec.* ./
-RUN dart pub get
 
 # Copy E2E client source code
 WORKDIR /repo/e2e/satellite_client

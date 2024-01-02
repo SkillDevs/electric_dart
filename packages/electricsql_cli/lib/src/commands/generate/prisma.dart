@@ -8,7 +8,8 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart';
 import 'package:recase/recase.dart';
 
-const String _kPrismaVersion = '5.5.2';
+// Version of Prisma supported by the Electric Proxy
+const String _kPrismaVersion = '5.2.0';
 const int _kNodeVersion = 20;
 
 const _kPrismaCLIDockerfile = '''

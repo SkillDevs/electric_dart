@@ -32,7 +32,7 @@ resorts to the default url which is '$defaultElectricServiceUrl\'''',
         'proxy',
         help: '''
 Optional argument providing the url to connect to the PG database via the proxy.
- *    If not provided, it uses the url set in the `PG_PROXY_URL` environment variable.
+ *    If not provided, it uses the url set in the `ELECTRIC_PROXY_URL` environment variable.
  *    If that variable is not set, it resorts to the default url which is
  *    '$defaultElectricProxyUrl'.
  *    NOTE: the generator introspects the PG database via the proxy,
@@ -60,7 +60,7 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
   @override
   String get description =>
       'Fetches the migrations from Electric and generates '
-      'the migrations file';
+      'the drift schema and the Electric migrations';
 
   @override
   String get name => 'generate';

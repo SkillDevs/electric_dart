@@ -4,16 +4,16 @@ import 'package:test/test.dart';
 
 void main() {
   test('insecureAuthToken generates expected token', () async {
-    final token = insecureAuthToken({'user_id': 'dummy-user'});
+    final token = insecureAuthToken({'sub': 'dummy-user'});
 
     final claims = JWT.decode(token).payload as Map<String, Object?>;
-    expect(claims, {'user_id': 'dummy-user'});
+    expect(claims, {'sub': 'dummy-user'});
   });
 
   test('insecureAuthToken supports non-latin characters', () async {
-    final token = insecureAuthToken({'user_id': '⚡'});
+    final token = insecureAuthToken({'sub': '⚡'});
 
     final claims = JWT.decode(token).payload as Map<String, Object?>;
-    expect(claims, {'user_id': '⚡'});
+    expect(claims, {'sub': '⚡'});
   });
 }

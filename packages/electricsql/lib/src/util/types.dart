@@ -281,7 +281,7 @@ typedef ErrorCallback = EventCallbackCall<SatelliteException>;
 typedef RelationCallback = EventCallbackCall<Relation>;
 typedef TransactionCallback = Future<void> Function(Transaction);
 typedef IncomingTransactionCallback = EventCallbackCall<TransactionEvent>;
-typedef OutboundStartedCallback = EventCallbackCall<LSN>;
+typedef OutboundStartedCallback = EventCallbackCall<void>;
 
 // class Relation {
 //   final int id;

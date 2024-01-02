@@ -70,7 +70,7 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   void Function() _hookToNotifier() {
-    final key = notifier.subscribeToDataChanges(
+    final _unsubDataChanges = notifier.subscribeToDataChanges(
       (notification) {
         final tablesChanged = notification.changes.map((e) {
           final tableName = e.qualifiedTablename.tablename;
@@ -91,7 +91,7 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
     });
 
     return () {
-      notifier.unsubscribeFromDataChanges(key);
+      _unsubDataChanges();
       tableUpdateSub.cancel();
     };
   }

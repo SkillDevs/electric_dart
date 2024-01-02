@@ -73,15 +73,14 @@ class SatelliteProcess implements Satellite {
 
   @visibleForTesting
   AuthState? authState;
-  String? _authStateSubscription;
+  UnsubscribeFunction? _unsubscribeFromAuthState;
 
   @override
   ConnectivityState? connectivityState;
-  String? _connectivityChangeSubscription;
+  UnsubscribeFunction? _unsubscribeFromConnectivityChanges;
 
   Timer? _pollingInterval;
-  String? _potentialDataChangeSubscription;
-
+  UnsubscribeFunction? _unsubscribeFromPotentialDataChanges;
   late final Throttle<DateTime> throttledSnapshot;
 
   LSN? _lsn;
@@ -167,9 +166,9 @@ class SatelliteProcess implements Satellite {
     await setAuthState(AuthState(clientId: clientId, token: authConfig.token));
 
     final notifierSubscriptions = {
-      '_authStateSubscription': _authStateSubscription,
-      '_connectivityChangeSubscription': _connectivityChangeSubscription,
-      '_potentialDataChangeSubscription': _potentialDataChangeSubscription,
+      '_authStateSubscription': _unsubscribeFromAuthState,
+      '_connectivityChangeSubscription': _unsubscribeFromConnectivityChanges,
+      '_potentialDataChangeSubscription': _unsubscribeFromPotentialDataChanges,
     };
     notifierSubscriptions.forEach((name, value) {
       if (value != null) {
@@ -180,11 +179,11 @@ This means there is a notifier subscription leak.`''');
     });
 
     // Monitor auth state changes.
-    _authStateSubscription =
+    _unsubscribeFromAuthState =
         notifier.subscribeToAuthStateChanges(_updateAuthState);
 
     // Monitor connectivity state changes.
-    _connectivityChangeSubscription =
+    _unsubscribeFromConnectivityChanges =
         notifier.subscribeToConnectivityStateChanges(
       (ConnectivityStateChangeNotification notification) async {
         // Wait for the next event loop to ensure that other listeners get a
@@ -196,7 +195,7 @@ This means there is a notifier subscription leak.`''');
     );
 
     // Request a snapshot whenever the data in our database potentially changes.
-    _potentialDataChangeSubscription =
+    _unsubscribeFromPotentialDataChanges =
         notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
     // Start polling to request a snapshot every `pollingInterval` ms.
@@ -278,7 +277,6 @@ This means there is a notifier subscription leak.`''');
   void setClientListeners() {
     client.subscribeToError(_handleClientError);
     client.subscribeToRelations(updateRelations);
-    // FIXME: calling an async function in an event emitter
     client.subscribeToTransactions(applyTransaction);
     client.subscribeToOutboundStarted((_) => throttledSnapshot());
 
@@ -298,23 +296,19 @@ This means there is a notifier subscription leak.`''');
       _pollingInterval = null;
     }
 
-    if (_authStateSubscription != null) {
-      notifier.unsubscribeFromAuthStateChanges(_authStateSubscription!);
-      _authStateSubscription = null;
+    if (_unsubscribeFromAuthState != null) {
+      _unsubscribeFromAuthState?.call();
+      _unsubscribeFromAuthState = null;
     }
 
-    if (_connectivityChangeSubscription != null) {
-      notifier.unsubscribeFromConnectivityStateChanges(
-        _connectivityChangeSubscription!,
-      );
-      _connectivityChangeSubscription = null;
+    if (_unsubscribeFromConnectivityChanges != null) {
+      _unsubscribeFromConnectivityChanges?.call();
+      _unsubscribeFromConnectivityChanges = null;
     }
 
-    if (_potentialDataChangeSubscription != null) {
-      notifier.unsubscribeFromPotentialDataChanges(
-        _potentialDataChangeSubscription!,
-      );
-      _potentialDataChangeSubscription = null;
+    if (_unsubscribeFromPotentialDataChanges != null) {
+      _unsubscribeFromPotentialDataChanges?.call();
+      _unsubscribeFromPotentialDataChanges = null;
     }
 
     _disconnect();

@@ -6,7 +6,7 @@
 [![pub package](https://img.shields.io/pub/v/electricsql_cli.svg?label=electricsql_cli&color=blue)](https://pub.dartlang.org/packages/electricsql_cli)
 
 <h1>
-    <img align="center" height="60" src="https://github.com/SkillDevs/electric_dart/blob/master/resources/electric_dart_icon.png"/>
+    <img align="center" height="60" src="https://raw.githubusercontent.com/SkillDevs/electric_dart/master/resources/electric_dart_icon.png"/>
     Electric Dart
 </h1>
 
@@ -24,8 +24,8 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 ### Reference implementation: 
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
-* Version `v0.7.1-dev`
-* Commit: `fb773fbb33201e10d3677937127fa1cdf0cae685`
+* Version `v0.8.2`
+* Commit: `dc0008d52900e6d4f2632dc76e980c5ba89adf71`
 
 
 ### What's Electric?

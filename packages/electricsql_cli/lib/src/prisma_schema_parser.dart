@@ -8,8 +8,10 @@ List<Model> parseModels(String prismaSchema) {
   final schema = prismaSchema.replaceAll(commentRegex, '');
 
   // Match models defined in the schema
-  final modelRegex =
-      RegExp(r'^\s*model\s+(?<name>\w+)\s*{(?<body>[^}]*)}', multiLine: true);
+  final modelRegex = RegExp(
+    r'^\s*model\s+(?<name>\w+)\s*{(?<body>[\S\s]*?)}(?=\n|$)',
+    multiLine: true,
+  );
   final matches = [...modelRegex.allMatches(schema)];
   final modelBodies = matches.map((match) {
     final name = match.namedGroup('name')!.trim();

@@ -27,6 +27,68 @@ void main() {
     });
   });
 
+  group('splice', () {
+    test('empty', () {
+      late List<int> list;
+
+      list = <int>[];
+      expect(list.splice(0), <int>[]);
+      expect(list, <int>[]);
+
+      list = <int>[];
+      expect(list.splice(1), <int>[]);
+      expect(list, <int>[]);
+    });
+
+    test('start >= length', () {
+      late List<int> list;
+
+      list = <int>[2];
+      expect(list.splice(1), <int>[]);
+      expect(list, <int>[2]);
+
+      list = <int>[2];
+      expect(list.splice(2), <int>[]);
+      expect(list, <int>[2]);
+    });
+
+    test('regular', () {
+      late List<int> list;
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(0), <int>[2, 3, 5]);
+      expect(list, <int>[]);
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(1), <int>[3, 5]);
+      expect(list, <int>[2]);
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(3), <int>[]);
+      expect(list, <int>[2, 3, 5]);
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(5), <int>[]);
+      expect(list, <int>[2, 3, 5]);
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(0, 1), <int>[2]);
+      expect(list, <int>[3, 5]);
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(0, 2), <int>[2, 3]);
+      expect(list, <int>[5]);
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(1, 2), <int>[3, 5]);
+      expect(list, <int>[2]);
+
+      list = <int>[2, 3, 5];
+      expect(list.splice(1, 6), <int>[3, 5]);
+      expect(list, <int>[2]);
+    });
+  });
+
   group('ignoreTimeZone', () {
     test('input utc', () {
       final inputDateUTC = DateTime.utc(2023, 10, 25, 12, 0, 0);

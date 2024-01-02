@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
+import 'package:electricsql/src/notifiers/event.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/util.dart';
 import 'package:test/test.dart';
@@ -36,7 +36,8 @@ Future<void> main() async {
   Future<int> runAndCheckNotifications(Future<void> Function() f) async {
     int notifications = 0;
     bool _hasListened = false;
-    final sub = notifier.subscribeToPotentialDataChanges((_notification) {
+    final unsubscribe =
+        notifier.subscribeToPotentialDataChanges((_notification) {
       _hasListened = true;
       notifications = notifications + 1;
     });
@@ -49,7 +50,7 @@ Future<void> main() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
 
-    notifier.unsubscribeFromPotentialDataChanges(sub);
+    unsubscribe();
     return notifications;
   }
 
@@ -158,15 +159,26 @@ Future<void> main() async {
 
     // Check that the listeners are registered
     final notifier = electric.notifier as EventNotifier;
-    expect(notifier.changeCallbacks.length, greaterThan(0));
-    expect(notifier.connectivityStatusCallbacks.length, greaterThan(0));
+    final events = [
+      EventNames.authChange,
+      EventNames.potentialDataChange,
+      EventNames.connectivityStateChange,
+    ];
+    for (final event in events) {
+      final numListeners =
+          notifier.events.listeners.where((l) => l.type == event).length;
+      expect(numListeners, greaterThan(0));
+    }
 
     // Close the Electric client
     await electric.close();
 
     // Check that the listeners are unregistered
-    expect(notifier.changeCallbacks, isEmpty);
-    expect(notifier.connectivityStatusCallbacks, isEmpty);
+    for (final event in events) {
+      final numListeners =
+          notifier.events.listeners.where((l) => l.type == event).length;
+      expect(numListeners, 0);
+    }
 
     // Check that the Satellite process is unregistered
     expect(!registry.satellites.containsKey(dbName), true);

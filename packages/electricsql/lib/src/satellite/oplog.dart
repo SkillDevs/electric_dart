@@ -313,7 +313,10 @@ String serialiseRow(Row row) {
       } else if (value.isInfinite) {
         return MapEntry(key, value.isNegative ? '-Inf' : 'Inf');
       }
+    } else if (value is BigInt) {
+      return MapEntry(key, value.toString());
     }
+
     return MapEntry(key, value);
   });
 

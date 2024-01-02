@@ -245,18 +245,18 @@ packages:
     dependency: "direct main"
     description:
       name: drift
-      sha256: d542088d353585a252f015b81c1e7603c57c996ba59a80d53a3f4644cc47f543
+      sha256: "05363b695885c72036ed5c76287125bfc6f1deda20cb3aa044a09fe22792f81b"
       url: "https://pub.dev"
     source: hosted
-    version: "2.13.2"
+    version: "2.14.1"
   drift_dev:
     dependency: "direct dev"
     description:
       name: drift_dev
-      sha256: "369d2769d84e0c2d2cb4cd420e4fdb4f975852c83ebb934733c3b382c62961cd"
+      sha256: "50c14b8248d133d36b41c1b08ceed138be869b5b98ccaf3af16c9b88c7adc54e"
       url: "https://pub.dev"
     source: hosted
-    version: "2.13.2"
+    version: "2.14.1"
   ed25519_edwards:
     dependency: transitive
     description:
@@ -271,21 +271,21 @@ packages:
       path: "../packages/electricsql"
       relative: true
     source: path
-    version: "0.3.1"
+    version: "0.4.1"
   electricsql_cli:
     dependency: "direct dev"
     description:
       path: "../packages/electricsql_cli"
       relative: true
     source: path
-    version: "0.3.1"
+    version: "0.4.1"
   electricsql_flutter:
     dependency: "direct main"
     description:
       path: "../packages/electricsql_flutter"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.0"
   embed_annotation:
     dependency: transitive
     description:
@@ -327,7 +327,7 @@ packages:
     source: hosted
     version: "2.1.0"
   file:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: file
       sha256: "5fc22d7c25582e38ad9a8515372cd9a93834027aacf1801cf01164dac0ffa08c"
@@ -633,7 +633,7 @@ packages:
     source: hosted
     version: "6.0.1"
   platform:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: platform
       sha256: "0a279f0707af40c890e80b1e9df8bb761694c074ba7e1d4ab1bc4b728e200b59"
@@ -681,7 +681,7 @@ packages:
     source: hosted
     version: "3.1.0"
   pub_semver:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: pub_semver
       sha256: "40d3ab1bbd474c4c2328c91e3a7df8c6dd629b79ece4c4bd04bee496a224fb0c"
@@ -785,10 +785,10 @@ packages:
     dependency: "direct main"
     description:
       name: sqlite3
-      sha256: db65233e6b99e99b2548932f55a987961bc06d82a31a0665451fa0b4fff4c3fb
+      sha256: c4a4c5a4b2a32e2d0f6837b33d7c91a67903891a5b7dbe706cf4b1f6b0c798c5
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.0"
+    version: "2.3.0"
   sqlite3_flutter_libs:
     dependency: "direct main"
     description:
@@ -801,10 +801,10 @@ packages:
     dependency: transitive
     description:
       name: sqlparser
-      sha256: db6354e8ba71acc50bc4afeafff2a248710ae2c00c9412e2c8b796916d4b1c45
+      sha256: "877fcefabb725d120e31f54fa669a98c002db0feeaca6cea5354543f03b5e906"
       url: "https://pub.dev"
     source: hosted
-    version: "0.32.1"
+    version: "0.33.0"
   stack_trace:
     dependency: transitive
     description:
@@ -926,7 +926,7 @@ packages:
     source: hosted
     version: "2.1.4"
   watcher:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: watcher
       sha256: "3d2ad6751b3c16cf07c7fca317a1413b3f26530319181b37e3b9039b84fc01d8"
