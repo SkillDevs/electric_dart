@@ -27,6 +27,8 @@ Future<void> main() async {
   runApp(_Entrypoint());
 }
 
+StateProvider<bool> dbDeletedProvider = StateProvider((ref) => false);
+
 class _Entrypoint extends HookWidget {
   @override
   Widget build(BuildContext context) {
@@ -72,7 +74,17 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: kElectricColorScheme,
       ),
-      home: const MyHomePage(),
+      home: Consumer(
+        builder: (context, ref, _) {
+          final dbDeleted = ref.watch(dbDeletedProvider);
+
+          if (dbDeleted) {
+            return const _DeleteDbScreen();
+          }
+
+          return const MyHomePage();
+        },
+      ),
     );
   }
 }
@@ -146,36 +158,34 @@ class MyHomePage extends HookConsumerWidget {
               ),
             ),
           ),
-          if (!kIsWeb)
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: _DeleteDbButton(),
-              ),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.all(8.0),
+              child: _DeleteDbButton(),
             ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _DeleteDbButton extends StatelessWidget {
+class _DeleteDbButton extends ConsumerWidget {
   const _DeleteDbButton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, ref) {
     return TextButton.icon(
       style: TextButton.styleFrom(
           foregroundColor: Theme.of(context).colorScheme.error),
       onPressed: () async {
+        ref.read(dbDeletedProvider.notifier).update((state) => true);
+
+        final todosDb = ref.read(todosDatabaseProvider);
+        await todosDb.todosRepo.close();
+
         await impl.deleteTodosDbFile();
-
-        if (!context.mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Database deleted, restart the app")),
-        );
       },
       icon: const Icon(Symbols.delete),
       label: const Text("Delete local database"),
@@ -349,6 +359,19 @@ class TodoTile extends ConsumerWidget {
           // satellite.notifier.potentiallyChanged();
         },
         icon: const Icon(Symbols.delete),
+      ),
+    );
+  }
+}
+
+class _DeleteDbScreen extends StatelessWidget {
+  const _DeleteDbScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Text('Local database has been deleted, please restart the app'),
       ),
     );
   }
