@@ -159,7 +159,20 @@ List<Statement> generateCompensationTriggers(Table table) {
     final fkTableName = foreignKey.table;
     final fkTablePK =
         foreignKey.parentKey; // primary key of the table pointed at by the FK.
-    final joinedFkPKs = joinColsForJSON([fkTablePK], columnTypes, null);
+
+    // This table's `childKey` points to the parent's table `parentKey`.
+    // `joinColsForJSON` looks up the type of the `parentKey` column in the provided `colTypes` object.
+    // However, `columnTypes` contains the types of the columns of this table
+    // so we need to pass an object containing the column type of the parent key.
+    // We can construct that object because the type of the parent key must be the same
+    // as the type of the child key that is pointing to it.
+    final joinedFkPKs = joinColsForJSON(
+      [fkTablePK],
+      {
+        fkTablePK: columnTypes[foreignKey.childKey]!,
+      },
+      null,
+    );
 
     return <String>[
       '''

@@ -112,6 +112,8 @@ class Weirdnames extends Table {
   Column<DbInteger> get int$ =>
       customType(ElectricEnumTypes.integer).named('int').nullable()();
 
+  Column<Object> get braces => customType(ElectricTypes.json)();
+
   @override
   String? get tableName => 'weirdnames';
 

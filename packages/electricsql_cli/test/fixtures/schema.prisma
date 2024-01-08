@@ -48,6 +48,7 @@ model weirdnames {
   c_uuid String @id @db.Uuid
   val    String @map("1val")
   text   String
+  braces   Json @default("{}") @db.Json
   int  integer?  // int used as column name, not type
 }
 

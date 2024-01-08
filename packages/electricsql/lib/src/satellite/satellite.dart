@@ -8,7 +8,6 @@ import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:events_emitter/events_emitter.dart';
 
 export 'package:electricsql/src/satellite/process.dart' show ShapeSubscription;
 
@@ -70,20 +69,16 @@ abstract class Client {
     List<String>? subscriptionIds,
   );
   Future<StopReplicationResponse> stopReplication();
-  void subscribeToRelations(RelationCallback callback);
-  void unsubscribeToRelations(EventListener<Relation> eventListener);
-  void subscribeToTransactions(TransactionCallback callback);
-  void unsubscribeToTransactions(EventListener<TransactionEvent> eventListener);
+  void Function() subscribeToRelations(RelationCallback callback);
+  void Function() subscribeToTransactions(TransactionCallback callback);
   void enqueueTransaction(
     DataTransaction transaction,
   );
   LSN getLastSentLsn();
-  EventListener<void> subscribeToOutboundStarted(
+  void Function() subscribeToOutboundStarted(
     OutboundStartedCallback callback,
   );
-  void unsubscribeToOutboundStarted(EventListener<LSN> eventListener);
-  EventListener<SatelliteException> subscribeToError(ErrorCallback callback);
-  void unsubscribeToError(EventListener<SatelliteException> eventListener);
+  void Function() subscribeToError(ErrorCallback callback);
 
   Future<SubscribeResponse> subscribe(
     String subscriptionId,
@@ -99,11 +94,11 @@ abstract class Client {
 }
 
 class SubscriptionEventListeners {
-  final EventListener<SubscriptionData> successEventListener;
-  final EventListener<SubscriptionErrorData> errorEventListener;
+  final void Function() removeSuccessListener;
+  final void Function() removeErrorListener;
 
   SubscriptionEventListeners({
-    required this.successEventListener,
-    required this.errorEventListener,
+    required this.removeSuccessListener,
+    required this.removeErrorListener,
   });
 }

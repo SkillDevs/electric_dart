@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:electricsql/util.dart';
 import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:electricsql_flutter/electricsql_flutter.dart';
@@ -43,21 +45,45 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
         electricClient = await startElectricDrift(dbName, driftRepo.db);
       } on SatelliteException catch (e) {
         if (mounted) {
-          if (!kIsWeb && e.code == SatelliteErrorCode.unknownSchemaVersion) {
+          if (e.code == SatelliteErrorCode.unknownSchemaVersion) {
             // Ask to delete the database
             final shouldDeleteLocal = await launchConfirmationDialog(
               title: "Local schema doesn't match server's",
               content: const Text("Delete local state and retry?"),
               context: context,
+              barrierDismissible: false,
             );
 
             if (shouldDeleteLocal == true) {
               await driftRepo.close();
 
-              await impl.deleteTodosDbFile();
+              if (!kIsWeb) {
+                await impl.deleteTodosDbFile();
 
-              retryVN.value++;
-              return;
+                retryVN.value++;
+                return;
+              } else {
+                // On web, we cannot properly retry automatically, so just ask the user to refresh
+                // the page
+
+                unawaited(impl.deleteTodosDbFile());
+                await Future<void>.delayed(const Duration(milliseconds: 200));
+
+                if (!context.mounted) return;
+
+                await showDialog<void>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) {
+                      return const AlertDialog(
+                        title: Text("Local database deleted"),
+                        content: Text("Please refresh the page"),
+                      );
+                    });
+
+                // Wait indefinitely until user refreshes
+                await Future<void>.delayed(const Duration(days: 9999));
+              }
             }
           }
         }

@@ -130,7 +130,7 @@ class TodoData extends DataClass implements Insertable<TodoData> {
       map['text'] = Variable<String>(text$);
     }
     map['completed'] = Variable<bool>(completed);
-    map['edited_at'] = Variable<DateTime>(editedAt);
+    map['edited_at'] = Variable<DateTime>(editedAt, ElectricTypes.timestampTZ);
     return map;
   }
 
