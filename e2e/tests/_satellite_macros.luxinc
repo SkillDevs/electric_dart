@@ -56,22 +56,9 @@
     [invoke wait-for "get_jsonb db '${id}'" "${id}" 10 $node]
 [endmacro]
 
-[macro node_write_float id f4_value f8_value]
-    # Can write valid floats to the DB
-    !write_float db '${id}' ${f4_value} ${f8_value}
-    ??{ id: '${id}',
-    ??$node
-[endmacro]
-
 [macro node_await_get_enum id]
     [invoke wait-for "get_enum db '${id}'" "${id}" 10 $node]
-[endmacro]
 
-[macro node_write_enum id value]
-    # Can write valid enums to the DB
-    !write_enum db '${id}' ${value}
-    ??{ id: '${id}', c: ${value} }
-    ??$node
 [endmacro]
 
 [macro node_get_uuid id]
@@ -116,17 +103,31 @@
     ??$node
 [endmacro]
 
+[macro node_get_enum id expected_enum]
+    !get_enum db '${id}'
+    ??{ id: '${id}', c: ${expected_enum} }
+    ??$node
+[endmacro]
+
+[macro node_write_float id f4_value f8_value]
+    # Can write valid floats to the DB
+    !write_float db '${id}' ${f4_value} ${f8_value}
+    ??{ id: '${id}',
+    ??$node
+[endmacro]
+
+[macro node_write_enum id value]
+    # Can write valid enums to the DB
+    !write_enum db '${id}' ${value}
+    ??{ id: '${id}', c: ${value} }
+    ??$node
+[endmacro]
+
 [macro node_write_json id json_value jsonb_value]
     # Can write valid JSON to the DB
     !write_json db '${id}' ${json_value} ${jsonb_value}
     #??{ id: '${id}', js: ${json_value}, jsb: ${jsonb_value} }
     # ??{ id: '${id}', jsb: ${jsonb_value} }
-    ??$node
-[endmacro]
-
-[macro node_get_enum id expected_enum]
-    !get_enum db '${id}'
-    ??{ id: '${id}', c: ${expected_enum} }
     ??$node
 [endmacro]
 
