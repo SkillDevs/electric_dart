@@ -109,10 +109,10 @@ class Weirdnames extends Table {
 
   TextColumn get text$ => text().named('text')();
 
+  Column<Object> get braces => customType(ElectricTypes.json)();
+
   Column<DbInteger> get int$ =>
       customType(ElectricEnumTypes.integer).named('int').nullable()();
-
-  Column<Object> get braces => customType(ElectricTypes.json)();
 
   @override
   String? get tableName => 'weirdnames';
