@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/enums.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:path/path.dart' as path;
@@ -71,12 +73,7 @@ Future<List<String>> getMigrationNames(Directory migrationsFolder) async {
   return dirNames;
 }
 
-const kDriftImport = 'package:drift/drift.dart';
-const kElectricSqlDriftImport = 'package:electricsql/drivers/drift.dart';
-
 String generateMigrationsDartCode(List<Migration> migrations) {
-  const kElectricSqlImport = 'package:electricsql/electricsql.dart';
-
   final migrationReference = refer('Migration', kElectricSqlImport);
 
   // Migrations
@@ -132,6 +129,7 @@ String _buildLibCode(void Function(LibraryBuilder b) updateLib) {
   final emitter = DartEmitter(
     allocator: Allocator(),
     useNullSafetySyntax: true,
+    orderDirectives: true,
   );
   final codeStr = DartFormatter().format(
     '${library.accept(emitter)}',
@@ -155,6 +153,29 @@ Future<void> buildDriftSchemaDartFile(
 }
 
 String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
+  final List<Class> tableClasses = _getTableClasses(driftSchemaInfo);
+
+  final List<Enum> electricEnums = getElectricEnumDeclarations(driftSchemaInfo);
+
+  return _buildLibCode(
+    (b) => b
+      ..body.addAll(
+        [
+          _getElectrifiedTablesField(tableClasses),
+          ...tableClasses,
+          if (electricEnums.isNotEmpty) ...[
+            // Enums
+            Code('\n// ${'-' * 30} ENUMS ${'-' * 30}\n\n'),
+            ...electricEnums,
+            getElectricEnumCodecsClass(driftSchemaInfo),
+            getElectricEnumTypesClass(driftSchemaInfo),
+          ],
+        ],
+      ),
+  );
+}
+
+List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
   final tableRef = refer('Table', kDriftImport);
 
   final List<Class> tableClasses = [];
@@ -172,6 +193,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
         // Fields
         for (final columnInfo in tableInfo.columns)
           _getColumnFieldGetter(
+            driftSchemaInfo,
             tableInfo.tableName,
             columnInfo,
             driftSchemaInfo.genOpts?.columnGenOpts(
@@ -202,16 +224,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
     );
     tableClasses.add(tableClass);
   }
-
-  return _buildLibCode(
-    (b) => b
-      ..body.addAll(
-        [
-          _getElectrifiedTablesField(tableClasses),
-          ...tableClasses,
-        ],
-      ),
-  );
+  return tableClasses;
 }
 
 Field _getElectrifiedTablesField(List<Class> tableClasses) {
@@ -243,11 +256,12 @@ Method? _getPrimaryKeyGetter(DriftTableInfo tableInfo) {
 }
 
 Method _getColumnFieldGetter(
+  DriftSchemaInfo schemaInfo,
   String tableName,
   DriftColumn columnInfo,
   DriftColumnGenOpts? genOpts,
 ) {
-  var columnBuilderExpr = _getInitialColumnBuilder(columnInfo);
+  var columnBuilderExpr = _getInitialColumnBuilder(schemaInfo, columnInfo);
 
   if (columnInfo.columnName != columnInfo.dartName) {
     columnBuilderExpr = columnBuilderExpr
@@ -271,7 +285,7 @@ Method _getColumnFieldGetter(
     (b) => b
       ..name = columnInfo.dartName
       ..type = MethodType.getter
-      ..returns = _getOutColumnTypeFromColumnInfo(columnInfo)
+      ..returns = _getOutColumnTypeFromColumnInfo(schemaInfo, columnInfo)
       ..body = columnExpr.code,
   );
 }
@@ -306,7 +320,10 @@ Method? _getTableNameGetter(DriftTableInfo tableInfo) {
   );
 }
 
-Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
+Expression _getInitialColumnBuilder(
+  DriftSchemaInfo schemaInfo,
+  DriftColumn columnInfo,
+) {
   switch (columnInfo.type) {
     case DriftElectricColumnType.int2:
       return _customElectricTypeExpr('int2');
@@ -334,6 +351,13 @@ Expression _getInitialColumnBuilder(DriftColumn columnInfo) {
       return _customElectricTypeExpr('timestampTZ');
     case DriftElectricColumnType.uuid:
       return _customElectricTypeExpr('uuid');
+    case DriftElectricColumnType.enumT:
+      final driftEnum = schemaInfo.enums[columnInfo.enumPgType!]!;
+
+      // Generates `customType(ElectricEnumTypes.<enum>Type)`
+      final enumTypesClass = refer(kElectricEnumTypesClassName);
+      return refer('customType', kDriftImport)
+          .call([enumTypesClass.property(driftEnum.driftTypeName)]);
     case DriftElectricColumnType.json:
       return _customElectricTypeExpr('json');
     case DriftElectricColumnType.jsonb:
@@ -349,7 +373,10 @@ Expression _customElectricTypeExpr(String electricTypeName) {
       .call([electricTypesClass.property(electricTypeName)]);
 }
 
-Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
+Reference _getOutColumnTypeFromColumnInfo(
+  DriftSchemaInfo schemaInfo,
+  DriftColumn columnInfo,
+) {
   switch (columnInfo.type) {
     case DriftElectricColumnType.int2:
     case DriftElectricColumnType.int4:
@@ -369,6 +396,10 @@ Reference _getOutColumnTypeFromColumnInfo(DriftColumn columnInfo) {
     case DriftElectricColumnType.timestamp:
     case DriftElectricColumnType.timestampTZ:
       return refer('Column<DateTime>', kDriftImport);
+    case DriftElectricColumnType.enumT:
+      final driftEnum = schemaInfo.enums[columnInfo.enumPgType!]!;
+      final enumDartType = driftEnum.dartEnumName;
+      return refer('Column<$enumDartType>', kDriftImport);
     case DriftElectricColumnType.json:
     case DriftElectricColumnType.jsonb:
       return refer('Column<Object>', kDriftImport);

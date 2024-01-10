@@ -3,6 +3,7 @@
 // ignore_for_file: depend_on_referenced_packages, prefer_double_quotes
 
 import 'dart:collection';
+
 import 'package:electricsql/electricsql.dart';
 
 final kElectricMigrations = UnmodifiableListView<Migration>(<Migration>[

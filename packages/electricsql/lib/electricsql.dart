@@ -17,8 +17,11 @@ export 'src/electric/index.dart';
 
 export 'src/migrators/migrators.dart' show Migration;
 
+// Type converters
+export 'src/util/converters/index.dart';
+
 // Debug
 export 'src/util/debug/index.dart';
 
 // Utils that we embed in the main library
-export 'src/util/index.dart' show ConnectivityState, TypeConverters, kJsonNull;
+export 'src/util/index.dart' show ConnectivityState;
