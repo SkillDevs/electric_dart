@@ -132,6 +132,10 @@ final electric = await electrify<AppDatabase>(
     // `dart run electricsql_cli generate`
     migrations: kElectricMigrations,
     config: ElectricConfig(
+        // Electric service URL
+        // Make sure it's not localhost if running on an emulator/usb connected device,
+        // but the IP of your machine (192.168.x.x when hosting it yourself)
+        url: 'http://<ip>:5133',
         auth: AuthConfig(
             // https://electric-sql.com/docs/usage/auth
             // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
@@ -141,10 +145,6 @@ final electric = await electrify<AppDatabase>(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
         //
-        // Electric service URL
-        // Make sure it's not localhost if running on an emulator/usb connected device,
-        // but the IP of your machine (192.168.x.x when hosting it yourself)
-        url: 'http://<ip>:<port>', 
     ),
 );
 ```

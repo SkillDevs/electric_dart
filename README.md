@@ -66,6 +66,8 @@ final electric = await electrify<AppDatabase>(
     // `dart run electricsql_cli generate`
     migrations: kElectricMigrations,
     config: ElectricConfig(
+        // Electric service URL
+        url: 'http://<ip>:5133',
         auth: AuthConfig(
             // https://electric-sql.com/docs/usage/auth
             // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
@@ -74,7 +76,6 @@ final electric = await electrify<AppDatabase>(
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
-        // url: '<ELECTRIC_SERVICE_URL>',
     ),
 );
 ```
