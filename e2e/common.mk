@@ -3,7 +3,18 @@ export PROJECT_ROOT=$(shell git rev-parse --show-toplevel)
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 export E2E_ROOT := $(dir $(mkfile_path))
 
-LUX=${E2E_ROOT}/lux/bin/lux
+
+# Any timeouts in the tests, specified in seconds,
+# are multiplied by this to convert to milliseconds.
+# If in CI, double all timeouts to reduce flakiness
+TIMEOUT_MULTIPLIER = 1000
+ifeq ($(CI), true)
+    TIMEOUT_MULTIPLIER = 2000
+endif
+
+LUX_PATH=${E2E_ROOT}lux/bin/lux
+LUX=${LUX_PATH} --multiplier ${TIMEOUT_MULTIPLIER}
+
 DOCKER_REGISTRY  = europe-docker.pkg.dev/vaxine/vaxine-io
 DOCKER_REGISTRY2 = europe-docker.pkg.dev/vaxine/ci
 export BUILDER_IMAGE=${DOCKER_REGISTRY2}/electric-builder:latest
@@ -45,7 +56,7 @@ clone_electric:
 	git fetch origin && \
 	git checkout --force ${ELECTRIC_COMMIT}
 
-lux: ${LUX}
+lux: ${LUX_PATH}
 
 ${LUX}:
 	git clone https://github.com/hawk/lux.git

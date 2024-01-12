@@ -15,12 +15,14 @@ void main() {
 
     final schemaInfo = extractInfoFromPrismaSchema(_prismaSchema);
 
-    expect(schemaInfo.tables.length, 5);
+    expect(schemaInfo.tables.length, 6);
 
     expectValidProjectsModel(schemaInfo);
     expectValidMembershipsModel(schemaInfo);
     expectValidDatatypesModel(schemaInfo);
     expectValidWeirdNames(schemaInfo);
+
+    expectEnums(schemaInfo);
   });
 }
 
@@ -178,7 +180,7 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
 void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[3];
 
-  expect(table.columns.length, 4);
+  expect(table.columns.length, 5);
 
   expect(table.tableName, 'weirdnames');
   expect(table.dartClassName, 'Weirdnames');
@@ -198,10 +200,38 @@ void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   // Conflict with drift and/or dart types
   final textColumn = table.columns.firstWhere((c) => c.columnName == 'text');
   expect(textColumn.type, DriftElectricColumnType.string);
-  expect(textColumn.dartName, 'textCol');
+  expect(textColumn.dartName, r'text$');
 
   // Conflict when using curly brances in the field definition
   final bracesColumn =
       table.columns.firstWhere((c) => c.columnName == 'braces');
   expect(bracesColumn.type, DriftElectricColumnType.json);
+
+  final enumCol = table.columns.firstWhere((e) => e.columnName == 'int');
+  expect(enumCol.type, DriftElectricColumnType.enumT);
+  expect(enumCol.dartName, r'int$');
+  expect(enumCol.enumPgType, 'integer');
+}
+
+void expectEnums(DriftSchemaInfo schemaInfo) {
+  expect(schemaInfo.enums.length, 2);
+
+  final enumInfo = schemaInfo.enums['integer']!;
+
+  expect(enumInfo.dartEnumName, 'DbInteger');
+  expect(enumInfo.enumCodecName, 'integer');
+  expect(enumInfo.driftTypeName, 'integer');
+  expect(enumInfo.values.length, 4);
+  expect(enumInfo.values.map((v) => v.dartVal).toList(), [
+    r'int$',
+    r'bool$',
+    r'double$',
+    r'$2Float',
+  ]);
+  expect(enumInfo.values.map((v) => v.pgVal).toList(), [
+    'int',
+    'Bool',
+    'DOUBLE',
+    '2Float',
+  ]);
 }

@@ -57,3 +57,14 @@ model Jsons {
   js  Json?  @db.Json
   jsb Json?
 }
+
+model Enums {
+  id String @id
+  c  Color?
+}
+
+enum Color {
+  RED
+  GREEN
+  BLUE
+}

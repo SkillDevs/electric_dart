@@ -7,9 +7,11 @@ Future<bool?> launchConfirmationDialog({
   IconData? icon,
   String? confirmationAction,
   String? cancelAction,
+  bool barrierDismissible = true,
 }) {
   return showDialog(
     context: context,
+    barrierDismissible: barrierDismissible,
     builder: (BuildContext context) {
       void confirmationOnPressed() async {
         Navigator.pop(context, true);

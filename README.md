@@ -24,8 +24,8 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 ### Reference implementation: 
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
-* Version `v0.8.2`
-* Commit: `dc0008d52900e6d4f2632dc76e980c5ba89adf71`
+* Version `v0.8.2-dev`
+* Commit: `8220227857f2e05750a8bd94c1fd6e768c09bfa6`
 
 
 ### What's Electric?
@@ -66,6 +66,8 @@ final electric = await electrify<AppDatabase>(
     // `dart run electricsql_cli generate`
     migrations: kElectricMigrations,
     config: ElectricConfig(
+        // Electric service URL
+        url: 'http://<ip>:5133',
         auth: AuthConfig(
             // https://electric-sql.com/docs/usage/auth
             // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
@@ -74,7 +76,6 @@ final electric = await electrify<AppDatabase>(
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
-        // url: '<ELECTRIC_SERVICE_URL>',
     ),
 );
 ```

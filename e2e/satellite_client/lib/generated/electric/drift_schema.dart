@@ -4,6 +4,7 @@
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
+import 'package:electricsql/electricsql.dart';
 
 const kElectrifiedTables = [
   Items,
@@ -15,6 +16,7 @@ const kElectrifiedTables = [
   Ints,
   Floats,
   Jsons,
+  Enums,
 ];
 
 class Items extends Table {
@@ -146,11 +148,47 @@ class Jsons extends Table {
   Column<Object> get jsb => customType(ElectricTypes.jsonb).nullable()();
 
   @override
-  String? get tableName => 'jsons';
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Enums extends Table {
+  TextColumn get id => text()();
+
+  Column<DbColor> get c => customType(ElectricEnumTypes.color).nullable()();
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
   bool get withoutRowId => true;
+}
+
+// ------------------------------ ENUMS ------------------------------
+
+/// Dart enum for Postgres enum "Color"
+enum DbColor { red, green, blue }
+
+/// Codecs for Electric enums
+class ElectricEnumCodecs {
+  /// Codec for Dart enum "Color"
+  static final color = ElectricEnumCodec<DbColor>(
+    dartEnumToPgEnum: <DbColor, String>{
+      DbColor.red: 'RED',
+      DbColor.green: 'GREEN',
+      DbColor.blue: 'BLUE',
+    },
+    values: DbColor.values,
+  );
+}
+
+/// Drift custom types for Electric enums
+class ElectricEnumTypes {
+  /// Codec for Dart enum "Color"
+  static final color = CustomElectricTypeGeneric(
+    codec: ElectricEnumCodecs.color,
+    typeName: 'Color',
+  );
 }

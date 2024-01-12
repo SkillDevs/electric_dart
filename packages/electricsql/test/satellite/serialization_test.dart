@@ -32,6 +32,9 @@ void main() {
         RelationColumn(name: 'bool1', type: 'BOOL', isNullable: true),
         RelationColumn(name: 'bool2', type: 'BOOL', isNullable: true),
         RelationColumn(name: 'bool3', type: 'BOOL', isNullable: true),
+        // bundled migrations contain type 'TEXT' for enums
+        RelationColumn(name: 'enum1', type: 'TEXT', isNullable: true),
+        RelationColumn(name: 'enum2', type: 'TEXT', isNullable: true),
       ],
     );
 
@@ -49,6 +52,9 @@ void main() {
           'bool1': PgType.bool,
           'bool2': PgType.bool,
           'bool3': PgType.bool,
+          // enum types are transformed to text type by our generator
+          'enum1': PgType.text,
+          'enum2': PgType.text,
         },
       },
       migrations: [],
@@ -66,6 +72,8 @@ void main() {
       'bool1': 1,
       'bool2': 0,
       'bool3': null,
+      'enum1': 'red',
+      'enum2': null,
     };
     final sRow = serializeRow(record, rel, dbDescription);
     expect(
@@ -81,6 +89,8 @@ void main() {
         '5e+234',
         't',
         'f',
+        '',
+        'red',
         '',
       ],
     );
@@ -101,6 +111,8 @@ void main() {
       'bool1': null,
       'bool2': null,
       'bool3': null,
+      'enum1': 'red',
+      'enum2': null,
     };
 
     final sRow2 = serializeRow(record2, rel, dbDescription);
@@ -117,6 +129,8 @@ void main() {
         '-Infinity',
         '',
         '',
+        '',
+        'red',
         '',
       ],
     );
@@ -259,26 +273,29 @@ void main() {
       tableType: SatRelation_RelationType.TABLE,
       columns: [
         RelationColumn(name: 'value', type: 'INTEGER', isNullable: true),
+        // at runtime, incoming SatRelation messages contain the name of the enum type
+        RelationColumn(name: 'color', type: 'COLOR', isNullable: true),
       ],
     );
 
+    final row = <String, Object?>{
+      'value': 6,
+      'color': 'red',
+    };
     final satOpRow = serializeRow(
-      {'value': 6},
+      row,
       newTableRelation,
       testDbDescription,
     );
 
-    // Encoded values ["6"]
     expect(
-      satOpRow.values,
-      [
-        Uint8List.fromList(['6'.codeUnitAt(0)]),
-      ],
+      satOpRow.values.map((bytes) => utf8.decode(bytes)),
+      ['6', 'red'],
     );
 
     final deserializedRow =
         deserializeRow(satOpRow, newTableRelation, testDbDescription);
 
-    expect(deserializedRow, {'value': 6});
+    expect(deserializedRow, row);
   });
 }

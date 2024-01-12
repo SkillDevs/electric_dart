@@ -20,16 +20,14 @@ class ElectricTypes {
   static const JsonBType jsonb = JsonBType();
 }
 
-abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
+class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
     implements CustomSqlType<DartT> {
   final Codec<DartT, SQLType> codec;
   final String typeName;
-  final PgType pgType;
 
-  const CustomElectricType({
+  const CustomElectricTypeGeneric({
     required this.codec,
     required this.typeName,
-    required this.pgType,
   });
 
   @override
@@ -53,6 +51,17 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
 
   @override
   String sqlTypeName(GenerationContext context) => typeName;
+}
+
+abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
+    extends CustomElectricTypeGeneric<DartT, SQLType> {
+  final PgType pgType;
+
+  const CustomElectricType({
+    required super.codec,
+    required super.typeName,
+    required this.pgType,
+  });
 }
 
 class TimestampType extends CustomElectricType<DateTime, String> {

@@ -13,6 +13,7 @@ import 'package:electricsql/src/util/converters/codecs/timestamptz.dart';
 import 'package:electricsql/src/util/converters/codecs/timetz.dart';
 import 'package:electricsql/src/util/converters/codecs/uuid.dart';
 
+export 'package:electricsql/src/util/converters/codecs/enum.dart';
 export 'package:electricsql/src/util/converters/codecs/json.dart'
     show kJsonNull;
 
