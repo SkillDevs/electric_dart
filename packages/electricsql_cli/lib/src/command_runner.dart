@@ -1,6 +1,7 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
+import 'package:electricsql_cli/src/env.dart';
 import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 
@@ -38,6 +39,7 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
     addCommand(GenerateMigrationsCommand(logger: _logger));
     addCommand(ProxyTunnelCommand(logger: _logger));
     addCommand(DockerStatusCommand(logger: _logger));
+    addCommand(DockerStartCommand(logger: _logger));
   }
 
   @override
@@ -47,6 +49,9 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
 
   @override
   Future<int> run(Iterable<String> args) async {
+    // Load env
+    loadEnv();
+
     try {
       final topLevelResults = parse(args);
       if (topLevelResults['verbose'] == true) {

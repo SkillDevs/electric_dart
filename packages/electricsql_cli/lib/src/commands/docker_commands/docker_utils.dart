@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:async';
-import 'dart:io';
-import 'dart:isolate';
 import 'package:electricsql_cli/src/assets.dart';
 import 'package:electricsql_cli/src/exit_signals.dart';
+import 'package:electricsql_cli/src/util.dart';
 import 'package:path/path.dart' as path;
 
 // final String currentScriptDir = Platform.script.path;
@@ -17,9 +15,7 @@ Future<int> dockerCompose(
   List<String> userArgs, {
   Map<String, String> env = const {},
 }) async {
-  // TODO(dart): appname
-  const appName = 'electric';
-  //const appName = getAppName() ?? 'electric'
+  final appName = getAppName() ?? 'electric';
 
   final assetsDir = await getElectricCLIAssetsDir();
   final composeFile = File(path.join(assetsDir.path, 'docker/compose.yaml'));
