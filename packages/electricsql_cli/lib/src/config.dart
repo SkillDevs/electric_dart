@@ -219,6 +219,8 @@ class Config {
 
   final Map<String, Object?> _map;
 
+  Iterable<MapEntry<String, Object?>> get entries => _map.entries;
+
   T read<T>(String key) {
     if (!_map.containsKey(key)) {
       throw ArgumentError('Config name not loaded: $key');

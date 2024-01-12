@@ -1,5 +1,21 @@
+import 'dart:io';
+
+import 'package:electricsql_cli/src/exit_signals.dart';
+
+const int kSigIntExitCode = 130;
+
 bool notBlank(String? str) {
   return str != null && str.trim().isNotEmpty;
+}
+
+String prettyMap(Map<String, Object?> map) {
+  final buffer = StringBuffer('{');
+  buffer.writeln();
+  for (final entry in map.entries) {
+    buffer.writeln('  ${entry.key}: ${entry.value},');
+  }
+  buffer.write('}');
+  return buffer.toString();
 }
 
 String? getAppName() {
@@ -42,7 +58,6 @@ Map<String, Object?> extractDatabaseURL(String url) {
   };
 }
 
-
 Map<String, Object?> extractServiceURL(String serviceUrl) {
   final parsed = Uri.parse(serviceUrl);
   if (parsed.host.isEmpty) {
@@ -52,4 +67,20 @@ Map<String, Object?> extractServiceURL(String serviceUrl) {
     'host': parsed.host,
     'port': parsed.hasPort ? parsed.port : null,
   };
+}
+
+Future<int> waitForProcess(Process p) async {
+  final disposeExitSignals = handleExitSignals(
+    onExit: (_) async {
+      // Don't exit, let the process handle it
+      return false;
+    },
+  );
+
+  try {
+    final exitCode = await p.exitCode;
+    return exitCode;
+  } finally {
+    await disposeExitSignals();
+  }
 }

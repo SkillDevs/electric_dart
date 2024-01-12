@@ -1,16 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:electricsql_cli/src/assets.dart';
-import 'package:electricsql_cli/src/exit_signals.dart';
 import 'package:electricsql_cli/src/util.dart';
 import 'package:path/path.dart' as path;
 
-// final String currentScriptDir = Platform.script.path;
-// final String envrcFile = path.join(currentScriptDir, '../../backend/.envrc');
-// final String composeFile =
-//     path.join(currentScriptDir, '../../backend/docker-compose.yaml');
-
-Future<int> dockerCompose(
+Future<Process> dockerCompose(
   String command,
   List<String> userArgs, {
   Map<String, String> env = const {},
@@ -42,17 +36,5 @@ Future<int> dockerCompose(
     },
   );
 
-  final disposeExitSignals = handleExitSignals(
-    onExit: (_) async {
-      // Don't exit, let the docker subprocess handle it
-      return false;
-    },
-  );
-
-  try {
-    final exitCode = await proc.exitCode;
-    return exitCode;
-  } finally {
-    await disposeExitSignals();
-  }
+  return proc;
 }
