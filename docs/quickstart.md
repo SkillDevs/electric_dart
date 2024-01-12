@@ -140,7 +140,11 @@ final electric = await electrify<AppDatabase>(
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
-        // url: '<ELECTRIC_SERVICE_URL>',
+        //
+        // Electric service URL
+        // Make sure it's not localhost if running on an emulator/usb connected device,
+        // but the IP of your machine (192.168.x.x when hosting it yourself)
+        url: 'http://<ip>:<port>', 
     ),
 );
 ```
@@ -164,6 +168,9 @@ Everything should be working now. You can use the `drift` database normally.
 Inserting, updating or deleting via the drift APIs should automatically sync the data in the Postgres database.
 
 You can see some examples of writes and reads in the main [README](https://github.com/SkillDevs/electric_dart/blob/master/README.md).
+
+> [!NOTE]  
+> If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
 
 
 ### 7. (Optional) Configure how the Drift code for Electric is generated

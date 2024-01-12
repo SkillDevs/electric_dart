@@ -32,8 +32,8 @@ Before starting the app, we need to start the Electric service and a Postgres da
 cd backend
 ./start.sh # This sets environment variables from .envrc and starts the docker-compose
 ```
-
-> **NOTE**: If you are running the example from a non tagged commit, it is highly recommended to change the `ELECTRIC_IMAGE` in the `.envrc` file to `electric:local-build` and run `make` on the main Electric repository (https://github.com/electric-sql/electric) at the same commit the Dart client is based on. You can find that commit in the Dart client README. This will ensure that the client matches the Electric service behavior, as the protocol can vary depending on the version.
+> [!NOTE]  
+> If you are running the example from a non tagged commit, it is highly recommended to change the `ELECTRIC_IMAGE` in the `.envrc` file to `electric:local-build` and run `make` on the main Electric repository (https://github.com/electric-sql/electric) at the same commit the Dart client is based on. You can find that commit in the Dart client README. This will ensure that the client matches the Electric service behavior, as the protocol can vary depending on the version.
 
 ### 2. Apply migrations in Postgres
 
@@ -57,9 +57,11 @@ cd backend
 flutter pub get
 ```
 
-### 4. Generate the client migrations file
+### 4. Generate the glue code
 
-This generates the migrations Dart code needed by the Electric client to bundle the migrations. There is more information about this below.
+`electricsql` for Dart uses [drift](https://pub.dev/packages/drift) to provide a type-safe interface to the local SQLite database.
+The `electricsql_cli` tool can be used to automatically generate the `drift` schema based on your Postgres schema. That way you don't need to replicate the Postgres tables in `drift` table definitions in the app. The example already has this code generated, but you can call it yourself to make sure it works correctly.
+Another task this generation does is to bundle the migrations of the Postgres database into the client. More information below.
 
 ```sh
 # Within the Flutter app folder, where the pubspec.yaml file is located.
@@ -73,6 +75,9 @@ flutter run
 ```
 
 You can run additional Flutter apps to test how they sync automatically. For example, you can run the web version and the mobile version at the same time. `flutter run -d <device_id>`
+
+> [!NOTE]  
+> If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
 
 ### 5. (Optional) Tweak the Electric configuration
 
@@ -92,16 +97,15 @@ dbmate -d migrations -u "postgres://postgres:proxy_password@localhost:65432/todo
 
 Every time the schema changes in Postgres, we need to update the client bundling the required migrations. You can do that following the next section, although in this example they have already been generated.
 
-### Generate the client migrations file
+### Generating the glue code
 
-We can automatically generate the necessary migrations that the client app needs to bundle using the CLI tool.
+We can automatically generate the necessary migrations and drift schema code that the client app needs by using the CLI tool.
 With `electricsql_cli` as a dev dependency in your app, you can then run: 
 
 ```sh
 dart run electricsql_cli generate
 ```
 
-It will connect to the Electric service and generate the migrations file automatically. You can configure the service url
-as well as the output directory. Check out the options with `--help`.
+It will connect to the Electric service and generate all the necessary glue code. You can configure the service url as well as the output directory. Check out the options with `--help`.
 
 The generated code contains the constant `kElectricMigrations` which you need to provide to the `electrify` function when initializing Electric.

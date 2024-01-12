@@ -49,6 +49,7 @@ class _Entrypoint extends HookWidget {
       return InitAppLoader(initDataVN: initDataVN);
     }
 
+    // Database and Electric are ready
     return ProviderScope(
       overrides: [
         todosDatabaseProvider.overrideWithValue(initData.todosDb),
@@ -283,9 +284,6 @@ class _TodosLoaded extends HookConsumerWidget {
                     );
 
                     textController.clear();
-
-                    // final satellite = ref.read(satelliteProvider);
-                    // satellite.notifier.potentiallyChanged();
                   },
                 ),
                 const SizedBox(
@@ -328,9 +326,6 @@ class TodoTile extends ConsumerWidget {
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.updateTodo(todo.copyWith(completed: !todo.completed));
-
-          // final satellite = ref.read(satelliteProvider);
-          // satellite.notifier.potentiallyChanged();
         },
         icon: todo.completed
             ? Icon(
@@ -354,9 +349,6 @@ class TodoTile extends ConsumerWidget {
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.removeTodo(todo.id);
-
-          // final satellite = ref.read(satelliteProvider);
-          // satellite.notifier.potentiallyChanged();
         },
         icon: const Icon(Symbols.delete),
       ),
