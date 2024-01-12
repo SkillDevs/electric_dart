@@ -6,8 +6,7 @@ import 'package:path/path.dart';
 const minorVersion = kElectricProtocolVersion;
 
 final configOptions = <String, ConfigOption<Object>>{
-    // *** Client options ***
-
+  // *** Client options ***
   'SERVICE': ConfigOption<String>(
     valueTypeName: 'url',
     doc: 'URL of the Electric service.',
@@ -38,7 +37,8 @@ final configOptions = <String, ConfigOption<Object>>{
   'CLIENT_PATH': ConfigOption<String>(
     valueTypeName: 'path',
     shortForm: 'o',
-    doc: 'Path to the directory where the generated electric client code will be written.',
+    doc:
+        'Path to the directory where the generated electric client code will be written.',
     groups: ['client'],
     defaultValue: join('.', 'lib', 'generated', 'electric'),
   ),
@@ -119,10 +119,10 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'ELECTRIC_USE_IPV6': ConfigOption<bool>(
     defaultValue: false,
-    doc: '''
-Make Electric listen on :: instead of 0.0.0.0. On Linux this allows inbound 
-connections over both IPv6 and IPv4. On Windows and some BSD systems inbound 
-connections will only be accepted over IPv6 when this setting is enabled.''',
+    doc:
+        'Make Electric listen on :: instead of 0.0.0.0. On Linux this allows inbound '
+        'connections over both IPv6 and IPv4. On Windows and some BSD systems inbound '
+        'connections will only be accepted over IPv6 when this setting is enabled.',
     groups: ['electric'],
   ),
   'LOGICAL_PUBLISHER_HOST': ConfigOption<String>(
@@ -140,9 +140,9 @@ connections will only be accepted over IPv6 when this setting is enabled.''',
   'HTTP_PORT': ConfigOption<int>(
     defaultValueFun: () => defaultServiceUrlPart('port', 5133),
     valueTypeName: 'port',
-    doc: '''
-Port for HTTP connections. Includes client websocket connections on /ws, and 
-other functions on /api.''',
+    doc:
+        'Port for HTTP connections. Includes client websocket connections on /ws, and '
+        'other functions on /api.',
     groups: ['electric', 'client'],
   ),
   'PG_PROXY_PORT': ConfigOption<int>(
@@ -154,7 +154,8 @@ other functions on /api.''',
   'PG_PROXY_PASSWORD': ConfigOption<String>(
     defaultValue: 'proxy_password',
     valueTypeName: 'password',
-    doc: 'Password to use when connecting to the Postgres proxy via psql or any other Postgres client.',
+    doc:
+        'Password to use when connecting to the Postgres proxy via psql or any other Postgres client.',
     groups: ['electric', 'client', 'proxy'],
   ),
   'AUTH_MODE': ConfigOption<String>(
@@ -175,20 +176,23 @@ other functions on /api.''',
   ),
   'AUTH_JWT_NAMESPACE': ConfigOption<String>(
     valueTypeName: 'namespace',
-    doc: '''This is an optional setting that specifies the location inside the token of 
-custom claims that are specific to Electric.''',
+    doc:
+        'This is an optional setting that specifies the location inside the token of '
+        'custom claims that are specific to Electric.',
     groups: ['electric'],
   ),
   'AUTH_JWT_ISS': ConfigOption<String>(
     valueTypeName: 'iss',
-    doc: '''This optional setting allows you to specificy the "issuer" that will be matched 
-against the iss claim extracted from auth tokens.''',
+    doc:
+        'This optional setting allows you to specificy the "issuer" that will be matched '
+        'against the iss claim extracted from auth tokens.',
     groups: ['electric'],
   ),
   'AUTH_JWT_AUD': ConfigOption<String>(
     valueTypeName: 'aud',
-    doc: '''This optional setting allows you to specificy the "audience" that will be matched
-against the aud claim extracted from auth tokens.''',
+    doc:
+        'This optional setting allows you to specificy the "audience" that will be matched '
+        'against the aud claim extracted from auth tokens.',
     groups: ['electric'],
   ),
   'ELECTRIC_TELEMETRY': ConfigOption<String>(
@@ -204,83 +208,10 @@ against the aud claim extracted from auth tokens.''',
     groups: ['electric'],
   ),
   'ELECTRIC_IMAGE': ConfigOption<String>(
-    defaultValue: 'electricsql/electric:$minorVersion', // Latest minor version of the electric service
+    defaultValue:
+        'electricsql/electric:$minorVersion', // Latest minor version of the electric service
     valueTypeName: 'image',
     doc: 'The Docker image to use for Electric.',
     groups: ['electric'],
   ),
 };
-
-/*
-export const configOptions = {
- 
-  AUTH_MODE: {
-    defaultVal: 'insecure',
-    valueType: String,
-    valueTypeName: 'secure | insecure',
-    doc: 'Authentication mode to use to authenticate clients.',
-    groups: ['electric'],
-  },
-  AUTH_JWT_ALG: {
-    valueType: String,
-    valueTypeName: 'algorithm',
-    doc: 'The algorithm to use for JWT verification.',
-    groups: ['electric'],
-  },
-  AUTH_JWT_KEY: {
-    valueType: String,
-    valueTypeName: 'key',
-    doc: 'The key to use for JWT verification',
-    groups: ['electric'],
-  },
-  AUTH_JWT_NAMESPACE: {
-    valueType: String,
-    valueTypeName: 'namespace',
-    doc: dedent`
-      This is an optional setting that specifies the location inside the token of 
-      custom claims that are specific to Electric.
-    `,
-    groups: ['electric'],
-  },
-  AUTH_JWT_ISS: {
-    valueType: String,
-    valueTypeName: 'iss',
-    doc: dedent`
-      This optional setting allows you to specificy the "issuer" that will be matched 
-      against the iss claim extracted from auth tokens.
-    `,
-    groups: ['electric'],
-  },
-  AUTH_JWT_AUD: {
-    valueType: String,
-    valueTypeName: 'aud',
-    doc: dedent`
-      This optional setting allows you to specificy the "audience" that will be matched
-      against the aud claim extracted from auth tokens.
-    `,
-    groups: ['electric'],
-  },
-  ELECTRIC_TELEMETRY: {
-    valueType: String,
-    defaultVal: 'enabled',
-    valueTypeName: 'enabled | disabled',
-    doc: 'Set to "disable" to disable sending telemetry data to Electric.',
-    groups: ['electric'],
-  },
-  POSTGRESQL_IMAGE: {
-    valueType: String,
-    valueTypeName: 'image',
-    defaultVal: 'postgres:14-alpine',
-    doc: 'The Docker image to use for the PostgreSQL database.',
-    groups: ['electric'],
-  },
-  ELECTRIC_IMAGE: {
-    valueType: String,
-    valueTypeName: 'image',
-    defaultVal: `electricsql/electric:${minorVersion}`, // Latest minor version of this library
-    doc: 'The Docker image to use for Electric.',
-    groups: ['electric'],
-  },
-} as const
-
-*/

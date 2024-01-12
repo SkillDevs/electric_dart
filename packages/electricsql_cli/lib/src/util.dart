@@ -18,11 +18,20 @@ String prettyMap(Map<String, Object?> map) {
   return buffer.toString();
 }
 
+/// Get the name of the current project.
 String? getAppName() {
-  // const packageJsonPath = path.join(appRoot, 'package.json')
-  // return JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).name
-  // TODO(dart): getAppName
-  return 'custom_cli_app';
+  final pubspecFile = File('pubspec.yaml');
+  if (!pubspecFile.existsSync()) {
+    return null;
+  }
+  final pubspec = pubspecFile.readAsStringSync();
+  final regexp = RegExp(r'^name:\s+(\S+)\s*$', multiLine: true);
+  final match = regexp.firstMatch(pubspec);
+
+  if (match != null) {
+    return match[1];
+  }
+  return null;
 }
 
 String buildDatabaseURL({

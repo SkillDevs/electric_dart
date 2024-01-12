@@ -40,6 +40,8 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
     addCommand(ProxyTunnelCommand(logger: _logger));
     addCommand(DockerStatusCommand(logger: _logger));
     addCommand(DockerStartCommand(logger: _logger));
+    addCommand(DockerStopCommand(logger: _logger));
+    addCommand(DockerPsqlCommand(logger: _logger));
   }
 
   @override

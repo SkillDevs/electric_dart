@@ -33,13 +33,13 @@ class DockerStartCommand extends Command<int> {
 
   @override
   FutureOr<int>? run() async {
-    if (argResults!['database-url'] != null &&
-        argResults!['with-postgres'] != null) {
+    final opts = getOptsFromCommand(this);
+
+    if (opts['database-url'] != null && opts['with-postgres'] != null) {
       _logger.err('You cannot set --database-url when using --with-postgres.');
       return 1;
     }
 
-    final opts = getOptsFromCommand(this);
     final config = getConfig(opts);
     if (!config.read<bool>('WITH_POSTGRES') &&
         config.read<String>('DATABASE_URL').isEmpty) {
