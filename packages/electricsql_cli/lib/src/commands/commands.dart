@@ -1,3 +1,4 @@
+export 'configure/command_show_config.dart';
 export 'configure/command_with_config.dart';
 export 'docker_commands/command_psql.dart';
 export 'docker_commands/command_start.dart';
