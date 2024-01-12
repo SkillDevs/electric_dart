@@ -36,12 +36,14 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
       );
 
     // Add sub commands
-    addCommand(GenerateMigrationsCommand(logger: _logger));
-    addCommand(ProxyTunnelCommand(logger: _logger));
-    addCommand(DockerStatusCommand(logger: _logger));
+    addCommand(GenerateElectricClientCommand(logger: _logger));
     addCommand(DockerStartCommand(logger: _logger));
     addCommand(DockerStopCommand(logger: _logger));
+    addCommand(DockerStatusCommand(logger: _logger));
     addCommand(DockerPsqlCommand(logger: _logger));
+    // TODO(dart): show-config
+    addCommand(CommandWithConfigCommand(logger: _logger));
+    addCommand(ProxyTunnelCommand(logger: _logger));
   }
 
   @override

@@ -10,6 +10,9 @@ import 'package:web_socket_channel/io.dart';
 const String defaultElectricServiceWSUrl = 'ws://localhost:5133';
 const int defaultLocalPort = 65432;
 
+
+// TODO(dart): Refactor with cli v2
+
 class ProxyTunnelCommand extends Command<int> {
   ProxyTunnelCommand({
     required Logger logger,
@@ -34,7 +37,7 @@ Optional argument providing the local port to bind the tunnel to.''',
 
   @override
   String get description =>
-      'Opens a tunnel to the Electric Postgres Proxy and binds it to a local port';
+      'Open a tunnel to the Electric Postgres Proxy and binds it to a local port';
 
   @override
   String get name => 'proxy-tunnel';

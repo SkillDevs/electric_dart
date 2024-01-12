@@ -8,6 +8,13 @@ bool notBlank(String? str) {
   return str != null && str.trim().isNotEmpty;
 }
 
+String removeTrailingSlash(String str) {
+  if (str.endsWith('/')) {
+    return str.substring(0, str.length - 1);
+  }
+  return str;
+}
+
 String prettyMap(Map<String, Object?> map) {
   final buffer = StringBuffer('{');
   buffer.writeln();

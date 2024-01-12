@@ -139,6 +139,20 @@ Config getConfig([Map<String, Object?>? options]) {
   return Config(_resolvedValues);
 }
 
+Map<String, String> envFromConfig(Config config) {
+  return Map.fromEntries(
+    config.entries.map(
+      (entry) {
+        final name = entry.key;
+        return MapEntry(
+          name.startsWith('ELECTRIC_') ? name : 'ELECTRIC_$name',
+          config.read<Object?>(entry.key).toString(),
+        );
+      },
+    ),
+  );
+}
+
 void expectValidConfigName<T>(String name) {
   if (!configOptions.containsKey(name)) {
     throw ArgumentError('Invalid config name: $name');
