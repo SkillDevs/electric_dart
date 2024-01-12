@@ -25,3 +25,5 @@ export 'src/util/debug/index.dart';
 
 // Utils that we embed in the main library
 export 'src/util/index.dart' show ConnectivityState;
+
+export 'src/version.dart' show kElectricProtocolVersion;
