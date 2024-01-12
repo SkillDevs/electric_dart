@@ -16,6 +16,7 @@ class DockerStatusCommand extends Command<int> {
   @override
   String get name => 'status';
 
+  // ignore: unused_field
   final Logger _logger;
 
   @override
