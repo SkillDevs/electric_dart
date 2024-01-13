@@ -2,11 +2,17 @@ import 'dart:io';
 
 import 'package:dotenv/dotenv.dart';
 
-late DotEnv programEnv;
+DotEnv? _cachedProgramEnv;
 
-void loadEnv() {
-  programEnv = DotEnv(includePlatformEnvironment: true);
+DotEnv get programEnv {
+  if (_cachedProgramEnv == null) {
+    final env = _loadEnv();
+    _cachedProgramEnv = env;
+  }
+  return _cachedProgramEnv!;
+}
 
+DotEnv _loadEnv() {
   final envFiles = <String>[
     '.env',
     '.env.local',
@@ -21,5 +27,8 @@ void loadEnv() {
   }
 
   final effectiveFiles = envFiles.where((file) => File(file).existsSync());
-  programEnv.load(effectiveFiles);
+  final dotEnv = DotEnv(includePlatformEnvironment: true);
+  dotEnv.load(effectiveFiles);
+
+  return dotEnv;
 }

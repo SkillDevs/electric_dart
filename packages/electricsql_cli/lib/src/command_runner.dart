@@ -53,8 +53,8 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
 
   @override
   Future<int> run(Iterable<String> args) async {
-    // Load env
-    loadEnv();
+    // Eagerly load env when starting the CLI by reading the global dotenv variable
+    programEnv;
 
     try {
       final topLevelResults = parse(args);
