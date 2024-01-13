@@ -220,7 +220,7 @@ Future<void> _runGenerator({
   required bool debug,
   required Logger logger,
 }) async {
-  logger.info('Generating migrations file...');
+  logger.info('Generating the Electric client code...');
 
   final currentDir = Directory.current;
 
