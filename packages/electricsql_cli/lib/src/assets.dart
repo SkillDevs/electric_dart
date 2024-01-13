@@ -12,8 +12,7 @@ Future<Directory> getElectricCLIAssetsDir() async {
       .where((pkg) => pkg.name == 'electricsql_cli')
       .map((e) => e.packageUriRoot)
       .first;
-  final cliLibDir =
-      Directory(cliSrcUri.toFilePath(windows: Platform.isWindows));
+  final cliLibDir = Directory(cliSrcUri.toFilePath());
 
   final cliRootDir = cliLibDir.parent;
 

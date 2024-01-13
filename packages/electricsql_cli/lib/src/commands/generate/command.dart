@@ -283,14 +283,23 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
     final prismaCLIDir =
         await Directory(path.join(tmpDir.path, 'prisma-cli')).create();
     final prismaCLI = PrismaCLI(logger: logger, folder: prismaCLIDir);
-    logger.info('Installing Prisma CLI via Docker...');
-    await prismaCLI.install();
+
+    await wrapWithProgress(
+      logger,
+      () => prismaCLI.install(),
+      progressMsg: 'Installing Prisma CLI via Docker',
+      completeMsg: 'Prisma CLI installed',
+    );
 
     final prismaSchema = await createPrismaSchema(tmpDir, config: config);
 
     // Introspect the created DB to update the Prisma schema
-    logger.info('Introspecting database...');
-    await introspectDB(prismaCLI, prismaSchema);
+    await wrapWithProgress(
+      logger,
+      () => introspectDB(prismaCLI, prismaSchema),
+      progressMsg: 'Introspecting database',
+      completeMsg: 'Database introspected',
+    );
 
     final prismaSchemaContent = prismaSchema.readAsStringSync();
 
@@ -302,13 +311,21 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       prismaSchemaContent,
       genOpts: opts.driftSchemaGenOpts,
     );
-    logger.info('Building Drift DB schema...');
     final driftSchemaFile = resolveDriftSchemaFile(outFolder);
-    await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
+    await wrapWithProgress(
+      logger,
+      () => buildDriftSchemaDartFile(schemaInfo, driftSchemaFile),
+      progressMsg: 'Generating Drift DB schema',
+      completeMsg: 'Drift DB schema generated',
+    );
 
-    logger.info('Building migrations...');
     final migrationsFile = resolveMigrationsFile(outFolder);
-    await buildMigrations(migrationsDir, migrationsFile);
+    await wrapWithProgress(
+      logger,
+      () => buildMigrations(migrationsDir, migrationsFile),
+      progressMsg: 'Generating bundled migrations',
+      completeMsg: 'Bundled migrations generated',
+    );
   } catch (e) {
     generationFailed = true;
     logger.err('generate command failed: $e');

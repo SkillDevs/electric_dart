@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:electricsql_cli/src/exit_signals.dart';
+import 'package:mason_logger/mason_logger.dart';
 
 const int kSigIntExitCode = 130;
 
@@ -113,5 +114,22 @@ Future<int> waitForProcess(Process p) async {
     return exitCode;
   } finally {
     await disposeExitSignals();
+  }
+}
+
+Future<T> wrapWithProgress<T>(
+  Logger logger,
+  Future<T> Function() fun, {
+  required String progressMsg,
+  String? completeMsg,
+}) async {
+  final progress = logger.progress(progressMsg);
+  try {
+    final res = await fun();
+    progress.complete(completeMsg);
+    return res;
+  } catch (e) {
+    progress.fail();
+    rethrow;
   }
 }
