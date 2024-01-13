@@ -6,6 +6,7 @@ import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/exit_signals.dart';
+import 'package:electricsql_cli/src/util.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:web_socket_channel/io.dart';
 
@@ -75,6 +76,14 @@ Future<void> runProxyTunnel({
       return false;
     },
   );
+
+  // Cleanup the service URL
+  if (serviceUrl.startsWith('https://')) {
+    serviceUrl = serviceUrl.replaceFirst('https://', 'wss://');
+  } else if (serviceUrl.startsWith('http://')) {
+    serviceUrl = serviceUrl.replaceFirst('http://', 'ws://');
+  }
+  serviceUrl = removeTrailingSlash(serviceUrl);
 
   logger.info('ElectricSQL Postgres Proxy Tunnel listening on port $localPort');
   logger.info('Connected to ElectricSQL Service at $serviceUrl');
