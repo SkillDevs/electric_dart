@@ -8,6 +8,7 @@ CREATE TABLE "todo" (
     "text" TEXT,
     "completed" BOOLEAN NOT NULL,
     "edited_at" TIMESTAMPTZ NOT NULL,
+    "electric_user_id" TEXT NOT NULL,
     PRIMARY KEY ("id")
 );
 
