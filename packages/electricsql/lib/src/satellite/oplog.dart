@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:electricsql/satellite.dart';
 import 'package:collection/collection.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/sets.dart';

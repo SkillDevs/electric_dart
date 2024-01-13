@@ -278,7 +278,7 @@ class SubscriptionsDataCache extends EventEmitter {
 
     final relation = relations[relationId];
     relation?.columns
-        .removeWhere((element) => element.name == "electric_user_id");
+        .removeWhere((element) => element.name == 'electric_user_id');
     if (relation == null) {
       internalError(
         SatelliteErrorCode.protocolViolation,

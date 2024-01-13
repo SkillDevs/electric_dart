@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:electricsql/satellite.dart';
 import 'package:electricsql/util.dart' show genUUID;
 import 'package:electricsql/electricsql.dart';
 import 'package:flutter/foundation.dart';
@@ -140,7 +139,7 @@ class MyHomePage extends HookConsumerWidget {
               AnimatedEmojis.electricity,
               size: 24,
             ),
-            Spacer(),
+            const Spacer(),
             IconButton(
               onPressed: () {
                 final logoutAction = ref.read(logoutActionProvider);
@@ -213,7 +212,7 @@ class _DeleteDbButton extends ConsumerWidget {
         final todosDb = ref.read(todosDatabaseProvider);
         await todosDb.todosRepo.close();
 
-        await impl.deleteTodosDbFile();
+        await impl.deleteTodosDbFile(userId);
       },
       icon: const Icon(Symbols.delete),
       label: const Text("Delete local database"),

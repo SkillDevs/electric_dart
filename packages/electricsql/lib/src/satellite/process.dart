@@ -1469,7 +1469,7 @@ void setCurrentUser(AuthState authState) {
   }
 
   SatelliteProcess.userId = payload['user_id']! as String;
-  print('Current user = ${SatelliteProcess.userId}');
+  logger.debug('Current user = ${SatelliteProcess.userId}');
 }
 
 Statement _applyDeleteOperation(

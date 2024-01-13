@@ -16,7 +16,7 @@ Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
   required List<Migration> migrations,
   required ElectricConfig config,
   ElectrifyOptions? opts,
-  required Set<String> tablesWithUser,
+  Set<String> tablesWithUser = const {},
 }) async {
   final adapter = opts?.adapter ?? DriftAdapter(db);
   final socketFactory = opts?.socketFactory ?? getDefaultSocketFactory();

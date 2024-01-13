@@ -4,16 +4,18 @@ import 'package:drift/drift.dart';
 import 'package:drift/wasm.dart';
 import 'package:flutter/foundation.dart';
 
-const webDbName = "todo-app";
-
 final _sqlite3Uri = Uri.parse('/sqlite3.wasm');
 final _driftWorkerUri = Uri.parse('/drift_worker.js');
 
+String _buildDbName(String userId) => "todo-app_$userId";
+
 /// Obtains a database connection for running drift on the web.
-DatabaseConnection connect() {
+DatabaseConnection connect(String userId) {
   return DatabaseConnection.delayed(Future(() async {
+    final userDbName = _buildDbName(userId);
+
     final db = await WasmDatabase.open(
-      databaseName: webDbName,
+      databaseName: userDbName,
       sqlite3Uri: _sqlite3Uri,
       driftWorkerUri: _driftWorkerUri,
     );
@@ -30,16 +32,18 @@ DatabaseConnection connect() {
   }));
 }
 
-Future<void> deleteTodosDbFile() async {
+Future<void> deleteTodosDbFile(String userId) async {
+  final userDbName = _buildDbName(userId);
+
   final probeRes = await WasmDatabase.probe(
     sqlite3Uri: _sqlite3Uri,
     driftWorkerUri: _driftWorkerUri,
-    databaseName: webDbName,
+    databaseName: userDbName,
   );
 
   final db = _firstWhereOrNull(
     probeRes.existingDatabases,
-    (dbInfo) => dbInfo.$2 == webDbName,
+    (dbInfo) => dbInfo.$2 == userDbName,
   );
 
   if (db != null) {

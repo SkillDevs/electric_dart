@@ -64,7 +64,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN,
               final userId = driftRepo.db.userId;
 
               if (!kIsWeb) {
-                await impl.deleteTodosDbFile();
+                await impl.deleteTodosDbFile(userId);
 
                 retryVN.value++;
                 return;
@@ -72,7 +72,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN,
                 // On web, we cannot properly retry automatically, so just ask the user to refresh
                 // the page
 
-                unawaited(impl.deleteTodosDbFile());
+                unawaited(impl.deleteTodosDbFile(userId));
                 await Future<void>.delayed(const Duration(milliseconds: 200));
 
                 if (!context.mounted) return;
