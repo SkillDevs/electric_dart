@@ -16,10 +16,19 @@ String removeTrailingSlash(String str) {
 }
 
 String prettyMap(Map<String, Object?> map) {
+  Object? _getDistinctiveValue(Object? value) {
+    if (value is String) {
+      final quote = value.contains("'") ? '"' : "'";
+      return '$quote$value$quote';
+    } else {
+      return value;
+    }
+  }
+
   final buffer = StringBuffer('{');
   buffer.writeln();
   for (final entry in map.entries) {
-    buffer.writeln('  ${entry.key}: ${entry.value},');
+    buffer.writeln('  ${entry.key}: ${_getDistinctiveValue(entry.value)},');
   }
   buffer.write('}');
   return buffer.toString();
