@@ -29,7 +29,16 @@ final configOptions = <String, ConfigOption<Object>>{
       final port = getConfigValue<int>('PG_PROXY_PORT');
       final password = getConfigValue<String>('PG_PROXY_PASSWORD');
       final dbName = getConfigValue<String>('DATABASE_NAME');
-      return 'postgresql://postgres:$password@$host:$port/$dbName';
+      const user = 'postgres';
+      final ssl = getConfigValue<bool>('DATABASE_REQUIRE_SSL');
+      return buildDatabaseURL(
+        host: host,
+        port: port,
+        user: user,
+        password: password,
+        dbName: dbName,
+        ssl: ssl,
+      );
     },
     constructedDefault:
         'postgresql://postgres:{ELECTRIC_PG_PROXY_PASSWORD}@{ELECTRIC_SERVICE_HOST}:{ELECTRIC_PG_PROXY_PORT}/{ELECTRIC_DATABASE_NAME}',
@@ -65,12 +74,14 @@ final configOptions = <String, ConfigOption<Object>>{
       final user = getConfigValue<String>('DATABASE_USER');
       final password = getConfigValue<String>('DATABASE_PASSWORD');
       final dbName = getConfigValue<String>('DATABASE_NAME');
+      final ssl = getConfigValue<bool>('DATABASE_REQUIRE_SSL');
       return buildDatabaseURL(
         host: host,
         port: port,
         user: user,
         password: password,
         dbName: dbName,
+        ssl: ssl,
       );
     },
     constructedDefault:

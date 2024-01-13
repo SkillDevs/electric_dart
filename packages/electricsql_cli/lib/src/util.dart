@@ -47,12 +47,18 @@ String buildDatabaseURL({
   required String host,
   required int port,
   required String dbName,
+  bool? ssl,
 }) {
   final url = StringBuffer('postgresql://$user');
   if (password.isNotEmpty) {
     url.write(':$password');
   }
   url.write('@$host:$port/$dbName');
+
+  if (ssl == false) {
+    url.write('?sslmode=disable');
+  }
+
   return url.toString();
 }
 

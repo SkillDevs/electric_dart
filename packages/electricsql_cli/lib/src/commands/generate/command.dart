@@ -240,9 +240,9 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
       );
     }
     logger.info('Service URL: ${opts.config.read<String>('SERVICE')}');
-    logger.info('Proxy URL: ${opts.config.read<String>('PROXY')}');
-    // Generate the client
+    logger.info('Proxy URL: ${buildProxyUrlForIntrospection(opts.config)}');
 
+    // Generate the client
     await _runGeneratorInner(opts);
   } finally {
     if (opts.withMigrations != null) {
@@ -284,8 +284,7 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
     logger.info('Installing Prisma CLI via Docker...');
     await prismaCLI.install();
 
-    final prismaSchema =
-        await createPrismaSchema(tmpDir, proxy: config.read<String>('PROXY'));
+    final prismaSchema = await createPrismaSchema(tmpDir, config: config);
 
     // Introspect the created DB to update the Prisma schema
     logger.info('Introspecting database...');
@@ -293,7 +292,7 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
 
     final prismaSchemaContent = prismaSchema.readAsStringSync();
 
-    //print(prismaSchemaContent);
+    // print(prismaSchemaContent);
 
     final outFolder = config.read<String>('CLIENT_PATH');
 
