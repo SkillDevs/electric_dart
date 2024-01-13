@@ -44,8 +44,17 @@ class _Entrypoint extends HookWidget {
     useEffect(() {
       // Cleanup resources on app unmount
       return () {
-        initData?.connectivityStateController.dispose();
-        initData?.electricClient.close();
+        () async {
+          if (initData != null) {
+            await initData.electricClient.close();
+            await initData.todosDb.todosRepo.close();
+
+            // If wanted the user db could be deleted
+            // await impl.deleteTodosDbFile(initData.userId);
+
+            print("Everything closed");
+          }
+        }();
       };
     }, [initData]);
 
