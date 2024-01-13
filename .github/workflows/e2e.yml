@@ -16,9 +16,12 @@ env:
   ELIXIR_VERSION: "1.15"
 
 # Only run one E2E workflow at the same time
-concurrency:
-  group: e2e-${{ github.workflow }}
-  cancel-in-progress: false
+# Cancel-pending: false does not exist, so when pushing different branches at the same time
+# they get cancelled
+# Alternatively use the Github Action: ahmadnassri/action-workflow-queue
+# concurrency:
+#   group: e2e-${{ github.workflow }}
+#   cancel-in-progress: false
 
 jobs:
   e2e_tests:
@@ -38,10 +41,10 @@ jobs:
 
       # Make sure that only one E2E workflow is running at the same time
       # Ports used in the tests are fixed and cannot be reused
-      # - uses: ahmadnassri/action-workflow-queue@v1
-      #   with:
-      #     # milliseconds
-      #     timeout: 900000  # 15 minutes
+      - uses: ahmadnassri/action-workflow-queue@v1
+        with:
+          # milliseconds
+          timeout: 900000  # 15 minutes
 
       - name: Inject slug/short variables
         uses: rlespinasse/github-slug-action@v4

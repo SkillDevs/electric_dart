@@ -14,7 +14,9 @@ class ForeignKey {
 
 typedef ColumnName = String;
 typedef SQLiteType = String;
-typedef ColumnTypes = Map<ColumnName, SQLiteType>;
+typedef PgTypeStr = String;
+typedef ColumnType = ({SQLiteType sqliteType, PgTypeStr pgType});
+typedef ColumnTypes = Map<ColumnName, ColumnType>;
 
 class Table {
   String tableName;
@@ -77,11 +79,11 @@ List<Statement> generateOplogTriggers(
     '''
 
     CREATE TRIGGER update_ensure_${namespace}_${tableName}_primarykey
-      BEFORE UPDATE ON $tableFullName
+      BEFORE UPDATE ON "$namespace"."$tableName"
     BEGIN
       SELECT
         CASE
-          ${primary.map((col) => "WHEN old.$col != new.$col THEN\n\t\tRAISE (ABORT, 'cannot change the value of column $col as it belongs to the primary key')").join('\n')}
+          ${primary.map((col) => "WHEN old.\"$col\" != new.\"$col\" THEN\n\t\tRAISE (ABORT, 'cannot change the value of column $col as it belongs to the primary key')").join('\n')}
         END;
     END;
     ''',
@@ -93,7 +95,7 @@ List<Statement> generateOplogTriggers(
     '''
 
     CREATE TRIGGER insert_${namespace}_${tableName}_into_oplog
-       AFTER INSERT ON $tableFullName
+       AFTER INSERT ON "$namespace"."$tableName"
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
     BEGIN
       INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
@@ -107,7 +109,7 @@ List<Statement> generateOplogTriggers(
     '''
 
     CREATE TRIGGER update_${namespace}_${tableName}_into_oplog
-       AFTER UPDATE ON $tableFullName
+       AFTER UPDATE ON "$namespace"."$tableName"
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
     BEGIN
       INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
@@ -121,7 +123,7 @@ List<Statement> generateOplogTriggers(
     '''
 
     CREATE TRIGGER delete_${namespace}_${tableName}_into_oplog
-       AFTER DELETE ON $tableFullName
+       AFTER DELETE ON "$namespace"."$tableName"
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
     BEGIN
       INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
@@ -132,14 +134,18 @@ List<Statement> generateOplogTriggers(
 }
 
 /// Generates triggers for compensations for all foreign keys in the provided table.
+///
+/// Compensation is recorded as a SatOpCompensation messaage. The entire reason
+/// for it existing is to maybe revive the row if it has been deleted, so we need
+/// correct tags.
+///
+/// The compensation update contains _just_ the primary keys, no other columns are present.
+///
 /// @param tableFullName Full name of the table.
 /// @param table The corresponding table.
 /// @param tables Map of all tables (needed to look up the tables that are pointed at by FKs).
 /// @returns An array of SQLite statements that add the necessary compensation triggers.
-List<Statement> generateCompensationTriggers(
-  TableFullName tableFullName,
-  Table table,
-) {
+List<Statement> generateCompensationTriggers(Table table) {
   final tableName = table.tableName;
   final namespace = table.namespace;
   final foreignKeys = table.foreignKeys;
@@ -153,7 +159,20 @@ List<Statement> generateCompensationTriggers(
     final fkTableName = foreignKey.table;
     final fkTablePK =
         foreignKey.parentKey; // primary key of the table pointed at by the FK.
-    final joinedFkPKs = joinColsForJSON([fkTablePK], columnTypes, null);
+
+    // This table's `childKey` points to the parent's table `parentKey`.
+    // `joinColsForJSON` looks up the type of the `parentKey` column in the provided `colTypes` object.
+    // However, `columnTypes` contains the types of the columns of this table
+    // so we need to pass an object containing the column type of the parent key.
+    // We can construct that object because the type of the parent key must be the same
+    // as the type of the child key that is pointing to it.
+    final joinedFkPKs = joinColsForJSON(
+      [fkTablePK],
+      {
+        fkTablePK: columnTypes[foreignKey.childKey]!,
+      },
+      null,
+    );
 
     return <String>[
       '''
@@ -165,25 +184,25 @@ List<Statement> generateCompensationTriggers(
       // which can be at most once since we filter on the foreign key which is also the primary key and thus is unique.
       '''
       CREATE TRIGGER compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog
-        AFTER INSERT ON $tableFullName
+        AFTER INSERT ON "$namespace"."$tableName"
         WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$fkTableNamespace.$fkTableName') AND
              1 == (SELECT value from _electric_meta WHERE key == 'compensations')
       BEGIN
         INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-        SELECT '$fkTableNamespace', '$fkTableName', 'UPDATE', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
-        FROM $fkTableNamespace.$fkTableName WHERE ${foreignKey.parentKey} = new.${foreignKey.childKey};
+        SELECT '$fkTableNamespace', '$fkTableName', 'COMPENSATION', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
+        FROM "$fkTableNamespace"."$fkTableName" WHERE "${foreignKey.parentKey}" = new."${foreignKey.childKey}";
       END;
       ''',
       'DROP TRIGGER IF EXISTS compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog;',
       '''
       CREATE TRIGGER compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog
-         AFTER UPDATE ON $namespace.$tableName
+         AFTER UPDATE ON "$namespace"."$tableName"
          WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$fkTableNamespace.$fkTableName') AND
               1 == (SELECT value from _electric_meta WHERE key == 'compensations')
       BEGIN
         INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-        SELECT '$fkTableNamespace', '$fkTableName', 'UPDATE', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
-        FROM $fkTableNamespace.$fkTableName WHERE ${foreignKey.parentKey} = new.${foreignKey.childKey};
+        SELECT '$fkTableNamespace', '$fkTableName', 'COMPENSATION', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
+        FROM "$fkTableNamespace"."$fkTableName" WHERE "${foreignKey.parentKey}" = new."${foreignKey.childKey}";
       END;
       ''',
     ].map(Statement.new).toList();
@@ -203,7 +222,7 @@ List<Statement> generateTableTriggers(
   Table table,
 ) {
   final oplogTriggers = generateOplogTriggers(tableFullName, table);
-  final fkTriggers = generateCompensationTriggers(tableFullName, table);
+  final fkTriggers = generateCompensationTriggers(table);
   return [...oplogTriggers, ...fkTriggers];
 }
 
@@ -231,6 +250,7 @@ List<Statement> generateTriggers(Tables tables) {
 /// Joins the column names and values into a string of pairs of the form `'col1', val1, 'col2', val2, ...`
 /// that can be used to build a JSON object in a SQLite `json_object` function call.
 /// Values of type REAL are cast to text to avoid a bug in SQLite's `json_object` function (see below).
+/// Similarly, values of type INT8 (i.e. BigInts) are cast to text because JSON does not support BigInts.
 ///
 /// NOTE: There is a bug with SQLite's `json_object` function up to version 3.41.2
 ///       that causes it to return an invalid JSON object if some value is +Infinity or -Infinity.
@@ -278,7 +298,14 @@ String joinColsForJSON(
   // casts the value to TEXT if it is of type REAL
   // to work around the bug in SQLite's `json_object` function
   String castIfNeeded(String col, String targettedCol) {
-    if (colTypes[col] == 'REAL') {
+    final tpes = colTypes[col]!;
+    final sqliteType = tpes.sqliteType;
+    final pgType = tpes.pgType;
+    if (
+        // REAL has a special handling for NaN and Infinities
+        sqliteType == 'REAL' ||
+            // INT8 and BIGINT encoded as string in oplog JSON
+            (pgType == 'INT8' || pgType == 'BIGINT')) {
       return 'cast($targettedCol as TEXT)';
     } else {
       return targettedCol;
@@ -287,11 +314,11 @@ String joinColsForJSON(
 
   if (target == null) {
     return (cols..sort())
-        .map((col) => "'$col', ${castIfNeeded(col, col)}")
+        .map((col) => "'$col', ${castIfNeeded(col, '"$col"')}")
         .join(', ');
   } else {
     return (cols..sort())
-        .map((col) => "'$col', ${castIfNeeded(col, '$target.$col')}")
+        .map((col) => "'$col', ${castIfNeeded(col, '$target."$col"')}")
         .join(', ');
   }
 }

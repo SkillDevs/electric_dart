@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -39,6 +39,10 @@ cp -rf "$DART_E2E_BAK"/electric_repo e2e/electric_repo
 cp "$DART_E2E_BAK"/run_client_e2e_with_retries.sh e2e
 
 pushd "$ROOT_DIR/e2e"
-# Apply patch ignoring first level from the diff (electric and dart subfolders)
-patch -p1 --merge < "$ROOT_DIR"/patch/e2e.patch
+
+# Apply patch ignoring first level (p1) from the diff (electric and dart subfolders)
+# --merge is used so that it creates a "git compatible" merge conflict
+# --no-backup-if-mismatch is used so that it doesn't create .orig files
+patch -p1 --merge --no-backup-if-mismatch < "$ROOT_DIR"/patch/e2e.patch
+
 popd

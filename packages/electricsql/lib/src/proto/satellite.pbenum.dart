@@ -1,20 +1,21 @@
-///
+//
 //  Generated code. Do not modify.
 //  source: proto/satellite.proto
 //
 // @dart = 2.12
-// ignore_for_file: annotate_overrides,camel_case_types,constant_identifier_names,directives_ordering,library_prefixes,non_constant_identifier_names,prefer_final_fields,return_of_invalid_type,unnecessary_const,unnecessary_import,unnecessary_this,unused_import,unused_shown_name
 
-// ignore_for_file: UNDEFINED_SHOWN_NAME
+// ignore_for_file: annotate_overrides, camel_case_types, comment_references
+// ignore_for_file: constant_identifier_names, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_final_fields
+// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
+
 import 'dart:core' as $core;
+
 import 'package:protobuf/protobuf.dart' as $pb;
 
 class SatAuthHeader extends $pb.ProtobufEnum {
-  static const SatAuthHeader UNSPECIFIED = SatAuthHeader._(
-      0,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'UNSPECIFIED');
+  static const SatAuthHeader UNSPECIFIED =
+      SatAuthHeader._(0, _omitEnumNames ? '' : 'UNSPECIFIED');
 
   static const $core.List<SatAuthHeader> values = <SatAuthHeader>[
     UNSPECIFIED,
@@ -28,45 +29,20 @@ class SatAuthHeader extends $pb.ProtobufEnum {
 }
 
 class SatErrorResp_ErrorCode extends $pb.ProtobufEnum {
-  static const SatErrorResp_ErrorCode INTERNAL = SatErrorResp_ErrorCode._(
-      0,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'INTERNAL');
-  static const SatErrorResp_ErrorCode AUTH_REQUIRED = SatErrorResp_ErrorCode._(
-      1,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'AUTH_REQUIRED');
-  static const SatErrorResp_ErrorCode AUTH_FAILED = SatErrorResp_ErrorCode._(
-      2,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'AUTH_FAILED');
+  static const SatErrorResp_ErrorCode INTERNAL =
+      SatErrorResp_ErrorCode._(0, _omitEnumNames ? '' : 'INTERNAL');
+  static const SatErrorResp_ErrorCode AUTH_REQUIRED =
+      SatErrorResp_ErrorCode._(1, _omitEnumNames ? '' : 'AUTH_REQUIRED');
+  static const SatErrorResp_ErrorCode AUTH_FAILED =
+      SatErrorResp_ErrorCode._(2, _omitEnumNames ? '' : 'AUTH_FAILED');
   static const SatErrorResp_ErrorCode REPLICATION_FAILED =
-      SatErrorResp_ErrorCode._(
-          3,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'REPLICATION_FAILED');
+      SatErrorResp_ErrorCode._(3, _omitEnumNames ? '' : 'REPLICATION_FAILED');
   static const SatErrorResp_ErrorCode INVALID_REQUEST =
-      SatErrorResp_ErrorCode._(
-          4,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'INVALID_REQUEST');
+      SatErrorResp_ErrorCode._(4, _omitEnumNames ? '' : 'INVALID_REQUEST');
   static const SatErrorResp_ErrorCode PROTO_VSN_MISMATCH =
-      SatErrorResp_ErrorCode._(
-          5,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'PROTO_VSN_MISMATCH');
+      SatErrorResp_ErrorCode._(5, _omitEnumNames ? '' : 'PROTO_VSN_MISMATCH');
   static const SatErrorResp_ErrorCode SCHEMA_VSN_MISMATCH =
-      SatErrorResp_ErrorCode._(
-          6,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'SCHEMA_VSN_MISMATCH');
+      SatErrorResp_ErrorCode._(6, _omitEnumNames ? '' : 'SCHEMA_VSN_MISMATCH');
 
   static const $core.List<SatErrorResp_ErrorCode> values =
       <SatErrorResp_ErrorCode>[
@@ -88,11 +64,7 @@ class SatErrorResp_ErrorCode extends $pb.ProtobufEnum {
 
 class SatInStartReplicationReq_Option extends $pb.ProtobufEnum {
   static const SatInStartReplicationReq_Option NONE =
-      SatInStartReplicationReq_Option._(
-          0,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'NONE');
+      SatInStartReplicationReq_Option._(0, _omitEnumNames ? '' : 'NONE');
 
   static const $core.List<SatInStartReplicationReq_Option> values =
       <SatInStartReplicationReq_Option>[
@@ -108,44 +80,27 @@ class SatInStartReplicationReq_Option extends $pb.ProtobufEnum {
       : super(v, n);
 }
 
+/// error code enum
 class SatInStartReplicationResp_ReplicationError_Code extends $pb.ProtobufEnum {
   static const SatInStartReplicationResp_ReplicationError_Code
       CODE_UNSPECIFIED = SatInStartReplicationResp_ReplicationError_Code._(
-          0,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'CODE_UNSPECIFIED');
+          0, _omitEnumNames ? '' : 'CODE_UNSPECIFIED');
   static const SatInStartReplicationResp_ReplicationError_Code BEHIND_WINDOW =
       SatInStartReplicationResp_ReplicationError_Code._(
-          1,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'BEHIND_WINDOW');
+          1, _omitEnumNames ? '' : 'BEHIND_WINDOW');
   static const SatInStartReplicationResp_ReplicationError_Code
       INVALID_POSITION = SatInStartReplicationResp_ReplicationError_Code._(
-          2,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'INVALID_POSITION');
+          2, _omitEnumNames ? '' : 'INVALID_POSITION');
   static const SatInStartReplicationResp_ReplicationError_Code
       SUBSCRIPTION_NOT_FOUND =
       SatInStartReplicationResp_ReplicationError_Code._(
-          3,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'SUBSCRIPTION_NOT_FOUND');
+          3, _omitEnumNames ? '' : 'SUBSCRIPTION_NOT_FOUND');
   static const SatInStartReplicationResp_ReplicationError_Code MALFORMED_LSN =
       SatInStartReplicationResp_ReplicationError_Code._(
-          4,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'MALFORMED_LSN');
+          4, _omitEnumNames ? '' : 'MALFORMED_LSN');
   static const SatInStartReplicationResp_ReplicationError_Code
       UNKNOWN_SCHEMA_VSN = SatInStartReplicationResp_ReplicationError_Code._(
-          5,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'UNKNOWN_SCHEMA_VSN');
+          5, _omitEnumNames ? '' : 'UNKNOWN_SCHEMA_VSN');
 
   static const $core.List<SatInStartReplicationResp_ReplicationError_Code>
       values = <SatInStartReplicationResp_ReplicationError_Code>[
@@ -170,26 +125,14 @@ class SatInStartReplicationResp_ReplicationError_Code extends $pb.ProtobufEnum {
 }
 
 class SatRelation_RelationType extends $pb.ProtobufEnum {
-  static const SatRelation_RelationType TABLE = SatRelation_RelationType._(
-      0,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'TABLE');
-  static const SatRelation_RelationType INDEX = SatRelation_RelationType._(
-      1,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'INDEX');
-  static const SatRelation_RelationType VIEW = SatRelation_RelationType._(
-      2,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'VIEW');
-  static const SatRelation_RelationType TRIGGER = SatRelation_RelationType._(
-      3,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'TRIGGER');
+  static const SatRelation_RelationType TABLE =
+      SatRelation_RelationType._(0, _omitEnumNames ? '' : 'TABLE');
+  static const SatRelation_RelationType INDEX =
+      SatRelation_RelationType._(1, _omitEnumNames ? '' : 'INDEX');
+  static const SatRelation_RelationType VIEW =
+      SatRelation_RelationType._(2, _omitEnumNames ? '' : 'VIEW');
+  static const SatRelation_RelationType TRIGGER =
+      SatRelation_RelationType._(3, _omitEnumNames ? '' : 'TRIGGER');
 
   static const $core.List<SatRelation_RelationType> values =
       <SatRelation_RelationType>[
@@ -207,21 +150,12 @@ class SatRelation_RelationType extends $pb.ProtobufEnum {
 }
 
 class SatOpMigrate_Type extends $pb.ProtobufEnum {
-  static const SatOpMigrate_Type CREATE_TABLE = SatOpMigrate_Type._(
-      0,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'CREATE_TABLE');
-  static const SatOpMigrate_Type CREATE_INDEX = SatOpMigrate_Type._(
-      1,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'CREATE_INDEX');
-  static const SatOpMigrate_Type ALTER_ADD_COLUMN = SatOpMigrate_Type._(
-      6,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'ALTER_ADD_COLUMN');
+  static const SatOpMigrate_Type CREATE_TABLE =
+      SatOpMigrate_Type._(0, _omitEnumNames ? '' : 'CREATE_TABLE');
+  static const SatOpMigrate_Type CREATE_INDEX =
+      SatOpMigrate_Type._(1, _omitEnumNames ? '' : 'CREATE_INDEX');
+  static const SatOpMigrate_Type ALTER_ADD_COLUMN =
+      SatOpMigrate_Type._(6, _omitEnumNames ? '' : 'ALTER_ADD_COLUMN');
 
   static const $core.List<SatOpMigrate_Type> values = <SatOpMigrate_Type>[
     CREATE_TABLE,
@@ -236,25 +170,17 @@ class SatOpMigrate_Type extends $pb.ProtobufEnum {
   const SatOpMigrate_Type._($core.int v, $core.String n) : super(v, n);
 }
 
+/// error code enum
 class SatSubsResp_SatSubsError_Code extends $pb.ProtobufEnum {
   static const SatSubsResp_SatSubsError_Code CODE_UNSPECIFIED =
       SatSubsResp_SatSubsError_Code._(
-          0,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'CODE_UNSPECIFIED');
+          0, _omitEnumNames ? '' : 'CODE_UNSPECIFIED');
   static const SatSubsResp_SatSubsError_Code SUBSCRIPTION_ID_ALREADY_EXISTS =
       SatSubsResp_SatSubsError_Code._(
-          1,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'SUBSCRIPTION_ID_ALREADY_EXISTS');
+          1, _omitEnumNames ? '' : 'SUBSCRIPTION_ID_ALREADY_EXISTS');
   static const SatSubsResp_SatSubsError_Code SHAPE_REQUEST_ERROR =
       SatSubsResp_SatSubsError_Code._(
-          2,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'SHAPE_REQUEST_ERROR');
+          2, _omitEnumNames ? '' : 'SHAPE_REQUEST_ERROR');
 
   static const $core.List<SatSubsResp_SatSubsError_Code> values =
       <SatSubsResp_SatSubsError_Code>[
@@ -272,39 +198,25 @@ class SatSubsResp_SatSubsError_Code extends $pb.ProtobufEnum {
       : super(v, n);
 }
 
+/// error code enum
 class SatSubsResp_SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
   static const SatSubsResp_SatSubsError_ShapeReqError_Code CODE_UNSPECIFIED =
       SatSubsResp_SatSubsError_ShapeReqError_Code._(
-          0,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'CODE_UNSPECIFIED');
+          0, _omitEnumNames ? '' : 'CODE_UNSPECIFIED');
   static const SatSubsResp_SatSubsError_ShapeReqError_Code TABLE_NOT_FOUND =
       SatSubsResp_SatSubsError_ShapeReqError_Code._(
-          1,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'TABLE_NOT_FOUND');
+          1, _omitEnumNames ? '' : 'TABLE_NOT_FOUND');
   static const SatSubsResp_SatSubsError_ShapeReqError_Code
       REFERENTIAL_INTEGRITY_VIOLATION =
       SatSubsResp_SatSubsError_ShapeReqError_Code._(
-          2,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'REFERENTIAL_INTEGRITY_VIOLATION');
+          2, _omitEnumNames ? '' : 'REFERENTIAL_INTEGRITY_VIOLATION');
   static const SatSubsResp_SatSubsError_ShapeReqError_Code
       EMPTY_SHAPE_DEFINITION = SatSubsResp_SatSubsError_ShapeReqError_Code._(
-          3,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'EMPTY_SHAPE_DEFINITION');
+          3, _omitEnumNames ? '' : 'EMPTY_SHAPE_DEFINITION');
   static const SatSubsResp_SatSubsError_ShapeReqError_Code
       DUPLICATE_TABLE_IN_SHAPE_DEFINITION =
       SatSubsResp_SatSubsError_ShapeReqError_Code._(
-          4,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'DUPLICATE_TABLE_IN_SHAPE_DEFINITION');
+          4, _omitEnumNames ? '' : 'DUPLICATE_TABLE_IN_SHAPE_DEFINITION');
 
   static const $core.List<SatSubsResp_SatSubsError_ShapeReqError_Code> values =
       <SatSubsResp_SatSubsError_ShapeReqError_Code>[
@@ -326,18 +238,12 @@ class SatSubsResp_SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
       : super(v, n);
 }
 
+/// error code enum
 class SatSubsDataError_Code extends $pb.ProtobufEnum {
-  static const SatSubsDataError_Code CODE_UNSPECIFIED = SatSubsDataError_Code._(
-      0,
-      const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-          ? ''
-          : 'CODE_UNSPECIFIED');
+  static const SatSubsDataError_Code CODE_UNSPECIFIED =
+      SatSubsDataError_Code._(0, _omitEnumNames ? '' : 'CODE_UNSPECIFIED');
   static const SatSubsDataError_Code SHAPE_DELIVERY_ERROR =
-      SatSubsDataError_Code._(
-          1,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'SHAPE_DELIVERY_ERROR');
+      SatSubsDataError_Code._(1, _omitEnumNames ? '' : 'SHAPE_DELIVERY_ERROR');
 
   static const $core.List<SatSubsDataError_Code> values =
       <SatSubsDataError_Code>[
@@ -352,19 +258,14 @@ class SatSubsDataError_Code extends $pb.ProtobufEnum {
   const SatSubsDataError_Code._($core.int v, $core.String n) : super(v, n);
 }
 
+/// error code enum
 class SatSubsDataError_ShapeReqError_Code extends $pb.ProtobufEnum {
   static const SatSubsDataError_ShapeReqError_Code CODE_UNSPECIFIED =
       SatSubsDataError_ShapeReqError_Code._(
-          0,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'CODE_UNSPECIFIED');
+          0, _omitEnumNames ? '' : 'CODE_UNSPECIFIED');
   static const SatSubsDataError_ShapeReqError_Code SHAPE_SIZE_LIMIT_EXCEEDED =
       SatSubsDataError_ShapeReqError_Code._(
-          1,
-          const $core.bool.fromEnvironment('protobuf.omit_enum_names')
-              ? ''
-              : 'SHAPE_SIZE_LIMIT_EXCEEDED');
+          1, _omitEnumNames ? '' : 'SHAPE_SIZE_LIMIT_EXCEEDED');
 
   static const $core.List<SatSubsDataError_ShapeReqError_Code> values =
       <SatSubsDataError_ShapeReqError_Code>[
@@ -380,3 +281,5 @@ class SatSubsDataError_ShapeReqError_Code extends $pb.ProtobufEnum {
   const SatSubsDataError_ShapeReqError_Code._($core.int v, $core.String n)
       : super(v, n);
 }
+
+const _omitEnumNames = $core.bool.fromEnvironment('protobuf.omit_enum_names');

@@ -16,9 +16,7 @@ Future<String> secureAuthToken({
   // final mockIss = iss ?? 'dev.electric-sql.com';
   // final mockKey = key ?? 'integration-tests-signing-key-example';
 
-  final int nowInSecs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  // Subtract 1 second to account for clock precision when validating the token
-  final iat = nowInSecs - 1;
+  final int iat = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
   final jwt = JWT(
     {
@@ -49,7 +47,7 @@ Future<String> mockSecureAuthToken({
   final mockKey = key ?? 'integration-tests-signing-key-example';
 
   return secureAuthToken(
-    claims: {'user_id': 'test-user'},
+    claims: {'sub': 'test-user'},
     iss: mockIss,
     key: mockKey,
   );

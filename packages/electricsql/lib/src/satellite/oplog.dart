@@ -20,6 +20,7 @@ enum OpType {
   delete,
   insert,
   update,
+  compensation,
 }
 
 enum ChangesOpType {
@@ -97,6 +98,8 @@ OpType changeTypeToOpType(DataChangeType opTypeStr) {
       return OpType.update;
     case DataChangeType.delete:
       return OpType.delete;
+    case DataChangeType.compensation:
+      return OpType.compensation;
   }
 }
 
@@ -108,6 +111,8 @@ DataChangeType opTypeToChangeType(OpType opType) {
       return DataChangeType.insert;
     case OpType.update:
       return DataChangeType.update;
+    case OpType.compensation:
+      return DataChangeType.compensation;
   }
 }
 
@@ -121,6 +126,8 @@ OpType opTypeStrToOpType(String str) {
       return OpType.update;
     case 'insert':
       return OpType.insert;
+    case 'compensation':
+      return OpType.compensation;
   }
 
   assert(false, 'OpType $str not handled');
@@ -307,7 +314,10 @@ String serialiseRow(Row row) {
       } else if (value.isInfinite) {
         return MapEntry(key, value.isNegative ? '-Inf' : 'Inf');
       }
+    } else if (value is BigInt) {
+      return MapEntry(key, value.toString());
     }
+
     return MapEntry(key, value);
   });
 
@@ -316,7 +326,7 @@ String serialiseRow(Row row) {
 
 /// Deserialises a row back into a record.
 /// `"NaN"`, `"+Inf"`, and `"-Inf"` are transformed back into their numeric equivalent
-/// iff the column type is a float.
+/// if the column type is a float.
 /// @param str The row to deserialise.
 /// @param rel The relation for the table to which this row belongs.
 Row deserialiseRow(String str, Relation rel) {
@@ -342,6 +352,11 @@ Row deserialiseRow(String str, Relation rel) {
         return MapEntry(key, double.parse(value));
       }
     }
+
+    if (columnType == 'INT8' || columnType == 'BIGINT') {
+      return MapEntry(key, BigInt.parse(value.toString()));
+    }
+
     return MapEntry(key, value);
   });
 }

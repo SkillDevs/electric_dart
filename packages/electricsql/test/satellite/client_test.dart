@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -32,13 +31,9 @@ void main() {
     server = SatelliteWSServerStub();
     await server.start();
 
-    const dbName = 'dbName';
-
     client = SatelliteClient(
-      dbName: dbName,
       dbDescription: kTestDbDescription,
       socketFactory: WebSocketIOFactory(),
-      notifier: MockNotifier(dbName),
       opts: SatelliteClientOpts(
         host: '127.0.0.1',
         port: 30002,
@@ -53,7 +48,7 @@ void main() {
   });
 
   tearDown(() async {
-    client.close();
+    client.disconnect();
     await server.close();
   });
 
@@ -314,8 +309,8 @@ void main() {
 
     final completer = Completer<void>();
 
-    client.on('transaction', (TransactionEvent event) {
-      expect(event.transaction.changes.length, 3);
+    client.subscribeToTransactions((Transaction transaction) async {
+      expect(transaction.changes.length, 3);
       completer.complete();
     });
 
@@ -391,8 +386,7 @@ void main() {
 
     final completer = Completer<void>();
 
-    client.on('transaction', (TransactionEvent event) {
-      final transaction = event.transaction;
+    client.subscribeToTransactions((Transaction transaction) async {
       expect(transaction.migrationVersion, migrationVersion);
       expect(
         transaction,
@@ -444,7 +438,7 @@ void main() {
     server.nextRpcResponse('stopReplication', [stop]);
 
     final completer = Completer<void>();
-    client.on('transaction', (TransactionEvent event) {
+    client.emitter.onTransaction((TransactionEvent event) {
       final ack = event.ackCb;
       final lsn0 = client.inbound.lastLsn;
       expect(lsn0, null);
@@ -767,8 +761,7 @@ void main() {
     server.nextRpcResponse('stopReplication', [stop]);
     final completer = Completer<void>();
 
-    client.on('transaction', (TransactionEvent transactionEvent) {
-      final transaction = transactionEvent.transaction;
+    client.subscribeToTransactions((Transaction transaction) async {
       final changes = transaction.changes.cast<DataChange>();
       expect(record!['id'], changes[0].record!['id']);
       expect(record['content'], changes[0].record!['content']);

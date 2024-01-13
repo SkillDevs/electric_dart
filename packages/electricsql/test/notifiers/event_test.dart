@@ -113,13 +113,13 @@ void main() {
 
     final List<ConnectivityStateChangeNotification> notifications = [];
 
-    final key = target.subscribeToConnectivityStateChanges((x) {
+    final unsubscribe = target.subscribeToConnectivityStateChanges((x) {
       notifications.add(x);
     });
 
     source.connectivityStateChanged('test.db', ConnectivityState.connected);
 
-    target.unsubscribeFromConnectivityStateChanges(key);
+    unsubscribe();
 
     source.connectivityStateChanged('test.db', ConnectivityState.connected);
 

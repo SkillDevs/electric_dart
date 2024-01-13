@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:todos_electrified/database/database.dart';
@@ -27,6 +28,8 @@ Future<void> main() async {
   runApp(_Entrypoint());
 }
 
+StateProvider<bool> dbDeletedProvider = StateProvider((ref) => false);
+
 final logoutActionProvider = Provider<void Function()>((ref) {
   throw UnimplementedError();
 });
@@ -41,18 +44,8 @@ class _Entrypoint extends HookWidget {
     useEffect(() {
       // Cleanup resources on app unmount
       return () {
-        () async {
-          if (initData != null) {
-            initData.electricClient.dispose();
-            await globalRegistry.stopAll();
-            await initData.todosDb.todosRepo.close();
-
-            // If wanted the user db could be deleted
-            // await impl.deleteTodosDbFile(initData.userId);
-
-            print("Everything closed");
-          }
-        }();
+        initData?.connectivityStateController.dispose();
+        initData?.electricClient.close();
       };
     }, [initData]);
 
@@ -61,6 +54,7 @@ class _Entrypoint extends HookWidget {
       return InitAppLoader(initDataVN: initDataVN);
     }
 
+    // Database and Electric are ready
     return ProviderScope(
       overrides: [
         todosDatabaseProvider.overrideWithValue(initData.todosDb),
@@ -90,7 +84,17 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: kElectricColorScheme,
       ),
-      home: const MyHomePage(),
+      home: Consumer(
+        builder: (context, ref, _) {
+          final dbDeleted = ref.watch(dbDeletedProvider);
+
+          if (dbDeleted) {
+            return const _DeleteDbScreen();
+          }
+
+          return const MyHomePage();
+        },
+      ),
     );
   }
 }
@@ -172,14 +176,13 @@ class MyHomePage extends HookConsumerWidget {
               ),
             ),
           ),
-          if (!kIsWeb)
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: _DeleteDbButton(),
-              ),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.all(8.0),
+              child: _DeleteDbButton(),
             ),
+          ),
         ],
       ),
     );
@@ -196,13 +199,12 @@ class _DeleteDbButton extends ConsumerWidget {
           foregroundColor: Theme.of(context).colorScheme.error),
       onPressed: () async {
         final userId = ref.read(userIdProvider);
-        await impl.deleteTodosDbFile(userId);
+        ref.read(dbDeletedProvider.notifier).update((state) => true);
 
-        if (!context.mounted) return;
+        final todosDb = ref.read(todosDatabaseProvider);
+        await todosDb.todosRepo.close();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Database deleted, restart the app")),
-        );
+        await impl.deleteTodosDbFile();
       },
       icon: const Icon(Symbols.delete),
       label: const Text("Delete local database"),
@@ -300,9 +302,6 @@ class _TodosLoaded extends HookConsumerWidget {
                     );
 
                     textController.clear();
-
-                    // final satellite = ref.read(satelliteProvider);
-                    // satellite.notifier.potentiallyChanged();
                   },
                 ),
                 const SizedBox(
@@ -345,9 +344,6 @@ class TodoTile extends ConsumerWidget {
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.updateTodo(todo.copyWith(completed: !todo.completed));
-
-          // final satellite = ref.read(satelliteProvider);
-          // satellite.notifier.potentiallyChanged();
         },
         icon: todo.completed
             ? Icon(
@@ -364,17 +360,28 @@ class TodoTile extends ConsumerWidget {
         ),
       ),
       subtitle: Text(
-        todo.editedAt.toIso8601String(),
+        "Last edited: ${DateFormat.yMMMd().add_jm().format(todo.editedAt)}",
+        style: Theme.of(context).textTheme.bodySmall,
       ),
       trailing: IconButton(
         onPressed: () async {
           final db = ref.read(todosDatabaseProvider);
           await db.removeTodo(todo.id);
-
-          // final satellite = ref.read(satelliteProvider);
-          // satellite.notifier.potentiallyChanged();
         },
         icon: const Icon(Symbols.delete),
+      ),
+    );
+  }
+}
+
+class _DeleteDbScreen extends StatelessWidget {
+  const _DeleteDbScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Text('Local database has been deleted, please restart the app'),
       ),
     );
   }

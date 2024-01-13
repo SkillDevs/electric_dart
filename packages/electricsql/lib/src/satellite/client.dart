@@ -7,7 +7,6 @@ import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/notifiers/notifiers.dart' hide Change;
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/rpc.dart';
@@ -15,13 +14,13 @@ import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/cache.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
+import 'package:electricsql/src/util/async_event_emitter.dart';
 import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:events_emitter/events_emitter.dart';
 import 'package:meta/meta.dart';
 import 'package:synchronized/synchronized.dart';
 
@@ -43,9 +42,31 @@ const subscriptionError = {
   SatelliteErrorCode.shapeDeliveryError,
 };
 
-class SatelliteClient extends EventEmitter implements Client {
+abstract interface class SafeEventEmitter {
+  void Function() onError(ErrorCallback callback);
+  void Function() onRelation(RelationCallback callback);
+  void Function() onTransaction(
+    IncomingTransactionCallback callback,
+  );
+  void Function() onOutboundStarted(OutboundStartedCallback callback);
+
+  void enqueueEmitError(SatelliteException error);
+  void enqueueEmitRelation(Relation relation);
+  void enqueueEmitTransaction(TransactionEvent transactionEvent);
+  void enqueueEmitOutboundStarted(LSN lsn);
+
+  void removeAllListeners();
+
+  int listenerCount(String event);
+}
+
+class SatelliteClient implements Client {
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
+  late final SafeEventEmitter _emitter;
+
+  @visibleForTesting
+  SafeEventEmitter get emitter => _emitter;
 
   Socket? socket;
 
@@ -65,6 +86,7 @@ class SatelliteClient extends EventEmitter implements Client {
   List<String> allowedMutexedRpcResponses = [];
 
   DBSchema _dbDescription;
+  bool _isDown = false;
 
   @visibleForTesting
   void debugSetDbDescription(DBSchema value) {
@@ -79,17 +101,15 @@ class SatelliteClient extends EventEmitter implements Client {
   };
 
   SatelliteClient({
-    // ignore: avoid_unused_constructor_parameters
-    required DbName dbName,
     required DBSchema dbDescription,
     required this.socketFactory,
-    // ignore: avoid_unused_constructor_parameters
-    required Notifier notifier,
     required this.opts,
   }) : _dbDescription = dbDescription {
     // This cannot be lazyly instantiated in the 'late final' property, otherwise
     // it won't be properly ready to emit events at the right time
     _subscriptionsDataCache = SubscriptionsDataCache(_dbDescription);
+
+    _emitter = SatelliteClientEventEmitter();
 
     inbound = resetReplication<Transaction>(null, null);
     outbound = resetReplication<DataTransaction>(null, null);
@@ -149,8 +169,15 @@ class SatelliteClient extends EventEmitter implements Client {
 
   @override
   Future<void> connect() async {
-    if (!isClosed()) {
-      close();
+    if (_isDown) {
+      throw SatelliteException(
+        SatelliteErrorCode.unexpectedState,
+        'client has already shutdown',
+      );
+    }
+
+    if (isConnected()) {
+      disconnect();
     }
 
     final completer = Completer<void>();
@@ -159,7 +186,7 @@ class SatelliteClient extends EventEmitter implements Client {
     this.socket = socket;
 
     void onceError(Object error) {
-      close();
+      disconnect();
       completer.completeError(error);
     }
 
@@ -174,21 +201,20 @@ class SatelliteClient extends EventEmitter implements Client {
       socketHandler = (Uint8List message) => handleIncoming(message);
       socket.onMessage(socketHandler!);
       socket.onError((error) {
-        if (listenerCount('error') == 0) {
-          close();
+        if (_emitter.listenerCount('error') == 0) {
+          disconnect();
           logger.error(
             'socket error but no listener is attached: $error',
           );
         }
-        emit('error', error);
+        _emitter.enqueueEmitError(error);
       });
       socket.onClose(() {
-        close();
-        if (listenerCount('error') == 0) {
+        disconnect();
+        if (_emitter.listenerCount('error') == 0) {
           logger.error('socket closed but no listener is attached');
         }
-        emit(
-          'error',
+        _emitter.enqueueEmitError(
           SatelliteException(SatelliteErrorCode.socketError, 'socket closed'),
         );
       });
@@ -208,12 +234,8 @@ class SatelliteClient extends EventEmitter implements Client {
     return completer.future;
   }
 
-  int listenerCount(String event) {
-    return listeners.where((l) => l.type == event).length;
-  }
-
   @override
-  void close() {
+  void disconnect() {
     outbound = resetReplication(outbound.lastLsn, null);
     inbound = resetReplication(inbound.lastLsn, null);
 
@@ -226,15 +248,15 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  bool isClosed() {
-    return socketHandler == null;
+  bool isConnected() {
+    return socketHandler != null;
   }
 
-  void removeAllListeners() {
-    // Prevent concurrent modification
-    for (final listener in [...listeners]) {
-      removeEventListener(listener);
-    }
+  @override
+  void shutdown() {
+    disconnect();
+    _emitter.removeAllListeners();
+    _isDown = true;
   }
 
   Future<T> delayIncomingMessages<T>(
@@ -281,7 +303,7 @@ class SatelliteClient extends EventEmitter implements Client {
       if (error is SatelliteException) {
         // subscription errors are emitted through specific event
         if (!subscriptionError.contains(error.code)) {
-          emit('error', error);
+          _emitter.enqueueEmitError(error);
         }
       } else {
         // This is an unexpected runtime error
@@ -303,21 +325,20 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToTransactions(
-    Future<void> Function(Transaction transaction) callback,
+  void Function() subscribeToTransactions(
+    TransactionCallback callback,
   ) {
-    on<TransactionEvent>('transaction', (txnEvent) async {
-      // move callback execution outside the message handling path
+    return _emitter.onTransaction((txnEvent) async {
       await callback(txnEvent.transaction);
       txnEvent.ackCb();
     });
   }
 
   @override
-  void subscribeToRelations(
-    void Function(Relation relation) callback,
+  void Function() subscribeToRelations(
+    RelationCallback callback,
   ) {
-    on<Relation>('relation', callback);
+    return _emitter.onRelation(callback);
   }
 
   @override
@@ -408,7 +429,7 @@ class SatelliteClient extends EventEmitter implements Client {
       logger.debug('[proto] send: ${msgToString(request)}');
     }
     final _socket = socket;
-    if (_socket == null || isClosed()) {
+    if (_socket == null || !isConnected()) {
       throw SatelliteException(
         SatelliteErrorCode.unexpectedState,
         'trying to send message, but client is closed',
@@ -516,11 +537,10 @@ class SatelliteClient extends EventEmitter implements Client {
       throttledPushTransaction =
           Throttle(pushTransactions, Duration(milliseconds: opts.pushPeriod));
 
-      emit('outbound_started', message.lsn);
+      _emitter.enqueueEmitOutboundStarted(message.lsn);
       return SatInStartReplicationResp();
     } else {
-      emit(
-        'error',
+      _emitter.enqueueEmitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${outbound.isReplicating} handling 'start' request",
@@ -552,23 +572,15 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  EventListener<SatelliteException> subscribeToError(ErrorCallback callback) {
-    return on<SatelliteException>('error', callback);
+  void Function() subscribeToError(ErrorCallback callback) {
+    return _emitter.onError(callback);
   }
 
   @override
-  void unsubscribeToError(EventListener<SatelliteException> eventListener) {
-    removeEventListener(eventListener);
-  }
-
-  @override
-  EventListener<void> subscribeToOutboundEvent(void Function() callback) {
-    return on<void>('outbound_started', (_) => callback());
-  }
-
-  @override
-  void unsubscribeToOutboundEvent(EventListener<void> eventListener) {
-    removeEventListener(eventListener);
+  void Function() subscribeToOutboundStarted(
+    OutboundStartedCallback callback,
+  ) {
+    return _emitter.onOutboundStarted(callback);
   }
 
   @override
@@ -582,8 +594,8 @@ class SatelliteClient extends EventEmitter implements Client {
         _subscriptionsDataCache.on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
-      successEventListener: successListener,
-      errorEventListener: errorListener,
+      removeSuccessListener: () => successListener.cancel(),
+      removeErrorListener: () => errorListener.cancel(),
     );
   }
 
@@ -591,12 +603,8 @@ class SatelliteClient extends EventEmitter implements Client {
   void unsubscribeToSubscriptionEvents(
     SubscriptionEventListeners listeners,
   ) {
-    _subscriptionsDataCache.removeEventListener(
-      listeners.successEventListener,
-    );
-    _subscriptionsDataCache.removeEventListener(
-      listeners.errorEventListener,
-    );
+    listeners.removeSuccessListener();
+    listeners.removeErrorListener();
   }
 
   @override
@@ -700,8 +708,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
       return SatInStopReplicationResp();
     } else {
-      emit(
-        'error',
+      _emitter.enqueueEmitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'stop' request",
@@ -730,8 +737,7 @@ class SatelliteClient extends EventEmitter implements Client {
 
   void handleRelation(SatRelation message) {
     if (inbound.isReplicating != ReplicationStatus.active) {
-      emit(
-        'error',
+      _emitter.enqueueEmitError(
         SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'relation' message",
@@ -758,7 +764,7 @@ class SatelliteClient extends EventEmitter implements Client {
     );
 
     inbound.relations[relation.id] = relation;
-    emit('relation', relation);
+    _emitter.enqueueEmitRelation(relation);
   }
 
   void handleTransaction(SatOpLog message) {
@@ -774,8 +780,7 @@ class SatelliteClient extends EventEmitter implements Client {
   }
 
   void handleErrorResp(SatErrorResp error) {
-    emit(
-      'error',
+    _emitter.enqueueEmitError(
       serverErrorToSatelliteError(error),
     );
   }
@@ -848,8 +853,7 @@ class SatelliteClient extends EventEmitter implements Client {
           origin: lastTx.origin,
           migrationVersion: lastTx.migrationVersion,
         );
-        emit<TransactionEvent>(
-          'transaction',
+        _emitter.enqueueEmitTransaction(
           TransactionEvent(
             transaction,
             () => inbound.lastLsn = transaction.lsn,
@@ -1003,6 +1007,14 @@ class SatelliteClient extends EventEmitter implements Client {
               tags: tags,
             ),
           );
+        case DataChangeType.compensation:
+          changeOp = SatTransOp(
+            compensation: SatOpCompensation(
+              pkData: record,
+              relationId: relation.id,
+              tags: tags,
+            ),
+          );
       }
       ops.add(changeOp);
     }
@@ -1016,8 +1028,8 @@ class SatelliteClient extends EventEmitter implements Client {
 /// @param dbDescription Database description object
 /// @param table Name of the table
 /// @param column Name of the column
-/// @returns The PG type of the column
-PgType _getColumnType(
+/// @returns The PG type of the column or null if unknown (possibly an enum at runtime via the socket)
+PgType? _getColumnType(
   DBSchema dbDescription,
   String table,
   RelationColumn column,
@@ -1025,7 +1037,8 @@ PgType _getColumnType(
   if (dbDescription.hasTable(table) &&
       dbDescription.getFields(table).containsKey(column.name)) {
     // The table and column are known in the DB description
-    return dbDescription.getFields(table)[column.name]!;
+    final PgType pgType = dbDescription.getFields(table)[column.name]!;
+    return pgType;
   } else {
     // The table or column is not known.
     // There must have been a migration that added it to the DB while the app was running.
@@ -1036,7 +1049,10 @@ PgType _getColumnType(
     // because it was received at runtime and thus will have the PG type
     // (which would not be the case for bundled relations fetched
     //  from the endpoint because the endpoint maps PG types to SQLite types).
-    return pgTypeFromColumnType(column.type);
+    final PgType? pgType = maybePgTypeFromColumnType(column.type);
+    // if the type is not know, it's probably an ENUM, the name of the incoming type
+    // is the name of the enum
+    return pgType;
   }
 }
 
@@ -1120,24 +1136,28 @@ int calculateNumBytes(int columnNum) {
 
 Object deserializeColumnData(
   List<int> column,
-  PgType columnType,
+  PgType? columnType,
 ) {
   switch (columnType) {
     case PgType.char:
     case PgType.date:
+    case PgType.int8:
     case PgType.text:
     case PgType.time:
     case PgType.timestamp:
     case PgType.timestampTz:
     case PgType.uuid:
     case PgType.varchar:
+    // enums (pgType == null) are decoded from text
+    case null:
+    case PgType.json:
+    case PgType.jsonb:
       return TypeDecoder.text(column);
     case PgType.bool:
       return TypeDecoder.boolean(column);
     case PgType.int:
     case PgType.int2:
     case PgType.int4:
-    case PgType.int8:
     case PgType.integer:
       return num.parse(TypeDecoder.text(column));
     case PgType.float4:
@@ -1150,13 +1170,14 @@ Object deserializeColumnData(
 }
 
 // All values serialized as textual representation
-List<int> serializeColumnData(Object columnValue, PgType columnType) {
+List<int> serializeColumnData(Object columnValue, PgType? columnType) {
   switch (columnType) {
     case PgType.bool:
       return TypeEncoder.boolean(columnValue as int);
     case PgType.timeTz:
       return TypeEncoder.timetz(columnValue as String);
     default:
+      // Enums (pgType == null) are encoded as text
       return TypeEncoder.text(_getDefaultStringToSerialize(columnValue));
   }
 }
@@ -1207,4 +1228,81 @@ DecodedMessage toMessage(Uint8List data) {
   }
 
   return DecodedMessage(decodeMessage(data.sublist(1), type), type);
+}
+
+class SatelliteClientEventEmitter implements SafeEventEmitter {
+  final AsyncEventEmitter _emitter = AsyncEventEmitter();
+
+  SatelliteClientEventEmitter();
+
+  @override
+  void enqueueEmitError(SatelliteException error) {
+    return _enqueueEmit('error', error);
+  }
+
+  @override
+  void enqueueEmitRelation(Relation relation) {
+    return _enqueueEmit('relation', relation);
+  }
+
+  @override
+  void enqueueEmitTransaction(TransactionEvent transactionEvent) {
+    return _enqueueEmit('transaction', transactionEvent);
+  }
+
+  @override
+  void enqueueEmitOutboundStarted(LSN lsn) {
+    return _enqueueEmit('outbound_started', lsn);
+  }
+
+  @override
+  void Function() onError(ErrorCallback callback) {
+    return _on('error', callback);
+  }
+
+  @override
+  void Function() onRelation(RelationCallback callback) {
+    return _on('relation', callback);
+  }
+
+  @override
+  void Function() onTransaction(
+    IncomingTransactionCallback callback,
+  ) {
+    return _on('transaction', callback);
+  }
+
+  @override
+  void Function() onOutboundStarted(OutboundStartedCallback callback) {
+    return _on('outbound_started', callback);
+  }
+
+  @override
+  int listenerCount(String event) {
+    return _emitter.listenerCount(event);
+  }
+
+  @override
+  void removeAllListeners() {
+    _emitter.removeAllListeners(null);
+  }
+
+  void Function() _on<T>(
+    String eventName,
+    FutureOr<void> Function(T) callback,
+  ) {
+    FutureOr<void> wrapper(dynamic data) {
+      return callback(data as T);
+    }
+
+    _emitter.on(eventName, wrapper);
+
+    return () {
+      _emitter.removeListener(eventName, wrapper);
+    };
+  }
+
+  void _enqueueEmit<T>(String eventName, T data) {
+    return _emitter.enqueueEmit<T>(eventName, data);
+  }
 }

@@ -1,10 +1,14 @@
 ![Tests](https://github.com/SkillDevs/electric_dart/actions/workflows/tests.yml/badge.svg)
+![E2E](https://github.com/SkillDevs/electric_dart/actions/workflows/e2e.yml/badge.svg)
 
 [![pub package](https://img.shields.io/pub/v/electricsql.svg?label=electricsql&color=blue)](https://pub.dartlang.org/packages/electricsql)
 [![pub package](https://img.shields.io/pub/v/electricsql_flutter.svg?label=electricsql_flutter&color=blue)](https://pub.dartlang.org/packages/electricsql_flutter)
 [![pub package](https://img.shields.io/pub/v/electricsql_cli.svg?label=electricsql_cli&color=blue)](https://pub.dartlang.org/packages/electricsql_cli)
 
-# Electric Dart ⚡🎯
+<h1>
+    <img align="center" height="60" src="https://raw.githubusercontent.com/SkillDevs/electric_dart/master/resources/electric_dart_icon.png"/>
+    Electric Dart
+</h1>
 
 #### 🛠️ WORK IN PROGRESS 🛠️
 
@@ -20,8 +24,8 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 ### Reference implementation: 
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
-* Version `v0.7.0`
-* Commit: `02d2b6c69b4d1cd78b49bd38b3128f3949f3fc52`
+* Version `v0.8.2-dev`
+* Commit: `8220227857f2e05750a8bd94c1fd6e768c09bfa6`
 
 
 ### What's Electric?
@@ -62,6 +66,8 @@ final electric = await electrify<AppDatabase>(
     // `dart run electricsql_cli generate`
     migrations: kElectricMigrations,
     config: ElectricConfig(
+        // Electric service URL
+        url: 'http://<ip>:5133',
         auth: AuthConfig(
             // https://electric-sql.com/docs/usage/auth
             // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
@@ -70,7 +76,6 @@ final electric = await electrify<AppDatabase>(
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
-        // url: '<ELECTRIC_SERVICE_URL>',
     ),
 );
 ```
@@ -149,9 +154,9 @@ Dart 3.x and Melos required
 
 ### Generate the Protobuf code
 
-Install the `protoc_plugin` Dart package. Version used: `^20.0.1`
+Install the `protoc_plugin` Dart package.
 
-`dart pub global activate protoc_plugin 20.0.1`
+`dart pub global activate protoc_plugin`
 
 To generate the code
 

@@ -4,6 +4,7 @@
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
+import 'package:electricsql/electricsql.dart';
 import 'package:myapp/base_model.dart';
 
 const kElectrifiedTables = [
@@ -12,6 +13,7 @@ const kElectrifiedTables = [
   Datatypes,
   Weirdnames,
   GenOptsDriftTable,
+  Enums,
 ];
 
 class Project extends Table {
@@ -63,6 +65,11 @@ class Datatypes extends Table {
 
   IntColumn get cInt4 => customType(ElectricTypes.int4).named('c_int4')();
 
+  IntColumn get cInt8 => customType(ElectricTypes.int8).named('c_int8')();
+
+  RealColumn get cFloat4 =>
+      customType(ElectricTypes.float4).named('c_float4')();
+
   RealColumn get cFloat8 =>
       customType(ElectricTypes.float8).named('c_float8')();
 
@@ -80,6 +87,11 @@ class Datatypes extends Table {
   Column<DateTime> get cTimestamptz =>
       customType(ElectricTypes.timestampTZ).named('c_timestamptz')();
 
+  Column<Object> get cJson => customType(ElectricTypes.json).named('c_json')();
+
+  Column<Object> get cJsonb =>
+      customType(ElectricTypes.jsonb).named('c_jsonb')();
+
   @override
   String? get tableName => 'datatypes';
 
@@ -95,7 +107,12 @@ class Weirdnames extends Table {
 
   TextColumn get val => text().named('1val')();
 
-  TextColumn get textCol => text().named('text')();
+  TextColumn get text$ => text().named('text')();
+
+  Column<Object> get braces => customType(ElectricTypes.json)();
+
+  Column<DbInteger> get int$ =>
+      customType(ElectricEnumTypes.integer).named('int').nullable()();
 
   @override
   String? get tableName => 'weirdnames';
@@ -124,4 +141,66 @@ class GenOptsDriftTable extends Table {
 
   @override
   bool get withoutRowId => true;
+}
+
+class Enums extends Table {
+  TextColumn get id => text()();
+
+  Column<DbColor> get c => customType(ElectricEnumTypes.color).nullable()();
+
+  @override
+  String? get tableName => 'enums';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+// ------------------------------ ENUMS ------------------------------
+
+/// Dart enum for Postgres enum "color"
+enum DbColor { red, green, blue }
+
+/// Dart enum for Postgres enum "integer"
+enum DbInteger { int$, bool$, double$, $2Float }
+
+/// Codecs for Electric enums
+class ElectricEnumCodecs {
+  /// Codec for Dart enum "color"
+  static final color = ElectricEnumCodec<DbColor>(
+    dartEnumToPgEnum: <DbColor, String>{
+      DbColor.red: 'RED',
+      DbColor.green: 'GREEN',
+      DbColor.blue: 'BLUE',
+    },
+    values: DbColor.values,
+  );
+
+  /// Codec for Dart enum "integer"
+  static final integer = ElectricEnumCodec<DbInteger>(
+    dartEnumToPgEnum: <DbInteger, String>{
+      DbInteger.int$: 'int',
+      DbInteger.bool$: 'Bool',
+      DbInteger.double$: 'DOUBLE',
+      DbInteger.$2Float: '2Float',
+    },
+    values: DbInteger.values,
+  );
+}
+
+/// Drift custom types for Electric enums
+class ElectricEnumTypes {
+  /// Codec for Dart enum "color"
+  static final color = CustomElectricTypeGeneric(
+    codec: ElectricEnumCodecs.color,
+    typeName: 'color',
+  );
+
+  /// Codec for Dart enum "integer"
+  static final integer = CustomElectricTypeGeneric(
+    codec: ElectricEnumCodecs.integer,
+    typeName: 'integer',
+  );
 }

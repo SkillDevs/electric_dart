@@ -1,49 +1,56 @@
-///
+//
 //  Generated code. Do not modify.
 //  source: proto/satellite.proto
 //
 // @dart = 2.12
-// ignore_for_file: annotate_overrides,camel_case_types,constant_identifier_names,deprecated_member_use_from_same_package,directives_ordering,library_prefixes,non_constant_identifier_names,prefer_final_fields,return_of_invalid_type,unnecessary_const,unnecessary_import,unnecessary_this,unused_import,unused_shown_name
 
-import 'dart:core' as $core;
+// ignore_for_file: annotate_overrides, camel_case_types, comment_references
+// ignore_for_file: constant_identifier_names, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_final_fields
+// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
+
 import 'dart:convert' as $convert;
+import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 
 @$core.Deprecated('Use satAuthHeaderDescriptor instead')
-const SatAuthHeader$json = const {
+const SatAuthHeader$json = {
   '1': 'SatAuthHeader',
-  '2': const [
-    const {'1': 'UNSPECIFIED', '2': 0},
+  '2': [
+    {'1': 'UNSPECIFIED', '2': 0},
   ],
-  '4': const [
-    const {'1': 1, '2': 1},
+  '4': [
+    {'1': 1, '2': 1},
   ],
 };
 
 /// Descriptor for `SatAuthHeader`. Decode as a `google.protobuf.EnumDescriptorProto`.
 final $typed_data.Uint8List satAuthHeaderDescriptor = $convert
     .base64Decode('Cg1TYXRBdXRoSGVhZGVyEg8KC1VOU1BFQ0lGSUVEEAAiBAgBEAE=');
+
 @$core.Deprecated('Use satRpcRequestDescriptor instead')
-const SatRpcRequest$json = const {
+const SatRpcRequest$json = {
   '1': 'SatRpcRequest',
-  '2': const [
-    const {'1': 'method', '3': 1, '4': 1, '5': 9, '10': 'method'},
-    const {'1': 'request_id', '3': 2, '4': 1, '5': 13, '10': 'requestId'},
-    const {'1': 'message', '3': 3, '4': 1, '5': 12, '10': 'message'},
+  '2': [
+    {'1': 'method', '3': 1, '4': 1, '5': 9, '10': 'method'},
+    {'1': 'request_id', '3': 2, '4': 1, '5': 13, '10': 'requestId'},
+    {'1': 'message', '3': 3, '4': 1, '5': 12, '10': 'message'},
   ],
 };
 
 /// Descriptor for `SatRpcRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satRpcRequestDescriptor = $convert.base64Decode(
-    'Cg1TYXRScGNSZXF1ZXN0EhYKBm1ldGhvZBgBIAEoCVIGbWV0aG9kEh0KCnJlcXVlc3RfaWQYAiABKA1SCXJlcXVlc3RJZBIYCgdtZXNzYWdlGAMgASgMUgdtZXNzYWdl');
+    'Cg1TYXRScGNSZXF1ZXN0EhYKBm1ldGhvZBgBIAEoCVIGbWV0aG9kEh0KCnJlcXVlc3RfaWQYAi'
+    'ABKA1SCXJlcXVlc3RJZBIYCgdtZXNzYWdlGAMgASgMUgdtZXNzYWdl');
+
 @$core.Deprecated('Use satRpcResponseDescriptor instead')
-const SatRpcResponse$json = const {
+const SatRpcResponse$json = {
   '1': 'SatRpcResponse',
-  '2': const [
-    const {'1': 'method', '3': 1, '4': 1, '5': 9, '10': 'method'},
-    const {'1': 'request_id', '3': 2, '4': 1, '5': 13, '10': 'requestId'},
-    const {'1': 'message', '3': 3, '4': 1, '5': 12, '9': 0, '10': 'message'},
-    const {
+  '2': [
+    {'1': 'method', '3': 1, '4': 1, '5': 9, '10': 'method'},
+    {'1': 'request_id', '3': 2, '4': 1, '5': 13, '10': 'requestId'},
+    {'1': 'message', '3': 3, '4': 1, '5': 12, '9': 0, '10': 'message'},
+    {
       '1': 'error',
       '3': 4,
       '4': 1,
@@ -53,19 +60,23 @@ const SatRpcResponse$json = const {
       '10': 'error'
     },
   ],
-  '8': const [
-    const {'1': 'result'},
+  '8': [
+    {'1': 'result'},
   ],
 };
 
 /// Descriptor for `SatRpcResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satRpcResponseDescriptor = $convert.base64Decode(
-    'Cg5TYXRScGNSZXNwb25zZRIWCgZtZXRob2QYASABKAlSBm1ldGhvZBIdCgpyZXF1ZXN0X2lkGAIgASgNUglyZXF1ZXN0SWQSGgoHbWVzc2FnZRgDIAEoDEgAUgdtZXNzYWdlEjgKBWVycm9yGAQgASgLMiAuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEVycm9yUmVzcEgAUgVlcnJvckIICgZyZXN1bHQ=');
+    'Cg5TYXRScGNSZXNwb25zZRIWCgZtZXRob2QYASABKAlSBm1ldGhvZBIdCgpyZXF1ZXN0X2lkGA'
+    'IgASgNUglyZXF1ZXN0SWQSGgoHbWVzc2FnZRgDIAEoDEgAUgdtZXNzYWdlEjgKBWVycm9yGAQg'
+    'ASgLMiAuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEVycm9yUmVzcEgAUgVlcnJvckIICgZyZXN1bH'
+    'Q=');
+
 @$core.Deprecated('Use satAuthHeaderPairDescriptor instead')
-const SatAuthHeaderPair$json = const {
+const SatAuthHeaderPair$json = {
   '1': 'SatAuthHeaderPair',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'key',
       '3': 1,
       '4': 1,
@@ -73,20 +84,22 @@ const SatAuthHeaderPair$json = const {
       '6': '.Electric.Satellite.SatAuthHeader',
       '10': 'key'
     },
-    const {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
   ],
 };
 
 /// Descriptor for `SatAuthHeaderPair`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satAuthHeaderPairDescriptor = $convert.base64Decode(
-    'ChFTYXRBdXRoSGVhZGVyUGFpchIzCgNrZXkYASABKA4yIS5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0QXV0aEhlYWRlclIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZQ==');
+    'ChFTYXRBdXRoSGVhZGVyUGFpchIzCgNrZXkYASABKA4yIS5FbGVjdHJpYy5TYXRlbGxpdGUuU2'
+    'F0QXV0aEhlYWRlclIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZQ==');
+
 @$core.Deprecated('Use satAuthReqDescriptor instead')
-const SatAuthReq$json = const {
+const SatAuthReq$json = {
   '1': 'SatAuthReq',
-  '2': const [
-    const {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
-    const {'1': 'token', '3': 2, '4': 1, '5': 9, '10': 'token'},
-    const {
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'token', '3': 2, '4': 1, '5': 9, '10': 'token'},
+    {
       '1': 'headers',
       '3': 3,
       '4': 3,
@@ -99,13 +112,16 @@ const SatAuthReq$json = const {
 
 /// Descriptor for `SatAuthReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satAuthReqDescriptor = $convert.base64Decode(
-    'CgpTYXRBdXRoUmVxEg4KAmlkGAEgASgJUgJpZBIUCgV0b2tlbhgCIAEoCVIFdG9rZW4SPwoHaGVhZGVycxgDIAMoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoSGVhZGVyUGFpclIHaGVhZGVycw==');
+    'CgpTYXRBdXRoUmVxEg4KAmlkGAEgASgJUgJpZBIUCgV0b2tlbhgCIAEoCVIFdG9rZW4SPwoHaG'
+    'VhZGVycxgDIAMoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoSGVhZGVyUGFpclIHaGVh'
+    'ZGVycw==');
+
 @$core.Deprecated('Use satAuthRespDescriptor instead')
-const SatAuthResp$json = const {
+const SatAuthResp$json = {
   '1': 'SatAuthResp',
-  '2': const [
-    const {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
-    const {
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {
       '1': 'headers',
       '3': 3,
       '4': 3,
@@ -118,12 +134,14 @@ const SatAuthResp$json = const {
 
 /// Descriptor for `SatAuthResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satAuthRespDescriptor = $convert.base64Decode(
-    'CgtTYXRBdXRoUmVzcBIOCgJpZBgBIAEoCVICaWQSPwoHaGVhZGVycxgDIAMoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoSGVhZGVyUGFpclIHaGVhZGVycw==');
+    'CgtTYXRBdXRoUmVzcBIOCgJpZBgBIAEoCVICaWQSPwoHaGVhZGVycxgDIAMoCzIlLkVsZWN0cm'
+    'ljLlNhdGVsbGl0ZS5TYXRBdXRoSGVhZGVyUGFpclIHaGVhZGVycw==');
+
 @$core.Deprecated('Use satErrorRespDescriptor instead')
-const SatErrorResp$json = const {
+const SatErrorResp$json = {
   '1': 'SatErrorResp',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'error_type',
       '3': 1,
       '4': 1,
@@ -131,33 +149,53 @@ const SatErrorResp$json = const {
       '6': '.Electric.Satellite.SatErrorResp.ErrorCode',
       '10': 'errorType'
     },
+    {'1': 'lsn', '3': 2, '4': 1, '5': 12, '9': 0, '10': 'lsn', '17': true},
+    {
+      '1': 'message',
+      '3': 3,
+      '4': 1,
+      '5': 9,
+      '9': 1,
+      '10': 'message',
+      '17': true
+    },
   ],
-  '4': const [SatErrorResp_ErrorCode$json],
+  '4': [SatErrorResp_ErrorCode$json],
+  '8': [
+    {'1': '_lsn'},
+    {'1': '_message'},
+  ],
 };
 
 @$core.Deprecated('Use satErrorRespDescriptor instead')
-const SatErrorResp_ErrorCode$json = const {
+const SatErrorResp_ErrorCode$json = {
   '1': 'ErrorCode',
-  '2': const [
-    const {'1': 'INTERNAL', '2': 0},
-    const {'1': 'AUTH_REQUIRED', '2': 1},
-    const {'1': 'AUTH_FAILED', '2': 2},
-    const {'1': 'REPLICATION_FAILED', '2': 3},
-    const {'1': 'INVALID_REQUEST', '2': 4},
-    const {'1': 'PROTO_VSN_MISMATCH', '2': 5},
-    const {'1': 'SCHEMA_VSN_MISMATCH', '2': 6},
+  '2': [
+    {'1': 'INTERNAL', '2': 0},
+    {'1': 'AUTH_REQUIRED', '2': 1},
+    {'1': 'AUTH_FAILED', '2': 2},
+    {'1': 'REPLICATION_FAILED', '2': 3},
+    {'1': 'INVALID_REQUEST', '2': 4},
+    {'1': 'PROTO_VSN_MISMATCH', '2': 5},
+    {'1': 'SCHEMA_VSN_MISMATCH', '2': 6},
   ],
 };
 
 /// Descriptor for `SatErrorResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satErrorRespDescriptor = $convert.base64Decode(
-    'CgxTYXRFcnJvclJlc3ASSQoKZXJyb3JfdHlwZRgBIAEoDjIqLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRFcnJvclJlc3AuRXJyb3JDb2RlUgllcnJvclR5cGUimwEKCUVycm9yQ29kZRIMCghJTlRFUk5BTBAAEhEKDUFVVEhfUkVRVUlSRUQQARIPCgtBVVRIX0ZBSUxFRBACEhYKElJFUExJQ0FUSU9OX0ZBSUxFRBADEhMKD0lOVkFMSURfUkVRVUVTVBAEEhYKElBST1RPX1ZTTl9NSVNNQVRDSBAFEhcKE1NDSEVNQV9WU05fTUlTTUFUQ0gQBg==');
+    'CgxTYXRFcnJvclJlc3ASSQoKZXJyb3JfdHlwZRgBIAEoDjIqLkVsZWN0cmljLlNhdGVsbGl0ZS'
+    '5TYXRFcnJvclJlc3AuRXJyb3JDb2RlUgllcnJvclR5cGUSFQoDbHNuGAIgASgMSABSA2xzbogB'
+    'ARIdCgdtZXNzYWdlGAMgASgJSAFSB21lc3NhZ2WIAQEimwEKCUVycm9yQ29kZRIMCghJTlRFUk'
+    '5BTBAAEhEKDUFVVEhfUkVRVUlSRUQQARIPCgtBVVRIX0ZBSUxFRBACEhYKElJFUExJQ0FUSU9O'
+    'X0ZBSUxFRBADEhMKD0lOVkFMSURfUkVRVUVTVBAEEhYKElBST1RPX1ZTTl9NSVNNQVRDSBAFEh'
+    'cKE1NDSEVNQV9WU05fTUlTTUFUQ0gQBkIGCgRfbHNuQgoKCF9tZXNzYWdl');
+
 @$core.Deprecated('Use satInStartReplicationReqDescriptor instead')
-const SatInStartReplicationReq$json = const {
+const SatInStartReplicationReq$json = {
   '1': 'SatInStartReplicationReq',
-  '2': const [
-    const {'1': 'lsn', '3': 1, '4': 1, '5': 12, '10': 'lsn'},
-    const {
+  '2': [
+    {'1': 'lsn', '3': 1, '4': 1, '5': 12, '10': 'lsn'},
+    {
       '1': 'options',
       '3': 2,
       '4': 3,
@@ -165,14 +203,8 @@ const SatInStartReplicationReq$json = const {
       '6': '.Electric.Satellite.SatInStartReplicationReq.Option',
       '10': 'options'
     },
-    const {
-      '1': 'subscription_ids',
-      '3': 4,
-      '4': 3,
-      '5': 9,
-      '10': 'subscriptionIds'
-    },
-    const {
+    {'1': 'subscription_ids', '3': 4, '4': 3, '5': 9, '10': 'subscriptionIds'},
+    {
       '1': 'schema_version',
       '3': 5,
       '4': 1,
@@ -182,38 +214,43 @@ const SatInStartReplicationReq$json = const {
       '17': true
     },
   ],
-  '4': const [SatInStartReplicationReq_Option$json],
-  '8': const [
-    const {'1': '_schema_version'},
+  '4': [SatInStartReplicationReq_Option$json],
+  '8': [
+    {'1': '_schema_version'},
   ],
-  '9': const [
-    const {'1': 3, '2': 4},
+  '9': [
+    {'1': 3, '2': 4},
   ],
 };
 
 @$core.Deprecated('Use satInStartReplicationReqDescriptor instead')
-const SatInStartReplicationReq_Option$json = const {
+const SatInStartReplicationReq_Option$json = {
   '1': 'Option',
-  '2': const [
-    const {'1': 'NONE', '2': 0},
+  '2': [
+    {'1': 'NONE', '2': 0},
   ],
-  '4': const [
-    const {'1': 1, '2': 1},
-    const {'1': 2, '2': 2},
-    const {'1': 3, '2': 3},
-    const {'1': 4, '2': 4},
+  '4': [
+    {'1': 1, '2': 1},
+    {'1': 2, '2': 2},
+    {'1': 3, '2': 3},
+    {'1': 4, '2': 4},
   ],
 };
 
 /// Descriptor for `SatInStartReplicationReq`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List satInStartReplicationReqDescriptor =
-    $convert.base64Decode(
-        'ChhTYXRJblN0YXJ0UmVwbGljYXRpb25SZXESEAoDbHNuGAEgASgMUgNsc24STQoHb3B0aW9ucxgCIAMoDjIzLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRJblN0YXJ0UmVwbGljYXRpb25SZXEuT3B0aW9uUgdvcHRpb25zEikKEHN1YnNjcmlwdGlvbl9pZHMYBCADKAlSD3N1YnNjcmlwdGlvbklkcxIqCg5zY2hlbWFfdmVyc2lvbhgFIAEoCUgAUg1zY2hlbWFWZXJzaW9uiAEBIioKBk9wdGlvbhIICgROT05FEAAiBAgBEAEiBAgCEAIiBAgDEAMiBAgEEARCEQoPX3NjaGVtYV92ZXJzaW9uSgQIAxAE');
+final $typed_data.Uint8List satInStartReplicationReqDescriptor = $convert.base64Decode(
+    'ChhTYXRJblN0YXJ0UmVwbGljYXRpb25SZXESEAoDbHNuGAEgASgMUgNsc24STQoHb3B0aW9ucx'
+    'gCIAMoDjIzLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRJblN0YXJ0UmVwbGljYXRpb25SZXEuT3B0'
+    'aW9uUgdvcHRpb25zEikKEHN1YnNjcmlwdGlvbl9pZHMYBCADKAlSD3N1YnNjcmlwdGlvbklkcx'
+    'IqCg5zY2hlbWFfdmVyc2lvbhgFIAEoCUgAUg1zY2hlbWFWZXJzaW9uiAEBIioKBk9wdGlvbhII'
+    'CgROT05FEAAiBAgBEAEiBAgCEAIiBAgDEAMiBAgEEARCEQoPX3NjaGVtYV92ZXJzaW9uSgQIAx'
+    'AE');
+
 @$core.Deprecated('Use satInStartReplicationRespDescriptor instead')
-const SatInStartReplicationResp$json = const {
+const SatInStartReplicationResp$json = {
   '1': 'SatInStartReplicationResp',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'err',
       '3': 1,
       '4': 1,
@@ -224,17 +261,17 @@ const SatInStartReplicationResp$json = const {
       '17': true
     },
   ],
-  '3': const [SatInStartReplicationResp_ReplicationError$json],
-  '8': const [
-    const {'1': '_err'},
+  '3': [SatInStartReplicationResp_ReplicationError$json],
+  '8': [
+    {'1': '_err'},
   ],
 };
 
 @$core.Deprecated('Use satInStartReplicationRespDescriptor instead')
-const SatInStartReplicationResp_ReplicationError$json = const {
+const SatInStartReplicationResp_ReplicationError$json = {
   '1': 'ReplicationError',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'code',
       '3': 1,
       '4': 1,
@@ -243,64 +280,76 @@ const SatInStartReplicationResp_ReplicationError$json = const {
           '.Electric.Satellite.SatInStartReplicationResp.ReplicationError.Code',
       '10': 'code'
     },
-    const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
   ],
-  '4': const [SatInStartReplicationResp_ReplicationError_Code$json],
+  '4': [SatInStartReplicationResp_ReplicationError_Code$json],
 };
 
 @$core.Deprecated('Use satInStartReplicationRespDescriptor instead')
-const SatInStartReplicationResp_ReplicationError_Code$json = const {
+const SatInStartReplicationResp_ReplicationError_Code$json = {
   '1': 'Code',
-  '2': const [
-    const {'1': 'CODE_UNSPECIFIED', '2': 0},
-    const {'1': 'BEHIND_WINDOW', '2': 1},
-    const {'1': 'INVALID_POSITION', '2': 2},
-    const {'1': 'SUBSCRIPTION_NOT_FOUND', '2': 3},
-    const {'1': 'MALFORMED_LSN', '2': 4},
-    const {'1': 'UNKNOWN_SCHEMA_VSN', '2': 5},
+  '2': [
+    {'1': 'CODE_UNSPECIFIED', '2': 0},
+    {'1': 'BEHIND_WINDOW', '2': 1},
+    {'1': 'INVALID_POSITION', '2': 2},
+    {'1': 'SUBSCRIPTION_NOT_FOUND', '2': 3},
+    {'1': 'MALFORMED_LSN', '2': 4},
+    {'1': 'UNKNOWN_SCHEMA_VSN', '2': 5},
   ],
 };
 
 /// Descriptor for `SatInStartReplicationResp`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List satInStartReplicationRespDescriptor =
-    $convert.base64Decode(
-        'ChlTYXRJblN0YXJ0UmVwbGljYXRpb25SZXNwElUKA2VychgBIAEoCzI+LkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRJblN0YXJ0UmVwbGljYXRpb25SZXNwLlJlcGxpY2F0aW9uRXJyb3JIAFIDZXJyiAEBGpQCChBSZXBsaWNhdGlvbkVycm9yElcKBGNvZGUYASABKA4yQy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVzcC5SZXBsaWNhdGlvbkVycm9yLkNvZGVSBGNvZGUSGAoHbWVzc2FnZRgCIAEoCVIHbWVzc2FnZSKMAQoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASEQoNQkVISU5EX1dJTkRPVxABEhQKEElOVkFMSURfUE9TSVRJT04QAhIaChZTVUJTQ1JJUFRJT05fTk9UX0ZPVU5EEAMSEQoNTUFMRk9STUVEX0xTThAEEhYKElVOS05PV05fU0NIRU1BX1ZTThAFQgYKBF9lcnI=');
+final $typed_data.Uint8List satInStartReplicationRespDescriptor = $convert.base64Decode(
+    'ChlTYXRJblN0YXJ0UmVwbGljYXRpb25SZXNwElUKA2VychgBIAEoCzI+LkVsZWN0cmljLlNhdG'
+    'VsbGl0ZS5TYXRJblN0YXJ0UmVwbGljYXRpb25SZXNwLlJlcGxpY2F0aW9uRXJyb3JIAFIDZXJy'
+    'iAEBGpQCChBSZXBsaWNhdGlvbkVycm9yElcKBGNvZGUYASABKA4yQy5FbGVjdHJpYy5TYXRlbG'
+    'xpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVzcC5SZXBsaWNhdGlvbkVycm9yLkNvZGVSBGNv'
+    'ZGUSGAoHbWVzc2FnZRgCIAEoCVIHbWVzc2FnZSKMAQoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSU'
+    'VEEAASEQoNQkVISU5EX1dJTkRPVxABEhQKEElOVkFMSURfUE9TSVRJT04QAhIaChZTVUJTQ1JJ'
+    'UFRJT05fTk9UX0ZPVU5EEAMSEQoNTUFMRk9STUVEX0xTThAEEhYKElVOS05PV05fU0NIRU1BX1'
+    'ZTThAFQgYKBF9lcnI=');
+
 @$core.Deprecated('Use satInStopReplicationReqDescriptor instead')
-const SatInStopReplicationReq$json = const {
+const SatInStopReplicationReq$json = {
   '1': 'SatInStopReplicationReq',
 };
 
 /// Descriptor for `SatInStopReplicationReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satInStopReplicationReqDescriptor =
     $convert.base64Decode('ChdTYXRJblN0b3BSZXBsaWNhdGlvblJlcQ==');
+
 @$core.Deprecated('Use satInStopReplicationRespDescriptor instead')
-const SatInStopReplicationResp$json = const {
+const SatInStopReplicationResp$json = {
   '1': 'SatInStopReplicationResp',
 };
 
 /// Descriptor for `SatInStopReplicationResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satInStopReplicationRespDescriptor =
     $convert.base64Decode('ChhTYXRJblN0b3BSZXBsaWNhdGlvblJlc3A=');
+
 @$core.Deprecated('Use satRelationColumnDescriptor instead')
-const SatRelationColumn$json = const {
+const SatRelationColumn$json = {
   '1': 'SatRelationColumn',
-  '2': const [
-    const {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
-    const {'1': 'type', '3': 2, '4': 1, '5': 9, '10': 'type'},
-    const {'1': 'primaryKey', '3': 3, '4': 1, '5': 8, '10': 'primaryKey'},
-    const {'1': 'is_nullable', '3': 4, '4': 1, '5': 8, '10': 'isNullable'},
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'type', '3': 2, '4': 1, '5': 9, '10': 'type'},
+    {'1': 'primaryKey', '3': 3, '4': 1, '5': 8, '10': 'primaryKey'},
+    {'1': 'is_nullable', '3': 4, '4': 1, '5': 8, '10': 'isNullable'},
   ],
 };
 
 /// Descriptor for `SatRelationColumn`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satRelationColumnDescriptor = $convert.base64Decode(
-    'ChFTYXRSZWxhdGlvbkNvbHVtbhISCgRuYW1lGAEgASgJUgRuYW1lEhIKBHR5cGUYAiABKAlSBHR5cGUSHgoKcHJpbWFyeUtleRgDIAEoCFIKcHJpbWFyeUtleRIfCgtpc19udWxsYWJsZRgEIAEoCFIKaXNOdWxsYWJsZQ==');
+    'ChFTYXRSZWxhdGlvbkNvbHVtbhISCgRuYW1lGAEgASgJUgRuYW1lEhIKBHR5cGUYAiABKAlSBH'
+    'R5cGUSHgoKcHJpbWFyeUtleRgDIAEoCFIKcHJpbWFyeUtleRIfCgtpc19udWxsYWJsZRgEIAEo'
+    'CFIKaXNOdWxsYWJsZQ==');
+
 @$core.Deprecated('Use satRelationDescriptor instead')
-const SatRelation$json = const {
+const SatRelation$json = {
   '1': 'SatRelation',
-  '2': const [
-    const {'1': 'schema_name', '3': 1, '4': 1, '5': 9, '10': 'schemaName'},
-    const {
+  '2': [
+    {'1': 'schema_name', '3': 1, '4': 1, '5': 9, '10': 'schemaName'},
+    {
       '1': 'table_type',
       '3': 2,
       '4': 1,
@@ -308,9 +357,9 @@ const SatRelation$json = const {
       '6': '.Electric.Satellite.SatRelation.RelationType',
       '10': 'tableType'
     },
-    const {'1': 'table_name', '3': 3, '4': 1, '5': 9, '10': 'tableName'},
-    const {'1': 'relation_id', '3': 4, '4': 1, '5': 13, '10': 'relationId'},
-    const {
+    {'1': 'table_name', '3': 3, '4': 1, '5': 9, '10': 'tableName'},
+    {'1': 'relation_id', '3': 4, '4': 1, '5': 13, '10': 'relationId'},
+    {
       '1': 'columns',
       '3': 5,
       '4': 3,
@@ -319,28 +368,34 @@ const SatRelation$json = const {
       '10': 'columns'
     },
   ],
-  '4': const [SatRelation_RelationType$json],
+  '4': [SatRelation_RelationType$json],
 };
 
 @$core.Deprecated('Use satRelationDescriptor instead')
-const SatRelation_RelationType$json = const {
+const SatRelation_RelationType$json = {
   '1': 'RelationType',
-  '2': const [
-    const {'1': 'TABLE', '2': 0},
-    const {'1': 'INDEX', '2': 1},
-    const {'1': 'VIEW', '2': 2},
-    const {'1': 'TRIGGER', '2': 3},
+  '2': [
+    {'1': 'TABLE', '2': 0},
+    {'1': 'INDEX', '2': 1},
+    {'1': 'VIEW', '2': 2},
+    {'1': 'TRIGGER', '2': 3},
   ],
 };
 
 /// Descriptor for `SatRelation`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satRelationDescriptor = $convert.base64Decode(
-    'CgtTYXRSZWxhdGlvbhIfCgtzY2hlbWFfbmFtZRgBIAEoCVIKc2NoZW1hTmFtZRJLCgp0YWJsZV90eXBlGAIgASgOMiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFJlbGF0aW9uLlJlbGF0aW9uVHlwZVIJdGFibGVUeXBlEh0KCnRhYmxlX25hbWUYAyABKAlSCXRhYmxlTmFtZRIfCgtyZWxhdGlvbl9pZBgEIAEoDVIKcmVsYXRpb25JZBI/Cgdjb2x1bW5zGAUgAygLMiUuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFJlbGF0aW9uQ29sdW1uUgdjb2x1bW5zIjsKDFJlbGF0aW9uVHlwZRIJCgVUQUJMRRAAEgkKBUlOREVYEAESCAoEVklFVxACEgsKB1RSSUdHRVIQAw==');
+    'CgtTYXRSZWxhdGlvbhIfCgtzY2hlbWFfbmFtZRgBIAEoCVIKc2NoZW1hTmFtZRJLCgp0YWJsZV'
+    '90eXBlGAIgASgOMiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFJlbGF0aW9uLlJlbGF0aW9uVHlw'
+    'ZVIJdGFibGVUeXBlEh0KCnRhYmxlX25hbWUYAyABKAlSCXRhYmxlTmFtZRIfCgtyZWxhdGlvbl'
+    '9pZBgEIAEoDVIKcmVsYXRpb25JZBI/Cgdjb2x1bW5zGAUgAygLMiUuRWxlY3RyaWMuU2F0ZWxs'
+    'aXRlLlNhdFJlbGF0aW9uQ29sdW1uUgdjb2x1bW5zIjsKDFJlbGF0aW9uVHlwZRIJCgVUQUJMRR'
+    'AAEgkKBUlOREVYEAESCAoEVklFVxACEgsKB1RSSUdHRVIQAw==');
+
 @$core.Deprecated('Use satOpLogDescriptor instead')
-const SatOpLog$json = const {
+const SatOpLog$json = {
   '1': 'SatOpLog',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'ops',
       '3': 1,
       '4': 3,
@@ -353,12 +408,14 @@ const SatOpLog$json = const {
 
 /// Descriptor for `SatOpLog`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpLogDescriptor = $convert.base64Decode(
-    'CghTYXRPcExvZxIwCgNvcHMYASADKAsyHi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0VHJhbnNPcFIDb3Bz');
+    'CghTYXRPcExvZxIwCgNvcHMYASADKAsyHi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0VHJhbnNPcF'
+    'IDb3Bz');
+
 @$core.Deprecated('Use satTransOpDescriptor instead')
-const SatTransOp$json = const {
+const SatTransOp$json = {
   '1': 'SatTransOp',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'begin',
       '3': 1,
       '4': 1,
@@ -367,7 +424,7 @@ const SatTransOp$json = const {
       '9': 0,
       '10': 'begin'
     },
-    const {
+    {
       '1': 'commit',
       '3': 2,
       '4': 1,
@@ -376,7 +433,7 @@ const SatTransOp$json = const {
       '9': 0,
       '10': 'commit'
     },
-    const {
+    {
       '1': 'update',
       '3': 3,
       '4': 1,
@@ -385,7 +442,7 @@ const SatTransOp$json = const {
       '9': 0,
       '10': 'update'
     },
-    const {
+    {
       '1': 'insert',
       '3': 4,
       '4': 1,
@@ -394,7 +451,7 @@ const SatTransOp$json = const {
       '9': 0,
       '10': 'insert'
     },
-    const {
+    {
       '1': 'delete',
       '3': 5,
       '4': 1,
@@ -403,7 +460,7 @@ const SatTransOp$json = const {
       '9': 0,
       '10': 'delete'
     },
-    const {
+    {
       '1': 'migrate',
       '3': 6,
       '4': 1,
@@ -412,72 +469,76 @@ const SatTransOp$json = const {
       '9': 0,
       '10': 'migrate'
     },
+    {
+      '1': 'compensation',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.Electric.Satellite.SatOpCompensation',
+      '9': 0,
+      '10': 'compensation'
+    },
   ],
-  '8': const [
-    const {'1': 'op'},
+  '8': [
+    {'1': 'op'},
   ],
 };
 
 /// Descriptor for `SatTransOp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satTransOpDescriptor = $convert.base64Decode(
-    'CgpTYXRUcmFuc09wEjYKBWJlZ2luGAEgASgLMh4uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wQmVnaW5IAFIFYmVnaW4SOQoGY29tbWl0GAIgASgLMh8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wQ29tbWl0SABSBmNvbW1pdBI5CgZ1cGRhdGUYAyABKAsyHy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BVcGRhdGVIAFIGdXBkYXRlEjkKBmluc2VydBgEIAEoCzIfLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcEluc2VydEgAUgZpbnNlcnQSOQoGZGVsZXRlGAUgASgLMh8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wRGVsZXRlSABSBmRlbGV0ZRI8CgdtaWdyYXRlGAYgASgLMiAuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wTWlncmF0ZUgAUgdtaWdyYXRlQgQKAm9w');
+    'CgpTYXRUcmFuc09wEjYKBWJlZ2luGAEgASgLMh4uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wQm'
+    'VnaW5IAFIFYmVnaW4SOQoGY29tbWl0GAIgASgLMh8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9w'
+    'Q29tbWl0SABSBmNvbW1pdBI5CgZ1cGRhdGUYAyABKAsyHy5FbGVjdHJpYy5TYXRlbGxpdGUuU2'
+    'F0T3BVcGRhdGVIAFIGdXBkYXRlEjkKBmluc2VydBgEIAEoCzIfLkVsZWN0cmljLlNhdGVsbGl0'
+    'ZS5TYXRPcEluc2VydEgAUgZpbnNlcnQSOQoGZGVsZXRlGAUgASgLMh8uRWxlY3RyaWMuU2F0ZW'
+    'xsaXRlLlNhdE9wRGVsZXRlSABSBmRlbGV0ZRI8CgdtaWdyYXRlGAYgASgLMiAuRWxlY3RyaWMu'
+    'U2F0ZWxsaXRlLlNhdE9wTWlncmF0ZUgAUgdtaWdyYXRlEksKDGNvbXBlbnNhdGlvbhgHIAEoCz'
+    'IlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcENvbXBlbnNhdGlvbkgAUgxjb21wZW5zYXRpb25C'
+    'BAoCb3A=');
+
 @$core.Deprecated('Use satOpBeginDescriptor instead')
-const SatOpBegin$json = const {
+const SatOpBegin$json = {
   '1': 'SatOpBegin',
-  '2': const [
-    const {
-      '1': 'commit_timestamp',
-      '3': 1,
-      '4': 1,
-      '5': 4,
-      '10': 'commitTimestamp'
-    },
-    const {'1': 'trans_id', '3': 2, '4': 1, '5': 9, '10': 'transId'},
-    const {'1': 'lsn', '3': 3, '4': 1, '5': 12, '10': 'lsn'},
-    const {
-      '1': 'origin',
-      '3': 4,
-      '4': 1,
-      '5': 9,
-      '9': 0,
-      '10': 'origin',
-      '17': true
-    },
-    const {'1': 'is_migration', '3': 5, '4': 1, '5': 8, '10': 'isMigration'},
+  '2': [
+    {'1': 'commit_timestamp', '3': 1, '4': 1, '5': 4, '10': 'commitTimestamp'},
+    {'1': 'trans_id', '3': 2, '4': 1, '5': 9, '10': 'transId'},
+    {'1': 'lsn', '3': 3, '4': 1, '5': 12, '10': 'lsn'},
+    {'1': 'origin', '3': 4, '4': 1, '5': 9, '9': 0, '10': 'origin', '17': true},
+    {'1': 'is_migration', '3': 5, '4': 1, '5': 8, '10': 'isMigration'},
   ],
-  '8': const [
-    const {'1': '_origin'},
+  '8': [
+    {'1': '_origin'},
   ],
 };
 
 /// Descriptor for `SatOpBegin`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpBeginDescriptor = $convert.base64Decode(
-    'CgpTYXRPcEJlZ2luEikKEGNvbW1pdF90aW1lc3RhbXAYASABKARSD2NvbW1pdFRpbWVzdGFtcBIZCgh0cmFuc19pZBgCIAEoCVIHdHJhbnNJZBIQCgNsc24YAyABKAxSA2xzbhIbCgZvcmlnaW4YBCABKAlIAFIGb3JpZ2luiAEBEiEKDGlzX21pZ3JhdGlvbhgFIAEoCFILaXNNaWdyYXRpb25CCQoHX29yaWdpbg==');
+    'CgpTYXRPcEJlZ2luEikKEGNvbW1pdF90aW1lc3RhbXAYASABKARSD2NvbW1pdFRpbWVzdGFtcB'
+    'IZCgh0cmFuc19pZBgCIAEoCVIHdHJhbnNJZBIQCgNsc24YAyABKAxSA2xzbhIbCgZvcmlnaW4Y'
+    'BCABKAlIAFIGb3JpZ2luiAEBEiEKDGlzX21pZ3JhdGlvbhgFIAEoCFILaXNNaWdyYXRpb25CCQ'
+    'oHX29yaWdpbg==');
+
 @$core.Deprecated('Use satOpCommitDescriptor instead')
-const SatOpCommit$json = const {
+const SatOpCommit$json = {
   '1': 'SatOpCommit',
-  '2': const [
-    const {
-      '1': 'commit_timestamp',
-      '3': 1,
-      '4': 1,
-      '5': 4,
-      '10': 'commitTimestamp'
-    },
-    const {'1': 'trans_id', '3': 2, '4': 1, '5': 9, '10': 'transId'},
-    const {'1': 'lsn', '3': 3, '4': 1, '5': 12, '10': 'lsn'},
+  '2': [
+    {'1': 'commit_timestamp', '3': 1, '4': 1, '5': 4, '10': 'commitTimestamp'},
+    {'1': 'trans_id', '3': 2, '4': 1, '5': 9, '10': 'transId'},
+    {'1': 'lsn', '3': 3, '4': 1, '5': 12, '10': 'lsn'},
   ],
 };
 
 /// Descriptor for `SatOpCommit`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpCommitDescriptor = $convert.base64Decode(
-    'CgtTYXRPcENvbW1pdBIpChBjb21taXRfdGltZXN0YW1wGAEgASgEUg9jb21taXRUaW1lc3RhbXASGQoIdHJhbnNfaWQYAiABKAlSB3RyYW5zSWQSEAoDbHNuGAMgASgMUgNsc24=');
+    'CgtTYXRPcENvbW1pdBIpChBjb21taXRfdGltZXN0YW1wGAEgASgEUg9jb21taXRUaW1lc3RhbX'
+    'ASGQoIdHJhbnNfaWQYAiABKAlSB3RyYW5zSWQSEAoDbHNuGAMgASgMUgNsc24=');
+
 @$core.Deprecated('Use satOpInsertDescriptor instead')
-const SatOpInsert$json = const {
+const SatOpInsert$json = {
   '1': 'SatOpInsert',
-  '2': const [
-    const {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
-    const {
+  '2': [
+    {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
+    {
       '1': 'row_data',
       '3': 2,
       '4': 1,
@@ -485,19 +546,22 @@ const SatOpInsert$json = const {
       '6': '.Electric.Satellite.SatOpRow',
       '10': 'rowData'
     },
-    const {'1': 'tags', '3': 3, '4': 3, '5': 9, '10': 'tags'},
+    {'1': 'tags', '3': 3, '4': 3, '5': 9, '10': 'tags'},
   ],
 };
 
 /// Descriptor for `SatOpInsert`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpInsertDescriptor = $convert.base64Decode(
-    'CgtTYXRPcEluc2VydBIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI3Cghyb3dfZGF0YRgCIAEoCzIcLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcFJvd1IHcm93RGF0YRISCgR0YWdzGAMgAygJUgR0YWdz');
+    'CgtTYXRPcEluc2VydBIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI3Cghyb3dfZG'
+    'F0YRgCIAEoCzIcLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcFJvd1IHcm93RGF0YRISCgR0YWdz'
+    'GAMgAygJUgR0YWdz');
+
 @$core.Deprecated('Use satOpUpdateDescriptor instead')
-const SatOpUpdate$json = const {
+const SatOpUpdate$json = {
   '1': 'SatOpUpdate',
-  '2': const [
-    const {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
-    const {
+  '2': [
+    {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
+    {
       '1': 'row_data',
       '3': 2,
       '4': 1,
@@ -505,7 +569,7 @@ const SatOpUpdate$json = const {
       '6': '.Electric.Satellite.SatOpRow',
       '10': 'rowData'
     },
-    const {
+    {
       '1': 'old_row_data',
       '3': 3,
       '4': 1,
@@ -513,19 +577,23 @@ const SatOpUpdate$json = const {
       '6': '.Electric.Satellite.SatOpRow',
       '10': 'oldRowData'
     },
-    const {'1': 'tags', '3': 4, '4': 3, '5': 9, '10': 'tags'},
+    {'1': 'tags', '3': 4, '4': 3, '5': 9, '10': 'tags'},
   ],
 };
 
 /// Descriptor for `SatOpUpdate`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpUpdateDescriptor = $convert.base64Decode(
-    'CgtTYXRPcFVwZGF0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI3Cghyb3dfZGF0YRgCIAEoCzIcLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcFJvd1IHcm93RGF0YRI+CgxvbGRfcm93X2RhdGEYAyABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdGESEgoEdGFncxgEIAMoCVIEdGFncw==');
+    'CgtTYXRPcFVwZGF0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI3Cghyb3dfZG'
+    'F0YRgCIAEoCzIcLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcFJvd1IHcm93RGF0YRI+CgxvbGRf'
+    'cm93X2RhdGEYAyABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdG'
+    'ESEgoEdGFncxgEIAMoCVIEdGFncw==');
+
 @$core.Deprecated('Use satOpDeleteDescriptor instead')
-const SatOpDelete$json = const {
+const SatOpDelete$json = {
   '1': 'SatOpDelete',
-  '2': const [
-    const {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
-    const {
+  '2': [
+    {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
+    {
       '1': 'old_row_data',
       '3': 2,
       '4': 1,
@@ -533,31 +601,59 @@ const SatOpDelete$json = const {
       '6': '.Electric.Satellite.SatOpRow',
       '10': 'oldRowData'
     },
-    const {'1': 'tags', '3': 3, '4': 3, '5': 9, '10': 'tags'},
+    {'1': 'tags', '3': 3, '4': 3, '5': 9, '10': 'tags'},
   ],
 };
 
 /// Descriptor for `SatOpDelete`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpDeleteDescriptor = $convert.base64Decode(
-    'CgtTYXRPcERlbGV0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI+CgxvbGRfcm93X2RhdGEYAiABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdGESEgoEdGFncxgDIAMoCVIEdGFncw==');
+    'CgtTYXRPcERlbGV0ZRIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI+CgxvbGRfcm'
+    '93X2RhdGEYAiABKAsyHC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BSb3dSCm9sZFJvd0RhdGES'
+    'EgoEdGFncxgDIAMoCVIEdGFncw==');
+
+@$core.Deprecated('Use satOpCompensationDescriptor instead')
+const SatOpCompensation$json = {
+  '1': 'SatOpCompensation',
+  '2': [
+    {'1': 'relation_id', '3': 1, '4': 1, '5': 13, '10': 'relationId'},
+    {
+      '1': 'pk_data',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.Electric.Satellite.SatOpRow',
+      '10': 'pkData'
+    },
+    {'1': 'tags', '3': 4, '4': 3, '5': 9, '10': 'tags'},
+  ],
+};
+
+/// Descriptor for `SatOpCompensation`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List satOpCompensationDescriptor = $convert.base64Decode(
+    'ChFTYXRPcENvbXBlbnNhdGlvbhIfCgtyZWxhdGlvbl9pZBgBIAEoDVIKcmVsYXRpb25JZBI1Cg'
+    'dwa19kYXRhGAIgASgLMhwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdE9wUm93UgZwa0RhdGESEgoE'
+    'dGFncxgEIAMoCVIEdGFncw==');
+
 @$core.Deprecated('Use satOpRowDescriptor instead')
-const SatOpRow$json = const {
+const SatOpRow$json = {
   '1': 'SatOpRow',
-  '2': const [
-    const {'1': 'nulls_bitmask', '3': 1, '4': 1, '5': 12, '10': 'nullsBitmask'},
-    const {'1': 'values', '3': 2, '4': 3, '5': 12, '10': 'values'},
+  '2': [
+    {'1': 'nulls_bitmask', '3': 1, '4': 1, '5': 12, '10': 'nullsBitmask'},
+    {'1': 'values', '3': 2, '4': 3, '5': 12, '10': 'values'},
   ],
 };
 
 /// Descriptor for `SatOpRow`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpRowDescriptor = $convert.base64Decode(
-    'CghTYXRPcFJvdxIjCg1udWxsc19iaXRtYXNrGAEgASgMUgxudWxsc0JpdG1hc2sSFgoGdmFsdWVzGAIgAygMUgZ2YWx1ZXM=');
+    'CghTYXRPcFJvdxIjCg1udWxsc19iaXRtYXNrGAEgASgMUgxudWxsc0JpdG1hc2sSFgoGdmFsdW'
+    'VzGAIgAygMUgZ2YWx1ZXM=');
+
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
-const SatOpMigrate$json = const {
+const SatOpMigrate$json = {
   '1': 'SatOpMigrate',
-  '2': const [
-    const {'1': 'version', '3': 1, '4': 1, '5': 9, '10': 'version'},
-    const {
+  '2': [
+    {'1': 'version', '3': 1, '4': 1, '5': 9, '10': 'version'},
+    {
       '1': 'stmts',
       '3': 2,
       '4': 3,
@@ -565,7 +661,7 @@ const SatOpMigrate$json = const {
       '6': '.Electric.Satellite.SatOpMigrate.Stmt',
       '10': 'stmts'
     },
-    const {
+    {
       '1': 'table',
       '3': 3,
       '4': 1,
@@ -576,24 +672,24 @@ const SatOpMigrate$json = const {
       '17': true
     },
   ],
-  '3': const [
+  '3': [
     SatOpMigrate_Stmt$json,
     SatOpMigrate_PgColumnType$json,
     SatOpMigrate_Column$json,
     SatOpMigrate_ForeignKey$json,
     SatOpMigrate_Table$json
   ],
-  '4': const [SatOpMigrate_Type$json],
-  '8': const [
-    const {'1': '_table'},
+  '4': [SatOpMigrate_Type$json],
+  '8': [
+    {'1': '_table'},
   ],
 };
 
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
-const SatOpMigrate_Stmt$json = const {
+const SatOpMigrate_Stmt$json = {
   '1': 'Stmt',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'type',
       '3': 1,
       '4': 1,
@@ -601,27 +697,27 @@ const SatOpMigrate_Stmt$json = const {
       '6': '.Electric.Satellite.SatOpMigrate.Type',
       '10': 'type'
     },
-    const {'1': 'sql', '3': 2, '4': 1, '5': 9, '10': 'sql'},
+    {'1': 'sql', '3': 2, '4': 1, '5': 9, '10': 'sql'},
   ],
 };
 
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
-const SatOpMigrate_PgColumnType$json = const {
+const SatOpMigrate_PgColumnType$json = {
   '1': 'PgColumnType',
-  '2': const [
-    const {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
-    const {'1': 'array', '3': 2, '4': 3, '5': 5, '10': 'array'},
-    const {'1': 'size', '3': 3, '4': 3, '5': 5, '10': 'size'},
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'array', '3': 2, '4': 3, '5': 5, '10': 'array'},
+    {'1': 'size', '3': 3, '4': 3, '5': 5, '10': 'size'},
   ],
 };
 
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
-const SatOpMigrate_Column$json = const {
+const SatOpMigrate_Column$json = {
   '1': 'Column',
-  '2': const [
-    const {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
-    const {'1': 'sqlite_type', '3': 2, '4': 1, '5': 9, '10': 'sqliteType'},
-    const {
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'sqlite_type', '3': 2, '4': 1, '5': 9, '10': 'sqliteType'},
+    {
       '1': 'pg_type',
       '3': 3,
       '4': 1,
@@ -633,21 +729,21 @@ const SatOpMigrate_Column$json = const {
 };
 
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
-const SatOpMigrate_ForeignKey$json = const {
+const SatOpMigrate_ForeignKey$json = {
   '1': 'ForeignKey',
-  '2': const [
-    const {'1': 'fk_cols', '3': 1, '4': 3, '5': 9, '10': 'fkCols'},
-    const {'1': 'pk_table', '3': 2, '4': 1, '5': 9, '10': 'pkTable'},
-    const {'1': 'pk_cols', '3': 3, '4': 3, '5': 9, '10': 'pkCols'},
+  '2': [
+    {'1': 'fk_cols', '3': 1, '4': 3, '5': 9, '10': 'fkCols'},
+    {'1': 'pk_table', '3': 2, '4': 1, '5': 9, '10': 'pkTable'},
+    {'1': 'pk_cols', '3': 3, '4': 3, '5': 9, '10': 'pkCols'},
   ],
 };
 
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
-const SatOpMigrate_Table$json = const {
+const SatOpMigrate_Table$json = {
   '1': 'Table',
-  '2': const [
-    const {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
-    const {
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {
       '1': 'columns',
       '3': 2,
       '4': 3,
@@ -655,7 +751,7 @@ const SatOpMigrate_Table$json = const {
       '6': '.Electric.Satellite.SatOpMigrate.Column',
       '10': 'columns'
     },
-    const {
+    {
       '1': 'fks',
       '3': 3,
       '4': 3,
@@ -663,35 +759,44 @@ const SatOpMigrate_Table$json = const {
       '6': '.Electric.Satellite.SatOpMigrate.ForeignKey',
       '10': 'fks'
     },
-    const {'1': 'pks', '3': 4, '4': 3, '5': 9, '10': 'pks'},
+    {'1': 'pks', '3': 4, '4': 3, '5': 9, '10': 'pks'},
   ],
 };
 
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
-const SatOpMigrate_Type$json = const {
+const SatOpMigrate_Type$json = {
   '1': 'Type',
-  '2': const [
-    const {'1': 'CREATE_TABLE', '2': 0},
-    const {'1': 'CREATE_INDEX', '2': 1},
-    const {'1': 'ALTER_ADD_COLUMN', '2': 6},
+  '2': [
+    {'1': 'CREATE_TABLE', '2': 0},
+    {'1': 'CREATE_INDEX', '2': 1},
+    {'1': 'ALTER_ADD_COLUMN', '2': 6},
   ],
 };
 
 /// Descriptor for `SatOpMigrate`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpMigrateDescriptor = $convert.base64Decode(
-    'CgxTYXRPcE1pZ3JhdGUSGAoHdmVyc2lvbhgBIAEoCVIHdmVyc2lvbhI7CgVzdG10cxgCIAMoCzIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuU3RtdFIFc3RtdHMSQQoFdGFibGUYAyABKAsyJi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLlRhYmxlSABSBXRhYmxliAEBGlMKBFN0bXQSOQoEdHlwZRgBIAEoDjIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuVHlwZVIEdHlwZRIQCgNzcWwYAiABKAlSA3NxbBpMCgxQZ0NvbHVtblR5cGUSEgoEbmFtZRgBIAEoCVIEbmFtZRIUCgVhcnJheRgCIAMoBVIFYXJyYXkSEgoEc2l6ZRgDIAMoBVIEc2l6ZRqFAQoGQ29sdW1uEhIKBG5hbWUYASABKAlSBG5hbWUSHwoLc3FsaXRlX3R5cGUYAiABKAlSCnNxbGl0ZVR5cGUSRgoHcGdfdHlwZRgDIAEoCzItLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuUGdDb2x1bW5UeXBlUgZwZ1R5cGUaWQoKRm9yZWlnbktleRIXCgdma19jb2xzGAEgAygJUgZma0NvbHMSGQoIcGtfdGFibGUYAiABKAlSB3BrVGFibGUSFwoHcGtfY29scxgDIAMoCVIGcGtDb2xzGq8BCgVUYWJsZRISCgRuYW1lGAEgASgJUgRuYW1lEkEKB2NvbHVtbnMYAiADKAsyJy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkNvbHVtblIHY29sdW1ucxI9CgNma3MYAyADKAsyKy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkZvcmVpZ25LZXlSA2ZrcxIQCgNwa3MYBCADKAlSA3BrcyJACgRUeXBlEhAKDENSRUFURV9UQUJMRRAAEhAKDENSRUFURV9JTkRFWBABEhQKEEFMVEVSX0FERF9DT0xVTU4QBkIICgZfdGFibGU=');
+    'CgxTYXRPcE1pZ3JhdGUSGAoHdmVyc2lvbhgBIAEoCVIHdmVyc2lvbhI7CgVzdG10cxgCIAMoCz'
+    'IlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuU3RtdFIFc3RtdHMSQQoFdGFibGUY'
+    'AyABKAsyJi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLlRhYmxlSABSBXRhYmxliA'
+    'EBGlMKBFN0bXQSOQoEdHlwZRgBIAEoDjIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3Jh'
+    'dGUuVHlwZVIEdHlwZRIQCgNzcWwYAiABKAlSA3NxbBpMCgxQZ0NvbHVtblR5cGUSEgoEbmFtZR'
+    'gBIAEoCVIEbmFtZRIUCgVhcnJheRgCIAMoBVIFYXJyYXkSEgoEc2l6ZRgDIAMoBVIEc2l6ZRqF'
+    'AQoGQ29sdW1uEhIKBG5hbWUYASABKAlSBG5hbWUSHwoLc3FsaXRlX3R5cGUYAiABKAlSCnNxbG'
+    'l0ZVR5cGUSRgoHcGdfdHlwZRgDIAEoCzItLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3Jh'
+    'dGUuUGdDb2x1bW5UeXBlUgZwZ1R5cGUaWQoKRm9yZWlnbktleRIXCgdma19jb2xzGAEgAygJUg'
+    'Zma0NvbHMSGQoIcGtfdGFibGUYAiABKAlSB3BrVGFibGUSFwoHcGtfY29scxgDIAMoCVIGcGtD'
+    'b2xzGq8BCgVUYWJsZRISCgRuYW1lGAEgASgJUgRuYW1lEkEKB2NvbHVtbnMYAiADKAsyJy5FbG'
+    'VjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkNvbHVtblIHY29sdW1ucxI9CgNma3MYAyAD'
+    'KAsyKy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkZvcmVpZ25LZXlSA2ZrcxIQCg'
+    'Nwa3MYBCADKAlSA3BrcyJACgRUeXBlEhAKDENSRUFURV9UQUJMRRAAEhAKDENSRUFURV9JTkRF'
+    'WBABEhQKEEFMVEVSX0FERF9DT0xVTU4QBkIICgZfdGFibGU=');
+
 @$core.Deprecated('Use satSubsReqDescriptor instead')
-const SatSubsReq$json = const {
+const SatSubsReq$json = {
   '1': 'SatSubsReq',
-  '2': const [
-    const {
-      '1': 'subscription_id',
-      '3': 1,
-      '4': 1,
-      '5': 9,
-      '10': 'subscriptionId'
-    },
-    const {
+  '2': [
+    {'1': 'subscription_id', '3': 1, '4': 1, '5': 9, '10': 'subscriptionId'},
+    {
       '1': 'shape_requests',
       '3': 2,
       '4': 3,
@@ -704,19 +809,16 @@ const SatSubsReq$json = const {
 
 /// Descriptor for `SatSubsReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsReqDescriptor = $convert.base64Decode(
-    'CgpTYXRTdWJzUmVxEicKD3N1YnNjcmlwdGlvbl9pZBgBIAEoCVIOc3Vic2NyaXB0aW9uSWQSRgoOc2hhcGVfcmVxdWVzdHMYAiADKAsyHy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U2hhcGVSZXFSDXNoYXBlUmVxdWVzdHM=');
+    'CgpTYXRTdWJzUmVxEicKD3N1YnNjcmlwdGlvbl9pZBgBIAEoCVIOc3Vic2NyaXB0aW9uSWQSRg'
+    'oOc2hhcGVfcmVxdWVzdHMYAiADKAsyHy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U2hhcGVSZXFS'
+    'DXNoYXBlUmVxdWVzdHM=');
+
 @$core.Deprecated('Use satSubsRespDescriptor instead')
-const SatSubsResp$json = const {
+const SatSubsResp$json = {
   '1': 'SatSubsResp',
-  '2': const [
-    const {
-      '1': 'subscription_id',
-      '3': 1,
-      '4': 1,
-      '5': 9,
-      '10': 'subscriptionId'
-    },
-    const {
+  '2': [
+    {'1': 'subscription_id', '3': 1, '4': 1, '5': 9, '10': 'subscriptionId'},
+    {
       '1': 'err',
       '3': 2,
       '4': 1,
@@ -727,17 +829,17 @@ const SatSubsResp$json = const {
       '17': true
     },
   ],
-  '3': const [SatSubsResp_SatSubsError$json],
-  '8': const [
-    const {'1': '_err'},
+  '3': [SatSubsResp_SatSubsError$json],
+  '8': [
+    {'1': '_err'},
   ],
 };
 
 @$core.Deprecated('Use satSubsRespDescriptor instead')
-const SatSubsResp_SatSubsError$json = const {
+const SatSubsResp_SatSubsError$json = {
   '1': 'SatSubsError',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'code',
       '3': 2,
       '4': 1,
@@ -745,8 +847,8 @@ const SatSubsResp_SatSubsError$json = const {
       '6': '.Electric.Satellite.SatSubsResp.SatSubsError.Code',
       '10': 'code'
     },
-    const {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
-    const {
+    {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
+    {
       '1': 'shape_request_error',
       '3': 4,
       '4': 3,
@@ -755,15 +857,15 @@ const SatSubsResp_SatSubsError$json = const {
       '10': 'shapeRequestError'
     },
   ],
-  '3': const [SatSubsResp_SatSubsError_ShapeReqError$json],
-  '4': const [SatSubsResp_SatSubsError_Code$json],
+  '3': [SatSubsResp_SatSubsError_ShapeReqError$json],
+  '4': [SatSubsResp_SatSubsError_Code$json],
 };
 
 @$core.Deprecated('Use satSubsRespDescriptor instead')
-const SatSubsResp_SatSubsError_ShapeReqError$json = const {
+const SatSubsResp_SatSubsError_ShapeReqError$json = {
   '1': 'ShapeReqError',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'code',
       '3': 1,
       '4': 1,
@@ -771,68 +873,79 @@ const SatSubsResp_SatSubsError_ShapeReqError$json = const {
       '6': '.Electric.Satellite.SatSubsResp.SatSubsError.ShapeReqError.Code',
       '10': 'code'
     },
-    const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
-    const {'1': 'request_id', '3': 3, '4': 1, '5': 9, '10': 'requestId'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'request_id', '3': 3, '4': 1, '5': 9, '10': 'requestId'},
   ],
-  '4': const [SatSubsResp_SatSubsError_ShapeReqError_Code$json],
+  '4': [SatSubsResp_SatSubsError_ShapeReqError_Code$json],
 };
 
 @$core.Deprecated('Use satSubsRespDescriptor instead')
-const SatSubsResp_SatSubsError_ShapeReqError_Code$json = const {
+const SatSubsResp_SatSubsError_ShapeReqError_Code$json = {
   '1': 'Code',
-  '2': const [
-    const {'1': 'CODE_UNSPECIFIED', '2': 0},
-    const {'1': 'TABLE_NOT_FOUND', '2': 1},
-    const {'1': 'REFERENTIAL_INTEGRITY_VIOLATION', '2': 2},
-    const {'1': 'EMPTY_SHAPE_DEFINITION', '2': 3},
-    const {'1': 'DUPLICATE_TABLE_IN_SHAPE_DEFINITION', '2': 4},
+  '2': [
+    {'1': 'CODE_UNSPECIFIED', '2': 0},
+    {'1': 'TABLE_NOT_FOUND', '2': 1},
+    {'1': 'REFERENTIAL_INTEGRITY_VIOLATION', '2': 2},
+    {'1': 'EMPTY_SHAPE_DEFINITION', '2': 3},
+    {'1': 'DUPLICATE_TABLE_IN_SHAPE_DEFINITION', '2': 4},
   ],
 };
 
 @$core.Deprecated('Use satSubsRespDescriptor instead')
-const SatSubsResp_SatSubsError_Code$json = const {
+const SatSubsResp_SatSubsError_Code$json = {
   '1': 'Code',
-  '2': const [
-    const {'1': 'CODE_UNSPECIFIED', '2': 0},
-    const {'1': 'SUBSCRIPTION_ID_ALREADY_EXISTS', '2': 1},
-    const {'1': 'SHAPE_REQUEST_ERROR', '2': 2},
+  '2': [
+    {'1': 'CODE_UNSPECIFIED', '2': 0},
+    {'1': 'SUBSCRIPTION_ID_ALREADY_EXISTS', '2': 1},
+    {'1': 'SHAPE_REQUEST_ERROR', '2': 2},
   ],
 };
 
 /// Descriptor for `SatSubsResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsRespDescriptor = $convert.base64Decode(
-    'CgtTYXRTdWJzUmVzcBInCg9zdWJzY3JpcHRpb25faWQYASABKAlSDnN1YnNjcmlwdGlvbklkEkMKA2VychgCIAEoCzIsLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcC5TYXRTdWJzRXJyb3JIAFIDZXJyiAEBGvQECgxTYXRTdWJzRXJyb3ISRQoEY29kZRgCIAEoDjIxLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcC5TYXRTdWJzRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdlGAMgASgJUgdtZXNzYWdlEmoKE3NoYXBlX3JlcXVlc3RfZXJyb3IYBCADKAsyOi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLlNoYXBlUmVxRXJyb3JSEXNoYXBlUmVxdWVzdEVycm9yGrsCCg1TaGFwZVJlcUVycm9yElMKBGNvZGUYASABKA4yPy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLlNoYXBlUmVxRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh0KCnJlcXVlc3RfaWQYAyABKAlSCXJlcXVlc3RJZCKbAQoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASEwoPVEFCTEVfTk9UX0ZPVU5EEAESIwofUkVGRVJFTlRJQUxfSU5URUdSSVRZX1ZJT0xBVElPThACEhoKFkVNUFRZX1NIQVBFX0RFRklOSVRJT04QAxInCiNEVVBMSUNBVEVfVEFCTEVfSU5fU0hBUEVfREVGSU5JVElPThAEIlkKBENvZGUSFAoQQ09ERV9VTlNQRUNJRklFRBAAEiIKHlNVQlNDUklQVElPTl9JRF9BTFJFQURZX0VYSVNUUxABEhcKE1NIQVBFX1JFUVVFU1RfRVJST1IQAkIGCgRfZXJy');
+    'CgtTYXRTdWJzUmVzcBInCg9zdWJzY3JpcHRpb25faWQYASABKAlSDnN1YnNjcmlwdGlvbklkEk'
+    'MKA2VychgCIAEoCzIsLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcC5TYXRTdWJzRXJy'
+    'b3JIAFIDZXJyiAEBGvQECgxTYXRTdWJzRXJyb3ISRQoEY29kZRgCIAEoDjIxLkVsZWN0cmljLl'
+    'NhdGVsbGl0ZS5TYXRTdWJzUmVzcC5TYXRTdWJzRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdl'
+    'GAMgASgJUgdtZXNzYWdlEmoKE3NoYXBlX3JlcXVlc3RfZXJyb3IYBCADKAsyOi5FbGVjdHJpYy'
+    '5TYXRlbGxpdGUuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLlNoYXBlUmVxRXJyb3JSEXNoYXBl'
+    'UmVxdWVzdEVycm9yGrsCCg1TaGFwZVJlcUVycm9yElMKBGNvZGUYASABKA4yPy5FbGVjdHJpYy'
+    '5TYXRlbGxpdGUuU2F0U3Vic1Jlc3AuU2F0U3Vic0Vycm9yLlNoYXBlUmVxRXJyb3IuQ29kZVIE'
+    'Y29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh0KCnJlcXVlc3RfaWQYAyABKAlSCXJlcX'
+    'Vlc3RJZCKbAQoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASEwoPVEFCTEVfTk9UX0ZPVU5E'
+    'EAESIwofUkVGRVJFTlRJQUxfSU5URUdSSVRZX1ZJT0xBVElPThACEhoKFkVNUFRZX1NIQVBFX0'
+    'RFRklOSVRJT04QAxInCiNEVVBMSUNBVEVfVEFCTEVfSU5fU0hBUEVfREVGSU5JVElPThAEIlkK'
+    'BENvZGUSFAoQQ09ERV9VTlNQRUNJRklFRBAAEiIKHlNVQlNDUklQVElPTl9JRF9BTFJFQURZX0'
+    'VYSVNUUxABEhcKE1NIQVBFX1JFUVVFU1RfRVJST1IQAkIGCgRfZXJy');
+
 @$core.Deprecated('Use satUnsubsReqDescriptor instead')
-const SatUnsubsReq$json = const {
+const SatUnsubsReq$json = {
   '1': 'SatUnsubsReq',
-  '2': const [
-    const {
-      '1': 'subscription_ids',
-      '3': 1,
-      '4': 3,
-      '5': 9,
-      '10': 'subscriptionIds'
-    },
+  '2': [
+    {'1': 'subscription_ids', '3': 1, '4': 3, '5': 9, '10': 'subscriptionIds'},
   ],
 };
 
 /// Descriptor for `SatUnsubsReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satUnsubsReqDescriptor = $convert.base64Decode(
-    'CgxTYXRVbnN1YnNSZXESKQoQc3Vic2NyaXB0aW9uX2lkcxgBIAMoCVIPc3Vic2NyaXB0aW9uSWRz');
+    'CgxTYXRVbnN1YnNSZXESKQoQc3Vic2NyaXB0aW9uX2lkcxgBIAMoCVIPc3Vic2NyaXB0aW9uSW'
+    'Rz');
+
 @$core.Deprecated('Use satUnsubsRespDescriptor instead')
-const SatUnsubsResp$json = const {
+const SatUnsubsResp$json = {
   '1': 'SatUnsubsResp',
 };
 
 /// Descriptor for `SatUnsubsResp`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satUnsubsRespDescriptor =
     $convert.base64Decode('Cg1TYXRVbnN1YnNSZXNw');
+
 @$core.Deprecated('Use satShapeReqDescriptor instead')
-const SatShapeReq$json = const {
+const SatShapeReq$json = {
   '1': 'SatShapeReq',
-  '2': const [
-    const {'1': 'request_id', '3': 1, '4': 1, '5': 9, '10': 'requestId'},
-    const {
+  '2': [
+    {'1': 'request_id', '3': 1, '4': 1, '5': 9, '10': 'requestId'},
+    {
       '1': 'shape_definition',
       '3': 2,
       '4': 1,
@@ -845,12 +958,15 @@ const SatShapeReq$json = const {
 
 /// Descriptor for `SatShapeReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satShapeReqDescriptor = $convert.base64Decode(
-    'CgtTYXRTaGFwZVJlcRIdCgpyZXF1ZXN0X2lkGAEgASgJUglyZXF1ZXN0SWQSSgoQc2hhcGVfZGVmaW5pdGlvbhgCIAEoCzIfLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTaGFwZURlZlIPc2hhcGVEZWZpbml0aW9u');
+    'CgtTYXRTaGFwZVJlcRIdCgpyZXF1ZXN0X2lkGAEgASgJUglyZXF1ZXN0SWQSSgoQc2hhcGVfZG'
+    'VmaW5pdGlvbhgCIAEoCzIfLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTaGFwZURlZlIPc2hhcGVE'
+    'ZWZpbml0aW9u');
+
 @$core.Deprecated('Use satShapeDefDescriptor instead')
-const SatShapeDef$json = const {
+const SatShapeDef$json = {
   '1': 'SatShapeDef',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'selects',
       '3': 1,
       '4': 3,
@@ -859,25 +975,28 @@ const SatShapeDef$json = const {
       '10': 'selects'
     },
   ],
-  '3': const [SatShapeDef_Select$json],
+  '3': [SatShapeDef_Select$json],
 };
 
 @$core.Deprecated('Use satShapeDefDescriptor instead')
-const SatShapeDef_Select$json = const {
+const SatShapeDef_Select$json = {
   '1': 'Select',
-  '2': const [
-    const {'1': 'tablename', '3': 1, '4': 1, '5': 9, '10': 'tablename'},
+  '2': [
+    {'1': 'tablename', '3': 1, '4': 1, '5': 9, '10': 'tablename'},
   ],
 };
 
 /// Descriptor for `SatShapeDef`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satShapeDefDescriptor = $convert.base64Decode(
-    'CgtTYXRTaGFwZURlZhJACgdzZWxlY3RzGAEgAygLMiYuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFNoYXBlRGVmLlNlbGVjdFIHc2VsZWN0cxomCgZTZWxlY3QSHAoJdGFibGVuYW1lGAEgASgJUgl0YWJsZW5hbWU=');
+    'CgtTYXRTaGFwZURlZhJACgdzZWxlY3RzGAEgAygLMiYuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdF'
+    'NoYXBlRGVmLlNlbGVjdFIHc2VsZWN0cxomCgZTZWxlY3QSHAoJdGFibGVuYW1lGAEgASgJUgl0'
+    'YWJsZW5hbWU=');
+
 @$core.Deprecated('Use satSubsDataErrorDescriptor instead')
-const SatSubsDataError$json = const {
+const SatSubsDataError$json = {
   '1': 'SatSubsDataError',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'code',
       '3': 1,
       '4': 1,
@@ -885,15 +1004,9 @@ const SatSubsDataError$json = const {
       '6': '.Electric.Satellite.SatSubsDataError.Code',
       '10': 'code'
     },
-    const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
-    const {
-      '1': 'subscription_id',
-      '3': 3,
-      '4': 1,
-      '5': 9,
-      '10': 'subscriptionId'
-    },
-    const {
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'subscription_id', '3': 3, '4': 1, '5': 9, '10': 'subscriptionId'},
+    {
       '1': 'shape_request_error',
       '3': 4,
       '4': 3,
@@ -902,15 +1015,15 @@ const SatSubsDataError$json = const {
       '10': 'shapeRequestError'
     },
   ],
-  '3': const [SatSubsDataError_ShapeReqError$json],
-  '4': const [SatSubsDataError_Code$json],
+  '3': [SatSubsDataError_ShapeReqError$json],
+  '4': [SatSubsDataError_Code$json],
 };
 
 @$core.Deprecated('Use satSubsDataErrorDescriptor instead')
-const SatSubsDataError_ShapeReqError$json = const {
+const SatSubsDataError_ShapeReqError$json = {
   '1': 'ShapeReqError',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'code',
       '3': 1,
       '4': 1,
@@ -918,103 +1031,113 @@ const SatSubsDataError_ShapeReqError$json = const {
       '6': '.Electric.Satellite.SatSubsDataError.ShapeReqError.Code',
       '10': 'code'
     },
-    const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
-    const {'1': 'request_id', '3': 3, '4': 1, '5': 9, '10': 'requestId'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'request_id', '3': 3, '4': 1, '5': 9, '10': 'requestId'},
   ],
-  '4': const [SatSubsDataError_ShapeReqError_Code$json],
+  '4': [SatSubsDataError_ShapeReqError_Code$json],
 };
 
 @$core.Deprecated('Use satSubsDataErrorDescriptor instead')
-const SatSubsDataError_ShapeReqError_Code$json = const {
+const SatSubsDataError_ShapeReqError_Code$json = {
   '1': 'Code',
-  '2': const [
-    const {'1': 'CODE_UNSPECIFIED', '2': 0},
-    const {'1': 'SHAPE_SIZE_LIMIT_EXCEEDED', '2': 1},
+  '2': [
+    {'1': 'CODE_UNSPECIFIED', '2': 0},
+    {'1': 'SHAPE_SIZE_LIMIT_EXCEEDED', '2': 1},
   ],
 };
 
 @$core.Deprecated('Use satSubsDataErrorDescriptor instead')
-const SatSubsDataError_Code$json = const {
+const SatSubsDataError_Code$json = {
   '1': 'Code',
-  '2': const [
-    const {'1': 'CODE_UNSPECIFIED', '2': 0},
-    const {'1': 'SHAPE_DELIVERY_ERROR', '2': 1},
+  '2': [
+    {'1': 'CODE_UNSPECIFIED', '2': 0},
+    {'1': 'SHAPE_DELIVERY_ERROR', '2': 1},
   ],
 };
 
 /// Descriptor for `SatSubsDataError`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsDataErrorDescriptor = $convert.base64Decode(
-    'ChBTYXRTdWJzRGF0YUVycm9yEj0KBGNvZGUYASABKA4yKS5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic0RhdGFFcnJvci5Db2RlUgRjb2RlEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USJwoPc3Vic2NyaXB0aW9uX2lkGAMgASgJUg5zdWJzY3JpcHRpb25JZBJiChNzaGFwZV9yZXF1ZXN0X2Vycm9yGAQgAygLMjIuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFN1YnNEYXRhRXJyb3IuU2hhcGVSZXFFcnJvclIRc2hhcGVSZXF1ZXN0RXJyb3Ia0gEKDVNoYXBlUmVxRXJyb3ISSwoEY29kZRgBIAEoDjI3LkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzRGF0YUVycm9yLlNoYXBlUmVxRXJyb3IuQ29kZVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh0KCnJlcXVlc3RfaWQYAyABKAlSCXJlcXVlc3RJZCI7CgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABIdChlTSEFQRV9TSVpFX0xJTUlUX0VYQ0VFREVEEAEiNgoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASGAoUU0hBUEVfREVMSVZFUllfRVJST1IQAQ==');
+    'ChBTYXRTdWJzRGF0YUVycm9yEj0KBGNvZGUYASABKA4yKS5FbGVjdHJpYy5TYXRlbGxpdGUuU2'
+    'F0U3Vic0RhdGFFcnJvci5Db2RlUgRjb2RlEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USJwoP'
+    'c3Vic2NyaXB0aW9uX2lkGAMgASgJUg5zdWJzY3JpcHRpb25JZBJiChNzaGFwZV9yZXF1ZXN0X2'
+    'Vycm9yGAQgAygLMjIuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdFN1YnNEYXRhRXJyb3IuU2hhcGVS'
+    'ZXFFcnJvclIRc2hhcGVSZXF1ZXN0RXJyb3Ia0gEKDVNoYXBlUmVxRXJyb3ISSwoEY29kZRgBIA'
+    'EoDjI3LkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzRGF0YUVycm9yLlNoYXBlUmVxRXJyb3Iu'
+    'Q29kZVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh0KCnJlcXVlc3RfaWQYAyABKA'
+    'lSCXJlcXVlc3RJZCI7CgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABIdChlTSEFQRV9TSVpF'
+    'X0xJTUlUX0VYQ0VFREVEEAEiNgoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASGAoUU0hBUE'
+    'VfREVMSVZFUllfRVJST1IQAQ==');
+
 @$core.Deprecated('Use satSubsDataBeginDescriptor instead')
-const SatSubsDataBegin$json = const {
+const SatSubsDataBegin$json = {
   '1': 'SatSubsDataBegin',
-  '2': const [
-    const {
-      '1': 'subscription_id',
-      '3': 1,
-      '4': 1,
-      '5': 9,
-      '10': 'subscriptionId'
-    },
-    const {'1': 'lsn', '3': 2, '4': 1, '5': 12, '10': 'lsn'},
+  '2': [
+    {'1': 'subscription_id', '3': 1, '4': 1, '5': 9, '10': 'subscriptionId'},
+    {'1': 'lsn', '3': 2, '4': 1, '5': 12, '10': 'lsn'},
   ],
 };
 
 /// Descriptor for `SatSubsDataBegin`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsDataBeginDescriptor = $convert.base64Decode(
-    'ChBTYXRTdWJzRGF0YUJlZ2luEicKD3N1YnNjcmlwdGlvbl9pZBgBIAEoCVIOc3Vic2NyaXB0aW9uSWQSEAoDbHNuGAIgASgMUgNsc24=');
+    'ChBTYXRTdWJzRGF0YUJlZ2luEicKD3N1YnNjcmlwdGlvbl9pZBgBIAEoCVIOc3Vic2NyaXB0aW'
+    '9uSWQSEAoDbHNuGAIgASgMUgNsc24=');
+
 @$core.Deprecated('Use satSubsDataEndDescriptor instead')
-const SatSubsDataEnd$json = const {
+const SatSubsDataEnd$json = {
   '1': 'SatSubsDataEnd',
 };
 
 /// Descriptor for `SatSubsDataEnd`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsDataEndDescriptor =
     $convert.base64Decode('Cg5TYXRTdWJzRGF0YUVuZA==');
+
 @$core.Deprecated('Use satShapeDataBeginDescriptor instead')
-const SatShapeDataBegin$json = const {
+const SatShapeDataBegin$json = {
   '1': 'SatShapeDataBegin',
-  '2': const [
-    const {'1': 'request_id', '3': 1, '4': 1, '5': 9, '10': 'requestId'},
-    const {'1': 'uuid', '3': 2, '4': 1, '5': 9, '10': 'uuid'},
+  '2': [
+    {'1': 'request_id', '3': 1, '4': 1, '5': 9, '10': 'requestId'},
+    {'1': 'uuid', '3': 2, '4': 1, '5': 9, '10': 'uuid'},
   ],
 };
 
 /// Descriptor for `SatShapeDataBegin`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satShapeDataBeginDescriptor = $convert.base64Decode(
-    'ChFTYXRTaGFwZURhdGFCZWdpbhIdCgpyZXF1ZXN0X2lkGAEgASgJUglyZXF1ZXN0SWQSEgoEdXVpZBgCIAEoCVIEdXVpZA==');
+    'ChFTYXRTaGFwZURhdGFCZWdpbhIdCgpyZXF1ZXN0X2lkGAEgASgJUglyZXF1ZXN0SWQSEgoEdX'
+    'VpZBgCIAEoCVIEdXVpZA==');
+
 @$core.Deprecated('Use satShapeDataEndDescriptor instead')
-const SatShapeDataEnd$json = const {
+const SatShapeDataEnd$json = {
   '1': 'SatShapeDataEnd',
 };
 
 /// Descriptor for `SatShapeDataEnd`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satShapeDataEndDescriptor =
     $convert.base64Decode('Cg9TYXRTaGFwZURhdGFFbmQ=');
-const $core.Map<$core.String, $core.dynamic> RootServiceBase$json = const {
+
+const $core.Map<$core.String, $core.dynamic> RootServiceBase$json = {
   '1': 'Root',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'authenticate',
       '2': '.Electric.Satellite.SatAuthReq',
       '3': '.Electric.Satellite.SatAuthResp'
     },
-    const {
+    {
       '1': 'startReplication',
       '2': '.Electric.Satellite.SatInStartReplicationReq',
       '3': '.Electric.Satellite.SatInStartReplicationResp'
     },
-    const {
+    {
       '1': 'stopReplication',
       '2': '.Electric.Satellite.SatInStopReplicationReq',
       '3': '.Electric.Satellite.SatInStopReplicationResp'
     },
-    const {
+    {
       '1': 'subscribe',
       '2': '.Electric.Satellite.SatSubsReq',
       '3': '.Electric.Satellite.SatSubsResp'
     },
-    const {
+    {
       '1': 'unsubscribe',
       '2': '.Electric.Satellite.SatUnsubsReq',
       '3': '.Electric.Satellite.SatUnsubsResp'
@@ -1024,7 +1147,7 @@ const $core.Map<$core.String, $core.dynamic> RootServiceBase$json = const {
 
 @$core.Deprecated('Use rootServiceDescriptor instead')
 const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
-    RootServiceBase$messageJson = const {
+    RootServiceBase$messageJson = {
   '.Electric.Satellite.SatAuthReq': SatAuthReq$json,
   '.Electric.Satellite.SatAuthHeaderPair': SatAuthHeaderPair$json,
   '.Electric.Satellite.SatAuthResp': SatAuthResp$json,
@@ -1049,17 +1172,25 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
 
 /// Descriptor for `Root`. Decode as a `google.protobuf.ServiceDescriptorProto`.
 final $typed_data.Uint8List rootServiceDescriptor = $convert.base64Decode(
-    'CgRSb290Ek8KDGF1dGhlbnRpY2F0ZRIeLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoUmVxGh8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEF1dGhSZXNwEm8KEHN0YXJ0UmVwbGljYXRpb24SLC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVxGi0uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RhcnRSZXBsaWNhdGlvblJlc3ASbAoPc3RvcFJlcGxpY2F0aW9uEisuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVxGiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVzcBJMCglzdWJzY3JpYmUSHi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0U3Vic1JlcRofLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcBJSCgt1bnN1YnNjcmliZRIgLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRVbnN1YnNSZXEaIS5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0VW5zdWJzUmVzcA==');
-const $core.Map<$core.String, $core.dynamic> ClientRootServiceBase$json =
-    const {
+    'CgRSb290Ek8KDGF1dGhlbnRpY2F0ZRIeLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRBdXRoUmVxGh'
+    '8uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEF1dGhSZXNwEm8KEHN0YXJ0UmVwbGljYXRpb24SLC5F'
+    'bGVjdHJpYy5TYXRlbGxpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVxGi0uRWxlY3RyaWMuU2'
+    'F0ZWxsaXRlLlNhdEluU3RhcnRSZXBsaWNhdGlvblJlc3ASbAoPc3RvcFJlcGxpY2F0aW9uEisu'
+    'RWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVxGiwuRWxlY3RyaWMuU2'
+    'F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVzcBJMCglzdWJzY3JpYmUSHi5FbGVjdHJp'
+    'Yy5TYXRlbGxpdGUuU2F0U3Vic1JlcRofLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRTdWJzUmVzcB'
+    'JSCgt1bnN1YnNjcmliZRIgLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRVbnN1YnNSZXEaIS5FbGVj'
+    'dHJpYy5TYXRlbGxpdGUuU2F0VW5zdWJzUmVzcA==');
+
+const $core.Map<$core.String, $core.dynamic> ClientRootServiceBase$json = {
   '1': 'ClientRoot',
-  '2': const [
-    const {
+  '2': [
+    {
       '1': 'startReplication',
       '2': '.Electric.Satellite.SatInStartReplicationReq',
       '3': '.Electric.Satellite.SatInStartReplicationResp'
     },
-    const {
+    {
       '1': 'stopReplication',
       '2': '.Electric.Satellite.SatInStopReplicationReq',
       '3': '.Electric.Satellite.SatInStopReplicationResp'
@@ -1069,7 +1200,7 @@ const $core.Map<$core.String, $core.dynamic> ClientRootServiceBase$json =
 
 @$core.Deprecated('Use clientRootServiceDescriptor instead')
 const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
-    ClientRootServiceBase$messageJson = const {
+    ClientRootServiceBase$messageJson = {
   '.Electric.Satellite.SatInStartReplicationReq': SatInStartReplicationReq$json,
   '.Electric.Satellite.SatInStartReplicationResp':
       SatInStartReplicationResp$json,
@@ -1081,4 +1212,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
 
 /// Descriptor for `ClientRoot`. Decode as a `google.protobuf.ServiceDescriptorProto`.
 final $typed_data.Uint8List clientRootServiceDescriptor = $convert.base64Decode(
-    'CgpDbGllbnRSb290Em8KEHN0YXJ0UmVwbGljYXRpb24SLC5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0SW5TdGFydFJlcGxpY2F0aW9uUmVxGi0uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RhcnRSZXBsaWNhdGlvblJlc3ASbAoPc3RvcFJlcGxpY2F0aW9uEisuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVxGiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJlcGxpY2F0aW9uUmVzcA==');
+    'CgpDbGllbnRSb290Em8KEHN0YXJ0UmVwbGljYXRpb24SLC5FbGVjdHJpYy5TYXRlbGxpdGUuU2'
+    'F0SW5TdGFydFJlcGxpY2F0aW9uUmVxGi0uRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RhcnRS'
+    'ZXBsaWNhdGlvblJlc3ASbAoPc3RvcFJlcGxpY2F0aW9uEisuRWxlY3RyaWMuU2F0ZWxsaXRlLl'
+    'NhdEluU3RvcFJlcGxpY2F0aW9uUmVxGiwuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RvcFJl'
+    'cGxpY2F0aW9uUmVzcA==');

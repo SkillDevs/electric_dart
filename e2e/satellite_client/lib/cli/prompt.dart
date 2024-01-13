@@ -33,221 +33,275 @@ Future<void> start() async {
           return "var=$variable  type=${variable.runtimeType}";
         });
       } else if (name == "get_shell_db_path") {
-        final luxShellName = command.arguments[0] as String;
-
-        final dbPath =
-            "${Platform.environment["SATELLITE_DB_PATH"]!}/$luxShellName";
-        await processCommand<String>(state, command, () {
-          return dbPath;
-        });
+        await processCommand1Param<String, String>(
+          state,
+          command,
+          (luxShellName) {
+            final dbPath =
+                "${Platform.environment["SATELLITE_DB_PATH"]!}/$luxShellName";
+            return dbPath;
+          },
+        );
       } else if (name == "make_db") {
-        final dbPath = command.arguments[0] as String;
-        await processCommand<ClientDatabase>(state, command, () async {
-          return await makeDb(dbPath);
-        });
+        await processCommand1Param<String, ClientDatabase>(
+          state,
+          command,
+          makeDb,
+        );
       } else if (name == "assignVar") {
-        await processCommand<dynamic>(state, command, () async {
-          final value = command.arguments[0];
-          return value;
-        });
+        await processCommand1Param<Object?, dynamic>(
+          state,
+          command,
+          (value) => value,
+        );
       } else if (name == "showVar") {
-        await processCommand<dynamic>(state, command, () async {
-          final value = command.arguments[0];
-          return value;
-        });
+        await processCommand1Param<Object?, dynamic>(
+          state,
+          command,
+          (value) => value,
+        );
       } else if (name == "electrify_db") {
-        await processCommand<DriftElectricClient>(state, command, () async {
-          final db = command.arguments[0] as ClientDatabase;
-          final host = command.arguments[1] as String;
-          final port = command.arguments[2] as int;
-          final migrationsJ = command.arguments[3] as List<dynamic>;
-
-          return await electrifyDb(
-            db,
-            host,
-            port,
-            migrationsJ,
-          );
-        });
+        await processCommand4Params<ClientDatabase, String, int, List<dynamic>,
+            DriftElectricClient>(
+          state,
+          command,
+          electrifyDb,
+        );
       } else if (name == "sync_table") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final table = command.arguments[1] as String;
-        await processCommand<void>(state, command, () async {
-          return await syncTable(electric, table);
-        });
+        await processCommand2Params<DriftElectricClient, String, void>(
+          state,
+          command,
+          syncTable,
+        );
       } else if (name == "get_tables") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<Rows>(state, command, () async {
-          return await getTables(electric);
-        });
+        await processCommand1Param<DriftElectricClient, Rows>(
+          state,
+          command,
+          getTables,
+        );
       } else if (name == "get_columns") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final table = command.arguments[1] as String;
-        await processCommand<Rows>(state, command, () async {
-          return await getColumns(electric, table);
-        });
+        await processCommand2Params<DriftElectricClient, String, Rows>(
+          state,
+          command,
+          getColumns,
+        );
       } else if (name == "get_rows") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final table = command.arguments[1] as String;
-        await processCommand<Rows>(state, command, () async {
-          return await getRows(electric, table);
-        });
+        await processCommand2Params<DriftElectricClient, String, Rows>(
+          state,
+          command,
+          getRows,
+        );
       } else if (name == "get_timestamps") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        await processCommand<void>(state, command, () async {
-          return await getTimestamps(electric);
-        });
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          getTimestamps,
+        );
       } else if (name == "assert_timestamp") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        final expectedCreatedAt = command.arguments[2] as String;
-        final expectedUpdatedAt = command.arguments[3] as String;
-        await processCommand<bool>(state, command, () async {
-          return await assertTimestamp(
-              electric, id, expectedCreatedAt, expectedUpdatedAt);
-        });
+        await processCommand4Params<MyDriftElectricClient, String, String,
+            String, bool>(
+          state,
+          command,
+          assertTimestamp,
+        );
       } else if (name == "write_timestamp") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final values = command.arguments[1] as Map<String, Object?>;
-        await processCommand<void>(state, command, () async {
-          return await writeTimestamp(electric, values);
-        });
+        await processCommand2Params<MyDriftElectricClient, Map<String, Object?>,
+            void>(
+          state,
+          command,
+          writeTimestamp,
+        );
       } else if (name == "write_datetime") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final values = command.arguments[1] as Map<String, Object?>;
-        await processCommand<void>(state, command, () async {
-          return await writeDatetime(electric, values);
-        });
+        await processCommand2Params<MyDriftElectricClient, Map<String, Object?>,
+            void>(
+          state,
+          command,
+          writeDatetime,
+        );
       } else if (name == "assert_datetime") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        final expectedDate = command.arguments[2] as String;
-        final expectedTime = command.arguments[3] as String;
-        await processCommand<bool>(state, command, () async {
-          return await assertDatetime(electric, id, expectedDate, expectedTime);
-        });
+        await processCommand4Params<MyDriftElectricClient, String, String,
+            String, bool>(
+          state,
+          command,
+          assertDatetime,
+        );
       } else if (name == "write_bool") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        final b = command.arguments[2] as bool;
-        await processCommand<SingleRow>(state, command, () async {
-          return await writeBool(electric, id, b);
-        });
+        await processCommand3Params<MyDriftElectricClient, String, bool,
+            SingleRow>(
+          state,
+          command,
+          writeBool,
+        );
       } else if (name == "get_bool") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        await processCommand<bool?>(state, command, () async {
-          return await getBool(electric, id);
-        });
+        await processCommand2Params<MyDriftElectricClient, String, bool?>(
+          state,
+          command,
+          getBool,
+        );
       } else if (name == "write_uuid") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        await processCommand<SingleRow>(state, command, () async {
-          return await writeUUID(electric, id);
-        });
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          writeUUID,
+        );
       } else if (name == "get_uuid") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        await processCommand<SingleRow>(state, command, () async {
-          return await getUUID(electric, id);
-        });
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getUUID,
+        );
       } else if (name == "write_int") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        final i2 = command.arguments[2] as int;
-        final i4 = command.arguments[3] as int;
-        await processCommand<SingleRow>(state, command, () async {
-          return await writeInt(electric, id, i2, i4);
+        await processCommand5Params<MyDriftElectricClient, String, int, int,
+            Object, SingleRow>(state, command, (electric, id, i2, i4, i8Raw) {
+          final BigInt i8;
+          if (i8Raw is int) {
+            i8 = BigInt.from(i8Raw);
+          } else if (i8Raw is String) {
+            i8 = BigInt.parse(i8Raw.replaceAll('n', ''));
+          } else {
+            throw Exception("Invalid i8 value: $i8Raw");
+          }
+
+          return writeInt(electric, id, i2, i4, i8);
         });
       } else if (name == "get_int") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        await processCommand<SingleRow>(state, command, () async {
-          return await getInt(electric, id);
-        });
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getInt,
+        );
       } else if (name == "write_float") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        final f8 = command.arguments[2] as num;
-        await processCommand<SingleRow>(state, command, () async {
-          return await writeFloat(electric, id, f8.toDouble());
-        });
+        await processCommand4Params<MyDriftElectricClient, String, num, num,
+            SingleRow>(
+          state,
+          command,
+          (electric, id, f4, f8) =>
+              writeFloat(electric, id, f4.toDouble(), f8.toDouble()),
+        );
       } else if (name == "get_float") {
-        final electric = command.arguments[0] as MyDriftElectricClient;
-        final id = command.arguments[1] as String;
-        await processCommand<SingleRow>(state, command, () async {
-          return await getFloat(electric, id);
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getFloat,
+        );
+      } else if (name == "get_jsonb") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getJsonb,
+        );
+      } else if (name == "get_json") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getJson,
+        );
+      } else if (name == "get_json_raw") {
+        await processCommand2Params<MyDriftElectricClient, String, String?>(
+          state,
+          command,
+          getJsonRaw,
+        );
+      } else if (name == "get_jsonb_raw") {
+        await processCommand2Params<MyDriftElectricClient, String, String?>(
+          state,
+          command,
+          getJsonbRaw,
+        );
+      } else if (name == "write_json") {
+        await processCommand4Params<MyDriftElectricClient, String, Object?,
+            Object?, SingleRow>(
+          state,
+          command,
+          writeJson,
+        );
+      } else if (name == "write_enum") {
+        await processCommand3Params<MyDriftElectricClient, String, String?,
+            SingleRow>(state, command, (electric, id, enumStr) {
+          //final enumValue = enumStr == null ? null : enumFromString(enumStr);
+          return writeEnum(electric, id, enumStr);
         });
+      } else if (name == "get_enum") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+          state,
+          command,
+          getEnum,
+        );
       } else if (name == "get_items") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<Rows>(state, command, () async {
-          return await getItems(electric);
-        });
+        await processCommand1Param<MyDriftElectricClient, Rows>(
+          state,
+          command,
+          getItems,
+        );
       } else if (name == "get_item_ids") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<Rows>(state, command, () async {
-          return await getItemIds(electric);
-        });
+        await processCommand1Param<MyDriftElectricClient, Rows>(
+          state,
+          command,
+          getItemIds,
+        );
       } else if (name == "get_item_columns") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final table = command.arguments[1] as String;
-        final column = command.arguments[2] as String;
-        await processCommand<Rows>(state, command, () async {
-          return await getItemColumns(electric, table, column);
-        });
+        await processCommand3Params<MyDriftElectricClient, String, String,
+            Rows>(
+          state,
+          command,
+          getItemColumns,
+        );
       } else if (name == "insert_item") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final keys = (command.arguments[1] as List<dynamic>).cast<String>();
-        await processCommand<void>(state, command, () async {
-          return await insertItem(electric, keys);
-        });
+        await processCommand2Params<MyDriftElectricClient, List<dynamic>, void>(
+          state,
+          command,
+          (electric, keys) => insertItem(electric, keys.cast<String>()),
+        );
       } else if (name == "insert_extended_into") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final table = command.arguments[1] as String;
-        final values = (command.arguments[2] as Map<String, Object?>);
-        await processCommand<void>(state, command, () async {
-          return await insertExtendedInto(electric, table, values);
-        });
+        await processCommand3Params<MyDriftElectricClient, String,
+            Map<String, Object?>, void>(
+          state,
+          command,
+          insertExtendedInto,
+        );
       } else if (name == "insert_extended_item") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final values = (command.arguments[1] as Map<String, Object?>);
-        await processCommand<void>(state, command, () async {
-          return await insertExtendedItem(electric, values);
-        });
+        await processCommand2Params<MyDriftElectricClient, Map<String, Object?>,
+            void>(
+          state,
+          command,
+          insertExtendedItem,
+        );
       } else if (name == "delete_item") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final keys = (command.arguments[1] as List<dynamic>).cast<String>();
-        await processCommand<void>(state, command, () async {
-          return await deleteItem(electric, keys);
-        });
+        await processCommand2Params<MyDriftElectricClient, List<dynamic>, void>(
+          state,
+          command,
+          (electric, keys) => deleteItem(electric, keys.cast<String>()),
+        );
       } else if (name == "get_other_items") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<Rows>(state, command, () async {
-          return await getOtherItems(electric);
-        });
+        await processCommand1Param<MyDriftElectricClient, Rows>(
+          state,
+          command,
+          getOtherItems,
+        );
       } else if (name == "insert_other_item") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final keys = (command.arguments[1] as List<dynamic>).cast<String>();
-        await processCommand<void>(state, command, () async {
-          return await insertOtherItem(electric, keys);
-        });
+        await processCommand2Params<MyDriftElectricClient, List<dynamic>, void>(
+          state,
+          command,
+          (electric, keys) => insertOtherItem(electric, keys.cast<String>()),
+        );
       } else if (name == "stop") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        await processCommand<void>(state, command, () async {
-          return await stop(electric);
-        });
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          stop,
+        );
       } else if (name == "raw_statement") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final sql = command.arguments[1] as String;
-        await processCommand<void>(state, command, () async {
-          return await rawStatement(electric, sql);
-        });
+        await processCommand2Params<MyDriftElectricClient, String, void>(
+          state,
+          command,
+          rawStatement,
+        );
       } else if (name == "change_connectivity") {
-        final electric = command.arguments[0] as DriftElectricClient;
-        final connectivityName = command.arguments[1] as String;
-        await processCommand<void>(state, command, () {
-          return changeConnectivity(electric, connectivityName);
-        });
+        await processCommand2Params<MyDriftElectricClient, String, void>(
+          state,
+          command,
+          changeConnectivity,
+        );
       } else {
         throw Exception("Unknown command: $name");
       }
@@ -261,6 +315,76 @@ Future<void> start() async {
   });
 }
 
+Future<void> processCommand1Param<P1, R>(
+  AppState state,
+  Command command,
+  FutureOr<R> Function(P1) handler,
+) async {
+  final p1 = command.arguments[0] as P1;
+
+  await processCommand<R>(state, command, () async {
+    return await handler(p1);
+  });
+}
+
+Future<void> processCommand2Params<P1, P2, R>(
+  AppState state,
+  Command command,
+  FutureOr<R> Function(P1, P2) handler,
+) async {
+  final p1 = command.arguments[0] as P1;
+  final p2 = command.arguments[1] as P2;
+
+  await processCommand<R>(state, command, () async {
+    return await handler(p1, p2);
+  });
+}
+
+Future<void> processCommand3Params<P1, P2, P3, R>(
+  AppState state,
+  Command command,
+  FutureOr<R> Function(P1, P2, P3) handler,
+) async {
+  final p1 = command.arguments[0] as P1;
+  final p2 = command.arguments[1] as P2;
+  final p3 = command.arguments[2] as P3;
+
+  await processCommand<R>(state, command, () async {
+    return await handler(p1, p2, p3);
+  });
+}
+
+Future<void> processCommand4Params<P1, P2, P3, P4, R>(
+  AppState state,
+  Command command,
+  FutureOr<R> Function(P1, P2, P3, P4) handler,
+) async {
+  final p1 = command.arguments[0] as P1;
+  final p2 = command.arguments[1] as P2;
+  final p3 = command.arguments[2] as P3;
+  final p4 = command.arguments[3] as P4;
+
+  await processCommand<R>(state, command, () async {
+    return await handler(p1, p2, p3, p4);
+  });
+}
+
+Future<void> processCommand5Params<P1, P2, P3, P4, P5, R>(
+  AppState state,
+  Command command,
+  FutureOr<R> Function(P1, P2, P3, P4, P5) handler,
+) async {
+  final p1 = command.arguments[0] as P1;
+  final p2 = command.arguments[1] as P2;
+  final p3 = command.arguments[2] as P3;
+  final p4 = command.arguments[3] as P4;
+  final p5 = command.arguments[4] as P5;
+
+  await processCommand<R>(state, command, () async {
+    return await handler(p1, p2, p3, p4, p5);
+  });
+}
+
 Future<void> processCommand<T>(
   AppState state,
   Command command,
@@ -268,6 +392,7 @@ Future<void> processCommand<T>(
 ) async {
   final res = await handler();
 
+  // Assign variable if needed
   if (command.variable != null) {
     state.variables[command.variable!] = res;
   }

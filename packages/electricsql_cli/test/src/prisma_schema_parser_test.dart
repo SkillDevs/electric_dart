@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:path/path.dart';
 import 'package:test/test.dart';
@@ -14,12 +15,14 @@ void main() {
 
     final schemaInfo = extractInfoFromPrismaSchema(_prismaSchema);
 
-    expect(schemaInfo.tables.length, 5);
+    expect(schemaInfo.tables.length, 6);
 
     expectValidProjectsModel(schemaInfo);
     expectValidMembershipsModel(schemaInfo);
     expectValidDatatypesModel(schemaInfo);
     expectValidWeirdNames(schemaInfo);
+
+    expectEnums(schemaInfo);
   });
 }
 
@@ -113,7 +116,7 @@ ALTER TABLE datatypes ENABLE ELECTRIC;
 void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[2];
 
-  expect(table.columns.length, 11);
+  expect(table.columns.length, 15);
 
   expect(table.tableName, 'datatypes');
   expect(table.dartClassName, 'Datatypes');
@@ -138,6 +141,13 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final int4Column = table.columns.firstWhere((c) => c.columnName == 'c_int4');
   expect(int4Column.type, DriftElectricColumnType.int4);
 
+  final int8Column = table.columns.firstWhere((c) => c.columnName == 'c_int8');
+  expect(int8Column.type, DriftElectricColumnType.int8);
+
+  final float4Column =
+      table.columns.firstWhere((c) => c.columnName == 'c_float4');
+  expect(float4Column.type, DriftElectricColumnType.float4);
+
   final float8Column =
       table.columns.firstWhere((c) => c.columnName == 'c_float8');
   expect(float8Column.type, DriftElectricColumnType.float8);
@@ -158,12 +168,19 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final timestamptzColumn =
       table.columns.firstWhere((c) => c.columnName == 'c_timestamptz');
   expect(timestamptzColumn.type, DriftElectricColumnType.timestampTZ);
+
+  final jsonColumn = table.columns.firstWhere((c) => c.columnName == 'c_json');
+  expect(jsonColumn.type, DriftElectricColumnType.json);
+
+  final jsonBColumn =
+      table.columns.firstWhere((c) => c.columnName == 'c_jsonb');
+  expect(jsonBColumn.type, DriftElectricColumnType.jsonb);
 }
 
 void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[3];
 
-  expect(table.columns.length, 3);
+  expect(table.columns.length, 5);
 
   expect(table.tableName, 'weirdnames');
   expect(table.dartClassName, 'Weirdnames');
@@ -183,5 +200,38 @@ void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
   // Conflict with drift and/or dart types
   final textColumn = table.columns.firstWhere((c) => c.columnName == 'text');
   expect(textColumn.type, DriftElectricColumnType.string);
-  expect(textColumn.dartName, 'textCol');
+  expect(textColumn.dartName, r'text$');
+
+  // Conflict when using curly brances in the field definition
+  final bracesColumn =
+      table.columns.firstWhere((c) => c.columnName == 'braces');
+  expect(bracesColumn.type, DriftElectricColumnType.json);
+
+  final enumCol = table.columns.firstWhere((e) => e.columnName == 'int');
+  expect(enumCol.type, DriftElectricColumnType.enumT);
+  expect(enumCol.dartName, r'int$');
+  expect(enumCol.enumPgType, 'integer');
+}
+
+void expectEnums(DriftSchemaInfo schemaInfo) {
+  expect(schemaInfo.enums.length, 2);
+
+  final enumInfo = schemaInfo.enums['integer']!;
+
+  expect(enumInfo.dartEnumName, 'DbInteger');
+  expect(enumInfo.enumCodecName, 'integer');
+  expect(enumInfo.driftTypeName, 'integer');
+  expect(enumInfo.values.length, 4);
+  expect(enumInfo.values.map((v) => v.dartVal).toList(), [
+    r'int$',
+    r'bool$',
+    r'double$',
+    r'$2Float',
+  ]);
+  expect(enumInfo.values.map((v) => v.pgVal).toList(), [
+    'int',
+    'Bool',
+    'DOUBLE',
+    '2Float',
+  ]);
 }

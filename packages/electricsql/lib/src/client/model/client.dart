@@ -7,9 +7,11 @@ import 'package:meta/meta.dart';
 
 abstract interface class ElectricClient {
   // ElectricNamespace methods
+  String get dbName;
   DatabaseAdapter get adapter;
   Notifier get notifier;
   DBSchema get dbDescription;
+  Registry get registry;
 
   bool get isConnected;
 
@@ -17,7 +19,7 @@ abstract interface class ElectricClient {
 
   void potentiallyChanged();
 
-  void dispose();
+  Future<void> close();
 
   // ElectricClient methods
 
@@ -37,26 +39,32 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
   final DBSchema dbDescription;
 
   factory ElectricClientImpl.create({
+    required String dbName,
     required DatabaseAdapter adapter,
     required DBSchema dbDescription,
     required Notifier notifier,
     required Satellite satellite,
+    required Registry registry,
   }) {
     final shapeManager = ShapeManager(satellite);
 
     return ElectricClientImpl.internal(
+      dbName: dbName,
       adapter: adapter,
       notifier: notifier,
       satellite: satellite,
       shapeManager: shapeManager,
       dbDescription: dbDescription,
+      registry: registry,
     );
   }
 
   @protected
   ElectricClientImpl.internal({
+    required super.dbName,
     required super.adapter,
     required super.notifier,
+    required super.registry,
     required this.satellite,
     required this.shapeManager,
     required this.dbDescription,

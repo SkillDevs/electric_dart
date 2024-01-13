@@ -12,6 +12,8 @@ enum PgType {
   varchar('VARCHAR'),
   char('CHAR'),
   uuid('UUID'),
+  json('JSON'),
+  jsonb('JSONB'),
   // DATES
   timestamp('TIMESTAMP'),
   timestampTz('TIMESTAMPTZ'),
@@ -29,13 +31,16 @@ final Map<String, PgType> _pgTypeMap = Map.fromEntries(
   ),
 );
 
-PgType pgTypeFromColumnType(String columnType) {
+PgType? maybePgTypeFromColumnType(String columnType) {
   final key = columnType.toUpperCase();
   final pgType = _pgTypeMap[key];
-
-  if (pgType == null) {
-    throw Exception('Unknown PG type: $key');
-  }
-
   return pgType;
 }
+
+/* PgType pgTypeFromColumnType(String columnType) {
+  final pgType = maybePgTypeFromColumnType(columnType);
+  if (pgType == null) {
+    throw Exception("Unknown PG type: '$columnType'");
+  }
+  return pgType;
+} */

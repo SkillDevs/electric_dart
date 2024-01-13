@@ -7,7 +7,7 @@ The default generation it's run via `dart run electricsql_cli generate`, but if 
 You can create a file under `bin/custom_electric_generate.dart` with the following content.
 It can be run with `dart run bin/custom_electric_generate.dart`.
 
-You can refer to this file [here](https://github.com/SkillDevs/electric_dart/blob/master/todos_flutter/bin/custom_drift_generation.dart) to see how the options are used. 
+You can refer to this file [here](https://github.com/SkillDevs/electric_dart/blob/master/todos_flutter/tool/custom_drift_generation.dart) to see how the options are used. 
 
 ```dart
 import 'package:electricsql_cli/electricsql_cli.dart';

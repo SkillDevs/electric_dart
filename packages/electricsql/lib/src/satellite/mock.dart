@@ -14,10 +14,10 @@ import 'package:electricsql/src/satellite/registry.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
+import 'package:electricsql/src/util/async_event_emitter.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:events_emitter/events_emitter.dart';
 import 'package:meta/meta.dart';
 
 typedef DataRecord = Record;
@@ -71,7 +71,7 @@ class MockSatelliteProcess implements Satellite {
   }
 
   @override
-  Future<void> stop() async {
+  Future<void> stop({bool? shutdown}) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
 }
@@ -118,9 +118,10 @@ class MockRegistry extends BaseRegistry {
   }
 }
 
-class MockSatelliteClient extends EventEmitter implements Client {
+class MockSatelliteClient extends AsyncEventEmitter implements Client {
+  bool isDown = false;
   bool replicating = false;
-  bool closed = true;
+  bool disconnected = true;
   List<int>? inboundAck = kDefaultLogPos;
 
   List<int> outboundSent = kDefaultLogPos;
@@ -130,9 +131,11 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
   RelationsCache relations = {};
   void Function(Relation relation)? relationsCb;
-  void Function(Transaction tx)? transactionsCb;
+  TransactionCallback? transactionsCb;
 
   Map<String, List<DataRecord>> relationData = {};
+
+  bool deliverFirst = false;
 
   void setRelations(RelationsCache relations) {
     this.relations = relations;
@@ -145,15 +148,6 @@ class MockSatelliteClient extends EventEmitter implements Client {
     }
   }
 
-  void setTransactions(List<Transaction> transactions) {
-    final _transactionsCb = transactionsCb;
-    if (_transactionsCb != null) {
-      for (final tx in transactions) {
-        _transactionsCb(tx);
-      }
-    }
-  }
-
   void setRelationData(String tablename, DataRecord record) {
     if (!relationData.containsKey(tablename)) {
       relationData[tablename] = [];
@@ -161,6 +155,10 @@ class MockSatelliteClient extends EventEmitter implements Client {
     final data = relationData[tablename]!;
 
     data.add(record);
+  }
+
+  void enableDeliverFirst() {
+    deliverFirst = true;
   }
 
   @override
@@ -206,22 +204,38 @@ class MockSatelliteClient extends EventEmitter implements Client {
     }
 
     return Future(() {
-      Timer(const Duration(milliseconds: 1), () {
-        emit(
-          kSubscriptionDelivered,
-          SubscriptionData(
+      void emitDelivered() => enqueueEmit(
+            kSubscriptionDelivered,
+            SubscriptionData(
+              subscriptionId: subscriptionId,
+              lsn: base64.decode('MTIz'), // base64.encode("123")
+              data: data,
+              shapeReqToUuid: shapeReqToUuid,
+            ),
+          );
+
+      final completer = Completer<SubscribeResponse>();
+      void resolve() {
+        completer.complete(
+          SubscribeResponse(
             subscriptionId: subscriptionId,
-            lsn: base64.decode('MTIz'), // base64.encode("123")
-            data: data,
-            shapeReqToUuid: shapeReqToUuid,
+            error: null,
           ),
         );
-      });
+      }
 
-      return SubscribeResponse(
-        subscriptionId: subscriptionId,
-        error: null,
-      );
+      if (deliverFirst) {
+        // When the `deliverFirst` flag is set,
+        // we deliver the subscription before resolving the promise.
+        emitDelivered();
+        Timer(const Duration(milliseconds: 1), resolve);
+      } else {
+        // Otherwise, we resolve the promise before delivering the subscription.
+        Timer(const Duration(milliseconds: 1), emitDelivered);
+        resolve();
+      }
+
+      return completer.future;
     });
   }
 
@@ -235,34 +249,34 @@ class MockSatelliteClient extends EventEmitter implements Client {
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   ) {
-    final successListener = on(kSubscriptionDelivered, successCallback);
-    final errorListener = on(kSubscriptionError, errorCallback);
+    final removeSuccessListener = _on(kSubscriptionDelivered, successCallback);
+    final removeErrorListener = _on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
-      successEventListener: successListener,
-      errorEventListener: errorListener,
+      removeSuccessListener: removeSuccessListener,
+      removeErrorListener: removeErrorListener,
     );
   }
 
   @override
   void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners) {
-    removeEventListener(listeners.successEventListener);
-    removeEventListener(listeners.errorEventListener);
+    listeners.removeSuccessListener();
+    listeners.removeErrorListener();
   }
 
   @override
-  EventListener<SatelliteException> subscribeToError(ErrorCallback callback) {
-    return on('error', callback);
+  void Function() subscribeToError(ErrorCallback callback) {
+    return _on('error', callback);
   }
 
   @override
-  void unsubscribeToError(EventListener<SatelliteException> eventListener) {
-    removeEventListener(eventListener);
+  bool isConnected() {
+    return !disconnected;
   }
 
   @override
-  bool isClosed() {
-    return closed;
+  void shutdown() {
+    isDown = true;
   }
 
   @override
@@ -274,24 +288,23 @@ class MockSatelliteClient extends EventEmitter implements Client {
   Future<void> connect({
     bool Function(Object error, int attempt)? retryHandler,
   }) async {
-    closed = false;
+    if (isDown) {
+      throw SatelliteException(
+        SatelliteErrorCode.unexpectedState,
+        'FAKE DOWN',
+      );
+    }
+
+    disconnected = false;
   }
 
   @override
-  void close() {
-    closed = true;
+  void disconnect() {
+    disconnected = true;
     for (final t in timeouts) {
       t.cancel();
     }
     return;
-  }
-
-  // ignore: unused_element
-  void _removeAllListeners() {
-    // Prevent concurrent modification
-    for (final listener in [...listeners]) {
-      removeEventListener(listener);
-    }
   }
 
   @override
@@ -316,7 +329,7 @@ class MockSatelliteClient extends EventEmitter implements Client {
 
     final t = Timer(
       const Duration(milliseconds: 100),
-      () => emit<void>('outbound_started'),
+      () => enqueueEmit<void>('outbound_started', null),
     );
     timeouts.add(t);
 
@@ -352,15 +365,25 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  void subscribeToRelations(void Function(Relation relation) callback) {
+  void Function() subscribeToRelations(
+    void Function(Relation relation) callback,
+  ) {
     relationsCb = callback;
+
+    return () {
+      relationsCb = null;
+    };
   }
 
   @override
-  void subscribeToTransactions(
+  void Function() subscribeToTransactions(
     Future<void> Function(Transaction transaction) callback,
   ) {
     transactionsCb = callback;
+
+    return () {
+      transactionsCb = null;
+    };
   }
 
   @override
@@ -371,13 +394,10 @@ class MockSatelliteClient extends EventEmitter implements Client {
   }
 
   @override
-  EventListener<void> subscribeToOutboundEvent(void Function() callback) {
-    return on<void>('outbound_started', (_) => callback());
-  }
-
-  @override
-  void unsubscribeToOutboundEvent(EventListener<void> eventListener) {
-    removeEventListener(eventListener);
+  void Function() subscribeToOutboundStarted(
+    OutboundStartedCallback callback,
+  ) {
+    return _on<void>('outbound_started', callback);
   }
 
   void sendErrorAfterTimeout(String subscriptionId, int timeoutMillis) {
@@ -396,10 +416,25 @@ class MockSatelliteClient extends EventEmitter implements Client {
       );
 
       final satError = subsDataErrorToSatelliteError(satSubsError);
-      emit(
+      enqueueEmit(
         kSubscriptionError,
         SubscriptionErrorData(subscriptionId: subscriptionId, error: satError),
       );
     });
+  }
+
+  void Function() _on<T>(
+    String eventName,
+    FutureOr<void> Function(T) callback,
+  ) {
+    FutureOr<void> wrapper(dynamic data) {
+      return callback(data as T);
+    }
+
+    on(eventName, wrapper);
+
+    return () {
+      removeListener(eventName, wrapper);
+    };
   }
 }

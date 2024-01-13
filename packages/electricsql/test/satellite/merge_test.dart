@@ -55,100 +55,38 @@ void main() {
     expect(merged['main.parent']![pk]!.fullRow, {'id': 1, 'value': 'TEST'});
   });
 
-  Int64 toCommitTimestamp(String timestamp) =>
-      Int64.ZERO + (DateTime.parse(timestamp).millisecondsSinceEpoch);
-
   test('merge can handle infinity values', () {
-    final pk = primaryKeyToStr({'id': 1});
-
-    final DataTransaction tx1 = DataTransaction(
-      lsn: kDefaultLogPos,
-      commitTimestamp: toCommitTimestamp('1970-01-02T03:46:41.000Z'),
-      changes: [
-        DataChange(
-          relation: kTestRelations['floatTable']!,
-          type: DataChangeType.insert,
-          record: {'id': 1, 'value': double.infinity},
-          tags: [],
-        ),
-      ],
+    _mergeTableTest(
+      initial: {'real': double.infinity},
+      incoming: {'real': double.negativeInfinity},
+      expected: {'real': double.negativeInfinity},
     );
-
-    final DataTransaction tx2 = DataTransaction(
-      lsn: kDefaultLogPos,
-      commitTimestamp: toCommitTimestamp('1970-01-02T03:46:42.000Z'),
-      changes: [
-        DataChange(
-          relation: kTestRelations['floatTable']!,
-          type: DataChangeType.insert,
-          record: {'id': 1, 'value': double.negativeInfinity},
-          tags: [],
-        ),
-      ],
-    );
-
-    // we go through `fromTransaction` on purpose
-    // in order to also test serialisation/deserialisation of the rows
-    final entry1 = fromTransaction(tx1, kTestRelations);
-    final entry2 = fromTransaction(tx2, kTestRelations);
-
-    final merged =
-        mergeEntries('local', entry1, 'remote', entry2, kTestRelations);
-
-    // tx2 should win because tx1 and tx2 happened concurrently
-    // but the timestamp of tx2 > tx1
-    expect(merged['main.floatTable']![pk]!.optype, ChangesOpType.upsert);
-    expect(merged['main.floatTable']![pk]!.fullRow, {
-      'id': 1,
-      'value': double.negativeInfinity,
-    });
   });
 
   test('merge can handle NaN values', () {
-    final pk = primaryKeyToStr({'id': 1});
-
-    final DataTransaction tx1 = DataTransaction(
-      lsn: kDefaultLogPos,
-      commitTimestamp: toCommitTimestamp('1970-01-02T03:46:41.000Z'),
-      changes: [
-        DataChange(
-          relation: kTestRelations['floatTable']!,
-          type: DataChangeType.insert,
-          record: {'id': 1, 'value': 5.0},
-          tags: [],
-        ),
-      ],
+    _mergeTableTest(
+      initial: {'real': 5.0},
+      incoming: {'real': double.nan},
+      expected: {'real': double.nan},
     );
+  });
 
-    final DataTransaction tx2 = DataTransaction(
-      lsn: kDefaultLogPos,
-      commitTimestamp: toCommitTimestamp('1970-01-02T03:46:42.000Z'),
-      changes: [
-        DataChange(
-          relation: kTestRelations['floatTable']!,
-          type: DataChangeType.insert,
-          record: {'id': 1, 'value': double.nan},
-          tags: [],
-        ),
-      ],
+  test('merge can handle BigInt (INT8 pgtype) values', () {
+    // Big ints are serialized as strings in the oplog
+    _mergeTableTest(
+      initial: {'int8': '3'},
+      incoming: {'int8': '9223372036854775807'},
+      expected: {'int8': BigInt.parse('9223372036854775807')},
     );
+  });
 
-    // we go through `fromTransaction` on purpose
-    // in order to also test serialisation/deserialisation of the rows
-    final entry1 = fromTransaction(tx1, kTestRelations);
-    final entry2 = fromTransaction(tx2, kTestRelations);
-
-    final merged =
-        mergeEntries('local', entry1, 'remote', entry2, kTestRelations);
-
-    // tx2 should win because tx1 and tx2 happened concurrently
-    // but the timestamp of tx2 > tx1
-    expect(merged['main.floatTable']![pk]!.optype, ChangesOpType.upsert);
-
-    final fullRow = merged['main.floatTable']![pk]!.fullRow;
-    expect(fullRow.length, 2);
-    expect(fullRow['id'], 1);
-    expect((fullRow['value']! as double).isNaN, isTrue);
+  test('merge can handle BigInt (BIGINT pgtype) values', () {
+    // Big ints are serialized as strings in the oplog
+    _mergeTableTest(
+      initial: {'bigint': '-5'},
+      incoming: {'bigint': '-9223372036854775808'},
+      expected: {'bigint': BigInt.parse('-9223372036854775808')},
+    );
   });
 
   test('merge works on oplog entries', () async {
@@ -159,7 +97,7 @@ void main() {
 
     // Insert a row in the table
     final insertRowSQL =
-        "INSERT INTO ${kPersonTable.tableName} (id, name, age, bmi) VALUES (9e999, 'John Doe', 30, 25.5)";
+        "INSERT INTO ${kPersonTable.tableName} (id, name, age, bmi, int8) VALUES (9e999, 'John Doe', 30, 25.5, 7)";
     db.execute(insertRowSQL);
 
     // Fetch the oplog entry for the inserted row
@@ -184,11 +122,13 @@ void main() {
           relation: kTestRelations[kPersonTable.tableName]!,
           type: DataChangeType.insert,
           record: {
+            // fields must be ordered alphabetically to match the behavior of the triggers
             'age': 30,
             'bmi': 8e888,
             'id': 9e999,
+            'int8': '224', // Big ints are serialized as strings in the oplog
             'name': 'John Doe',
-          }, // fields must be ordered alphabetically to match the behavior of the triggers
+          },
           tags: [],
         ),
       ],
@@ -215,6 +155,90 @@ void main() {
       'name': 'John Doe',
       'age': 30,
       'bmi': double.infinity,
+      'int8': BigInt.parse('224'),
     });
   });
+}
+
+Int64 toCommitTimestamp(String timestamp) =>
+    Int64.ZERO + (DateTime.parse(timestamp).millisecondsSinceEpoch);
+
+/// Merges two secuential transactions over the same row
+/// and checks that the value is merged correctly
+/// The operation is over the "mergeTable" table in the
+/// database schema
+void _mergeTableTest({
+  required Map<String, Object?> initial,
+  required Map<String, Object?> incoming,
+  required Map<String, Object?> expected,
+}) {
+  if (initial.containsKey('id')) {
+    throw Exception('id must not be provided in initial');
+  }
+  if (incoming.containsKey('id')) {
+    throw Exception('id must not be provided in incoming');
+  }
+  if (expected.containsKey('id')) {
+    throw Exception('id must not be provided in expected');
+  }
+
+  const pkId = 1;
+  final pk = primaryKeyToStr({'id': pkId});
+
+  final DataTransaction tx1 = DataTransaction(
+    lsn: kDefaultLogPos,
+    commitTimestamp: toCommitTimestamp('1970-01-02T03:46:41.000Z'),
+    changes: [
+      DataChange(
+        relation: kTestRelations['mergeTable']!,
+        type: DataChangeType.insert,
+        record: {...initial, 'id': pkId},
+        tags: [],
+      ),
+    ],
+  );
+
+  final DataTransaction tx2 = DataTransaction(
+    lsn: kDefaultLogPos,
+    commitTimestamp: toCommitTimestamp('1970-01-02T03:46:42.000Z'),
+    changes: [
+      DataChange(
+        relation: kTestRelations['mergeTable']!,
+        type: DataChangeType.insert,
+        record: {
+          ...incoming,
+          'id': 1,
+        },
+        tags: [],
+      ),
+    ],
+  );
+
+  // we go through `fromTransaction` on purpose
+  // in order to also test serialisation/deserialisation of the rows
+  final entry1 = fromTransaction(tx1, kTestRelations);
+  final entry2 = fromTransaction(tx2, kTestRelations);
+
+  final merged =
+      mergeEntries('local', entry1, 'remote', entry2, kTestRelations);
+
+  // tx2 should win because tx1 and tx2 happened concurrently
+  // but the timestamp of tx2 > tx1
+  expect(merged['main.mergeTable']![pk]!.optype, ChangesOpType.upsert);
+
+  final fullRow = merged['main.mergeTable']![pk]!.fullRow;
+  expect(fullRow['id'], pkId);
+
+  fullRow.remove('id');
+
+  expect(fullRow.length, expected.length);
+
+  for (final key in expected.keys) {
+    final expectedValue = expected[key];
+    if (expectedValue is double && expectedValue.isNaN) {
+      expect(fullRow[key], isNaN);
+    } else {
+      expect(fullRow[key], expectedValue);
+    }
+  }
 }

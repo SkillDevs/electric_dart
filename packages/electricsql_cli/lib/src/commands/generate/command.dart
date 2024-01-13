@@ -25,16 +25,16 @@ class GenerateMigrationsCommand extends Command<int> {
 Optional argument providing the url to connect to Electric.
 If not provided, it uses the url set in the `ELECTRIC_URL`
 environment variable. If that variable is not set, it
-resorts to the default url which is `http://127.0.0.1:5133''',
+resorts to the default url which is '$defaultElectricServiceUrl\'''',
         valueHelp: 'url',
       )
       ..addOption(
         'proxy',
         help: '''
 Optional argument providing the url to connect to the PG database via the proxy.
- *    If not provided, it uses the url set in the `PG_PROXY_URL` environment variable.
+ *    If not provided, it uses the url set in the `ELECTRIC_PROXY_URL` environment variable.
  *    If that variable is not set, it resorts to the default url which is
- *    'postgresql://prisma:password@localhost:65432/electric'.
+ *    '$defaultElectricProxyUrl'.
  *    NOTE: the generator introspects the PG database via the proxy,
  *          the URL must therefore connect using the "prisma" user.''',
         valueHelp: 'url',
@@ -46,13 +46,30 @@ Optional argument to specify where to write the generated files.
 If this argument is not provided they are written to
 `lib/generated/electric`''',
         valueHelp: 'file_path',
+      )
+      ..addFlag(
+        'int8AsBigInt',
+        help: '''
+Optional argument to specify whether to use BigInt Dart type for INT8 columns. Defaults to `false`.
+More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_dart_tables/#bigint-support''',
+        defaultsTo: false,
+        negatable: false,
+      )
+      ..addFlag(
+        'debug',
+        help: '''
+Optional flag to use for inspecting generator issues. If this
+ *     flag is enabled, the temporary migrations folder is retained in
+ *     case of an error for inspection.''',
+        defaultsTo: _defaultDebug,
+        negatable: false,
       );
   }
 
   @override
   String get description =>
       'Fetches the migrations from Electric and generates '
-      'the migrations file';
+      'the drift schema and the Electric migrations';
 
   @override
   String get name => 'generate';
@@ -64,13 +81,21 @@ If this argument is not provided they are written to
     final String? service = argResults?['service'] as String?;
     final String? outFolder = argResults?['out'] as String?;
     final String? proxy = argResults?['proxy'] as String?;
+    final bool int8AsBigInt = argResults?['int8AsBigInt'] as bool;
+    final bool debug = argResults?['debug'] as bool;
+
+    final _cliDriftGenOpts = _CLIDriftGenOpts(
+      int8AsBigInt: int8AsBigInt,
+    );
 
     try {
       await runElectricCodeGeneration(
         service: service,
         outFolder: outFolder,
         proxy: proxy,
+        debug: debug,
         logger: _logger,
+        driftSchemaGenOpts: _cliDriftGenOpts,
       );
       return ExitCode.success.code;
     } on ConfigException catch (_) {
@@ -79,17 +104,25 @@ If this argument is not provided they are written to
   }
 }
 
+class _CLIDriftGenOpts extends ElectricDriftGenOpts {
+  _CLIDriftGenOpts({
+    required super.int8AsBigInt,
+  });
+}
+
 const String defaultMigrationsFileName = 'migrations.dart';
 const String defaultDriftSchemaFileName = 'drift_schema.dart';
-const String defaultElectricServiceUrl = 'http://127.0.0.1:5133';
+const String defaultElectricServiceUrl = 'http://localhost:5133';
 const String defaultElectricProxyUrl =
     'postgresql://prisma:proxy_password@localhost:65432/electric';
+const bool _defaultDebug = false;
 
 Future<void> runElectricCodeGeneration({
   String? service,
   String? outFolder,
   String? proxy,
   ElectricDriftGenOpts? driftSchemaGenOpts,
+  bool? debug,
   Logger? logger,
 }) async {
   final finalLogger = logger ?? Logger();
@@ -120,6 +153,7 @@ Future<void> runElectricCodeGeneration({
     service: finalService,
     outFolder: finalOutFolder,
     proxy: finalProxy,
+    debug: debug ?? _defaultDebug,
     driftSchemaGenOpts: driftSchemaGenOpts,
     logger: finalLogger,
   );
@@ -183,6 +217,7 @@ Future<void> _runGenerator({
   required String outFolder,
   required String proxy,
   required ElectricDriftGenOpts? driftSchemaGenOpts,
+  required bool debug,
   required Logger logger,
 }) async {
   logger.info('Generating migrations file...');
@@ -192,6 +227,7 @@ Future<void> _runGenerator({
   // Create a unique temporary folder in which to save
   // intermediate files without risking collisions
   final tmpDir = await currentDir.createTemp('.electric_migrations_tmp_');
+  bool generationFailed = false;
 
   try {
     final migrationsPath = path.join(tmpDir.path, 'migrations');
@@ -216,8 +252,8 @@ Future<void> _runGenerator({
 
     final prismaSchemaContent = prismaSchema.readAsStringSync();
 
-    // Add custom validators (such as uuid) to the Prisma schema
-    // await addValidators(prismaSchema);
+    //print(prismaSchemaContent);
+
     final schemaInfo = extractInfoFromPrismaSchema(
       prismaSchemaContent,
       genOpts: driftSchemaGenOpts,
@@ -229,9 +265,16 @@ Future<void> _runGenerator({
     logger.info('Building migrations...');
     final migrationsFile = resolveMigrationsFile(outFolder);
     await buildMigrations(migrationsDir, migrationsFile);
+  } catch (e) {
+    generationFailed = true;
+    logger.err('generate command failed: $e');
+    rethrow;
   } finally {
-    // Delete the temporary folder
-    await tmpDir.delete(recursive: true);
+    // Delete our temporary directory unless
+    // generation failed in debug mode
+    if (!generationFailed || !debug) {
+      await tmpDir.delete(recursive: true);
+    }
   }
 }
 

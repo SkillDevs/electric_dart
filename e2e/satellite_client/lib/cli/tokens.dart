@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:electricsql/electricsql.dart';
 import 'package:satellite_dart_client/cli/state.dart';
 
 Future<List<Token>> extractTokens(AppState state, String text) async {
@@ -10,6 +11,8 @@ Future<List<Token>> extractTokens(AppState state, String text) async {
   for (final e in parts) {
     if (e == "null") {
       out.add(Token(text: e, dartValue: null));
+    } else if (e == "client.JsonNull") {
+      out.add(Token(text: e, dartValue: kJsonNull));
     } else if (e == "true") {
       out.add(Token(text: e, dartValue: true));
     } else if (e == "false") {

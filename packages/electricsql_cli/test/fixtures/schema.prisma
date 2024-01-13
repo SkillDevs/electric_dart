@@ -32,22 +32,48 @@ model datatypes {
   c_int         Int
   c_int2        Int      @db.SmallInt
   c_int4        Int
+  c_int8        BigInt   @db.BigInt
+  c_float4      Float    @db.Real 
   c_float8      Float
   c_bool        Boolean
   c_date        DateTime @db.Date
   c_time        DateTime @db.Time
   c_timestamp   DateTime @db.Timestamp(6)
   c_timestamptz DateTime @db.Timestamptz(6)
+  c_json        Json     @db.Json
+  c_jsonb       Json     @db.JsonB
 }
 
 model weirdnames {
   c_uuid String @id @db.Uuid
   val    String @map("1val")
   text   String
+  braces   Json @default("{}") @db.Json
+  int  integer?  // int used as column name, not type
 }
 
 model GenOpts {
   id Int
   value String
   timestamp   DateTime @db.Timestamptz(6)
+}
+
+
+model enums {
+  id String                       @id
+  c  Unsupported("public.color")?
+}
+
+enum color {
+  RED
+  GREEN
+  BLUE
+}
+
+// Just using an enum name with conflics
+enum integer {
+  int
+  Bool
+  DOUBLE
+  Float  @map("2Float")
 }

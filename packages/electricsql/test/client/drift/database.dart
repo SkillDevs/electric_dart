@@ -80,7 +80,11 @@ class DataTypes extends Table {
   TextColumn get uuid => customType(ElectricTypes.uuid).nullable()();
   IntColumn get int2 => customType(ElectricTypes.int2).nullable()();
   IntColumn get int4 => customType(ElectricTypes.int4).nullable()();
+  IntColumn get int8 => customType(ElectricTypes.int8).nullable()();
+  Int64Column get int8BigInt => int64().nullable()();
+  RealColumn get float4 => customType(ElectricTypes.float4).nullable()();
   RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
+  Column<Object> get json => customType(ElectricTypes.json).nullable()();
 
   IntColumn get relatedId =>
       integer().nullable().named('relatedId').references(Dummy, #id)();

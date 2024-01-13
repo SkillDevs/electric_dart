@@ -31,11 +31,11 @@ void main() {
       triggersSQL.contains(
         '''
     CREATE TRIGGER insert_main_personTable_into_oplog
-       AFTER INSERT ON personTable
+       AFTER INSERT ON "main"."personTable"
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == 'personTable')
     BEGIN
       INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-      VALUES ('main', 'personTable', 'INSERT', json_object('id', cast(new.id as TEXT)), json_object('age', new.age, 'bmi', cast(new.bmi as TEXT), 'id', cast(new.id as TEXT), 'name', new.name), NULL, NULL);
+      VALUES ('main', 'personTable', 'INSERT', json_object('id', cast(new."id" as TEXT)), json_object('age', new."age", 'bmi', cast(new."bmi" as TEXT), 'id', cast(new."id" as TEXT), 'int8', cast(new."int8" as TEXT), 'name', new."name"), NULL, NULL);
     END;
     ''',
       ),
@@ -45,11 +45,11 @@ void main() {
     expect(
       triggersSQL.contains('''
     CREATE TRIGGER update_main_personTable_into_oplog
-       AFTER UPDATE ON personTable
+       AFTER UPDATE ON "main"."personTable"
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == 'personTable')
     BEGIN
       INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-      VALUES ('main', 'personTable', 'UPDATE', json_object('id', cast(new.id as TEXT)), json_object('age', new.age, 'bmi', cast(new.bmi as TEXT), 'id', cast(new.id as TEXT), 'name', new.name), json_object('age', old.age, 'bmi', cast(old.bmi as TEXT), 'id', cast(old.id as TEXT), 'name', old.name), NULL);
+      VALUES ('main', 'personTable', 'UPDATE', json_object('id', cast(new."id" as TEXT)), json_object('age', new."age", 'bmi', cast(new."bmi" as TEXT), 'id', cast(new."id" as TEXT), 'int8', cast(new."int8" as TEXT), 'name', new."name"), json_object('age', old."age", 'bmi', cast(old."bmi" as TEXT), 'id', cast(old."id" as TEXT), 'int8', cast(old."int8" as TEXT), 'name', old."name"), NULL);
     END;
     '''),
       isTrue,
@@ -59,11 +59,11 @@ void main() {
       triggersSQL.contains(
         '''
     CREATE TRIGGER delete_main_personTable_into_oplog
-       AFTER DELETE ON personTable
+       AFTER DELETE ON "main"."personTable"
        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == 'personTable')
     BEGIN
       INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-      VALUES ('main', 'personTable', 'DELETE', json_object('id', cast(old.id as TEXT)), NULL, json_object('age', old.age, 'bmi', cast(old.bmi as TEXT), 'id', cast(old.id as TEXT), 'name', old.name), NULL);
+      VALUES ('main', 'personTable', 'DELETE', json_object('id', cast(old."id" as TEXT)), NULL, json_object('age', old."age", 'bmi', cast(old."bmi" as TEXT), 'id', cast(old."id" as TEXT), 'int8', cast(old."int8" as TEXT), 'name', old."name"), NULL);
     END;
     ''',
       ),
@@ -79,7 +79,7 @@ void main() {
 
     // Insert a row in the table
     final insertRowSQL =
-        "INSERT INTO $tableName (id, name, age, bmi) VALUES (1, 'John Doe', 30, 25.5)";
+        "INSERT INTO $tableName (id, name, age, bmi, int8) VALUES (1, 'John Doe', 30, 25.5, 7)";
     db.execute(insertRowSQL);
 
     // Check that the oplog table contains an entry for the inserted row
@@ -103,6 +103,7 @@ void main() {
         'age': 30,
         'bmi': '25.5',
         'id': '1.0',
+        'int8': '7', // BigInts are serialized as strings in the oplog
         'name': 'John Doe',
       }),
       'oldRow': null,
@@ -120,7 +121,7 @@ void main() {
 
     // Insert a row in the table
     final insertRowSQL =
-        "INSERT INTO $tableName (id, name, age, bmi) VALUES (-9e999, 'John Doe', 30, 9e999)";
+        "INSERT INTO $tableName (id, name, age, bmi, int8) VALUES (-9e999, 'John Doe', 30, 9e999, 7)";
     db.execute(insertRowSQL);
 
     // Check that the oplog table contains an entry for the inserted row
@@ -143,6 +144,7 @@ void main() {
         'age': 30,
         'bmi': 'Inf',
         'id': '-Inf',
+        'int8': '7', // BigInts are serialized as strings in the oplog
         'name': 'John Doe',
       }),
       'oldRow': null,

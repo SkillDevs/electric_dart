@@ -161,6 +161,7 @@ enum DataChangeType {
   insert,
   update,
   delete,
+  compensation,
 }
 
 typedef Record = Map<String, Object?>;
@@ -277,6 +278,10 @@ class RelationColumn with EquatableMixin {
 }
 
 typedef ErrorCallback = EventCallbackCall<SatelliteException>;
+typedef RelationCallback = EventCallbackCall<Relation>;
+typedef TransactionCallback = Future<void> Function(Transaction);
+typedef IncomingTransactionCallback = EventCallbackCall<TransactionEvent>;
+typedef OutboundStartedCallback = EventCallbackCall<void>;
 
 // class Relation {
 //   final int id;

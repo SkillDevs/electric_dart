@@ -282,6 +282,33 @@ void main() {
     expect(resultingValue, null);
   });
 
+  test('snapshot of INSERT with bigint', () async {
+    await runMigrations();
+
+    await adapter.run(
+      Statement(
+        'INSERT INTO bigIntTable(value) VALUES (1)',
+      ),
+    );
+
+    await satellite.setAuthState(authState);
+    await satellite.performSnapshot();
+    final entries = await satellite.getEntries();
+    final clientId = satellite.authState!.clientId;
+
+    final merged = localOperationsToTableChanges(
+      entries,
+      (timestamp) {
+        return generateTag(clientId, timestamp);
+      },
+      kTestRelations,
+    );
+    final opLogTableChange = merged['main.bigIntTable']!['{"value":"1"}']!;
+    final keyChanges = opLogTableChange.oplogEntryChanges;
+    final resultingValue = keyChanges.changes['value']!.value;
+    expect(resultingValue, BigInt.from(1));
+  });
+
   test('take snapshot and merge local wins', () async {
     await runMigrations();
 
@@ -1446,6 +1473,38 @@ void main() {
     }
   });
 
+  test(
+      '(regression) shape subscription succeeds even if subscription data is delivered before the SatSubsReq RPC call receives its SatSubsResp answer',
+      () async {
+    await runMigrations();
+
+    const tablename = 'parent';
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+
+    final conn = await satellite.start(authConfig);
+    await conn.connectionFuture;
+
+    final shapeDef = ClientShapeDefinition(
+      selects: [ShapeSelect(tablename: tablename)],
+    );
+
+    satellite.relations = kTestRelations;
+
+    // Enable the deliver first flag in the mock client
+    // such that the subscription data is delivered before the
+    // subscription promise is resolved
+    final mockClient = satellite.client as MockSatelliteClient;
+    mockClient.enableDeliverFirst();
+
+    final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
+    await synced;
+
+    // doesn't throw
+  });
+
   test('multiple subscriptions for the same shape are deduplicated', () async {
     await runMigrations();
 
@@ -1643,7 +1702,6 @@ void main() {
     );
 
     satellite.relations = kTestRelations;
-    await satellite.subscribe([shapeDef1, shapeDef2]);
 
     final completer = Completer<void>();
     client.subscribeToSubscriptionEvents(
@@ -1669,6 +1727,9 @@ void main() {
       },
       (_) {},
     );
+
+    await satellite.subscribe([shapeDef1, shapeDef2]);
+
     await completer.future;
   });
 
@@ -1915,7 +1976,7 @@ void main() {
   });
 
   test('connection backoff success', () async {
-    client.close();
+    client.disconnect();
 
     int numExpects = 0;
 

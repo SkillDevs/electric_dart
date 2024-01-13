@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
@@ -202,43 +205,96 @@ void main() async {
   });
 
   test('floats are converted correctly to SQLite', () async {
-    final List<(int id, double value)> values = [
-      (1, 1.234),
-      (2, double.nan),
-      (3, double.infinity),
-      (4, double.negativeInfinity),
+    final List<(int id, double float4, double float8)> values = [
+      (1, 1.234, 1.234),
+      (2, double.nan, double.nan),
+      (3, double.infinity, double.infinity),
+      (4, double.negativeInfinity, double.negativeInfinity),
     ];
 
     for (final entry in values) {
-      final (id, value) = entry;
+      final (id, f4, f8) = entry;
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
               id: Value(id),
-              float8: Value(value),
+              float4: Value(f4),
+              float8: Value(f8),
             ),
           );
     }
 
     final rawRes = await db.customSelect(
-      'SELECT id, float8 FROM DataTypes ORDER BY id ASC',
+      'SELECT id, float4, float8 FROM DataTypes ORDER BY id ASC',
       variables: [],
     ).get();
 
-    final List<(int id, Object value)> expected = [
-      (1, 1.234),
-      (2, 'NaN'),
-      (3, double.infinity),
-      (4, double.negativeInfinity),
+    final List<(int id, Object float4, Object float8)> expected = [
+      // 1.234 cannot be stored exactly in a float4
+      // hence, there is a rounding error, which is observed when we
+      // read the float4 value back into a 64-bit JS number
+      // The value 1.2339999675750732 that we read back
+      // is also what Math.fround(1.234) returns
+      // as being the nearest 32-bit single precision
+      // floating point representation of 1.234
+      (1, 1.2339999675750732, 1.234),
+      (2, 'NaN', 'NaN'),
+      (3, double.infinity, double.infinity),
+      (4, double.negativeInfinity, double.negativeInfinity),
     ];
 
-    final List<(int id, Object value)> rowsRecords = rawRes.map((row) {
+    final List<(int id, Object float4, Object float8)> rowsRecords =
+        rawRes.map((row) {
       final data = row.data;
       final id = data['id'] as int;
-      final Object value = data['float8'] as Object;
-      return (id, value);
+      final Object float4 = data['float4'] as Object;
+      final Object float8 = data['float8'] as Object;
+      return (id, float4, float8);
     }).toList();
 
     expect(rowsRecords, expected);
+  });
+
+  test('Int8s are converted correctly to SQLite', () async {
+    const int8 = 9223372036854775807;
+
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8: const Value(int8),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT id, int8 FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+
+    final row = rawRes[0].data;
+    expect(row['id'], 1);
+    expect(row['int8'], int8);
+  });
+
+  test('BigInts are converted correctly to SQLite', () async {
+    final bigInt = BigInt.parse('9223372036854775807');
+
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            int8BigInt: Value(bigInt),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT id, int8_big_int FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+
+    // because we are executing a raw query,
+    // the returned BigInt for the `id`
+    // is not converted into a regular number
+    final row = rawRes[0].data;
+    expect(row['id'], 1);
+    expect((row['int8_big_int'] as int).toString(), bigInt.toString());
   });
 
   test('drift files serialization/deserialization', () async {
@@ -261,5 +317,88 @@ void main() async {
       rawRes1[0].read<String>('timestamp'),
       '2023-08-07 16:28:35.421Z',
     );
+  });
+
+  test('json is converted correctly to SQLite', () async {
+    final json = {
+      'a': 1,
+      'b': true,
+      'c': {'d': 'nested'},
+      'e': [1, 2, 3],
+      'f': null,
+    };
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(1),
+            json: Value(json),
+          ),
+        );
+
+    final rawRes = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+
+    expect(rawRes[0].read<String>('json'), jsonEncode(json));
+
+    // Also test null values
+    // this null value is not a JSON null
+    // but a DB NULL that indicates absence of a value
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(2),
+            json: const Value(null),
+          ),
+        );
+
+    final rawRes2 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(2)],
+    ).get();
+
+    expect(rawRes2[0].read<String?>('json'), null);
+
+    // Also test JSON null value
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(3),
+            json: const Value(kJsonNull),
+          ),
+        );
+
+    final rawRes3 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(3)],
+    ).get();
+    expect(rawRes3[0].read<String>('json'), 'null');
+    expect(rawRes3[0].read<String>('json'), jsonEncode(null));
+
+    // also test regular values
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(4),
+            json: const Value('foo'),
+          ),
+        );
+
+    final rawRes4 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(4)],
+    ).get();
+    expect(rawRes4[0].read<String>('json'), jsonEncode('foo'));
+
+    // also test arrays
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: const Value(5),
+            json: const Value([1, 2, 3]),
+          ),
+        );
+
+    final rawRes5 = await db.customSelect(
+      'SELECT json FROM DataTypes WHERE id = ?',
+      variables: [const Variable(5)],
+    ).get();
+    expect(rawRes5[0].read<String>('json'), jsonEncode([1, 2, 3]));
   });
 }

@@ -18,6 +18,9 @@ void main() async {
   test('pg types extracted from drift', () async {
     final dataTypesFields = dbDescription.getFields('DataTypes');
 
+    final numCols = db.dataTypes.$columns.length;
+    expect(dataTypesFields.length, numCols);
+
     expect(dataTypesFields, {
       'id': PgType.integer,
       'date': PgType.date,
@@ -29,7 +32,11 @@ void main() async {
       'uuid': PgType.uuid,
       'int2': PgType.int2,
       'int4': PgType.int4,
+      'int8': PgType.int8,
+      'int8_big_int': PgType.int8,
+      'float4': PgType.float4,
       'float8': PgType.float8,
+      'json': PgType.json,
       'relatedId': PgType.integer,
     });
 

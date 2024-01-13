@@ -12,14 +12,14 @@ Add the required dependencies into your project.
 ```yaml
 dependencies:
   electricsql: <version>
-  drift: ^2.13.0 # or greater
+  drift: ^2.14.0 # or greater
 
   # Optionally include if you want to use the Flutter utilities
   electricsql_flutter: <version>
 
 dev_dependencies:
   electricsql_cli: <version>
-  drift_dev: ^2.13.0 # or greater
+  drift_dev: ^2.14.0 # or greater
   build_runner: ... # to build the drift code
 ```
 
@@ -50,9 +50,9 @@ You can run the tool within your Flutter app as follows:
 dart run electricsql_cli generate
 ```
 
-After it finishes you should have a the folder `lib/generated/electric` created. Inside you will find the `drift` schema and the Electric SQL migrations.
+After it finishes you should have the folder `lib/generated/electric` created. Inside you will find the `drift` schema and the Electric SQL migrations.
 
-After this point, the app should be configured like a regular app that uses `drift` with a minor adjustment.
+After this point, the app should be configured like a regular app that uses `drift`, with minor adjustments.
 You can refer to the official `drift` docs here https://drift.simonbinder.eu/docs/getting-started/
 
 When defining the `drift` database class you need to provide the tables from the generated file.
@@ -69,7 +69,14 @@ dart run build_runner build
 import 'dart:io';
 
 import 'package:drift/native.dart';
+
+// Import the generated Drift schema, which contains your electrified tables
 import 'package:myapp/generated/electric/drift_schema.dart';
+
+// [IMPORTANT] Add this line to enable the import of electric types for Drift
+// You can also import them from `electricsql_flutter`
+import 'package:electricsql/drivers/drift.dart'; 
+
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -83,7 +90,7 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 
   // [IMPORTANT CHANGE!!!]
-  // drift by default creates the local database tables. This is done by electric in
+  // Drift by default creates the local database tables. This is done by electric in
   // this situation, so we provide an empty onCreate callback
   @override
   MigrationStrategy get migration {
@@ -125,6 +132,10 @@ final electric = await electrify<AppDatabase>(
     // `dart run electricsql_cli generate`
     migrations: kElectricMigrations,
     config: ElectricConfig(
+        // Electric service URL
+        // Make sure it's not localhost if running on an emulator/usb connected device,
+        // but the IP of your machine (192.168.x.x when hosting it yourself)
+        url: 'http://<ip>:5133',
         auth: AuthConfig(
             // https://electric-sql.com/docs/usage/auth
             // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
@@ -133,7 +144,7 @@ final electric = await electrify<AppDatabase>(
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
-        // url: '<ELECTRIC_SERVICE_URL>',
+        //
     ),
 );
 ```
@@ -157,6 +168,9 @@ Everything should be working now. You can use the `drift` database normally.
 Inserting, updating or deleting via the drift APIs should automatically sync the data in the Postgres database.
 
 You can see some examples of writes and reads in the main [README](https://github.com/SkillDevs/electric_dart/blob/master/README.md).
+
+> [!NOTE]  
+> If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
 
 
 ### 7. (Optional) Configure how the Drift code for Electric is generated

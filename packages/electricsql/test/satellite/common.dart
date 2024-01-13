@@ -1,18 +1,23 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
 
+import 'package:drift/drift.dart' show DatabaseConnectionUser;
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
+import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
+import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/schema.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
+import 'package:electricsql/src/notifiers/index.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
-import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -21,6 +26,12 @@ import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 import '../util/sqlite.dart';
+
+// Speed up the intervals for testing.
+final opts = kSatelliteDefaults.copyWith(
+  minSnapshotWindow: const Duration(milliseconds: 40),
+  pollingInterval: const Duration(milliseconds: 200),
+);
 
 DBSchema kTestDbDescription = DBSchemaRaw(
   fields: {
@@ -101,10 +112,10 @@ Map<String, Relation> kTestRelations = {
       ),
     ],
   ),
-  'floatTable': Relation(
+  'mergeTable': Relation(
     id: 3,
     schema: 'public',
-    table: 'floatTable',
+    table: 'mergeTable',
     tableType: SatRelation_RelationType.TABLE,
     columns: [
       RelationColumn(
@@ -114,8 +125,20 @@ Map<String, Relation> kTestRelations = {
         primaryKey: true,
       ),
       RelationColumn(
-        name: 'value',
+        name: 'real',
         type: 'REAL',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'int8',
+        type: 'INT8',
+        isNullable: true,
+        primaryKey: false,
+      ),
+      RelationColumn(
+        name: 'bigint',
+        type: 'BIGINT',
         isNullable: true,
         primaryKey: false,
       ),
@@ -151,15 +174,29 @@ Map<String, Relation> kTestRelations = {
         isNullable: true,
         primaryKey: false,
       ),
+      RelationColumn(
+        name: 'int8',
+        type: 'INT8',
+        isNullable: true,
+        primaryKey: false,
+      ),
+    ],
+  ),
+  'bigIntTable': Relation(
+    id: 5,
+    schema: 'public',
+    table: 'bigIntTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'value',
+        type: 'INT8',
+        isNullable: false,
+        primaryKey: true,
+      ),
     ],
   ),
 };
-
-// Speed up the intervals for testing.
-final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: const Duration(milliseconds: 40),
-  pollingInterval: const Duration(milliseconds: 200),
-);
 
 Future<SatelliteTestContext> makeContext({
   SatelliteOpts? options,
@@ -247,6 +284,43 @@ class SatelliteTestContext {
   }
 }
 
+Future<ElectricClient> mockElectricClient(
+  DatabaseConnectionUser db,
+  Registry registry, {
+  required DbName dbName,
+  SatelliteOpts? options,
+}) async {
+  options ??= opts;
+
+  final adapter = DriftAdapter(db);
+  final migrator =
+      BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+  final notifier = MockNotifier(dbName, eventEmitter: EventEmitter());
+  final client = MockSatelliteClient();
+  final satellite = SatelliteProcess(
+    dbName: dbName,
+    adapter: adapter,
+    migrator: migrator,
+    notifier: notifier,
+    client: client,
+    opts: options,
+  );
+
+  await satellite.start(const AuthConfig(clientId: '', token: 'test-token'));
+  registry.satellites[dbName] = satellite;
+
+  // @ts-ignore Mock Electric client that does not contain the DAL
+  return ElectricClientImpl.internal(
+    dbName: dbName,
+    adapter: adapter,
+    notifier: notifier,
+    registry: registry,
+    satellite: satellite,
+    shapeManager: ShapeManagerMock(),
+    dbDescription: DBSchemaRaw(fields: {}, migrations: []),
+  );
+}
+
 Future<void> cleanAndStopSatelliteRaw({
   required DbName dbName,
   required SatelliteProcess satellite,
@@ -264,7 +338,7 @@ void migrateDb(Database db, Table table) {
   final tableName = table.tableName;
   // Create the table in the database
   final createTableSQL =
-      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL)';
+      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER)';
   db.execute(createTableSQL);
 
   // Apply the initial migration on the database
@@ -283,13 +357,14 @@ void migrateDb(Database db, Table table) {
 final kPersonTable = Table(
   namespace: 'main',
   tableName: 'personTable',
-  columns: ['id', 'name', 'age', 'bmi'],
+  columns: ['id', 'name', 'age', 'bmi', 'int8'],
   primary: ['id'],
   foreignKeys: [],
   columnTypes: {
-    'id': 'REAL',
-    'name': 'TEXT',
-    'age': 'INTEGER',
-    'bmi': 'REAL',
+    'id': (sqliteType: 'REAL', pgType: 'REAL'),
+    'name': (sqliteType: 'TEXT', pgType: 'TEXT'),
+    'age': (sqliteType: 'INTEGER', pgType: 'INTEGER'),
+    'bmi': (sqliteType: 'REAL', pgType: 'REAL'),
+    'int8': (sqliteType: 'INTEGER', pgType: 'INT8'),
   },
 );

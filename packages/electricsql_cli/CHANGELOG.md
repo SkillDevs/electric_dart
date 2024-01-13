@@ -1,3 +1,20 @@
+## 0.4.1
+
+* Code based on official Typescript client [v0.8.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.2)
+* New "proxy-tunnel" command that tunnels a Postgres TCP connection over a websocket for the Postgres Proxy.
+
+
+## 0.4.0
+
+* Code based on official Typescript client [v0.8.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.0) and [v0.8.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.1)
+* Added additional CLI parameter, `int8AsBigInt` to configure how to treat the INT8 type in Dart code, either as a `BigInt` or as `int`. `BigInt` can be useful if you need the full INT8 range in Flutter Web. Otherwise, Dart `int` is capable of storing the full INT8 range for all other platforms.
+
+
+## 0.3.1
+
+* Code based on official Typescript client [v0.7.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.7.1)
+
+
 ## 0.3.0
 
 * [BREAKING CHANGE]: The `generate_migrations` command is now called `generate` and it will also generate the drift schema code automatically based on the Postgres schema.

@@ -1,35 +1,30 @@
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 
 class ElectricNamespace {
+  final String dbName;
   final DatabaseAdapter adapter;
   final Notifier notifier;
+  final Registry registry;
 
   bool _isConnected = false;
   bool get isConnected => _isConnected;
 
-  late final String _connectivityChangesSubscriptionId;
+  late final UnsubscribeFunction _unsubscribeStateChanges;
 
   ElectricNamespace({
+    required this.dbName,
     required this.adapter,
     required this.notifier,
+    required this.registry,
   }) {
-    // XXX if you're implementing VAX-799, see the note below and maybe refactor
-    // this out of here whilst cleaning up the subscription.
-
-    // we need to set isConnected before the first event is emitted,
-    // otherwise application might be out of sync with satellite state.
-    _connectivityChangesSubscriptionId =
+    _unsubscribeStateChanges =
         notifier.subscribeToConnectivityStateChanges((notification) {
       setIsConnected(notification.connectivityState);
     });
   }
 
-  // XXX this `isConnected` property is now only used via the ElectricClient.
-  // Now ... because the connectivity state change subscription is wired up
-  // here, we proxy this property from a dynamic `isConnected` getter on the
-  // ElectricClient. All of which is a bit unecessary and something of a
-  // code smell. As is the subscription above not being cleaned up.
   void setIsConnected(ConnectivityState connectivityState) {
     _isConnected = connectivityState == ConnectivityState.connected;
   }
@@ -41,9 +36,9 @@ class ElectricNamespace {
     notifier.potentiallyChanged();
   }
 
-  void dispose() {
-    notifier.unsubscribeFromConnectivityStateChanges(
-      _connectivityChangesSubscriptionId,
-    );
+  /// Cleans up the resources used by the `ElectricNamespace`.
+  Future<void> close() async {
+    _unsubscribeStateChanges();
+    await registry.stop(dbName);
   }
 }

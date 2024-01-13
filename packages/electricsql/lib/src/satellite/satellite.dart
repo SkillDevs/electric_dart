@@ -8,11 +8,12 @@ import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:events_emitter/events_emitter.dart';
 
 export 'package:electricsql/src/satellite/process.dart' show ShapeSubscription;
 
 abstract class Registry {
+  Map<DbName, Satellite> get satellites;
+
   Future<Satellite> ensureStarted({
     required DbName dbName,
     required DBSchema dbDescription,
@@ -47,7 +48,7 @@ abstract class Satellite {
   ConnectivityState? connectivityState;
 
   Future<ConnectionWrapper> start(AuthConfig authConfig);
-  Future<void> stop();
+  Future<void> stop({bool? shutdown});
   Future<ShapeSubscription> subscribe(
     List<ClientShapeDefinition> shapeDefinitions,
   );
@@ -56,38 +57,34 @@ abstract class Satellite {
 
 abstract class Client {
   Future<void> connect();
-  void close();
+  void disconnect();
+  void shutdown();
   Future<AuthResponse> authenticate(
     AuthState authState,
   );
-  bool isClosed();
+  bool isConnected();
   Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
   );
   Future<StopReplicationResponse> stopReplication();
-  void subscribeToRelations(void Function(Relation relation) callback);
-  void subscribeToTransactions(
-    Future<void> Function(Transaction transaction) callback,
-  );
+  void Function() subscribeToRelations(RelationCallback callback);
+  void Function() subscribeToTransactions(TransactionCallback callback);
   void enqueueTransaction(
     DataTransaction transaction,
   );
   LSN getLastSentLsn();
-  EventListener<void> subscribeToOutboundEvent(void Function() callback);
-  void unsubscribeToOutboundEvent(EventListener<void> eventListener);
-  EventListener<SatelliteException> subscribeToError(ErrorCallback callback);
-  void unsubscribeToError(EventListener<SatelliteException> eventListener);
+  void Function() subscribeToOutboundStarted(
+    OutboundStartedCallback callback,
+  );
+  void Function() subscribeToError(ErrorCallback callback);
 
   Future<SubscribeResponse> subscribe(
     String subscriptionId,
     List<ShapeRequest> shapes,
   );
   Future<UnsubscribeResponse> unsubscribe(List<String> subIds);
-
-  // TODO: there is currently no way of unsubscribing from the server
-  // unsubscribe(subscriptionId: string): Promise<void>
 
   SubscriptionEventListeners subscribeToSubscriptionEvents(
     SubscriptionDeliveredCallback successCallback,
@@ -97,11 +94,11 @@ abstract class Client {
 }
 
 class SubscriptionEventListeners {
-  final EventListener<SubscriptionData> successEventListener;
-  final EventListener<SubscriptionErrorData> errorEventListener;
+  final void Function() removeSuccessListener;
+  final void Function() removeErrorListener;
 
   SubscriptionEventListeners({
-    required this.successEventListener,
-    required this.errorEventListener,
+    required this.removeSuccessListener,
+    required this.removeErrorListener,
   });
 }

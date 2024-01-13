@@ -1,4 +1,6 @@
+import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/tablename.dart';
+import 'package:meta/meta.dart';
 
 class ConnectionBackoffOptions {
   /// Delay factor to double after every connection attempt.
@@ -51,23 +53,30 @@ const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
   ),
 );
 
-const kDefaultSatelliteTimeout = 3000;
 const kDefaultSatellitePushPeriod = 500;
 
 class SatelliteClientOpts {
   final String host;
   final int port;
   final bool ssl;
-  int timeout;
+
+  int _timeout;
+  int get timeout => _timeout;
+
+  @visibleForTesting
+  set timeout(int timeout) {
+    _timeout = timeout;
+  }
+
   final int pushPeriod;
 
   SatelliteClientOpts({
     required this.host,
     required this.port,
     required this.ssl,
-    this.timeout = kDefaultSatelliteTimeout,
+    required int timeout,
     this.pushPeriod = kDefaultSatellitePushPeriod,
-  });
+  }) : _timeout = timeout;
 }
 
 class SatelliteOpts {
@@ -98,6 +107,8 @@ class SatelliteOpts {
 
   /// Backoff options for connecting with Electric
   final ConnectionBackoffOptions connectionBackoffOptions;
+
+  bool get debug => logger.levelImportance <= Level.debug.value;
 
   const SatelliteOpts({
     required this.metaTable,

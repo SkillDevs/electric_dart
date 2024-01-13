@@ -9,7 +9,9 @@ import 'package:electricsql/util.dart';
 import 'package:satellite_dart_client/drift/database.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
+import 'package:satellite_dart_client/generated/electric/drift_schema.dart';
 import 'package:satellite_dart_client/util/json.dart';
+import 'package:satellite_dart_client/util/pretty_output.dart';
 
 late String dbName;
 
@@ -238,12 +240,14 @@ Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int i2, int i4) async {
+Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int i2,
+    int i4, BigInt i8) async {
   final item = await electric.db.ints.insertReturning(
     IntsCompanion.insert(
       id: id,
       i2: Value(i2),
       i4: Value(i4),
+      i8: Value(i8),
     ),
   );
   return SingleRow.fromItem(item);
@@ -254,17 +258,95 @@ Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeFloat(MyDriftElectricClient electric, String id, double f8) async {
+Future<SingleRow> writeFloat(
+    MyDriftElectricClient electric, String id, double f4, double f8) async {
   final item = await electric.db.floats.insertReturning(
     FloatsCompanion.insert(
       id: id,
+      f4: Value(f4),
       f8: Value(f8),
     ),
   );
   return SingleRow.fromItem(item);
 }
 
-Future<Rows> getItemColumns(DriftElectricClient electric, String table, String column) async {
+Future<String?> getJsonRaw(MyDriftElectricClient electric, String id) async {
+  final res = await electric.db.customSelect(
+    'SELECT js FROM jsons WHERE id = ?;',
+    variables: [Variable(id)],
+  ).get();
+  return res[0].read<String?>('js');
+}
+
+Future<String?> getJsonbRaw(MyDriftElectricClient electric, String id) async {
+  final res = await electric.db.customSelect(
+    'SELECT jsb FROM jsons WHERE id = ?;',
+    variables: [Variable(id)],
+  ).get();
+  return res[0].read<String?>('jsb');
+}
+
+Future<SingleRow> getJson(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.jsons.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  final cols = toColumns(item)!;
+  cols.remove('jsb');
+  return SingleRow.fromColumns(cols);
+}
+
+Future<SingleRow> getJsonb(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.jsons.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  final cols = toColumns(item)!;
+  cols.remove('js');
+  return SingleRow.fromColumns(cols);
+}
+
+Future<SingleRow> writeJson(
+    MyDriftElectricClient electric, String id, Object? js, Object? jsb) async {
+  final item = await electric.db.jsons.insertReturning(
+    JsonsCompanion.insert(
+      id: id,
+      jsb: Value(jsb),
+    ),
+  );
+  return SingleRow.fromItem(item);
+}
+
+Future<SingleRow> getEnum(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.enums.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  return _enumClassToRawRow(item);
+}
+
+Future<SingleRow> writeEnum(
+    MyDriftElectricClient electric, String id, String? enumStr) async {
+  final enumValue =
+      enumStr == null ? null : ElectricEnumCodecs.color.decode(enumStr);
+
+  final item = await electric.db.enums.insertReturning(
+    EnumsCompanion.insert(
+      id: id,
+      c: Value(enumValue),
+    ),
+  );
+
+  return _enumClassToRawRow(item);
+}
+
+// Converts the dart enum into string for the Lux expected output
+SingleRow _enumClassToRawRow(Enum item) {
+  final driftCols = toColumns(item)!;
+  final colorEnum = driftCols['c'] as DbColor?;
+  if (colorEnum != null) {
+    driftCols['c'] = ElectricEnumCodecs.color.encode(colorEnum);
+  }
+
+  return SingleRow(driftCols);
+}
+
+Future<Rows> getItemColumns(
+    DriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
       .customSelect(
         "SELECT $column FROM $table;",
@@ -392,24 +474,10 @@ Rows _toRows(List<QueryRow> rows) {
   return Rows(
     rows.map((r) {
       final data = r.data;
-      return _mapToRow(data);
+      return data;
     }).toList(),
   );
 }
-
-Row _mapToRow(Map<String, Object?> map) {
-  return map.map((key, value) {
-    final String newVal;
-    if (value is String) {
-      newVal = "'$value'";
-    } else {
-      newVal = value.toString();
-    }
-    return MapEntry(key, newVal);
-  });
-}
-
-typedef Row = Map<String, String>;
 
 List<Variable> dynamicArgsToVariables(List<Object?>? args) {
   return (args ?? const [])
@@ -441,57 +509,33 @@ List<Variable> dynamicArgsToVariables(List<Object?>? args) {
 }
 
 class Rows {
-  final List<Row> rows;
+  final List<Map<String, Object?>> rows;
 
   Rows(this.rows);
 
   @override
   String toString() {
-    if (rows.isEmpty) {
-      return "[]";
-    }
-
-    final buffer = StringBuffer();
-    buffer.writeln("[");
-    for (final row in rows) {
-      buffer.write("  ");
-      buffer.write(_rowToPrettyStr(row));
-      buffer.writeln(",");
-    }
-    buffer.writeln("]");
-    return buffer.toString();
+    return listToPrettyStr(rows, withNewLine: true);
   }
 }
 
 class SingleRow {
-  final Row row;
+  final Map<String, Object?> row;
 
   SingleRow(this.row);
 
   factory SingleRow.fromItem(Insertable item) {
-    return SingleRow(_mapToRow(toColumns(item)!));
+    return SingleRow(toColumns(item)!);
+  }
+
+  factory SingleRow.fromColumns(Map<String, Object?> cols) {
+    return SingleRow(cols);
   }
 
   @override
   String toString() {
-    return _rowToPrettyStr(row);
+    return mapToPrettyStr(row);
   }
-}
-
-String _rowToPrettyStr(Row row) {
-  final buffer = StringBuffer();
-  buffer.write("{ ");
-  final entries = row.entries.toList();
-  for (var i = 0; i < entries.length; i++) {
-    final entry = entries[i];
-    buffer.write("${entry.key}: ${entry.value}");
-
-    if (i != entries.length - 1) {
-      buffer.write(", ");
-    }
-  }
-  buffer.write(" }");
-  return buffer.toString();
 }
 
 Map<String, Object?>? toColumns(Insertable? o) {

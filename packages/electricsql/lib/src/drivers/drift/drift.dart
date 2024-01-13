@@ -64,15 +64,15 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  void dispose() {
-    _baseClient.dispose();
+  Future<void> close() async {
+    await _baseClient.close();
 
     _disposeHook?.call();
     _disposeHook = null;
   }
 
   void Function() _hookToNotifier() {
-    final key = notifier.subscribeToDataChanges(
+    final _unsubDataChanges = notifier.subscribeToDataChanges(
       (notification) {
         final tablesChanged = notification.changes.map((e) {
           final tableName = e.qualifiedTablename.tablename;
@@ -93,7 +93,7 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
     });
 
     return () {
-      notifier.unsubscribeFromDataChanges(key);
+      _unsubDataChanges();
       tableUpdateSub.cancel();
     };
   }
@@ -109,6 +109,12 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
 
   @override
   Notifier get notifier => _baseClient.notifier;
+
+  @override
+  String get dbName => _baseClient.dbName;
+
+  @override
+  Registry get registry => _baseClient.registry;
 
   @override
   void potentiallyChanged() {

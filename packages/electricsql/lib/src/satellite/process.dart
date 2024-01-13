@@ -78,15 +78,14 @@ class SatelliteProcess implements Satellite {
 
   @visibleForTesting
   AuthState? authState;
-  String? _authStateSubscription;
+  UnsubscribeFunction? _unsubscribeFromAuthState;
 
   @override
   ConnectivityState? connectivityState;
-  String? _connectivityChangeSubscription;
+  UnsubscribeFunction? _unsubscribeFromConnectivityChanges;
 
   Timer? _pollingInterval;
-  String? _potentialDataChangeSubscription;
-
+  UnsubscribeFunction? _unsubscribeFromPotentialDataChanges;
   late final Throttle<DateTime> throttledSnapshot;
 
   LSN? _lsn;
@@ -154,9 +153,9 @@ class SatelliteProcess implements Satellite {
 
   @override
   Future<ConnectionWrapper> start(AuthConfig authConfig) async {
-    final sqliteVersionRow =
-        await adapter.query(Statement('SELECT sqlite_version() AS version'));
-    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
+    if (opts.debug) {
+      await _logSQLiteVersion();
+    }
 
     await migrator.up();
 
@@ -172,9 +171,9 @@ class SatelliteProcess implements Satellite {
     await setAuthState(AuthState(clientId: clientId, token: authConfig.token));
 
     final notifierSubscriptions = {
-      '_authStateSubscription': _authStateSubscription,
-      '_connectivityChangeSubscription': _connectivityChangeSubscription,
-      '_potentialDataChangeSubscription': _potentialDataChangeSubscription,
+      '_authStateSubscription': _unsubscribeFromAuthState,
+      '_connectivityChangeSubscription': _unsubscribeFromConnectivityChanges,
+      '_potentialDataChangeSubscription': _unsubscribeFromPotentialDataChanges,
     };
     notifierSubscriptions.forEach((name, value) {
       if (value != null) {
@@ -185,11 +184,11 @@ This means there is a notifier subscription leak.`''');
     });
 
     // Monitor auth state changes.
-    _authStateSubscription =
+    _unsubscribeFromAuthState =
         notifier.subscribeToAuthStateChanges(_updateAuthState);
 
     // Monitor connectivity state changes.
-    _connectivityChangeSubscription =
+    _unsubscribeFromConnectivityChanges =
         notifier.subscribeToConnectivityStateChanges(
       (ConnectivityStateChangeNotification notification) async {
         // Wait for the next event loop to ensure that other listeners get a
@@ -201,7 +200,7 @@ This means there is a notifier subscription leak.`''');
     );
 
     // Request a snapshot whenever the data in our database potentially changes.
-    _potentialDataChangeSubscription =
+    _unsubscribeFromPotentialDataChanges =
         notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
     // Start polling to request a snapshot every `pollingInterval` ms.
@@ -234,6 +233,12 @@ This means there is a notifier subscription leak.`''');
     return ConnectionWrapper(
       connectionFuture: connectionFuture,
     );
+  }
+
+  Future<void> _logSQLiteVersion() async {
+    final sqliteVersionRow =
+        await adapter.query(Statement('SELECT sqlite_version() AS version'));
+    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
   }
 
   @visibleForTesting
@@ -277,9 +282,8 @@ This means there is a notifier subscription leak.`''');
   void setClientListeners() {
     client.subscribeToError(_handleClientError);
     client.subscribeToRelations(updateRelations);
-    // FIXME: calling an async function in an event emitter
     client.subscribeToTransactions(applyTransaction);
-    client.subscribeToOutboundEvent(() => throttledSnapshot());
+    client.subscribeToOutboundStarted((_) => throttledSnapshot());
 
     client.subscribeToSubscriptionEvents(
       _handleSubscriptionData,
@@ -288,7 +292,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   @override
-  Future<void> stop() async {
+  Future<void> stop({bool? shutdown}) async {
     // Stop snapshotting and polling for changes.
     throttledSnapshot.cancel();
 
@@ -297,26 +301,26 @@ This means there is a notifier subscription leak.`''');
       _pollingInterval = null;
     }
 
-    if (_authStateSubscription != null) {
-      notifier.unsubscribeFromAuthStateChanges(_authStateSubscription!);
-      _authStateSubscription = null;
+    if (_unsubscribeFromAuthState != null) {
+      _unsubscribeFromAuthState?.call();
+      _unsubscribeFromAuthState = null;
     }
 
-    if (_connectivityChangeSubscription != null) {
-      notifier.unsubscribeFromConnectivityStateChanges(
-        _connectivityChangeSubscription!,
-      );
-      _connectivityChangeSubscription = null;
+    if (_unsubscribeFromConnectivityChanges != null) {
+      _unsubscribeFromConnectivityChanges?.call();
+      _unsubscribeFromConnectivityChanges = null;
     }
 
-    if (_potentialDataChangeSubscription != null) {
-      notifier.unsubscribeFromPotentialDataChanges(
-        _potentialDataChangeSubscription!,
-      );
-      _potentialDataChangeSubscription = null;
+    if (_unsubscribeFromPotentialDataChanges != null) {
+      _unsubscribeFromPotentialDataChanges?.call();
+      _unsubscribeFromPotentialDataChanges = null;
     }
 
     _disconnect();
+
+    if (shutdown == true) {
+      client.shutdown();
+    }
   }
 
   @override
@@ -365,24 +369,39 @@ This means there is a notifier subscription leak.`''');
     // this could especially happen in unit tests
     subscriptionNotifiers[subId] = completer;
 
-    final SubscribeResponse(:subscriptionId, :error) =
-        await client.subscribe(subId, shapeReqs);
-    if (subId != subscriptionId) {
+    // store the promise because by the time the
+    // `await this.client.subscribe(subId, shapeReqs)` call resolves
+    // the `subId` entry in the `subscriptionNotifiers` may have been deleted
+    // so we can no longer access it
+    final subProm = subscriptionNotifiers[subId]!.future;
+
+    // `clearSubAndThrow` deletes the listeners and cancels the subscription
+    Never clearSubAndThrow(Object error) {
       subscriptionNotifiers.remove(subId);
       subscriptions.subscriptionCancelled(subId);
-      throw Exception(
-        'Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId',
-      );
+      throw error;
     }
 
-    if (error != null) {
-      subscriptionNotifiers.remove(subId);
-      subscriptions.subscriptionCancelled(subscriptionId);
-      throw error;
-    } else {
-      return ShapeSubscription(
-        synced: subscriptionNotifiers[subId]!.future,
-      );
+    try {
+      final SubscribeResponse(:subscriptionId, :error) =
+          await client.subscribe(subId, shapeReqs);
+      if (subId != subscriptionId) {
+        clearSubAndThrow(
+          Exception(
+            'Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId',
+          ),
+        );
+      }
+
+      if (error != null) {
+        clearSubAndThrow(error);
+      } else {
+        return ShapeSubscription(
+          synced: subProm,
+        );
+      }
+    } catch (e) {
+      clearSubAndThrow(e);
     }
   }
 
@@ -611,15 +630,6 @@ This means there is a notifier subscription leak.`''');
   Future<void> _handleOrThrowClientError(SatelliteException error) {
     _disconnect();
 
-    // TODO(dart): Should we handle this case? When can it happen?
-    /*  if (!error) {
-      final e = new SatelliteError(
-        SatelliteErrorCode.INTERNAL,
-        'received an error event without an error code'
-      )
-      throw wrapFatalError(e)
-    } */
-
     if (isThrowable(error)) {
       throw error;
     }
@@ -645,7 +655,7 @@ This means there is a notifier subscription leak.`''');
         }
       case ConnectivityState.disconnected:
         {
-          client.close();
+          client.disconnect();
           return;
         }
       case ConnectivityState.connected:
@@ -752,7 +762,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   void _disconnect() {
-    client.close();
+    client.disconnect();
     _notifyConnectivityState(ConnectivityState.disconnected);
   }
 
@@ -963,7 +973,7 @@ This means there is a notifier subscription leak.`''');
         unawaited(_notifyChanges(oplogEntries));
       }
 
-      if (!client.isClosed()) {
+      if (client.isConnected()) {
         final enqueued = client.getLastSentLsn();
         final enqueuedLogPos = bytesToNumber(enqueued);
 
@@ -1016,7 +1026,7 @@ This means there is a notifier subscription leak.`''');
     List<OplogEntry> results,
   ) async {
     // TODO: Don't try replicating when outbound is inactive
-    if (client.isClosed()) {
+    if (!client.isConnected()) {
       return;
     }
 
@@ -1545,7 +1555,15 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
     }).toList(),
     columnTypes: Map.fromEntries(
       tbl.columns.map(
-        (col) => MapEntry(col.name, col.sqliteType.toUpperCase()),
+        (col) {
+          return MapEntry(
+            col.name,
+            (
+              sqliteType: col.sqliteType.toUpperCase(),
+              pgType: col.ensurePgType().name.toUpperCase(),
+            ),
+          );
+        },
       ),
     ),
   );

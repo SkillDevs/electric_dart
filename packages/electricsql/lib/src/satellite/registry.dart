@@ -13,6 +13,7 @@ import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/types.dart';
 
 abstract class BaseRegistry implements Registry {
+  @override
   final Map<DbName, Satellite> satellites = {};
   final Map<DbName, Future<Satellite>> startingPromises = {};
   final Map<DbName, Future<void>> stoppingPromises = {};
@@ -134,7 +135,7 @@ abstract class BaseRegistry implements Registry {
     // Otherwise, if running then stop.
     final satellite = satellites[dbName];
     if (satellite != null) {
-      final stoppingPromise = satellite.stop().then((_) {
+      final stoppingPromise = satellite.stop(shutdown: true).then((_) {
         satellites.remove(dbName);
         stoppingPromises.remove(dbName);
       });
@@ -185,13 +186,12 @@ class GlobalRegistry extends BaseRegistry {
       host: config.replication.host,
       port: config.replication.port,
       ssl: config.replication.ssl,
+      timeout: config.replication.timeout.inMilliseconds,
     );
 
     final client = SatelliteClient(
-      dbName: dbName,
       dbDescription: dbDescription,
       socketFactory: socketFactory,
-      notifier: notifier,
       opts: satelliteClientOpts,
     );
 
