@@ -217,6 +217,9 @@ void addOptionToCommand(Command<dynamic> command, String optionName) {
 }
 
 void addOptionGroupToCommand(Command<dynamic> command, String groupName) {
+  command.argParser.addSeparator(
+    "'$groupName' group options:",
+  );
   for (final optEntry in configOptions.entries) {
     final optName = optEntry.key;
     final opt = optEntry.value;
@@ -226,6 +229,10 @@ void addOptionGroupToCommand(Command<dynamic> command, String groupName) {
       addOptionToCommand(command, optName);
     }
   }
+}
+
+void addSpecificOptionsSeparator(Command<dynamic> command) {
+  command.argParser.addSeparator("'${command.name}' specific options:");
 }
 
 class Config {

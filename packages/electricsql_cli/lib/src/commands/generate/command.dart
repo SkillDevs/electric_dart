@@ -30,6 +30,8 @@ class GenerateElectricClientCommand extends Command<int> {
   }) : _logger = logger {
     addOptionGroupToCommand(this, 'client');
 
+    addSpecificOptionsSeparator(this);
+
     argParser
       ..addOption(
         'with-migrations',

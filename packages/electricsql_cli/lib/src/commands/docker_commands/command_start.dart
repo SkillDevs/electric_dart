@@ -14,6 +14,8 @@ class DockerStartCommand extends Command<int> {
   }) : _logger = logger {
     addOptionGroupToCommand(this, 'electric');
 
+    addSpecificOptionsSeparator(this);
+
     argParser.addFlag(
       'detach',
       help: 'Run in the background instead of printing logs to the console',

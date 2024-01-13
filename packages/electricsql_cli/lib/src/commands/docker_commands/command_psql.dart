@@ -12,6 +12,8 @@ class DockerPsqlCommand extends Command<int> {
     required Logger logger,
   }) : _logger = logger {
     addOptionGroupToCommand(this, 'proxy');
+
+    // addSpecificOptionsSeparator(this);
   }
 
   @override

@@ -18,6 +18,8 @@ class ProxyTunnelCommand extends Command<int> {
   }) : _logger = logger {
     addOptionGroupToCommand(this, 'tunnel');
 
+    addSpecificOptionsSeparator(this);
+
     argParser.addOption(
       'local-port',
       help: 'Local port to bind the tunnel to',
