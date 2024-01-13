@@ -90,12 +90,12 @@ Migration makeMigration(MetaData migration) {
 String _cleanUserIdFromTrigger(String sql) {
   final cleanSql = sql
       .replaceAll("'electric_user_id',", '')
-      .replaceAll('new.electric_user_id,', '')
-      .replaceAll('old.electric_user_id,', '')
+      .replaceAll('new."electric_user_id",', '')
+      .replaceAll('old."electric_user_id",', '')
       // Without last commas
       .replaceAll(RegExp(r",(\s)*'electric_user_id'"), '')
-      .replaceAll(RegExp(r',(\s)*new.electric_user_id'), '')
-      .replaceAll(RegExp(r',(\s)*old.electric_user_id'), '');
+      .replaceAll(RegExp(r',(\s)*new."electric_user_id"'), '')
+      .replaceAll(RegExp(r',(\s)*old."electric_user_id"'), '');
   return cleanSql;
 }
 
