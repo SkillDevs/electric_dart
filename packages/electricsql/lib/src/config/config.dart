@@ -67,21 +67,18 @@ class ReplicationConfig {
 
 HydratedConfig hydrateConfig(ElectricConfig config) {
   final auth = config.auth;
+  if (auth.token.isEmpty) {
+    throw Exception('Invalid configuration. Missing authentication token.');
+  }
 
   //final debug = config.debug ?? false;
 
-  final url = Uri.parse(config.url ?? 'http://localhost:5133');
-
-  final isSecureProtocol = url.scheme == 'https' || url.scheme == 'wss';
-  final sslEnabled = isSecureProtocol || url.queryParameters['ssl'] == 'true';
-
-  final defaultPort = sslEnabled ? 443 : 80;
-  final port = url.hasPort ? url.port : defaultPort;
+  final parsedServiceUrl = _parseServiceUrl(config.url);
 
   final replication = ReplicationConfig(
-    host: url.host,
-    port: port,
-    ssl: sslEnabled,
+    host: parsedServiceUrl.hostname,
+    port: parsedServiceUrl.port,
+    ssl: parsedServiceUrl.ssl,
     timeout: config.timeout ?? const Duration(milliseconds: 3000),
   );
 
@@ -94,4 +91,39 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
     //debug: debug,
     connectionBackoffOptions: connectionBackoffOptions,
   );
+}
+
+({String hostname, int port, bool ssl}) _parseServiceUrl(String? inputUrl) {
+  final Uri uri;
+  try {
+    uri = Uri.parse(inputUrl ?? 'http://localhost:5133');
+  } catch (e) {
+    _throwInvalidServiceUrlError();
+  }
+
+  const validProtocols = {'http', 'https', 'ws', 'wss', 'electric'};
+
+  if (!validProtocols.contains(uri.scheme)) {
+    _throwInvalidServiceUrlError('Invalid url protocol.');
+  }
+
+  if (uri.userInfo.isNotEmpty) {
+    _throwInvalidServiceUrlError('Username and password are not supported.');
+  }
+
+  final isSecureProtocol = uri.scheme == 'https' || uri.scheme == 'wss';
+  final sslEnabled = isSecureProtocol || uri.queryParameters['ssl'] == 'true';
+
+  final defaultPort = sslEnabled ? 443 : 80;
+  final port = uri.hasPort ? uri.port : defaultPort;
+
+  return (hostname: uri.host, port: port, ssl: sslEnabled);
+}
+
+Never _throwInvalidServiceUrlError([String? reason]) {
+  String msg = "Invalid 'url' in the configuration.";
+  if (reason != null) {
+    msg += ' $reason';
+  }
+  throw Exception(msg);
 }
