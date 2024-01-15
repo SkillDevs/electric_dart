@@ -7,7 +7,7 @@ import 'package:mason_logger/mason_logger.dart';
 
 const executableName = 'electricsql_cli';
 const packageName = 'electricsql_cli';
-const description = 'A Very Good Project created by Very Good CLI.';
+const description = 'Command line tools for Electric SQL.';
 
 /// {@template electric_cli_command_runner}
 /// A [CommandRunner] for the CLI.
