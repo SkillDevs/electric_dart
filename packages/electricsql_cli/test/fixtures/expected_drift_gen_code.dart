@@ -164,7 +164,21 @@ class Enums extends Table {
 enum DbColor { red, green, blue }
 
 /// Dart enum for Postgres enum "integer"
-enum DbInteger { int$, bool$, double$, $2Float }
+enum DbInteger {
+  int$,
+  bool$,
+  double$,
+  float,
+  someVal,
+  value$1,
+  value$2,
+  value$3,
+  rdValue,
+  weIRdStuFf
+}
+
+/// Dart enum for Postgres enum "snake_case_enum"
+enum DbSnakeCaseEnum { v1, v2 }
 
 /// Codecs for Electric enums
 class ElectricEnumCodecs {
@@ -184,9 +198,24 @@ class ElectricEnumCodecs {
       DbInteger.int$: 'int',
       DbInteger.bool$: 'Bool',
       DbInteger.double$: 'DOUBLE',
-      DbInteger.$2Float: '2Float',
+      DbInteger.float: '2Float',
+      DbInteger.someVal: '_some_val',
+      DbInteger.value$1: '01 value',
+      DbInteger.value$2: '2 value',
+      DbInteger.value$3: '2Value',
+      DbInteger.rdValue: '3rd value',
+      DbInteger.weIRdStuFf: 'WeIRd*Stu(ff)',
     },
     values: DbInteger.values,
+  );
+
+  /// Codec for Dart enum "snake_case_enum"
+  static final snakeCaseEnum = ElectricEnumCodec<DbSnakeCaseEnum>(
+    dartEnumToPgEnum: <DbSnakeCaseEnum, String>{
+      DbSnakeCaseEnum.v1: 'v1',
+      DbSnakeCaseEnum.v2: 'v2',
+    },
+    values: DbSnakeCaseEnum.values,
   );
 }
 
@@ -202,5 +231,11 @@ class ElectricEnumTypes {
   static final integer = CustomElectricTypeGeneric(
     codec: ElectricEnumCodecs.integer,
     typeName: 'integer',
+  );
+
+  /// Codec for Dart enum "snake_case_enum"
+  static final snakeCaseEnum = CustomElectricTypeGeneric(
+    codec: ElectricEnumCodecs.snakeCaseEnum,
+    typeName: 'snake_case_enum',
   );
 }

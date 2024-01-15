@@ -189,8 +189,28 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
 
       final String enumFieldName = _ensureValidDartIdentifier(pgNameCamel);
 
-      final values = e.values.map((pgValue) {
-        final dartVal = _ensureValidDartIdentifier(pgValue.camelCase);
+      // Prisma could reuse the name of the field for different enum values
+      final fieldFreqs = <String, int>{};
+      for (final val in e.values) {
+        final fieldName = val.field;
+        fieldFreqs[fieldName] = (fieldFreqs[fieldName] ?? 0) + 1;
+      }
+
+      final Map<String, int> usedDartValuesFreqs = {};
+      final values = e.values.map((prismaEnumVal) {
+        final pgValue = prismaEnumVal.pgValue;
+        final String origField = prismaEnumVal.field;
+
+        final usedNTimes = usedDartValuesFreqs[origField] ?? 0;
+
+        String field = origField;
+        // If the field is reused, append $n at the end
+        if (fieldFreqs[origField]! > 1) {
+          field = '$field\$${usedNTimes + 1}';
+        }
+        final dartVal = _ensureValidDartIdentifier(field.camelCase);
+
+        usedDartValuesFreqs[origField] = usedNTimes + 1;
         return (dartVal: dartVal, pgVal: pgValue);
       }).toList();
 
@@ -230,10 +250,10 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     final fieldName = field.field;
     String columnName = fieldName;
 
-    if (columnName == 'electric_user_id') {
-      // Don't include "electric_user_id" special column in the client schema
-      continue;
-    }
+    // if (columnName == 'electric_user_id') {
+    //   // Don't include "electric_user_id" special column in the client schema
+    //   continue;
+    // }
 
     final mapAttr = field.attributes
         .where(
