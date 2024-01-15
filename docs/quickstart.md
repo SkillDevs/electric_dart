@@ -30,14 +30,22 @@ Add the `electricsql_cli` dependency as a dev dependency. This tool can be used 
 
 ### 2. Configure the backend locally
 
-Take the `backend` folder from the `todos_example` app and copy it into your project.
-You can configure the `.envrc` file to change the name of the database, the Electric port, etc...
+The `electricsql_cli` will provide mostly all you need to run a Postgres database and the Electric service locally.
 
-This folder contains a few scripts to manage the Electric service and the Postgres database.
+```shell
+dart run electricsql_cli <command> [--help]
+```
 
-1. `start.sh`: Starts the Electric service and the Postgres database.
-2. `remove.sh`: Stops the service and removes all the Electric and Postgres data, in case you want to start from scratch.
-3. `apply-migrations.sh`: Applies the migrations into Postgres. This script uses `dbmate` to manage the migrations. You can use any other tool you want.
+One thing you need to provide yourself is the migrations that define the schema of the Postgres database, as well as a way to apply them incrementally.
+An easy to use tool to do this is [`dbmate`](https://github.com/amacneil/dbmate), but there are many others.
+
+To get started with `dbmate` you can copy the `tool/apply-migrations.sh` script from the `todos_flutter` example in the repository.
+The script will automatically apply the migrations under the folder `db/migrations` into the Postgres database using the Electric CLI which will configure all the environment variables needed.
+
+Most important commands from `electricsql_cli` to get you started:
+1. `start`: Starts the Electric service and optional the Postgres database with the option `--with-postgres`.
+2. `stop`: Stops the service. Optionally you can remove all the Electric and Postgres data, in case you want to start from scratch using the option `--remove`.
+3. `generate`: Generates the `drift` schema and the Electric migrations based on the Postgres schema. More info below.
 
 ### 3. Generate the glue code
 

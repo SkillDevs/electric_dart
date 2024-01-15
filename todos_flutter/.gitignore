@@ -44,3 +44,7 @@ app.*.map.json
 /android/app/release
 
 !pubspec.lock
+
+# Env files
+.env.local
+.env.*.local

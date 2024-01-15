@@ -2,53 +2,51 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
+import 'package:electricsql_cli/src/commands/command_util.dart';
+import 'package:electricsql_cli/src/commands/configure/command_with_config.dart';
+import 'package:electricsql_cli/src/commands/docker_commands/command_start.dart';
+import 'package:electricsql_cli/src/commands/docker_commands/command_stop.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
+import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/util.dart';
 import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
+
+const String defaultMigrationsFileName = 'migrations.dart';
+const String defaultDriftSchemaFileName = 'drift_schema.dart';
+const bool _defaultDebug = false;
 
 /// {@template sample_command}
 ///
 /// `electricsql_cli generate`
 /// A [Command] to exemplify a sub command
 /// {@endtemplate}
-class GenerateMigrationsCommand extends Command<int> {
-  GenerateMigrationsCommand({
+class GenerateElectricClientCommand extends Command<int> {
+  GenerateElectricClientCommand({
     required Logger logger,
   }) : _logger = logger {
+    addOptionGroupToCommand(this, 'client');
+
+    addSpecificOptionsSeparator(this);
+
     argParser
       ..addOption(
-        'service',
-        help: '''
-Optional argument providing the url to connect to Electric.
-If not provided, it uses the url set in the `ELECTRIC_URL`
-environment variable. If that variable is not set, it
-resorts to the default url which is '$defaultElectricServiceUrl\'''',
-        valueHelp: 'url',
-      )
-      ..addOption(
-        'proxy',
-        help: '''
-Optional argument providing the url to connect to the PG database via the proxy.
- *    If not provided, it uses the url set in the `ELECTRIC_PROXY_URL` environment variable.
- *    If that variable is not set, it resorts to the default url which is
- *    '$defaultElectricProxyUrl'.
- *    NOTE: the generator introspects the PG database via the proxy,
- *          the URL must therefore connect using the "prisma" user.''',
-        valueHelp: 'url',
-      )
-      ..addOption(
-        'out',
-        help: '''
-Optional argument to specify where to write the generated files.
-If this argument is not provided they are written to
-`lib/generated/electric`''',
-        valueHelp: 'file_path',
+        'with-migrations',
+        valueHelp: 'migrationsCommand',
+        help:
+            'Optional flag to specify a command to run to generate migrations.\n'
+            'With this option the work flow is:\n'
+            '1. Start new ElectricSQL and PostgreSQL containers\n'
+            '2. Run the provided migrations command\n'
+            '3. Generate the client\n'
+            '4. Stop and remove the containers\n',
       )
       ..addFlag(
-        'int8AsBigInt',
+        'int8-as-bigint',
+        aliases: ['int8AsBigInt'],
         help: '''
 Optional argument to specify whether to use BigInt Dart type for INT8 columns. Defaults to `false`.
 More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_dart_tables/#bigint-support''',
@@ -57,11 +55,8 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
       )
       ..addFlag(
         'debug',
-        help: '''
-Optional flag to use for inspecting generator issues. If this
- *     flag is enabled, the temporary migrations folder is retained in
- *     case of an error for inspection.''',
-        defaultsTo: _defaultDebug,
+        help: 'Optional flag to enable debug mode',
+        defaultsTo: false,
         negatable: false,
       );
   }
@@ -78,11 +73,13 @@ Optional flag to use for inspecting generator issues. If this
 
   @override
   Future<int> run() async {
-    final String? service = argResults?['service'] as String?;
-    final String? outFolder = argResults?['out'] as String?;
-    final String? proxy = argResults?['proxy'] as String?;
-    final bool int8AsBigInt = argResults?['int8AsBigInt'] as bool;
-    final bool debug = argResults?['debug'] as bool;
+    final opts = getOptsFromCommand(this);
+
+    final config = getConfig(opts);
+
+    final bool int8AsBigInt = opts['int8-as-bigint']! as bool;
+    final bool debug = opts['debug']! as bool;
+    final String? withMigrations = opts['with-migrations'] as String?;
 
     final _cliDriftGenOpts = _CLIDriftGenOpts(
       int8AsBigInt: int8AsBigInt,
@@ -90,10 +87,11 @@ Optional flag to use for inspecting generator issues. If this
 
     try {
       await runElectricCodeGeneration(
-        service: service,
-        outFolder: outFolder,
-        proxy: proxy,
+        service: config.read<String>('SERVICE'),
+        outFolder: config.read<String>('CLIENT_PATH'),
+        proxy: config.read<String>('PROXY'),
         debug: debug,
+        withMigrations: withMigrations,
         logger: _logger,
         driftSchemaGenOpts: _cliDriftGenOpts,
       );
@@ -110,35 +108,26 @@ class _CLIDriftGenOpts extends ElectricDriftGenOpts {
   });
 }
 
-const String defaultMigrationsFileName = 'migrations.dart';
-const String defaultDriftSchemaFileName = 'drift_schema.dart';
-const String defaultElectricServiceUrl = 'http://localhost:5133';
-const String defaultElectricProxyUrl =
-    'postgresql://prisma:proxy_password@localhost:65432/electric';
-const bool _defaultDebug = false;
-
 Future<void> runElectricCodeGeneration({
   String? service,
   String? outFolder,
   String? proxy,
   ElectricDriftGenOpts? driftSchemaGenOpts,
   bool? debug,
+  String? withMigrations,
   Logger? logger,
 }) async {
   final finalLogger = logger ?? Logger();
 
-  final String defaultService =
-      Platform.environment['ELECTRIC_URL'] ?? defaultElectricServiceUrl;
-  String finalService = service ?? defaultService;
-  if (finalService.endsWith('/')) {
-    finalService = finalService.substring(0, finalService.length - 1);
-  }
+  final config = getConfig({
+    'SERVICE': service,
+    'CLIENT_PATH': outFolder,
+    'PROXY': proxy,
+  });
 
-  final finalOutFolder = outFolder ?? 'lib/generated/electric';
+  final finalService = config.read<String>('SERVICE');
 
-  final String defaultProxy =
-      Platform.environment['ELECTRIC_PROXY_URL'] ?? defaultElectricProxyUrl;
-  final String finalProxy = proxy ?? defaultProxy;
+  final finalOutFolder = config.read<String>('CLIENT_PATH');
 
   final valid = await _prechecks(
     service: finalService,
@@ -149,14 +138,15 @@ Future<void> runElectricCodeGeneration({
     throw ConfigException();
   }
 
-  await _runGenerator(
-    service: finalService,
-    outFolder: finalOutFolder,
-    proxy: finalProxy,
-    debug: debug ?? _defaultDebug,
+  final genCommandOpts = _GeneratorOpts(
+    config: config,
     driftSchemaGenOpts: driftSchemaGenOpts,
+    withMigrations: withMigrations,
+    debug: debug ?? _defaultDebug,
     logger: finalLogger,
   );
+
+  await _runGenerator(genCommandOpts);
 }
 
 Future<bool> _prechecks({
@@ -212,15 +202,66 @@ Future<bool> _isElectricServiceReachable(String service) async {
   }
 }
 
-Future<void> _runGenerator({
-  required String service,
-  required String outFolder,
-  required String proxy,
-  required ElectricDriftGenOpts? driftSchemaGenOpts,
-  required bool debug,
-  required Logger logger,
-}) async {
+class _GeneratorOpts {
+  _GeneratorOpts({
+    required this.config,
+    required this.debug,
+    required this.withMigrations,
+    required this.driftSchemaGenOpts,
+    required this.logger,
+  });
+
+  final Config config;
+  final ElectricDriftGenOpts? driftSchemaGenOpts;
+  final String? withMigrations;
+  final bool debug;
+  final Logger logger;
+}
+
+Future<void> _runGenerator(_GeneratorOpts opts) async {
+  final logger = opts.logger;
+
   logger.info('Generating the Electric client code...');
+
+  try {
+    if (opts.withMigrations != null) {
+      // Start new ElectricSQL and PostgreSQL containers
+      logger.info('Starting ElectricSQL and PostgreSQL containers...');
+      await start(
+        config: opts.config,
+        withPostgres: true,
+        detach: true,
+        exitOnDetached: false,
+      );
+      // Run the provided migrations command
+      logger.info('Running migrations...');
+      await withConfig(
+        command: opts.withMigrations!,
+        config: opts.config,
+        logger: logger,
+      );
+    }
+    logger.info('Service URL: ${opts.config.read<String>('SERVICE')}');
+    logger.info('Proxy URL: ${buildProxyUrlForIntrospection(opts.config)}');
+
+    // Generate the client
+    await _runGeneratorInner(opts);
+  } finally {
+    if (opts.withMigrations != null) {
+      // Stop and remove the containers
+      logger.info('Stopping ElectricSQL and PostgreSQL containers...');
+      await stop(
+        // TODO(dart): Should we use remove???
+        remove: true,
+      );
+      logger.info('Done');
+    }
+  }
+}
+
+Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
+  final logger = opts.logger;
+  final config = opts.config;
 
   final currentDir = Directory.current;
 
@@ -233,6 +274,7 @@ Future<void> _runGenerator({
     final migrationsPath = path.join(tmpDir.path, 'migrations');
     final migrationsDir = await Directory(migrationsPath).create();
 
+    final service = removeTrailingSlash(config.read<String>('SERVICE'));
     final migrationEndpoint = '$service/api/migrations?dialect=sqlite';
 
     // Fetch the migrations from Electric endpoint and write them into tmpDir
@@ -241,30 +283,49 @@ Future<void> _runGenerator({
     final prismaCLIDir =
         await Directory(path.join(tmpDir.path, 'prisma-cli')).create();
     final prismaCLI = PrismaCLI(logger: logger, folder: prismaCLIDir);
-    logger.info('Installing Prisma CLI via Docker...');
-    await prismaCLI.install();
 
-    final prismaSchema = await createPrismaSchema(tmpDir, proxy: proxy);
+    await wrapWithProgress(
+      logger,
+      () => prismaCLI.install(),
+      progressMsg: 'Installing Prisma CLI via Docker',
+      completeMsg: 'Prisma CLI installed',
+    );
+
+    final prismaSchema = await createPrismaSchema(tmpDir, config: config);
 
     // Introspect the created DB to update the Prisma schema
-    logger.info('Introspecting database...');
-    await introspectDB(prismaCLI, prismaSchema);
+    await wrapWithProgress(
+      logger,
+      () => introspectDB(prismaCLI, prismaSchema),
+      progressMsg: 'Introspecting database',
+      completeMsg: 'Database introspected',
+    );
 
     final prismaSchemaContent = prismaSchema.readAsStringSync();
 
-    //print(prismaSchemaContent);
+    // print(prismaSchemaContent);
+
+    final outFolder = config.read<String>('CLIENT_PATH');
 
     final schemaInfo = extractInfoFromPrismaSchema(
       prismaSchemaContent,
-      genOpts: driftSchemaGenOpts,
+      genOpts: opts.driftSchemaGenOpts,
     );
-    logger.info('Building Drift DB schema...');
     final driftSchemaFile = resolveDriftSchemaFile(outFolder);
-    await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
+    await wrapWithProgress(
+      logger,
+      () => buildDriftSchemaDartFile(schemaInfo, driftSchemaFile),
+      progressMsg: 'Generating Drift DB schema',
+      completeMsg: 'Drift DB schema generated',
+    );
 
-    logger.info('Building migrations...');
     final migrationsFile = resolveMigrationsFile(outFolder);
-    await buildMigrations(migrationsDir, migrationsFile);
+    await wrapWithProgress(
+      logger,
+      () => buildMigrations(migrationsDir, migrationsFile),
+      progressMsg: 'Generating bundled migrations',
+      completeMsg: 'Bundled migrations generated',
+    );
   } catch (e) {
     generationFailed = true;
     logger.err('generate command failed: $e');
@@ -272,7 +333,7 @@ Future<void> _runGenerator({
   } finally {
     // Delete our temporary directory unless
     // generation failed in debug mode
-    if (!generationFailed || !debug) {
+    if (!generationFailed || !opts.debug) {
       await tmpDir.delete(recursive: true);
     }
   }

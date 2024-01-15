@@ -25,6 +25,7 @@ Future<void> main() async {
   final driftSchemaFile =
       File(join(projectDir.path, "lib/generated/electric/drift_schema.dart"));
   await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
+  print("Code generated!");
 }
 
 class E2EDriftGenOpts extends ElectricDriftGenOpts {

@@ -22,3 +22,4 @@ linter:
     use_setters_to_change_properties: false
     avoid_redundant_argument_values: false
     no_leading_underscores_for_local_identifiers: false
+    parameter_assignments: false
