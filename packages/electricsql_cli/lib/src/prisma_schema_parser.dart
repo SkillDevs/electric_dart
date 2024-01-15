@@ -183,17 +183,18 @@ List<EnumPrisma> parseEnums(String prismaSchema) {
 
 /// Takes the body of an enum and returns
 /// an array of values defined by the enum.
-List<String> _parseEnumValues(String body) {
+List<EnumValuePrisma> _parseEnumValues(String body) {
   final enumLines = body
       .split('\n')
       .map((e) => e.trim())
       .where((line) => line.isNotEmpty)
       .toList();
 
-  final values = <String>[];
+  final values = <EnumValuePrisma>[];
   for (final line in enumLines) {
     final splitted = line.split(' ');
     if (splitted.length > 1) {
+      final field = splitted[0];
       final attrsStr = splitted.sublist(1).join(' ');
       final attrs = _parseAttributes(attrsStr, attrType: _AttributeType.field);
 
@@ -206,12 +207,14 @@ List<String> _parseEnumValues(String body) {
       if (mapAttr != null) {
         final mappedNameLiteral = mapAttr.args.join(',');
         final pgEnumValue = extractStringLiteral(mappedNameLiteral);
-        values.add(pgEnumValue);
+        values.add(EnumValuePrisma(field: field, pgValue: pgEnumValue));
       } else {
         throw Exception('Unexpected spaces in enum line: $line');
       }
     } else {
-      values.add(line);
+      final field = line;
+      final pgEnumValue = field;
+      values.add(EnumValuePrisma(field: field, pgValue: pgEnumValue));
     }
   }
 
@@ -263,13 +266,25 @@ class Model {
 
 class EnumPrisma {
   final String name;
-  final List<String> values;
+  final List<EnumValuePrisma> values;
 
   EnumPrisma({required this.name, required this.values});
 
   @override
   String toString() {
     return 'EnumPrisma(name: $name, values: $values)';
+  }
+}
+
+class EnumValuePrisma {
+  final String field;
+  final String pgValue;
+
+  EnumValuePrisma({required this.field, required this.pgValue});
+
+  @override
+  String toString() {
+    return 'EnumValuePrisma(field: $field, pgValue: $pgValue)';
   }
 }
 

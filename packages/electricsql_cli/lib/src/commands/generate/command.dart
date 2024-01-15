@@ -221,7 +221,7 @@ class _GeneratorOpts {
 Future<void> _runGenerator(_GeneratorOpts opts) async {
   final logger = opts.logger;
 
-  logger.info('Generating Electric Dart files...');
+  logger.info('Generating the Electric client code...');
 
   try {
     if (opts.withMigrations != null) {
