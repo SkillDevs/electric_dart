@@ -30,7 +30,7 @@ class DockerPsqlCommand extends Command<int> {
   FutureOr<int>? run() async {
     final opts = getOptsFromCommand(this);
     final config = getConfig(opts);
-    await psql(
+    await runPsqlCommand(
       logger: _logger,
       config: config,
     );
@@ -38,7 +38,7 @@ class DockerPsqlCommand extends Command<int> {
   }
 }
 
-Future<void> psql({
+Future<void> runPsqlCommand({
   Logger? logger,
   required Config config,
 }) async {

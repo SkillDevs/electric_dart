@@ -35,7 +35,7 @@ class DockerStopCommand extends Command<int> {
   FutureOr<int>? run() async {
     final opts = getOptsFromCommand(this);
     final config = getConfig(opts);
-    await stop(
+    await runStopCommand(
       logger: _logger,
       config: config,
       remove: opts['remove'] as bool?,
@@ -44,7 +44,7 @@ class DockerStopCommand extends Command<int> {
   }
 }
 
-Future<void> stop({
+Future<void> runStopCommand({
   Logger? logger,
   required Config config,
   bool? remove,

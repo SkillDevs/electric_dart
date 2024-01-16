@@ -243,7 +243,7 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
         ...await withMigrationsConfig(config.read<String>('CONTAINER_NAME')),
       });
       opts.config = config;
-      await start(
+      await runStartCommand(
         config: config,
         withPostgres: true,
         detach: true,
@@ -266,7 +266,7 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
     if (opts.withMigrations != null) {
       // Stop and remove the containers
       logger.info('Stopping ElectricSQL and PostgreSQL containers...');
-      await stop(
+      await runStopCommand(
         remove: true,
         config: config,
       );

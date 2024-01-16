@@ -45,7 +45,7 @@ class ProxyTunnelCommand extends Command<int> {
     // port
     final int finalLocalPort = parsePort(localPortParam);
 
-    await runProxyTunnel(
+    await runProxyTunnelCommand(
       serviceUrl: config.read<String>('SERVICE'),
       localPort: finalLocalPort,
       logger: _logger,
@@ -54,7 +54,7 @@ class ProxyTunnelCommand extends Command<int> {
   }
 }
 
-Future<void> runProxyTunnel({
+Future<void> runProxyTunnelCommand({
   required String serviceUrl,
   required int localPort,
   required Logger logger,

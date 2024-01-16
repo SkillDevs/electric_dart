@@ -51,7 +51,7 @@ class DockerStartCommand extends Command<int> {
       return 1;
     }
 
-    await start(
+    await runStartCommand(
       logger: _logger,
       detach: opts['detach'] as bool?,
       withPostgres: config.read<bool>('WITH_POSTGRES'),
@@ -61,7 +61,7 @@ class DockerStartCommand extends Command<int> {
   }
 }
 
-Future<void> start({
+Future<void> runStartCommand({
   Logger? logger,
   bool? detach,
   bool? exitOnDetached,
