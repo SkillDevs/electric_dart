@@ -129,7 +129,9 @@ Future<void> runElectricCodeGeneration({
   final finalOutFolder = config.read<String>('CLIENT_PATH');
 
   final valid = await _prechecks(
-    service: finalService,
+    // If we run the migrations a temporary docker will be run, so no need to
+    // check the input
+    service: withMigrations != null ? null : finalService,
     outFolder: finalOutFolder,
     logger: finalLogger,
   );
@@ -149,7 +151,7 @@ Future<void> runElectricCodeGeneration({
 }
 
 Future<bool> _prechecks({
-  required String service,
+  required String? service,
   required String outFolder,
   required Logger logger,
 }) async {
@@ -158,7 +160,9 @@ Future<bool> _prechecks({
     return false;
   }
 
-  if (!(await _isElectricServiceReachable(service))) {
+  // Service might be null if the CLI creates a temporary docker with the service
+  // to run the migrations
+  if (service != null && !(await _isElectricServiceReachable(service))) {
     logger.err('ERROR: Could not reach Electric service at $service');
     return false;
   }
@@ -413,6 +417,10 @@ Future<Map<String, Object?>> withMigrationsConfig(String containerName) async {
     await portHandle.dispose();
   }
 
+
+  final randomStr =
+      List.generate(8, (_) => _random.nextInt(36).toRadixString(36)).join('');
+
   return <String, Object?>{
     'HTTP_PORT': portHandles[0].port,
     'PG_PROXY_PORT': portHandles[1].port.toString(),
@@ -421,8 +429,7 @@ Future<Map<String, Object?>> withMigrationsConfig(String containerName) async {
     'PG_PROXY_HOST': 'localhost',
     'DATABASE_REQUIRE_SSL': false,
     // Random container name to avoid collisions
-    'CONTAINER_NAME':
-        '$containerName-migrations-${_random.nextDouble().toStringAsFixed(36).substring(6)}',
+    'CONTAINER_NAME': '$containerName-migrations-$randomStr',
   };
 }
 
