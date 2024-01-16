@@ -4,18 +4,20 @@ import 'package:electricsql_cli/src/env.dart';
 import 'package:electricsql_cli/src/util.dart';
 import 'package:recase/recase.dart';
 
+typedef ConfigMap = Map<String, Object?>;
+
 class ConfigOption<T extends Object> {
   final String? valueTypeName;
   final String doc;
   final List<String>? groups;
   final String? shortForm;
-  final T Function()? defaultValueFun;
+  final T Function(ConfigMap)? defaultValueFun;
   final T? defaultValueStatic;
   final String? constructedDefault;
 
-  T Function()? get defaultValue {
+  T Function()? getDefaultValue(ConfigMap options) {
     if (defaultValueFun != null) {
-      return defaultValueFun;
+      return () => defaultValueFun!(options);
     } else if (defaultValueStatic != null) {
       return () => defaultValueStatic!;
     } else {
@@ -108,9 +110,10 @@ T? getOptionalConfigValue<T>(
   }
 
   // Finally, check if the option has a default value
-  final defaultVal = (configOptions[name]!).defaultValue;
-  if (defaultVal != null) {
-    return defaultVal() as T;
+  final defaultValGetter =
+      (configOptions[name]!).getDefaultValue(options ?? {});
+  if (defaultValGetter != null) {
+    return defaultValGetter() as T;
   } else {
     return null;
   }
@@ -158,7 +161,9 @@ void expectValidConfigName<T>(String name) {
     throw ArgumentError('Invalid config name: $name');
   }
   final config = configOptions[name]!;
-  if (config.defaultValue == null) return;
+
+  // If it doesn't have a default value, there is nothing more to check
+  if (config.getDefaultValue({}) == null) return;
 
   if (config.dartType != T) {
     throw ArgumentError('Invalid config name type: $name is not of type $T');
@@ -239,6 +244,7 @@ class Config {
   Config(this._map);
 
   final Map<String, Object?> _map;
+  Map<String, Object?> get map => _map;
 
   Iterable<MapEntry<String, Object?>> get entries => _map.entries;
 

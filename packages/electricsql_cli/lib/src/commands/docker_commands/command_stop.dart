@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/docker_utils.dart';
+import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/util.dart';
 import 'package:mason_logger/mason_logger.dart';
 
@@ -33,8 +34,10 @@ class DockerStopCommand extends Command<int> {
   @override
   FutureOr<int>? run() async {
     final opts = getOptsFromCommand(this);
+    final config = getConfig(opts);
     await stop(
       logger: _logger,
+      config: config,
       remove: opts['remove'] as bool?,
     );
     return 0;
@@ -43,6 +46,7 @@ class DockerStopCommand extends Command<int> {
 
 Future<void> stop({
   Logger? logger,
+  required Config config,
   bool? remove,
 }) async {
   final finalLogger = logger ?? Logger();
@@ -50,11 +54,18 @@ Future<void> stop({
   const env = <String, String>{
     'COMPOSE_PROFILES': 'with-postgres', // Stop any PostgreSQL containers too
   };
+  final containerName = config.read<String>('CONTAINER_NAME');
   Process proc;
   if (remove == true) {
-    proc = await dockerCompose('down', ['--volumes'], env: env);
+    proc = await dockerCompose(
+      'down',
+      ['--volumes'],
+      containerName: containerName,
+      env: env,
+    );
   } else {
-    proc = await dockerCompose('stop', [], env: env);
+    proc =
+        await dockerCompose('stop', [], containerName: containerName, env: env);
   }
 
   final code = await waitForProcess(proc);

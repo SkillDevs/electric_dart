@@ -76,9 +76,12 @@ Future<void> start({
     'Starting ElectricSQL sync service${withPostgres == true ? ' and PostgreSQL' : ''}',
   );
 
-  final appName = getAppName() ?? 'electric';
-
   final env = configToEnv(config);
+  // PG_PROXY_PORT can have a 'http:' prefix, which we need to remove
+  // for port mapping to work.
+  env['PG_PROXY_PORT_PARSED'] = parsePgProxyPort(
+    env['PG_PROXY_PORT']!,
+  ).port.toString();
 
   final dockerConfig = <String, String>{
     ...env,
@@ -87,7 +90,7 @@ Future<void> start({
             'COMPOSE_PROFILES': 'with-postgres',
             'COMPOSE_ELECTRIC_SERVICE': 'electric-with-postgres',
             'DATABASE_URL':
-                'postgresql://postgres:${env['DATABASE_PASSWORD'] ?? 'pg_password'}@postgres:${env['DATABASE_PORT'] ?? '5432'}/$appName',
+                'postgresql://postgres:${env['DATABASE_PASSWORD'] ?? 'pg_password'}@postgres:${env['DATABASE_PORT'] ?? '5432'}/${config.read<String>('DATABASE_NAME')}',
             'LOGICAL_PUBLISHER_HOST': 'electric',
           }
         : {}),
@@ -99,6 +102,7 @@ Future<void> start({
     [
       ...(detach == true ? ['--detach'] : []),
     ],
+    containerName: config.read<String>('CONTAINER_NAME'),
     env: dockerConfig,
   );
 
@@ -111,7 +115,7 @@ Future<void> start({
       final start = DateTime.now().millisecondsSinceEpoch;
       const timeout = 10 * 1000; // 10 seconds
       while (DateTime.now().millisecondsSinceEpoch - start < timeout) {
-        if (await checkPostgres(env)) {
+        if (await checkPostgres(config.read<String>('CONTAINER_NAME'), env)) {
           finalLogger.info('PostgreSQL is ready');
           if (finalExitOnDetached) {
             exit(0);
@@ -140,9 +144,23 @@ Future<void> start({
   }
 }
 
-Future<bool> checkPostgres(Map<String, String> env) async {
-  final proc =
-      await dockerCompose('exec', ['postgres', 'pg_isready'], env: env);
+Future<bool> checkPostgres(
+  String containerName,
+  Map<String, String> env,
+) async {
+  final proc = await dockerCompose(
+    'exec',
+    [
+      'postgres',
+      'pg_isready',
+      '-U',
+      env['DATABASE_USER']!,
+      '-p',
+      env['DATABASE_PORT']!,
+    ],
+    containerName: containerName,
+    env: env,
+  );
   final exitCode = await waitForProcess(proc);
   return exitCode == 0;
 }

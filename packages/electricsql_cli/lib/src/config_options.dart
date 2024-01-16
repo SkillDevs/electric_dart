@@ -12,9 +12,9 @@ final configOptions = <String, ConfigOption<Object>>{
     doc: 'URL of the Electric service.',
     groups: ['client', 'tunnel'],
     shortForm: 's',
-    defaultValueFun: () {
-      final host = getConfigValue<String>('SERVICE_HOST');
-      final port = getConfigValue<int>('HTTP_PORT');
+    defaultValueFun: (ConfigMap options) {
+      final host = getConfigValue<String>('SERVICE_HOST', options);
+      final port = getConfigValue<int>('HTTP_PORT', options);
       return 'http://$host:$port';
     },
     constructedDefault: 'http://{ELECTRIC_SERVICE_HOST}:{ELECTRIC_HTTP_PORT}',
@@ -24,13 +24,15 @@ final configOptions = <String, ConfigOption<Object>>{
     doc: "URL of the Electric service's PostgreSQL proxy.",
     groups: ['client', 'proxy'],
     shortForm: 'p',
-    defaultValueFun: () {
-      final host = getConfigValue<String>('SERVICE_HOST');
-      final port = getConfigValue<int>('PG_PROXY_PORT');
-      final password = getConfigValue<String>('PG_PROXY_PASSWORD');
-      final dbName = getConfigValue<String>('DATABASE_NAME');
+    defaultValueFun: (options) {
+      final host = getConfigValue<String>('PG_PROXY_HOST', options);
+      final port = parsePgProxyPort(
+        getConfigValue<String>('PG_PROXY_PORT', options),
+      ).port;
       const user = 'postgres';
-      final ssl = getConfigValue<bool>('DATABASE_REQUIRE_SSL');
+      final password = getConfigValue<String>('PG_PROXY_PASSWORD', options);
+      final dbName = getConfigValue<String>('DATABASE_NAME', options);
+      final ssl = getConfigValue<bool>('DATABASE_REQUIRE_SSL', options);
       return buildDatabaseURL(
         host: host,
         port: port,
@@ -41,7 +43,7 @@ final configOptions = <String, ConfigOption<Object>>{
       );
     },
     constructedDefault:
-        'postgresql://postgres:{ELECTRIC_PG_PROXY_PASSWORD}@{ELECTRIC_SERVICE_HOST}:{ELECTRIC_PG_PROXY_PORT}/{ELECTRIC_DATABASE_NAME}',
+        'postgresql://postgres:{ELECTRIC_PG_PROXY_PASSWORD}@{ELECTRIC_PG_PROXY_HOST}:{ELECTRIC_PG_PROXY_PORT}/{ELECTRIC_DATABASE_NAME}',
   ),
   'CLIENT_PATH': ConfigOption<String>(
     valueTypeName: 'path',
@@ -55,7 +57,17 @@ final configOptions = <String, ConfigOption<Object>>{
     valueTypeName: 'hostname',
     doc: 'Hostname the Electric service is running on.',
     groups: ['client', 'proxy'],
-    defaultValueFun: () => defaultServiceUrlPart('host', 'localhost'),
+    defaultValueFun: (_) => defaultServiceUrlPart('host', 'localhost'),
+  ),
+  'PG_PROXY_HOST': ConfigOption<String>(
+    valueTypeName: 'hostname',
+    doc:
+        'Hostname the Migration Proxy is running on. This is usually the same as, '
+        'and defaults to, SERVICE_HOST. '
+        ' '
+        'If using the proxy-tunnel, this should be the hostname of the tunnel.',
+    groups: ['client', 'proxy'],
+    defaultValueFun: (options) => getConfigValue('SERVICE_HOST', options),
   ),
 
   // *** Postgres database connection options ***
@@ -68,20 +80,18 @@ final configOptions = <String, ConfigOption<Object>>{
     doc: 'PostgreSQL connection URL for the database.',
     valueTypeName: 'url',
     shortForm: 'db',
-    defaultValueFun: () {
-      final host = getConfigValue<String>('DATABASE_HOST');
-      final port = getConfigValue<int>('DATABASE_PORT');
-      final user = getConfigValue<String>('DATABASE_USER');
-      final password = getConfigValue<String>('DATABASE_PASSWORD');
-      final dbName = getConfigValue<String>('DATABASE_NAME');
-      final ssl = getConfigValue<bool>('DATABASE_REQUIRE_SSL');
+    defaultValueFun: (options) {
+      final host = getConfigValue<String>('DATABASE_HOST', options);
+      final port = getConfigValue<int>('DATABASE_PORT', options);
+      final user = getConfigValue<String>('DATABASE_USER', options);
+      final password = getConfigValue<String>('DATABASE_PASSWORD', options);
+      final dbName = getConfigValue<String>('DATABASE_NAME', options);
       return buildDatabaseURL(
         host: host,
         port: port,
         user: user,
         password: password,
         dbName: dbName,
-        ssl: ssl,
       );
     },
     constructedDefault:
@@ -90,27 +100,27 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'DATABASE_HOST': ConfigOption<String>(
     doc: 'Hostname of the database server.',
-    defaultValueFun: () => defaultDbUrlPart('host', 'localhost'),
+    defaultValueFun: (_) => defaultDbUrlPart('host', 'localhost'),
     groups: ['database'],
   ),
   'DATABASE_PORT': ConfigOption<int>(
     doc: 'Port number of the database server.',
-    defaultValueFun: () => defaultDbUrlPart('port', 5432),
+    defaultValueFun: (_) => defaultDbUrlPart('port', 5432),
     groups: ['database'],
   ),
   'DATABASE_USER': ConfigOption<String>(
     doc: 'Username to connect to the database with.',
-    defaultValueFun: () => defaultDbUrlPart('user', 'postgres'),
+    defaultValueFun: (_) => defaultDbUrlPart('user', 'postgres'),
     groups: ['database'],
   ),
   'DATABASE_PASSWORD': ConfigOption<String>(
     doc: 'Password to connect to the database with.',
-    defaultValueFun: () => defaultDbUrlPart('password', 'db_password'),
+    defaultValueFun: (_) => defaultDbUrlPart('password', 'db_password'),
     groups: ['database'],
   ),
   'DATABASE_NAME': ConfigOption<String>(
     doc: 'Name of the database to connect to.',
-    defaultValueFun: () =>
+    defaultValueFun: (_) =>
         defaultDbUrlPart('dbName', getAppName() ?? 'electric'),
     groups: ['database', 'client', 'proxy'],
   ),
@@ -149,15 +159,15 @@ final configOptions = <String, ConfigOption<Object>>{
     groups: ['electric'],
   ),
   'HTTP_PORT': ConfigOption<int>(
-    defaultValueFun: () => defaultServiceUrlPart('port', 5133),
+    defaultValueFun: (_) => defaultServiceUrlPart('port', 5133),
     valueTypeName: 'port',
     doc:
         'Port for HTTP connections. Includes client websocket connections on /ws, and '
         'other functions on /api.',
     groups: ['electric', 'client'],
   ),
-  'PG_PROXY_PORT': ConfigOption<int>(
-    defaultValue: 65432,
+  'PG_PROXY_PORT': ConfigOption<String>(
+    defaultValue: '65432',
     valueTypeName: 'port',
     doc: 'Port number for connections to the Postgres migration proxy.',
     groups: ['electric', 'client', 'proxy'],
@@ -223,6 +233,12 @@ final configOptions = <String, ConfigOption<Object>>{
         'electricsql/electric:$minorVersion', // Latest minor version of the electric service
     valueTypeName: 'image',
     doc: 'The Docker image to use for Electric.',
+    groups: ['electric'],
+  ),
+  'CONTAINER_NAME': ConfigOption<String>(
+    valueTypeName: 'name',
+    defaultValueFun: (_) => getAppName() ?? 'electric',
+    doc: 'The name to use for the Docker container.',
     groups: ['electric'],
   ),
 };

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
@@ -10,6 +11,8 @@ import 'package:electricsql_cli/src/commands/generate/builder.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/env.dart';
+import 'package:electricsql_cli/src/get_port.dart';
 import 'package:electricsql_cli/src/util.dart';
 import 'package:http/http.dart' as http;
 import 'package:mason_logger/mason_logger.dart';
@@ -85,20 +88,16 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
       int8AsBigInt: int8AsBigInt,
     );
 
-    try {
-      await runElectricCodeGeneration(
-        service: config.read<String>('SERVICE'),
-        outFolder: config.read<String>('CLIENT_PATH'),
-        proxy: config.read<String>('PROXY'),
-        debug: debug,
-        withMigrations: withMigrations,
-        logger: _logger,
-        driftSchemaGenOpts: _cliDriftGenOpts,
-      );
-      return ExitCode.success.code;
-    } on ConfigException catch (_) {
-      return ExitCode.config.code;
-    }
+    await runElectricCodeGeneration(
+      service: config.read<String>('SERVICE'),
+      outFolder: config.read<String>('CLIENT_PATH'),
+      proxy: config.read<String>('PROXY'),
+      debug: debug,
+      withMigrations: withMigrations,
+      logger: _logger,
+      driftSchemaGenOpts: _cliDriftGenOpts,
+    );
+    return ExitCode.success.code;
   }
 }
 
@@ -211,7 +210,7 @@ class _GeneratorOpts {
     required this.logger,
   });
 
-  final Config config;
+  Config config;
   final ElectricDriftGenOpts? driftSchemaGenOpts;
   final String? withMigrations;
   final bool debug;
@@ -220,6 +219,7 @@ class _GeneratorOpts {
 
 Future<void> _runGenerator(_GeneratorOpts opts) async {
   final logger = opts.logger;
+  var config = opts.config;
 
   logger.info('Generating the Electric client code...');
 
@@ -227,8 +227,20 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
     if (opts.withMigrations != null) {
       // Start new ElectricSQL and PostgreSQL containers
       logger.info('Starting ElectricSQL and PostgreSQL containers...');
+      // Remove the ELECTRIC_SERVICE and ELECTRIC_PROXY env vars
+      // ignore: invalid_use_of_visible_for_testing_member
+      programEnv.map.remove('ELECTRIC_SERVICE');
+      // ignore: invalid_use_of_visible_for_testing_member
+      programEnv.map.remove('ELECTRIC_PROXY');
+      config = getConfig({
+        ...config.map,
+        'SERVICE': null,
+        'PROXY': null,
+        ...await withMigrationsConfig(config.read<String>('CONTAINER_NAME')),
+      });
+      opts.config = config;
       await start(
-        config: opts.config,
+        config: config,
         withPostgres: true,
         detach: true,
         exitOnDetached: false,
@@ -251,8 +263,8 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
       // Stop and remove the containers
       logger.info('Stopping ElectricSQL and PostgreSQL containers...');
       await stop(
-        // TODO(dart): Should we use remove???
         remove: true,
+        config: config,
       );
       logger.info('Done');
     }
@@ -389,4 +401,29 @@ Future<bool> fetchMigrations(
   return gotNewMigrations;
 }
 
-class ConfigException implements Exception {}
+Future<Map<String, Object?>> withMigrationsConfig(String containerName) async {
+  final portHandles = <DisposablePort>[
+    for (var i = 0; i < 3; i++) await getUnusedPort(),
+  ];
+
+  // After all ports are allocated, "dispose" the ports. There is a possible race
+  // condition here, while the docker is not started, these ports might get allocated
+
+  for (final portHandle in portHandles) {
+    await portHandle.dispose();
+  }
+
+  return <String, Object?>{
+    'HTTP_PORT': portHandles[0].port,
+    'PG_PROXY_PORT': portHandles[1].port.toString(),
+    'DATABASE_PORT': portHandles[2].port,
+    'SERVICE_HOST': 'localhost',
+    'PG_PROXY_HOST': 'localhost',
+    'DATABASE_REQUIRE_SSL': false,
+    // Random container name to avoid collisions
+    'CONTAINER_NAME':
+        '$containerName-migrations-${_random.nextDouble().toStringAsFixed(36).substring(6)}',
+  };
+}
+
+final _random = Random();

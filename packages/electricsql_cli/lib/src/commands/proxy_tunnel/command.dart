@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
-import 'package:electricsql_cli/src/commands/commands.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/exit_signals.dart';
 import 'package:electricsql_cli/src/util.dart';
@@ -43,23 +42,15 @@ class ProxyTunnelCommand extends Command<int> {
     final opts = getOptsFromCommand(this);
     final config = getConfig(opts);
     final localPortParam = opts['local-port']! as String;
-    try {
-      // port
-      final int? finalLocalPort = int.tryParse(localPortParam);
-      if (finalLocalPort == null) {
-        _logger.err('Invalid local port: $localPortParam');
-        throw ConfigException();
-      }
+    // port
+    final int finalLocalPort = parsePort(localPortParam);
 
-      await runProxyTunnel(
-        serviceUrl: config.read<String>('SERVICE'),
-        localPort: finalLocalPort,
-        logger: _logger,
-      );
-      return ExitCode.success.code;
-    } on ConfigException catch (_) {
-      return ExitCode.config.code;
-    }
+    await runProxyTunnel(
+      serviceUrl: config.read<String>('SERVICE'),
+      localPort: finalLocalPort,
+      logger: _logger,
+    );
+    return ExitCode.success.code;
   }
 }
 
