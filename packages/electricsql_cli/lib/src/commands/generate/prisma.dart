@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
+import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/prisma_schema_parser.dart';
+import 'package:electricsql_cli/src/util.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart';
 import 'package:recase/recase.dart';
@@ -26,11 +28,13 @@ ENTRYPOINT ["prisma"]
 /// The Prisma schema is initialised with a generator and a datasource.
 Future<File> createPrismaSchema(
   Directory folder, {
-  required String proxy,
+  required Config config,
 }) async {
   final prismaDir = Directory(join(folder.path, 'prisma'));
   final prismaSchemaFile = File(join(prismaDir.path, 'schema.prisma'));
   await prismaDir.create(recursive: true);
+
+  final proxyUrl = buildProxyUrlForIntrospection(config);
 
   // RelationMode = "prisma" is used so that "array like" foreign key relations
   // are not created in the prisma schema
@@ -38,13 +42,24 @@ Future<File> createPrismaSchema(
   final schema = '''
 datasource db {
   provider = "postgresql"
-  url      = "$proxy"
+  url      = "$proxyUrl"
   relationMode = "prisma"
 }
 ''';
 
   await prismaSchemaFile.writeAsString(schema);
   return prismaSchemaFile;
+}
+
+String buildProxyUrlForIntrospection(Config config) {
+  return buildDatabaseURL(
+    // We use the "prisma" user to put the proxy into introspection mode
+    user: 'prisma',
+    password: config.read<String>('PG_PROXY_PASSWORD'),
+    host: config.read<String>('SERVICE_HOST'),
+    port: config.read<int>('PG_PROXY_PORT'),
+    dbName: config.read<String>('DATABASE_NAME'),
+  );
 }
 
 Future<void> introspectDB(PrismaCLI cli, File prismaSchema) async {
@@ -189,8 +204,28 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
 
       final String enumFieldName = _ensureValidDartIdentifier(pgNameCamel);
 
-      final values = e.values.map((pgValue) {
-        final dartVal = _ensureValidDartIdentifier(pgValue.camelCase);
+      // Prisma could reuse the name of the field for different enum values
+      final fieldFreqs = <String, int>{};
+      for (final val in e.values) {
+        final fieldName = val.field;
+        fieldFreqs[fieldName] = (fieldFreqs[fieldName] ?? 0) + 1;
+      }
+
+      final Map<String, int> usedDartValuesFreqs = {};
+      final values = e.values.map((prismaEnumVal) {
+        final pgValue = prismaEnumVal.pgValue;
+        final String origField = prismaEnumVal.field;
+
+        final usedNTimes = usedDartValuesFreqs[origField] ?? 0;
+
+        String field = origField;
+        // If the field is reused, append $n at the end
+        if (fieldFreqs[origField]! > 1) {
+          field = '$field\$${usedNTimes + 1}';
+        }
+        final dartVal = _ensureValidDartIdentifier(field.camelCase);
+
+        usedDartValuesFreqs[origField] = usedNTimes + 1;
         return (dartVal: dartVal, pgVal: pgValue);
       }).toList();
 
@@ -230,10 +265,10 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     final fieldName = field.field;
     String columnName = fieldName;
 
-    if (columnName == 'electric_user_id') {
-      // Don't include "electric_user_id" special column in the client schema
-      continue;
-    }
+    // if (columnName == 'electric_user_id') {
+    //   // Don't include "electric_user_id" special column in the client schema
+    //   continue;
+    // }
 
     final mapAttr = field.attributes
         .where(

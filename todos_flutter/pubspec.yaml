@@ -9,7 +9,7 @@ environment:
   flutter: ">=3.10.0"
 
 dependencies:
-  animated_emoji: ^2.0.0
+  animated_emoji: ^3.0.0
   cupertino_icons: ^1.0.2
   drift: ^2.14.0
   electricsql:

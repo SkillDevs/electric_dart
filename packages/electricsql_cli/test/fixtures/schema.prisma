@@ -76,4 +76,15 @@ enum integer {
   Bool
   DOUBLE
   Float  @map("2Float")
+  _some_val
+  value         @map("01 value")
+  value         @map("2 value")
+  value         @map("2Value")
+  rd_value      @map("3rd value")
+  WeIRd_Stu_ff_ @map("WeIRd*Stu(ff)")
+}
+
+enum snake_case_enum {
+  v1
+  v2
 }

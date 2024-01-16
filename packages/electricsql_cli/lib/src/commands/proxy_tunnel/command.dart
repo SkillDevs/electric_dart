@@ -2,8 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
+import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
+import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/exit_signals.dart';
+import 'package:electricsql_cli/src/util.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:web_socket_channel/io.dart';
 
@@ -14,27 +17,21 @@ class ProxyTunnelCommand extends Command<int> {
   ProxyTunnelCommand({
     required Logger logger,
   }) : _logger = logger {
-    argParser
-      ..addOption(
-        'service',
-        help: '''
-Optional argument providing the url to connect to Electric.
-If not provided, it uses the url set in the `ELECTRIC_URL`
-environment variable. If that variable is not set, it
-resorts to the default url which is '$defaultElectricServiceWSUrl\'''',
-        valueHelp: 'url',
-      )
-      ..addOption(
-        'local-port',
-        help: '''
-Optional argument providing the local port to bind the tunnel to.''',
-        valueHelp: 'port',
-      );
+    addOptionGroupToCommand(this, 'tunnel');
+
+    addSpecificOptionsSeparator(this);
+
+    argParser.addOption(
+      'local-port',
+      help: 'Local port to bind the tunnel to',
+      valueHelp: 'port',
+      defaultsTo: defaultLocalPort.toString(),
+    );
   }
 
   @override
   String get description =>
-      'Opens a tunnel to the Electric Postgres Proxy and binds it to a local port';
+      'Open a tunnel to the Electric Postgres Proxy and binds it to a local port';
 
   @override
   String get name => 'proxy-tunnel';
@@ -43,33 +40,19 @@ Optional argument providing the local port to bind the tunnel to.''',
 
   @override
   Future<int> run() async {
+    final opts = getOptsFromCommand(this);
+    final config = getConfig(opts);
+    final localPortParam = opts['local-port']! as String;
     try {
-      final String? serviceParam = argResults?['service'] as String?;
-      final String? localPortParam = argResults?['local-port'] as String?;
-
-      final String defaultService =
-          Platform.environment['ELECTRIC_URL'] ?? defaultElectricServiceWSUrl;
-      String serviceUrl = (serviceParam ?? defaultService).trim();
-
-      // prepend protocol if not provided in service url
-      if (!RegExp(r'^(http|ws)s?:\/\/').hasMatch(serviceUrl)) {
-        serviceUrl = 'ws://$serviceUrl';
-      }
-      // remove trailing slash
-      if (serviceUrl.endsWith('/')) {
-        serviceUrl = serviceUrl.substring(0, serviceUrl.length - 1);
-      }
-
       // port
-      final int? finalLocalPort =
-          int.tryParse(localPortParam ?? defaultLocalPort.toString());
+      final int? finalLocalPort = int.tryParse(localPortParam);
       if (finalLocalPort == null) {
         _logger.err('Invalid local port: $localPortParam');
         throw ConfigException();
       }
 
       await runProxyTunnel(
-        serviceUrl: serviceUrl,
+        serviceUrl: config.read<String>('SERVICE'),
         localPort: finalLocalPort,
         logger: _logger,
       );
@@ -93,6 +76,14 @@ Future<void> runProxyTunnel({
       return false;
     },
   );
+
+  // Cleanup the service URL
+  if (serviceUrl.startsWith('https://')) {
+    serviceUrl = serviceUrl.replaceFirst('https://', 'wss://');
+  } else if (serviceUrl.startsWith('http://')) {
+    serviceUrl = serviceUrl.replaceFirst('http://', 'ws://');
+  }
+  serviceUrl = removeTrailingSlash(serviceUrl);
 
   logger.info('ElectricSQL Postgres Proxy Tunnel listening on port $localPort');
   logger.info('Connected to ElectricSQL Service at $serviceUrl');

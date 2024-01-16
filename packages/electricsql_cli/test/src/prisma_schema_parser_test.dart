@@ -214,24 +214,49 @@ void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {
 }
 
 void expectEnums(DriftSchemaInfo schemaInfo) {
-  expect(schemaInfo.enums.length, 2);
+  expect(schemaInfo.enums.length, 3);
 
-  final enumInfo = schemaInfo.enums['integer']!;
+  final weirdEnum = schemaInfo.enums['integer']!;
+  expectWeirdEnum(weirdEnum);
 
+  final snakeCaseEnum = schemaInfo.enums['snake_case_enum']!;
+  expectSnakeCaseEnum(snakeCaseEnum);
+}
+
+void expectWeirdEnum(DriftEnum enumInfo) {
   expect(enumInfo.dartEnumName, 'DbInteger');
   expect(enumInfo.enumCodecName, 'integer');
   expect(enumInfo.driftTypeName, 'integer');
-  expect(enumInfo.values.length, 4);
+  expect(enumInfo.values.length, 10);
   expect(enumInfo.values.map((v) => v.dartVal).toList(), [
     r'int$',
     r'bool$',
     r'double$',
-    r'$2Float',
+    'float',
+    'someVal',
+    r'value$1',
+    r'value$2',
+    r'value$3',
+    'rdValue',
+    'weIRdStuFf',
   ]);
   expect(enumInfo.values.map((v) => v.pgVal).toList(), [
     'int',
     'Bool',
     'DOUBLE',
     '2Float',
+    '_some_val',
+    '01 value',
+    '2 value',
+    '2Value',
+    '3rd value',
+    'WeIRd*Stu(ff)',
   ]);
+}
+
+void expectSnakeCaseEnum(DriftEnum enumInfo) {
+  expect(enumInfo.dartEnumName, 'DbSnakeCaseEnum');
+  expect(enumInfo.enumCodecName, 'snakeCaseEnum');
+  expect(enumInfo.driftTypeName, 'snakeCaseEnum');
+  expect(enumInfo.values.length, 2);
 }

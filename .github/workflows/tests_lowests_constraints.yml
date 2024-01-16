@@ -2,6 +2,8 @@ name: Tests (Lowest constraints)
 
 on:
   push:
+    branches:
+      - master
   pull_request:
 
 jobs:

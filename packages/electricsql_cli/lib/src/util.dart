@@ -1,0 +1,135 @@
+import 'dart:io';
+
+import 'package:electricsql_cli/src/exit_signals.dart';
+import 'package:mason_logger/mason_logger.dart';
+
+const int kSigIntExitCode = 130;
+
+bool notBlank(String? str) {
+  return str != null && str.trim().isNotEmpty;
+}
+
+String removeTrailingSlash(String str) {
+  if (str.endsWith('/')) {
+    return str.substring(0, str.length - 1);
+  }
+  return str;
+}
+
+String prettyMap(Map<String, Object?> map) {
+  Object? _getDistinctiveValue(Object? value) {
+    if (value is String) {
+      final quote = value.contains("'") ? '"' : "'";
+      return '$quote$value$quote';
+    } else {
+      return value;
+    }
+  }
+
+  final buffer = StringBuffer('{');
+  buffer.writeln();
+  for (final entry in map.entries) {
+    buffer.writeln('  ${entry.key}: ${_getDistinctiveValue(entry.value)},');
+  }
+  buffer.write('}');
+  return buffer.toString();
+}
+
+/// Get the name of the current project.
+String? getAppName() {
+  final pubspecFile = File('pubspec.yaml');
+  if (!pubspecFile.existsSync()) {
+    return null;
+  }
+  final pubspec = pubspecFile.readAsStringSync();
+  final regexp = RegExp(r'^name:\s+(\S+)\s*$', multiLine: true);
+  final match = regexp.firstMatch(pubspec);
+
+  if (match != null) {
+    return match[1];
+  }
+  return null;
+}
+
+String buildDatabaseURL({
+  required String user,
+  required String password,
+  required String host,
+  required int port,
+  required String dbName,
+  bool? ssl,
+}) {
+  final url = StringBuffer('postgresql://$user');
+  if (password.isNotEmpty) {
+    url.write(':$password');
+  }
+  url.write('@$host:$port/$dbName');
+
+  if (ssl == false) {
+    url.write('?sslmode=disable');
+  }
+
+  return url.toString();
+}
+
+Map<String, Object?> extractDatabaseURL(String url) {
+  final regexp = RegExp(
+    r'^postgres(ql)?:\/\/([^:]+)(?::([^@]+))?@([^:]+):(\d+)\/(.+)$',
+  );
+  final match = regexp.firstMatch(url);
+
+  if (match == null) {
+    throw Exception('Invalid database URL: $url');
+  }
+  return {
+    'user': match[2],
+    'password': match[3] ?? '',
+    'host': match[4],
+    'port': int.parse(match[5]!),
+    'dbName': match[6],
+  };
+}
+
+Map<String, Object?> extractServiceURL(String serviceUrl) {
+  final parsed = Uri.parse(serviceUrl);
+  if (parsed.host.isEmpty) {
+    throw Exception('Invalid service URL: $serviceUrl');
+  }
+  return {
+    'host': parsed.host,
+    'port': parsed.hasPort ? parsed.port : null,
+  };
+}
+
+Future<int> waitForProcess(Process p) async {
+  final disposeExitSignals = handleExitSignals(
+    onExit: (_) async {
+      // Don't exit, let the process handle it
+      return false;
+    },
+  );
+
+  try {
+    final exitCode = await p.exitCode;
+    return exitCode;
+  } finally {
+    await disposeExitSignals();
+  }
+}
+
+Future<T> wrapWithProgress<T>(
+  Logger logger,
+  Future<T> Function() fun, {
+  required String progressMsg,
+  String? completeMsg,
+}) async {
+  final progress = logger.progress(progressMsg);
+  try {
+    final res = await fun();
+    progress.complete(completeMsg);
+    return res;
+  } catch (e) {
+    progress.fail();
+    rethrow;
+  }
+}

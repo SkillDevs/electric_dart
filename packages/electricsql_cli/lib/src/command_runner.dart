@@ -1,12 +1,13 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
+import 'package:electricsql_cli/src/env.dart';
 import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 
 const executableName = 'electricsql_cli';
 const packageName = 'electricsql_cli';
-const description = 'A Very Good Project created by Very Good CLI.';
+const description = 'Command line tools for Electric SQL.';
 
 /// {@template electric_cli_command_runner}
 /// A [CommandRunner] for the CLI.
@@ -35,7 +36,13 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
       );
 
     // Add sub commands
-    addCommand(GenerateMigrationsCommand(logger: _logger));
+    addCommand(GenerateElectricClientCommand(logger: _logger));
+    addCommand(DockerStartCommand(logger: _logger));
+    addCommand(DockerStopCommand(logger: _logger));
+    addCommand(DockerStatusCommand(logger: _logger));
+    addCommand(DockerPsqlCommand(logger: _logger));
+    addCommand(ShowConfigCommand(logger: _logger));
+    addCommand(CommandWithConfigCommand(logger: _logger));
     addCommand(ProxyTunnelCommand(logger: _logger));
   }
 
@@ -46,6 +53,9 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
 
   @override
   Future<int> run(Iterable<String> args) async {
+    // Eagerly load env when starting the CLI by reading the global dotenv variable
+    programEnv;
+
     try {
       final topLevelResults = parse(args);
       if (topLevelResults['verbose'] == true) {
