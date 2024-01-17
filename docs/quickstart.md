@@ -42,6 +42,11 @@ An easy to use tool to do this is [`dbmate`](https://github.com/amacneil/dbmate)
 To get started with `dbmate` you can copy the `tool/apply-migrations.sh` script from the `todos_flutter` example in the repository.
 The script will automatically apply the migrations under the folder `db/migrations` into the Postgres database using the Electric CLI which will configure all the environment variables needed.
 
+> [!NOTE]  
+> The migrations need to specify which tables in the Postgres you want to "electrify", or make accesible in the client. That is done with a special syntax Electric provides: `ALTER TABLE <my table> ENABLE ELECTRIC;`. The example app in the repo has an example of how this is used in the `db/migrations` folder.
+>
+> More info: https://electric-sql.com/docs/usage/data-modelling/migrations
+
 Most important commands from `electricsql_cli` to get you started:
 1. `start`: Starts the Electric service and optional the Postgres database with the option `--with-postgres`.
 2. `stop`: Stops the service. Optionally you can remove all the Electric and Postgres data, in case you want to start from scratch using the option `--remove`.
