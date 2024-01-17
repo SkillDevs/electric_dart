@@ -32,7 +32,7 @@ dev_dependencies:
   drift_dev: ^2.14.0
   fast_immutable_collections: ^9.1.5
   file: ^7.0.0 # Lowest version supported
-  lint: ^2.1.2
+  lint: ^2.3.0
   pub_semver: ^2.1.4 # Lowest version supported
   test: ^1.24.6
   watcher: ^1.1.0 # Lowest version supported
