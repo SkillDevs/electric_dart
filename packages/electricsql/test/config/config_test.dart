@@ -2,7 +2,15 @@ import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:test/test.dart';
 
+import '../support/log_mock.dart';
+
+final log = <String>[];
+
+const AuthConfig validAuth = AuthConfig(token: 'test-token');
+
 void main() {
+  setupLoggerMock(() => log);
+
   test('hydrateConfig adds expected defaults', () {
     final hydrated = hydrateConfig(
       ElectricConfig(
@@ -71,9 +79,7 @@ void main() {
 
       final config = hydrateConfig(
         ElectricConfig(
-          auth: const AuthConfig(
-            token: 'test-token-3',
-          ),
+          auth: validAuth,
           url: '$scheme://1.1.1.1',
         ),
       );
@@ -85,9 +91,7 @@ void main() {
   test('hydrateConfig ssl', () {
     final httpsConfig = hydrateConfig(
       ElectricConfig(
-        auth: const AuthConfig(
-          token: 'test-token-3',
-        ),
+        auth: validAuth,
         url: 'http://1.1.1.1?ssl=true',
       ),
     );
@@ -114,28 +118,16 @@ void main() {
     );
   });
 
-  test('hydrateConfig checks for valid service url', () {
-    final errorReasons = <String, String?>{
-      'postgresql://somehost.com': 'Invalid url protocol.',
-      'https://user@somehost.com': 'Username and password are not supported.',
-      'https://user:pass@somehost.com':
-          'Username and password are not supported.',
-      // No reason, but it returns an invalid url error as well
-      'https://somehost.com:wrongport': null,
-    };
+  test('throws for invalid service url', () {
+    const urls = ['', 'https://somehost.com:wrongport', 'abc'];
 
-    for (final MapEntry(key: url, value: reason) in errorReasons.entries) {
-      String expectedErrorMsg = "Invalid 'url' in the configuration.";
-      if (reason != null) {
-        expectedErrorMsg = '$expectedErrorMsg $reason';
-      }
+    for (final url in urls) {
+      const expectedErrorMsg = "Invalid 'url' in the configuration.";
 
       expect(
         () => hydrateConfig(
           ElectricConfig(
-            auth: const AuthConfig(
-              token: 'test-token',
-            ),
+            auth: validAuth,
             url: url,
           ),
         ),
@@ -146,7 +138,41 @@ void main() {
             'Exception: $expectedErrorMsg',
           ),
         ),
+        reason: "url '$url' didn't throw an exception",
       );
+    }
+  });
+
+  test('hydrateConfig warns unexpected service urls', () {
+    const warnReasons = {
+      'postgresql://somehost.com': ['Unsupported URL protocol.'],
+      'https://user@somehost.com': ['Username and password are not supported.'],
+      'custom://user:pass@somehost.com': [
+        'Unsupported URL protocol.',
+        'Username and password are not supported.',
+      ],
+      'http://somehost.com:1234/some/path': ['An URL path is not supported.'],
+    };
+
+    for (final MapEntry(key: url, value: reasons) in warnReasons.entries) {
+      // Cleanup logs between urls
+      log.clear();
+
+      String expectedWarningMsg = "Unexpected 'url' in the configuration.";
+      if (reasons.isNotEmpty) {
+        expectedWarningMsg += ' ${reasons.join(' ')}';
+      }
+      expectedWarningMsg +=
+          " An URL like 'http(s)://<host>:<port>' is expected.";
+
+      hydrateConfig(
+        ElectricConfig(
+          auth: validAuth,
+          url: url,
+        ),
+      );
+
+      expect(log, [expectedWarningMsg]);
     }
   });
 }

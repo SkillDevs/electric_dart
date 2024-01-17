@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:ansicolor/ansicolor.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:logging/logging.dart' as loglib;
+import 'package:logging/logging.dart';
 import 'package:platform_info/platform_info.dart';
 
 final Logger logger = _createLogger();
@@ -50,40 +51,7 @@ Logger _createLogger() {
   final outputFun = _getOutputFun();
 
   logger.onRecord.listen((event) {
-    final error = event.error;
-
-    String extra = '';
-    if (error != null) {
-      extra = '\n\t$error';
-    }
-
-    if (event.stackTrace != null) {
-      extra += '\n\tStackTrace: ${event.stackTrace}';
-    }
-
-    final pen = AnsiPen();
-
-    final level = event.level;
-    final String levelName;
-    if (level >= loglib.Level.SEVERE) {
-      pen.red();
-      levelName = 'ERROR';
-    } else if (level >= loglib.Level.WARNING) {
-      pen.yellow();
-      levelName = 'WARN';
-    } else if (level <= loglib.Level.FINE) {
-      pen.gray(level: 0.6);
-      levelName = 'DEBUG';
-    } else {
-      pen.blue();
-      levelName = 'INFO';
-    }
-
-    final paddedName = '$levelName:'.padRight(6);
-
-    final message = pen(
-      '$paddedName ${event.time.copyWith(microsecond: 0).toTimeString()} ${event.message} $extra',
-    );
+    final message = convertLogEventToMessage(event);
 
     outputFun(message, event.loggerName);
   });
@@ -130,6 +98,12 @@ class Logger {
   void error(String message) {
     _logger.log(Level.error.loggingLibLevel, message);
   }
+
+  Stream<LogRecord> get onRecord => _logger.onRecord;
+
+  void clearListeners() {
+    _logger.clearListeners();
+  }
 }
 
 extension _LevelExt on Level {
@@ -168,4 +142,42 @@ LoggerOutput _getOutputFun() {
       print('[$loggerName] $message');
     };
   }
+}
+
+String convertLogEventToMessage(LogRecord event) {
+  final error = event.error;
+
+  String extra = '';
+  if (error != null) {
+    extra = '\n\t$error';
+  }
+
+  if (event.stackTrace != null) {
+    extra += '\n\tStackTrace: ${event.stackTrace}';
+  }
+
+  final pen = AnsiPen();
+
+  final level = event.level;
+  final String levelName;
+  if (level >= loglib.Level.SEVERE) {
+    pen.red();
+    levelName = 'ERROR';
+  } else if (level >= loglib.Level.WARNING) {
+    pen.yellow();
+    levelName = 'WARN';
+  } else if (level <= loglib.Level.FINE) {
+    pen.gray(level: 0.6);
+    levelName = 'DEBUG';
+  } else {
+    pen.blue();
+    levelName = 'INFO';
+  }
+
+  final paddedName = '$levelName:'.padRight(6);
+
+  final message = pen(
+    '$paddedName ${event.time.copyWith(microsecond: 0).toTimeString()} ${event.message} $extra',
+  );
+  return message;
 }
