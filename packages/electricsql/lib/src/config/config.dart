@@ -106,9 +106,14 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
   }
 
   final warnings = <String>[];
-  const expectedProtocols = {'http', 'https', 'ws', 'wss', 'electric'};
+  //const expectedProtocols = {'http', 'https', 'ws', 'wss', 'electric'};
 
-  if (!expectedProtocols.contains(uri.scheme)) {
+  // Detect if the user has provided a postgres URL by mistake.
+  if ({'postgres', 'postgresql'}.contains(uri.scheme)) {
+    warnings.add('Unsupported URL protocol.');
+  }
+
+  /* if (!expectedProtocols.contains(uri.scheme)) {
     warnings.add('Unsupported URL protocol.');
   }
 
@@ -119,7 +124,7 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
   if (uri.path != '/' && uri.path != '') {
     warnings.add('An URL path is not supported.');
   }
-
+ */
   final isSecureProtocol = uri.scheme == 'https' || uri.scheme == 'wss';
   final sslEnabled = isSecureProtocol || uri.queryParameters['ssl'] == 'true';
 

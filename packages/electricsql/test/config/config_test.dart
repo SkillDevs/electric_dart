@@ -146,12 +146,14 @@ void main() {
   test('hydrateConfig warns unexpected service urls', () {
     const warnReasons = {
       'postgresql://somehost.com': ['Unsupported URL protocol.'],
-      'https://user@somehost.com': ['Username and password are not supported.'],
+      // For now don't check other parts of the URLs
+      // Curently a draft PR: https://github.com/electric-sql/electric/pull/826
+      /* 'https://user@somehost.com': ['Username and password are not supported.'],
       'custom://user:pass@somehost.com': [
         'Unsupported URL protocol.',
         'Username and password are not supported.',
       ],
-      'http://somehost.com:1234/some/path': ['An URL path is not supported.'],
+      'http://somehost.com:1234/some/path': ['An URL path is not supported.'], */
     };
 
     for (final MapEntry(key: url, value: reasons) in warnReasons.entries) {
