@@ -90,6 +90,8 @@ class DBSchemaDrift implements DBSchema {
       case DriftSqlType.any:
         // Unsupported
         return null;
+      default:
+        return null;
     }
   }
 
