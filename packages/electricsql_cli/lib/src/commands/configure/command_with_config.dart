@@ -31,7 +31,7 @@ class CommandWithConfigCommand extends Command<int> {
   }
 }
 
-Future<void> withConfig({
+Future<int> withConfig({
   required String command,
   Config? config,
   Logger? logger,
@@ -65,5 +65,6 @@ Future<void> withConfig({
       ...envFromConfig(_config),
     },
   );
-  await waitForProcess(proc);
+  final exitCode = await waitForProcess(proc);
+  return exitCode;
 }

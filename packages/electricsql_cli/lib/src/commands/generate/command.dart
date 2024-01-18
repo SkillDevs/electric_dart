@@ -251,11 +251,22 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
       );
       // Run the provided migrations command
       logger.info('Running migrations...');
-      await withConfig(
+      logger.info('');
+      logger.info('${'-' * 27} Migrate output ${'-' * 27}');
+      final migrateExitCode = await withConfig(
         command: opts.withMigrations!,
         config: opts.config,
         logger: logger,
       );
+      logger.info('Exit code: $migrateExitCode');
+      logger.info('-' * 70);
+      logger.info('');
+
+      if (migrateExitCode != 0) {
+        throw Exception(
+          'Migrations command exited with non-zero exit code: $migrateExitCode. Check the output above.',
+        );
+      }
     }
     logger.info('Service URL: ${opts.config.read<String>('SERVICE')}');
     logger.info('Proxy URL: ${buildProxyUrlForIntrospection(opts.config)}');
