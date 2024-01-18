@@ -269,7 +269,9 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
       }
     }
     logger.info('Service URL: ${opts.config.read<String>('SERVICE')}');
-    logger.info('Proxy URL: ${buildProxyUrlForIntrospection(opts.config)}');
+    logger.info('Proxy URL: ${stripPasswordFromUrl(
+      buildProxyUrlForIntrospection(opts.config),
+    )}');
 
     // Generate the client
     await _runGeneratorInner(opts);
@@ -444,3 +446,19 @@ Future<Map<String, Object?>> withMigrationsConfig(String containerName) async {
 }
 
 final _random = Random();
+
+String stripPasswordFromUrl(String url) {
+  final parsed = Uri.parse(url);
+  String? newUserInfo;
+  if (parsed.userInfo.isNotEmpty) {
+    final splitted = parsed.userInfo.split(':');
+    if (splitted.length > 1) {
+      newUserInfo = '${splitted[0]}:********';
+    }
+  }
+  if (newUserInfo == null) {
+    return url;
+  } else {
+    return parsed.replace(userInfo: newUserInfo).toString();
+  }
+}
