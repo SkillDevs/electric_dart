@@ -14,6 +14,7 @@ import 'package:electricsql/util.dart';
 import 'package:test/test.dart';
 
 import '../../satellite/common.dart';
+import '../../support/log_mock.dart';
 import '../drift/database.dart';
 
 late DbName dbName;
@@ -23,7 +24,7 @@ late MockSatelliteClient client;
 late Migrator migrator;
 late DriftElectricClient<TestsDatabase> electric;
 
-late List<String> log;
+List<String> log = [];
 
 const authConfig = AuthConfig(
   token: 'test-token',
@@ -111,6 +112,8 @@ final profile = <String, Object?>{
 };
 
 void main() {
+  setupLoggerMock(() => log);
+
   setUp(() async {
     await makeContext();
   });

@@ -22,8 +22,11 @@ class DockerStatusCommand extends Command<int> {
 
   @override
   FutureOr<int>? run() async {
-    final p = await dockerCompose('ps', []);
-    await waitForProcess(p);
-    return 0;
+    return await runStatusCommand();
   }
+}
+
+Future<int> runStatusCommand() async {
+  final p = await dockerCompose('ps', []);
+  return await waitForProcess(p);
 }

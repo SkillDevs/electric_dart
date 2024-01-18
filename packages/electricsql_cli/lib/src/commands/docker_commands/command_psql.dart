@@ -30,7 +30,7 @@ class DockerPsqlCommand extends Command<int> {
   FutureOr<int>? run() async {
     final opts = getOptsFromCommand(this);
     final config = getConfig(opts);
-    await psql(
+    await runPsqlCommand(
       logger: _logger,
       config: config,
     );
@@ -38,31 +38,23 @@ class DockerPsqlCommand extends Command<int> {
   }
 }
 
-Future<void> psql({
+Future<void> runPsqlCommand({
   Logger? logger,
   required Config config,
 }) async {
-  // TODO: Do we want a version of this that works without the postgres container
-  // using a local psql client if available?
-
-  final appName = getAppName() ?? 'electric';
-  final env = <String, String>{
-    'ELECTRIC_APP_NAME': appName,
-    'COMPOSE_PROJECT_NAME': appName,
-  };
   // As we are connecting to the proxy from within the docker network, we have to
   // use the container name instead of localhost.
   final containerDbUrl = buildDatabaseURL(
     user: config.read<String>('DATABASE_USER'),
     password: config.read<String>('PG_PROXY_PASSWORD'),
     host: 'electric',
-    port: config.read<int>('PG_PROXY_PORT'),
+    port: parsePgProxyPort(config.read<String>('PG_PROXY_PORT')).port,
     dbName: config.read<String>('DATABASE_NAME'),
   );
   final proc = await dockerCompose(
     'exec',
     ['-it', 'postgres', 'psql', containerDbUrl],
-    env: env,
+    containerName: config.read<String>('CONTAINER_NAME'),
   );
   await waitForProcess(proc);
 }

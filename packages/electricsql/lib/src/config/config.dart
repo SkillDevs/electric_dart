@@ -1,5 +1,6 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/satellite/config.dart';
+import 'package:electricsql/src/util/debug/debug.dart';
 
 class ElectricConfig {
   final AuthConfig auth;
@@ -97,25 +98,42 @@ HydratedConfig hydrateConfig(ElectricConfig config) {
   final Uri uri;
   try {
     uri = Uri.parse(inputUrl ?? 'http://localhost:5133');
+    if (uri.host.isEmpty) {
+      throw Exception('Missing host');
+    }
   } catch (e) {
     _throwInvalidServiceUrlError();
   }
 
-  const validProtocols = {'http', 'https', 'ws', 'wss', 'electric'};
+  final warnings = <String>[];
+  //const expectedProtocols = {'http', 'https', 'ws', 'wss', 'electric'};
 
-  if (!validProtocols.contains(uri.scheme)) {
-    _throwInvalidServiceUrlError('Invalid url protocol.');
+  // Detect if the user has provided a postgres URL by mistake.
+  if ({'postgres', 'postgresql'}.contains(uri.scheme)) {
+    warnings.add('Unsupported URL protocol.');
+  }
+
+  /* if (!expectedProtocols.contains(uri.scheme)) {
+    warnings.add('Unsupported URL protocol.');
   }
 
   if (uri.userInfo.isNotEmpty) {
-    _throwInvalidServiceUrlError('Username and password are not supported.');
+    warnings.add('Username and password are not supported.');
   }
 
+  if (uri.path != '/' && uri.path != '') {
+    warnings.add('An URL path is not supported.');
+  }
+ */
   final isSecureProtocol = uri.scheme == 'https' || uri.scheme == 'wss';
   final sslEnabled = isSecureProtocol || uri.queryParameters['ssl'] == 'true';
 
   final defaultPort = sslEnabled ? 443 : 80;
   final port = uri.hasPort ? uri.port : defaultPort;
+
+  if (warnings.isNotEmpty) {
+    _warnUnexpectedServiceUrl(warnings);
+  }
 
   return (hostname: uri.host, port: port, ssl: sslEnabled);
 }
@@ -126,4 +144,15 @@ Never _throwInvalidServiceUrlError([String? reason]) {
     msg += ' $reason';
   }
   throw Exception(msg);
+}
+
+void _warnUnexpectedServiceUrl(List<String> reasons) {
+  String msg = "Unexpected 'url' in the configuration.";
+
+  if (reasons.isNotEmpty) {
+    msg += ' ${reasons.join(' ')}';
+  }
+
+  msg += " An URL like 'http(s)://<host>:<port>' is expected.";
+  logger.warning(msg);
 }

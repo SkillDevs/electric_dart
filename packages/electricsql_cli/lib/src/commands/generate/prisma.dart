@@ -56,8 +56,8 @@ String buildProxyUrlForIntrospection(Config config) {
     // We use the "prisma" user to put the proxy into introspection mode
     user: 'prisma',
     password: config.read<String>('PG_PROXY_PASSWORD'),
-    host: config.read<String>('SERVICE_HOST'),
-    port: config.read<int>('PG_PROXY_PORT'),
+    host: config.read<String>('PG_PROXY_HOST'),
+    port: parsePgProxyPort(config.read<String>('PG_PROXY_PORT')).port,
     dbName: config.read<String>('DATABASE_NAME'),
   );
 }

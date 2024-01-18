@@ -1,3 +1,9 @@
+## 0.5.0
+
+* Code based on official Typescript client [v0.9.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.0)
+* The CLI from `electricsql_cli` has been greatly improved, now supporting running the Electric and Postgres services locally behind the scenes, simplifying the structure of the project. Checkout the Quickstart section in the README for more details.
+
+
 ## 0.4.1
 
 * Code based on official Typescript client [v0.8.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.8.2)

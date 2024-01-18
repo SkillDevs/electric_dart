@@ -133,3 +133,39 @@ Future<T> wrapWithProgress<T>(
     rethrow;
   }
 }
+
+int parsePort(String str) {
+  final parsed = int.tryParse(str);
+  if (parsed == null) {
+    throw ConfigException('Invalid port: $str.');
+  }
+  return parsed;
+}
+
+({bool http, int port}) parsePgProxyPort(String str) {
+  if (str.contains(':')) {
+    final splitted = str.split(':');
+    if (splitted.length != 2) {
+      throw Exception("Unexpected proxy port value: '$str'");
+    }
+    final prefix = splitted[0];
+    final port = splitted[1];
+    return (
+      http: prefix.toLowerCase() == 'http',
+      port: parsePort(port),
+    );
+  } else if (str.toLowerCase() == 'http') {
+    return (http: true, port: 65432);
+  } else {
+    return (http: false, port: parsePort(str));
+  }
+}
+
+class ConfigException implements Exception {
+  ConfigException([this.message]);
+
+  final String? message;
+
+  @override
+  String toString() => message ?? 'ConfigException';
+}
