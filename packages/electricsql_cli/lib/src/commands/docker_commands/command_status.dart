@@ -23,12 +23,12 @@ class DockerStatusCommand extends Command<int> {
 
   @override
   FutureOr<int>? run() async {
-    return await runStatusCommand();
+    final config = getConfig();
+    return await runStatusCommand(config: config);
   }
 }
 
-Future<int> runStatusCommand() async {
-  final config = getConfig();
+Future<int> runStatusCommand({required Config config}) async {
   final containerName = config.read<String>('CONTAINER_NAME');
   final p = await dockerCompose('ps', [], containerName: containerName);
   return await waitForProcess(p);

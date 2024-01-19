@@ -263,9 +263,10 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
       logger.info('');
 
       if (migrateExitCode != 0) {
-        throw Exception(
-          'Migrations command exited with non-zero exit code: $migrateExitCode. Check the output above.',
+        logger.err(
+          'Failed to run migrations, --with-migrations command exited with error. Exit code: $migrateExitCode',
         );
+        exit(1);
       }
     }
     logger.info('Service URL: ${opts.config.read<String>('SERVICE')}');
