@@ -79,6 +79,16 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
             ),
           ],
         );
+
+      case 'TableWithCustomRowClass':
+        return DriftTableGenOpts(
+          annotations: [
+            useRowClassAnnotation(
+              refer('MyCustomRowClass', 'package:myapp/custom_row_class.dart'),
+              constructor: 'fromDb',
+            ),
+          ],
+        );
     }
     return null;
   }

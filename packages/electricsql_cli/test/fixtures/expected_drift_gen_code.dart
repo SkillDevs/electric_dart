@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:myapp/base_model.dart';
+import 'package:myapp/custom_row_class.dart';
 
 const kElectrifiedTables = [
   Project,
@@ -13,6 +14,7 @@ const kElectrifiedTables = [
   Datatypes,
   Weirdnames,
   GenOptsDriftTable,
+  TableWithCustomRowClass,
   Enums,
 ];
 
@@ -138,6 +140,21 @@ class GenOptsDriftTable extends Table {
 
   @override
   String? get tableName => 'GenOpts';
+
+  @override
+  bool get withoutRowId => true;
+}
+
+@UseRowClass(
+  MyCustomRowClass,
+  constructor: 'fromDb',
+)
+class TableWithCustomRowClass extends Table {
+  IntColumn get id => customType(ElectricTypes.int4)();
+
+  TextColumn get value => text()();
+
+  RealColumn get d => customType(ElectricTypes.float4)();
 
   @override
   bool get withoutRowId => true;

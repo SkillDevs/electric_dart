@@ -58,6 +58,12 @@ model GenOpts {
   timestamp   DateTime @db.Timestamptz(6)
 }
 
+model TableWithCustomRowClass {
+  id    Int
+  value String
+  d     Float    @db.Real 
+}
+
 
 model enums {
   id String                       @id

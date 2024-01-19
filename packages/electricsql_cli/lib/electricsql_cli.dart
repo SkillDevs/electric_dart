@@ -27,4 +27,5 @@ export 'package:electricsql_cli/src/drift_gen_util.dart'
     show
         clientDefaultExpression,
         dataClassNameAnnotation,
-        dateTimeNowExpression;
+        dateTimeNowExpression,
+        useRowClassAnnotation;

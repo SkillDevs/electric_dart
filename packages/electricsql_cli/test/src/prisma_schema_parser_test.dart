@@ -15,7 +15,7 @@ void main() {
 
     final schemaInfo = extractInfoFromPrismaSchema(_prismaSchema);
 
-    expect(schemaInfo.tables.length, 6);
+    expect(schemaInfo.tables.length, 7);
 
     expectValidProjectsModel(schemaInfo);
     expectValidMembershipsModel(schemaInfo);
