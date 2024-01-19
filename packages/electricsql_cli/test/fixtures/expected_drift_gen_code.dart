@@ -131,6 +131,7 @@ class Weirdnames extends Table {
   extending: BaseModel,
 )
 class GenOptsDriftTable extends Table {
+  @JsonKey('my_id')
   IntColumn get myIdCol => customType(ElectricTypes.int4).named('id')();
 
   TextColumn get value => text()();

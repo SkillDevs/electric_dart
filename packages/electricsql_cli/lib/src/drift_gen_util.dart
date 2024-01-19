@@ -70,18 +70,18 @@ Expression dataClassNameAnnotation(
   return dataclassAnotation;
 }
 
-/// Generates the [UseRowClass] annotation from drift. 
-/// 
+/// Generates the [UseRowClass] annotation from drift.
+///
 /// API: https://pub.dev/documentation/drift/latest/drift/UseRowClass-class.html
-/// 
+///
 /// Docs: https://drift.simonbinder.eu/docs/advanced-features/custom_row_classes
-/// 
+///
 /// [type] is the [code_builder] [Reference] to the custom row class.
-/// 
+///
 /// [constructor] is the name of the constructor that drift will use to map the rows.
-/// 
+///
 /// Usage examples:
-/// 
+///
 /// ```dart
 /// useRowClassAnnotation(refer('MyCustomRowClass', 'package:myapp/custom_row_class.dart'))
 /// useRowClassAnnotation(refer('MyCustomRowClass', 'package:myapp/custom_row_class.dart'), constructor: 'fromDb')
@@ -97,5 +97,14 @@ Expression useRowClassAnnotation(
     if (constructor != null) 'constructor': literal(constructor),
   });
 
+  return annotation;
+}
+
+/// Generates the [JsonKey] annotation from drift. https://pub.dev/documentation/drift/latest/drift/JsonKey-class.html
+///
+/// [key] is the key in the json map to use for the drift [Column]
+Expression jsonKeyAnnotation(String key) {
+  // @JsonKey('some_key')
+  final annotation = refer('JsonKey', kDriftImport).call([literal(key)]);
   return annotation;
 }

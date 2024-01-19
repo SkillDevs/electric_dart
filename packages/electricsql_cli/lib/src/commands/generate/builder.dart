@@ -297,6 +297,7 @@ Method _getColumnFieldGetter(
       ..name = columnInfo.dartName
       ..type = MethodType.getter
       ..returns = _getOutColumnTypeFromColumnInfo(schemaInfo, columnInfo)
+      ..annotations.addAll(genOpts?.annotations ?? [])
       ..body = columnExpr.code,
   );
 }

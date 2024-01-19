@@ -99,6 +99,9 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
       if (sqlColumnName == 'id') {
         return DriftColumnGenOpts(
           driftColumnName: 'myIdCol',
+          annotations: [
+            jsonKeyAnnotation('my_id'),
+          ],
         );
       } else if (sqlColumnName == 'timestamp') {
         return DriftColumnGenOpts(

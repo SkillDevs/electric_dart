@@ -28,4 +28,5 @@ export 'package:electricsql_cli/src/drift_gen_util.dart'
         clientDefaultExpression,
         dataClassNameAnnotation,
         dateTimeNowExpression,
+        jsonKeyAnnotation,
         useRowClassAnnotation;

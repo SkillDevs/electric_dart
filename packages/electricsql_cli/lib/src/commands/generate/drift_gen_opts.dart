@@ -78,9 +78,14 @@ class DriftColumnGenOpts {
   /// ```
   final ColumnBuilderModifier? columnBuilderModifier;
 
+  /// Annotations for the drift column field. Mainly for the `JsonKey` annotation.
+  /// You can use the following utility functions to generate it: `jsonKeyAnnotation`.
+  final List<Expression> annotations;
+
   DriftColumnGenOpts({
     this.driftColumnName,
     this.columnBuilderModifier,
+    this.annotations = const [],
   });
 }
 
