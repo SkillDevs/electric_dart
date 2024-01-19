@@ -8,6 +8,7 @@ import 'package:electricsql_cli/src/commands/generate/builder/enums.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
+import 'package:electricsql_cli/src/drift_gen_util.dart';
 import 'package:path/path.dart' as path;
 
 Future<void> buildMigrations(
@@ -208,19 +209,29 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
       ],
     );
 
-    final dataclassAnotation = _getDataClassAnnotation(
-      driftSchemaInfo,
-      tableGenOpts,
-    );
+    final List<Expression> annotations = [];
+    if (tableGenOpts != null) {
+      annotations.addAll(tableGenOpts.annotations);
+
+      // ignore: deprecated_member_use_from_same_package
+      if (tableGenOpts.dataClassName != null) {
+        // ignore: deprecated_member_use_from_same_package
+        final dataClassNameInfo = tableGenOpts.dataClassName!;
+        annotations.add(
+          dataClassNameAnnotation(
+            dataClassNameInfo.name,
+            extending: dataClassNameInfo.extending,
+          ),
+        );
+      }
+    }
 
     final tableClass = Class(
       (b) => b
         ..extend = tableRef
         ..name = tableInfo.dartClassName
         ..methods.addAll(methods)
-        ..annotations.addAll([
-          if (dataclassAnotation != null) dataclassAnotation,
-        ]),
+        ..annotations.addAll(annotations),
     );
     tableClasses.add(tableClass);
   }
@@ -406,24 +417,4 @@ Reference _getOutColumnTypeFromColumnInfo(
     case DriftElectricColumnType.bigint:
       return refer('Int64Column', kDriftImport);
   }
-}
-
-Expression? _getDataClassAnnotation(
-  DriftSchemaInfo driftSchemaInfo,
-  DriftTableGenOpts? tableGenOpts,
-) {
-  final DataClassNameInfo? customDataClassInfo = tableGenOpts?.dataClassName;
-
-  Expression? dataclassAnotation;
-  if (customDataClassInfo != null) {
-    // @DataClassName("SampleName", extending: BaseModel)
-    final String dataClassName = customDataClassInfo.name;
-    final Reference? extendingRef = customDataClassInfo.extending;
-    dataclassAnotation = refer('DataClassName', kDriftImport).call([
-      literal(dataClassName),
-    ], {
-      if (extendingRef != null) 'extending': extendingRef,
-    });
-  }
-  return dataclassAnotation;
 }

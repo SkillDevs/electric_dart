@@ -24,4 +24,7 @@ export 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 export 'package:electricsql_cli/src/commands/generate/prisma.dart'
     show extractInfoFromPrismaSchema;
 export 'package:electricsql_cli/src/drift_gen_util.dart'
-    show clientDefaultExpression, dateTimeNowExpression;
+    show
+        clientDefaultExpression,
+        dataClassNameAnnotation,
+        dateTimeNowExpression;

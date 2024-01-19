@@ -24,17 +24,19 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
     switch (sqlTableName) {
       case 'todo':
         return DriftTableGenOpts(
-          // This creates: class Todos extends Table {
+          // This creates: `class Todos extends Table {`
           driftTableName: 'Todos',
 
-          // This generates @DataClassName('TodoClass') for the Drift table definition
-          dataClassName: DataClassNameInfo(
-            'TodoClass',
-            // If you need to use the 'extending' parameter of the @DataClassName Drift
-            // annotation you can provide it here. For example:
-            // extending:
-            //     refer('BaseModel', 'package:todos_electrified/base_model.dart'),
-          ),
+          annotations: [
+            // This generates @DataClassName('TodoClass') for the Drift table definition
+            dataClassNameAnnotation(
+              'TodoClass',
+              // If you need to use the 'extending' parameter of the @DataClassName Drift
+              // annotation you can provide it here. For example:
+              // extending:
+              //     refer('BaseModel', 'package:todos_electrified/base_model.dart'),
+            ),
+          ],
         );
     }
     return null;

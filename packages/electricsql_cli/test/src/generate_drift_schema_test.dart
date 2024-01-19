@@ -72,10 +72,12 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
       case 'GenOpts':
         return DriftTableGenOpts(
           driftTableName: 'GenOptsDriftTable',
-          dataClassName: DataClassNameInfo(
-            'MyDataClassName',
-            extending: refer('BaseModel', 'package:myapp/base_model.dart'),
-          ),
+          annotations: [
+            dataClassNameAnnotation(
+              'MyDataClassName',
+              extending: refer('BaseModel', 'package:myapp/base_model.dart'),
+            ),
+          ],
         );
     }
     return null;
