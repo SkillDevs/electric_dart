@@ -36,6 +36,13 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
               // extending:
               //     refer('BaseModel', 'package:todos_electrified/base_model.dart'),
             ),
+
+            // Alternatively
+
+            // If you need @UseRowClass from Drift, you can use the following:
+            useRowClassAnnotation(
+              refer('MyTodoRowClass', 'package:app/<dart_file_path>.dart'),
+            ),
           ],
         );
     }
@@ -49,6 +56,11 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
         return DriftColumnGenOpts(
           // This generates   TextColumn get myTextCol => text().named('text')();
           driftColumnName: 'myTextCol',
+          annotations: [
+            // This generates @JsonKey('my_text') in the Drift column definition
+            // which changes the key in the toJson/fromJson methods from drift
+            jsonKeyAnnotation('my_text'),
+          ],
         );
       }
 
