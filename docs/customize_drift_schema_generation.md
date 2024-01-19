@@ -35,18 +35,31 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
 
 ### Table (DriftTableGenOpts)
 
-- `driftTableName`: The name of the table in the Drift schema. By default it's the same as the SQL table name in Pascal case.
+- `driftTableName`
 
-- `dataClassName`: The name of the data class in Drift. By default it will be the regular name Drift uses.
+  The name of the table in the Drift schema. By default it's the same as the SQL table name in Pascal case.
+
+- `annotations`
+
+  A list of annotation expressions to add to the Drift table definition. This can be used to add `UseRowClass` or `DataClassName` annotations from drift. Auxiliary functions to build these annotations are provided: `useRowClassAnnotation` and `dataClassNameAnnotation` respectively.
 
 
 ### Column (DriftColumnGenOpts)
 
-- `driftColumnName`: The name of the column in the Drift schema. By default it's the same as the SQL column name in Camel case.
+- `driftColumnName`
+  
+  The name of the column in the Drift schema. By default it's the same as the SQL column name in Camel case.
 
-- `columnBuilderModifier`: A function that receives the column builder and returns a modified version of it. This can be used to add extra modifiers to the column, such as `clientDefault`.
+- `annotations`
 
-If you need custom code you would need to use the package [code_builder](https://pub.dev/packages/code_builder) to build a custom [Expression] that will be converted in Dart code. 
+  A list of annotation expressions to add to the Drift column definition. This can be used to add the `JsonKey` annotation from drift. An auxiliary function to build this annotation is provided: `jsonKeyAnnotation`.
+
+
+- `columnBuilderModifier`
+  
+  A function that receives the column builder and returns a modified version of it. This can be used to add extra modifiers to the column, such as `clientDefault`.
+
+  If you need custom code you would need to use the package [`code_builder`](https://pub.dev/packages/code_builder) to build a custom [Expression] that will be converted in Dart code. 
 
 ```dart
 return DriftColumnGenOpts(
