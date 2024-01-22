@@ -6,7 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
 Future<void> main() async {
-  final (commit: referenceCommit, version: referenceVersion) = await getReferenceVersion();
+  final (commit: referenceCommit, version: referenceVersion) =
+      await getReferenceVersion();
 
   test('Check that protocol version matches reference commit in Electric',
       () async {
@@ -40,7 +41,6 @@ Future<void> main() async {
 
   test('Check that the Typecript client version matches the reference version',
       () async {
-    
     final electricGHJsonUrl =
         'https://raw.githubusercontent.com/electric-sql/electric/$referenceCommit/clients/typescript/package.json';
 
@@ -72,11 +72,12 @@ Future<void> main() async {
 Future<({String commit, String version})> getReferenceVersion() async {
   const readmePath = '../../README.md';
   final readmeContent = await File(readmePath).readAsString();
-  final referenceCommitRegexp = RegExp(r'\* Commit: `([a-f0-9]+)`');
-  final referenceCommit = referenceCommitRegexp.firstMatch(readmeContent)!.group(1)!;
+
+  final commitRegexp = RegExp(r'\* Commit: `([a-f0-9]+)`');
+  final commit = commitRegexp.firstMatch(readmeContent)!.group(1)!;
 
   final versionRegexp = RegExp(r'\* Version `(.+)`');
   final version = versionRegexp.firstMatch(readmeContent)!.group(1)!;
 
-  return (commit: referenceCommit, version: version);
+  return (commit: commit, version: version);
 }
