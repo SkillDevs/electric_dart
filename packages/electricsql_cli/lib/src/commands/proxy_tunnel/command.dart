@@ -45,12 +45,20 @@ class ProxyTunnelCommand extends Command<int> {
     // port
     final int finalLocalPort = parsePort(localPortParam);
 
-    await runProxyTunnelCommand(
-      serviceUrl: config.read<String>('SERVICE'),
-      localPort: finalLocalPort,
-      logger: _logger,
-    );
-    return ExitCode.success.code;
+    try {
+      final serviceUrl = _mapHttpToWebSocketInUrl(
+        config.read<String>('SERVICE'),
+      );
+      await runProxyTunnelCommand(
+        serviceUrl: serviceUrl,
+        localPort: finalLocalPort,
+        logger: _logger,
+      );
+      return ExitCode.success.code;
+    } catch (error) {
+      _logger.err(error.toString());
+      exit(1);
+    }
   }
 }
 
@@ -69,11 +77,6 @@ Future<void> runProxyTunnelCommand({
   );
 
   // Cleanup the service URL
-  if (serviceUrl.startsWith('https://')) {
-    serviceUrl = serviceUrl.replaceFirst('https://', 'wss://');
-  } else if (serviceUrl.startsWith('http://')) {
-    serviceUrl = serviceUrl.replaceFirst('http://', 'ws://');
-  }
   serviceUrl = removeTrailingSlash(serviceUrl);
 
   logger.info('ElectricSQL Postgres Proxy Tunnel listening on port $localPort');
@@ -122,4 +125,23 @@ Future<void> runProxyTunnelCommand({
   }
 
   await disposeExitSignals();
+}
+
+String _mapHttpToWebSocketInUrl(String url) {
+  final parsed = Uri.parse(url);
+
+  String? newProtocol;
+  if (parsed.scheme == 'https') {
+    newProtocol = 'wss';
+  } else if (parsed.scheme == 'http') {
+    newProtocol = 'ws';
+  } else if (parsed.scheme == 'ws' || parsed.scheme == 'wss') {
+    // Do nothing
+  } else {
+    throw Exception('Invalid URL scheme ${parsed.scheme} in ELECTRIC_SERVICE');
+  }
+
+  if (newProtocol == null) return url;
+
+  return parsed.replace(scheme: newProtocol).toString();
 }

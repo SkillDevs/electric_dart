@@ -11,6 +11,7 @@ class ConfigOption<T extends Object> {
   final String doc;
   final List<String>? groups;
   final String? shortForm;
+  final T? Function(ConfigMap)? inferVal;
   final T Function(ConfigMap)? defaultValueFun;
   final T? defaultValueStatic;
   final String? constructedDefault;
@@ -32,36 +33,57 @@ class ConfigOption<T extends Object> {
     required this.doc,
     this.groups,
     this.shortForm,
+    this.inferVal,
     T? defaultValue,
     this.defaultValueFun,
     this.constructedDefault,
   }) : defaultValueStatic = defaultValue;
 }
 
-T defaultDbUrlPart<T>(
-  String part,
-  T defaultValue,
-) {
-  final url = programEnv['ELECTRIC_DATABASE_URL'];
+T? inferDbUrlPart<T>(
+  String part, {
+  Map<String, Object?> options = const {},
+  T? defaultValue,
+}) {
+  final url = options['databaseUrl'] as String? ??
+      options['DATABASE_URL'] as String? ??
+      programEnv['ELECTRIC_DATABASE_URL'];
+
   if (notBlank(url)) {
     final parsed = extractDatabaseURL(url!);
-    if (parsed[part] != null) {
-      return parsed[part] as T;
-    }
+    return parsed[part] as T? ?? defaultValue;
   }
   return defaultValue;
 }
 
-T defaultServiceUrlPart<T>(
-  String part,
-  T defaultValue,
-) {
-  final url = programEnv['ELECTRIC_SERVICE'];
+T? inferProxyUrlPart<T>(
+  String part, {
+  Map<String, Object?> options = const {},
+  T? defaultValue,
+}) {
+  final url = options['proxy'] as String? ??
+      options['PROXY'] as String? ??
+      programEnv['ELECTRIC_PROXY'];
+
+  if (notBlank(url)) {
+    final parsed = extractDatabaseURL(url!);
+    return parsed[part] as T? ?? defaultValue;
+  }
+  return defaultValue;
+}
+
+T? inferServiceUrlPart<T>(
+  String part, {
+  Map<String, Object?> options = const {},
+  T? defaultValue,
+}) {
+  final url = options['service'] as String? ??
+      options['SERVICE'] as String? ??
+      programEnv['ELECTRIC_SERVICE'];
+
   if (notBlank(url)) {
     final parsed = extractServiceURL(url!);
-    if (parsed[part] != null) {
-      return parsed[part] as T;
-    }
+    return parsed[part] as T? ?? defaultValue;
   }
   return defaultValue;
 }
@@ -89,6 +111,16 @@ T? getOptionalConfigValue<T>(
       return options[optName]! as T;
     } else if (options[name] != null) {
       return options[name]! as T;
+    }
+  }
+
+  // Then check if the option has an method to infer a value from other options.
+  // If we get a value from this method, use it.
+  final inferVal = configOptions[name]!.inferVal;
+  if (inferVal != null) {
+    final val = inferVal(options ?? {});
+    if (val != null) {
+      return val as T;
     }
   }
 

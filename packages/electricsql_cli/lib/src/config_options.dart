@@ -57,7 +57,8 @@ final configOptions = <String, ConfigOption<Object>>{
     valueTypeName: 'hostname',
     doc: 'Hostname the Electric service is running on.',
     groups: ['client', 'proxy'],
-    defaultValueFun: (_) => defaultServiceUrlPart('host', 'localhost'),
+    inferVal: (options) => inferServiceUrlPart('host', options: options),
+    defaultValue: 'localhost',
   ),
   'PG_PROXY_HOST': ConfigOption<String>(
     valueTypeName: 'hostname',
@@ -67,6 +68,7 @@ final configOptions = <String, ConfigOption<Object>>{
         ' '
         'If using the proxy-tunnel, this should be the hostname of the tunnel.',
     groups: ['client', 'proxy'],
+    inferVal: (options) => inferProxyUrlPart('host', options: options),
     defaultValueFun: (options) => getConfigValue('SERVICE_HOST', options),
   ),
 
@@ -100,28 +102,32 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'DATABASE_HOST': ConfigOption<String>(
     doc: 'Hostname of the database server.',
-    defaultValueFun: (_) => defaultDbUrlPart('host', 'localhost'),
+    inferVal: (options) => inferDbUrlPart('host', options: options),
+    defaultValue: 'localhost',
     groups: ['database'],
   ),
   'DATABASE_PORT': ConfigOption<int>(
     doc: 'Port number of the database server.',
-    defaultValueFun: (_) => defaultDbUrlPart('port', 5432),
+    inferVal: (options) => inferDbUrlPart('port'),
+    defaultValue: 5432,
     groups: ['database'],
   ),
   'DATABASE_USER': ConfigOption<String>(
     doc: 'Username to connect to the database with.',
-    defaultValueFun: (_) => defaultDbUrlPart('user', 'postgres'),
+    inferVal: (options) => inferDbUrlPart('user', options: options),
+    defaultValue: 'postgres',
     groups: ['database'],
   ),
   'DATABASE_PASSWORD': ConfigOption<String>(
     doc: 'Password to connect to the database with.',
-    defaultValueFun: (_) => defaultDbUrlPart('password', 'db_password'),
+    inferVal: (options) => inferDbUrlPart('password', options: options),
+    defaultValue: 'db_password',
     groups: ['database'],
   ),
   'DATABASE_NAME': ConfigOption<String>(
     doc: 'Name of the database to connect to.',
-    defaultValueFun: (_) =>
-        defaultDbUrlPart('dbName', getAppName() ?? 'electric'),
+    inferVal: (options) => inferDbUrlPart('dbName', options: options),
+    defaultValueFun: (_) => getAppName() ?? 'electric',
     groups: ['database', 'client', 'proxy'],
   ),
 
@@ -159,7 +165,8 @@ final configOptions = <String, ConfigOption<Object>>{
     groups: ['electric'],
   ),
   'HTTP_PORT': ConfigOption<int>(
-    defaultValueFun: (_) => defaultServiceUrlPart('port', 5133),
+    inferVal: (options) => inferServiceUrlPart('port', options: options),
+    defaultValue: 5133,
     valueTypeName: 'port',
     doc:
         'Port for HTTP connections. Includes client websocket connections on /ws, and '
@@ -167,12 +174,18 @@ final configOptions = <String, ConfigOption<Object>>{
     groups: ['electric', 'client'],
   ),
   'PG_PROXY_PORT': ConfigOption<String>(
+    inferVal: (options) {
+      final inferred = inferProxyUrlPart<int>('port', options: options);
+      // ignore: prefer_null_aware_operators
+      return inferred == null ? null : inferred.toString();
+    },
     defaultValue: '65432',
     valueTypeName: 'port',
     doc: 'Port number for connections to the Postgres migration proxy.',
     groups: ['electric', 'client', 'proxy'],
   ),
   'PG_PROXY_PASSWORD': ConfigOption<String>(
+    inferVal: (options) => inferProxyUrlPart('password', options: options),
     defaultValue: 'proxy_password',
     valueTypeName: 'password',
     doc:

@@ -73,20 +73,34 @@ String buildDatabaseURL({
 }
 
 Map<String, Object?> extractDatabaseURL(String url) {
-  final regexp = RegExp(
-    r'^postgres(ql)?:\/\/([^:]+)(?::([^@]+))?@([^:]+):(\d+)\/(.+)$',
-  );
-  final match = regexp.firstMatch(url);
+  final Uri parsed;
+  try {
+    parsed = Uri.parse(url);
 
-  if (match == null) {
+    if (parsed.scheme != 'postgres' && parsed.scheme != 'postgresql') {
+      throw Exception('Unexpected scheme: ${parsed.scheme}');
+    }
+  } catch (e) {
     throw Exception('Invalid database URL: $url');
   }
+
+  String? user;
+  String? password;
+  if (parsed.userInfo.isNotEmpty) {
+    final splitted = parsed.userInfo.split(':');
+    user = splitted[0];
+    password = splitted.length > 1 ? splitted.sublist(1).join(':') : '';
+  }
+
   return {
-    'user': match[2],
-    'password': match[3] ?? '',
-    'host': match[4],
-    'port': int.parse(match[5]!),
-    'dbName': match[6],
+    'user': user,
+    'password': password,
+    'host': parsed.host == '' ? null : parsed.host,
+    'port': parsed.port == 0 ? null : parsed.port,
+    'dbName': parsed.path == '' || parsed.path == '/'
+        ? null
+        // Remove leading slash
+        : parsed.path.substring(1),
   };
 }
 
