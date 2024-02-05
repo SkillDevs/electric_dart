@@ -32,7 +32,7 @@ dependencies:
   # https://github.com/simolus3/sqlite3.dart/releases?q=sqlite3_flutter_libs&expanded=true
   sqlite3_flutter_libs: 0.5.19+1
 
-  # THese are only used for the backend example, they are not needed to use Eletric
+  # THese are only used for the backend example, they are not needed to use Electric
   # in Flutter apps.
   postgres: ^3.0.8
   drift_postgres: ^1.1.0
