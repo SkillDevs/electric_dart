@@ -21,7 +21,7 @@ class ElectricTypes {
 }
 
 class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
-    implements CustomSqlType<DartT> {
+    implements DialectAwareSqlType<DartT> {
   final Codec<DartT, SQLType> codec;
   final String typeName;
 
@@ -31,7 +31,7 @@ class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
   });
 
   @override
-  String mapToSqlLiteral(DartT dartValue) {
+  String mapToSqlLiteral(GenerationContext context, DartT dartValue) {
     final encoded = codec.encode(dartValue);
     if (encoded is String) {
       return "'$encoded'";
@@ -40,12 +40,12 @@ class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
   }
 
   @override
-  Object mapToSqlParameter(DartT dartValue) {
+  Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
     return codec.encode(dartValue);
   }
 
   @override
-  DartT read(Object fromSql) {
+  DartT read(SqlTypes types, Object fromSql) {
     return codec.decode(fromSql as SQLType);
   }
 
@@ -62,6 +62,15 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
     required super.typeName,
     required this.pgType,
   });
+
+  @override
+  DartT read(SqlTypes types, Object fromSql) {
+    if (types.dialect == SqlDialect.postgres) {
+      return fromSql as DartT;
+    } else {
+      return super.read(types, fromSql);
+    }
+  }
 }
 
 class TimestampType extends CustomElectricType<DateTime, String> {
@@ -154,7 +163,7 @@ class Float4Type extends CustomElectricType<double, Object> {
         );
 
   @override
-  String mapToSqlLiteral(double dartValue) {
+  String mapToSqlLiteral(GenerationContext _, double dartValue) {
     return _doubleToSqlLiteral(codec, dartValue);
   }
 }
@@ -168,7 +177,7 @@ class Float8Type extends CustomElectricType<double, Object> {
         );
 
   @override
-  String mapToSqlLiteral(double dartValue) {
+  String mapToSqlLiteral(GenerationContext _, double dartValue) {
     return _doubleToSqlLiteral(codec, dartValue);
   }
 }

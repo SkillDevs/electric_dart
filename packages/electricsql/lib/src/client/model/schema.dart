@@ -66,12 +66,10 @@ class DBSchemaDrift implements DBSchema {
     //print("Column: ${c.name}  ${c.type}   ${c.driftSqlType}");
     final type = c.type;
     switch (type) {
+      case CustomElectricType():
+        return type.pgType;
       case CustomSqlType<Object>():
-        if (type is CustomElectricType) {
-          return type.pgType;
-        } else {
-          return null;
-        }
+        return null;
       case DriftSqlType.bool:
         return PgType.bool;
       case DriftSqlType.string:
