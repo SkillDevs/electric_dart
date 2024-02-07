@@ -76,7 +76,7 @@ void main() {
     manager.subscriptionDelivered(subscriptionData);
 
     // not active after unsubscribe
-    manager.unsubscribe(subscriptionId);
+    manager.unsubscribe([subscriptionId]);
     expect(manager.shapesForActiveSubscription(subscriptionId), null);
 
     // able to subscribe again after unsubscribe

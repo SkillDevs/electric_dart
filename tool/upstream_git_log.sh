@@ -12,4 +12,4 @@ pushd "$ELECTRIC_REPO"
 
 COMMIT_FORMAT='%h - %s%n%ad - %an%nhttps://github.com/electric-sql/electric/commit/%h%n'
 
-TZ=UTC0 git log --pretty=format:"$COMMIT_FORMAT" --date=iso-local "$@"
+TZ=UTC0 git --no-pager log --reverse --pretty=format:"$COMMIT_FORMAT" --date=iso-local "$@"

@@ -11,7 +11,7 @@ import 'package:path/path.dart';
 import 'package:recase/recase.dart';
 
 // Version of Prisma supported by the Electric Proxy
-const String _kPrismaVersion = '5.2.0';
+const String _kPrismaVersion = '4.8.1';
 const int _kNodeVersion = 20;
 
 const _kPrismaCLIDockerfile = '''
@@ -26,7 +26,7 @@ ENTRYPOINT ["prisma"]
 
 /// Creates a fresh Prisma schema in the provided folder.
 /// The Prisma schema is initialised with a generator and a datasource.
-Future<File> createPrismaSchema(
+Future<File> createIntrospectionSchema(
   Directory folder, {
   required Config config,
 }) async {

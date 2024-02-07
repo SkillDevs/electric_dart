@@ -105,27 +105,42 @@ class InMemorySubscriptionsManager extends EventEmitter
     }
   }
 
-  @override
-  Future<void> unsubscribe(SubscriptionId subId) async {
-    final shapes = shapesForActiveSubscription(subId);
-    if (shapes != null) {
-      if (_gcHandler != null) {
-        await _gcHandler!(shapes);
-      }
+  void _gcSubscription(SubscriptionId subId) {
+    _inFlight.remove(subId);
+    _fulfilledSubscriptions.remove(subId);
+    removeSubscriptionFromHash(subId);
+  }
 
-      _inFlight.remove(subId);
-      _fulfilledSubscriptions.remove(subId);
-      removeSubscriptionFromHash(subId);
+  void _gcSubscriptions(List<SubscriptionId> subs) {
+    for (final sub in subs) {
+      _gcSubscription(sub);
     }
   }
 
+  /// Unsubscribes from one or more subscriptions.
+  /// @param subId A subscription ID or an array of subscription IDs.
   @override
-  Future<List<String>> unsubscribeAll() async {
-    final ids = _fulfilledSubscriptions.keys.toList();
-    for (final subId in ids) {
-      await unsubscribe(subId);
+  Future<List<SubscriptionId>> unsubscribe(List<SubscriptionId> subIds) async {
+    final ids = subIds;
+    final List<ShapeDefinition> shapes = ids
+        .expand(
+          (id) => shapesForActiveSubscription(id) ?? <ShapeDefinition>[],
+        )
+        .toList();
+
+    // GC all subscriptions in a single DB transaction
+    if (_gcHandler != null) {
+      await _gcHandler!(shapes);
     }
+    // also remove all subscriptions from memory
+    _gcSubscriptions(ids);
     return ids;
+  }
+
+  @override
+  Future<List<SubscriptionId>> unsubscribeAll() {
+    final ids = _fulfilledSubscriptions.keys.toList();
+    return unsubscribe(ids);
   }
 
   @override
@@ -214,3 +229,24 @@ String computeClientDefsHash(List<ClientShapeDefinition> requests) {
 
 String _mapPropsToString(Type runtimeType, List<Object?> props) =>
     '$runtimeType(${props.map((prop) => prop.toString()).join(', ')})';
+
+class MockSubscriptionsManager extends InMemorySubscriptionsManager {
+  MockSubscriptionsManager(super.gcHandler) {
+    _fulfilledSubscriptions = {
+      '1': [
+        ShapeDefinition(
+          uuid: '00000000-0000-0000-0000-000000000001',
+          definition:
+              ClientShapeDefinition(selects: [ShapeSelect(tablename: 'users')]),
+        ),
+      ],
+      '2': [
+        ShapeDefinition(
+          uuid: '00000000-0000-0000-0000-000000000002',
+          definition:
+              ClientShapeDefinition(selects: [ShapeSelect(tablename: 'posts')]),
+        ),
+      ],
+    };
+  }
+}

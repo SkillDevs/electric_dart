@@ -16,6 +16,7 @@ import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
+import 'package:electricsql/src/satellite/shapes/manager.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -1837,6 +1838,41 @@ void main() {
         SatelliteErrorCode.tableNotFound,
       );
     }
+  });
+
+  test('unsubscribing all subscriptions does not trigger FK violations',
+      () async {
+    await runMigrations(); // because the meta tables need to exist for shape GC
+
+    final subsManager = MockSubscriptionsManager(
+      satellite.garbageCollectShapeHandler,
+    );
+
+    // Create the 'users' and 'posts' tables expected by sqlite
+    // populate it with foreign keys and check that the subscription
+    // manager does not violate the FKs when unsubscribing from all subscriptions
+    await satellite.adapter.runInTransaction([
+      Statement('CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT)'),
+      Statement(
+        'CREATE TABLE posts (id TEXT PRIMARY KEY, title TEXT, author_id TEXT, FOREIGN KEY(author_id) REFERENCES users(id))',
+      ),
+      Statement("INSERT INTO users (id, name) VALUES ('u1', 'user1')"),
+      Statement(
+        "INSERT INTO posts (id, title, author_id) VALUES ('p1', 'My first post', 'u1')",
+      ),
+    ]);
+
+    await subsManager.unsubscribeAll();
+    // if we reach here, the FKs were not violated
+
+    // Check that everything was deleted
+    final users =
+        await satellite.adapter.query(Statement('SELECT * FROM users'));
+    expect(users, isEmpty);
+
+    final posts =
+        await satellite.adapter.query(Statement('SELECT * FROM posts'));
+    expect(posts, isEmpty);
   });
 
   test("Garbage collecting the subscription doesn't generate oplog entries",

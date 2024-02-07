@@ -32,15 +32,15 @@ abstract class SubscriptionsManager {
     List<ClientShapeDefinition> shapes,
   );
 
-  /// Deletes the subscription from the manager.
-  /// @param subId the identifier of the subscription
-  Future<void> unsubscribe(String subId);
+  /// Deletes the subscription(s) from the manager.
+  /// @param An array of subscription identifiers for the subscription
+  Future<List<SubscriptionId>> unsubscribe(List<SubscriptionId> subIds);
 
   /// Deletes all subscriptions from the manager. Useful to
   /// reset the state of the manager.
   /// Returns the subscription identifiers of all subscriptions
   /// that were deleted.
-  Future<List<String>> unsubscribeAll();
+  Future<List<SubscriptionId>> unsubscribeAll();
 
   /// Converts the state of the manager to a string format that
   /// can be used to persist it

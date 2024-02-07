@@ -321,7 +321,8 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       completeMsg: 'Prisma CLI installed',
     );
 
-    final prismaSchema = await createPrismaSchema(tmpDir, config: config);
+    final prismaSchema =
+        await createIntrospectionSchema(tmpDir, config: config);
 
     // Introspect the created DB to update the Prisma schema
     await wrapWithProgress(
