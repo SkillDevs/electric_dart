@@ -66,6 +66,8 @@ void main() {
 
   test('assert SSL is disabled by default', () {
     expect(
-        configOptions['DATABASE_REQUIRE_SSL']!.getDefaultValue({})!(), false);
+      configOptions['DATABASE_REQUIRE_SSL']!.getDefaultValue({})!(),
+      false,
+    );
   });
 }
