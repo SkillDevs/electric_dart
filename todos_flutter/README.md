@@ -89,3 +89,27 @@ dbmate -d migrations new <migration_name>
 ```
 
 Every time the schema changes in Postgres, we need to update the client bundling the required migrations. You can do that with the `generate` command as shown before.
+
+### 6. Run a backend
+
+To demonstrate how a full-stack Dart setup could look like with ElectricSQL,
+this example includes a simple backend using `shelf` and `drift_postgres`.
+Once postgres is running, you can start the backend with
+
+```sh
+dart run bin/backend.dart
+```
+
+With the backend running, you can fetch all todo items added to the database:
+
+```sh
+curl http://localhost:8080/
+
+```
+
+You can also post new todo entries with the backend, which show up in the app
+right away thanks to Electric:
+
+```sh
+curl -X POST --data 'My todo entry' http://localhost:8080
+```

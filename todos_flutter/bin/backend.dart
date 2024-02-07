@@ -33,7 +33,23 @@ void main() async {
     );
   }
 
-  final router = Router()..get('/', listAll);
+  Future<Response> post(Request request) async {
+    final body = await request.readAsString();
+
+    await database.into(database.todo).insert(
+          TodoCompanion.custom(
+            id: genRandomUuid().cast(),
+            completed: const Variable(false),
+            editedAt: const FunctionCallExpression('now', []),
+            text$: Variable('Via backend: $body'),
+          ),
+        );
+    return Response(201);
+  }
+
+  final router = Router()
+    ..get('/', listAll)
+    ..post('/', post);
   final handler = const Pipeline().addHandler(router.call);
 
   await serve(handler.call, 'localhost', 8080);
