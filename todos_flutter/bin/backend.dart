@@ -13,10 +13,9 @@ void main() async {
     PgDatabase(
       endpoint: Endpoint(
         host: 'localhost',
-        database: 'postgres',
-        port: 65432,
+        database: 'todos_electrified',
         username: 'postgres',
-        password: 'proxy_password',
+        password: 'db_password',
       ),
       settings: const ConnectionSettings(sslMode: SslMode.disable),
       // We're using dbmate to manage migrations
