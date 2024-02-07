@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/client/conversions/mapping.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/converters/type_converters.dart';
 
@@ -62,6 +63,15 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
     required super.typeName,
     required this.pgType,
   });
+
+  @override
+  Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
+    if (context.dialect == SqlDialect.postgres) {
+      return mapToSql(pgType, dartValue);
+    } else {
+      return super.mapToSqlParameter(context, dartValue);
+    }
+  }
 
   @override
   DartT read(SqlTypes types, Object fromSql) {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:electricsql/util.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -36,11 +37,11 @@ void main() async {
     final body = await request.readAsString();
 
     await database.into(database.todo).insert(
-          TodoCompanion.custom(
-            id: genRandomUuid().cast(),
-            completed: const Variable(false),
-            editedAt: const FunctionCallExpression('now', []),
-            text$: Variable('Via backend: $body'),
+          TodoCompanion.insert(
+            id: genUUID(),
+            completed: false,
+            editedAt: DateTime.now(),
+            text$: Value('Via backend: $body'),
           ),
         );
     return Response(201);
