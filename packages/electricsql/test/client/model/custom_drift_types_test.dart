@@ -541,7 +541,7 @@ Future<void> _testCustomType<DartT extends Object>(
   TestsDatabase db, {
   required DartT value,
   required GeneratedColumn<DartT> column,
-  required CustomSqlType<DartT>? customT,
+  required DialectAwareSqlType<DartT>? customT,
   required DataTypesCompanion Function(DataTypesCompanion, DartT value)
       insertCol,
   DartT? expected,
