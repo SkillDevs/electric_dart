@@ -114,6 +114,24 @@ class TestsDatabase extends _$TestsDatabase {
     );
   }
 
+  factory TestsDatabase.inMemoryPostgres() {
+    return TestsDatabase(
+      NativeDatabase.memory(
+        setup: (db) {
+          db.config.doubleQuotedStringLiterals = false;
+        },
+        // logStatements: true,
+      ).interceptWith(_PretendToBePostgres()),
+    );
+  }
+
   @override
   int get schemaVersion => 1;
+}
+
+class _PretendToBePostgres extends QueryInterceptor {
+  @override
+  SqlDialect dialect(QueryExecutor executor) {
+    return SqlDialect.postgres;
+  }
 }

@@ -4,12 +4,14 @@ import 'package:drift/drift.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
+import 'package:postgres/postgres.dart' as pg;
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 
 void main() async {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   final db = TestsDatabase.memory();
 
   await electrifyTestDatabase(db);
@@ -569,8 +571,27 @@ Future<void> _testCustomType<DartT extends Object>(
   final columnDriftValue = (columns[column.name]! as Variable<DartT>).value;
 
   if (value is double && value.isNaN) {
-    expect(columnDriftValue is double && columnDriftValue.isNaN, isTrue);
+    expect(columnDriftValue, isNaN);
   } else {
     expect(columnDriftValue, expected ?? value);
+  }
+
+  // Quick sanity check for postgres: it should map to a TypedValue that our
+  // wrappers would interpret correctly.
+  if (customT != null) {
+    final context = GenerationContext.fromDb(TestsDatabase.inMemoryPostgres());
+    final mappedValue = customT.mapToSqlParameter(context, value);
+    expect(mappedValue, isA<pg.TypedValue>());
+
+    final deserialized = customT.read(
+      context.typeMapping,
+      (mappedValue as pg.TypedValue).value!,
+    );
+
+    if (value is double && value.isNaN) {
+      expect(deserialized, isNaN);
+    } else {
+      expect(deserialized, value);
+    }
   }
 }
