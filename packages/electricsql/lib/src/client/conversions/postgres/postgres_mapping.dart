@@ -1,7 +1,7 @@
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:postgres/postgres.dart' as pg;
 
-Object mapToSql(PgType type, Object dartValue) {
+Object mapToSql(PgType? type, Object dartValue) {
   return switch (type) {
     PgType.bool => pg.TypedValue(pg.Type.boolean, dartValue),
     PgType.int ||
@@ -25,5 +25,14 @@ Object mapToSql(PgType type, Object dartValue) {
     PgType.timeTz =>
       pg.TypedValue(pg.Type.timestampWithTimezone, dartValue),
     PgType.date => pg.TypedValue(pg.Type.date, dartValue),
+    // We use the string representation for the enums
+    // Because we don't have the oid, we need to use Type.unspecified
+    // and decode UndecodedBytes when reading the value
+    null => pg.TypedValue(pg.Type.unspecified, dartValue as String),
   };
+}
+
+String readEnum(Object sqlValue) {
+  final enumStr = (sqlValue as pg.UndecodedBytes).asString;
+  return enumStr;
 }

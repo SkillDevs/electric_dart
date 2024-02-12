@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:electricsql/src/client/conversions/mapping.dart';
+import 'package:electricsql/src/client/conversions/postgres/mapping.dart'
+    as pg_mapping;
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/converters/type_converters.dart';
 
@@ -67,7 +68,7 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
   @override
   Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
     if (context.dialect == SqlDialect.postgres) {
-      return mapToSql(pgType, dartValue);
+      return pg_mapping.mapToSql(pgType, dartValue);
     } else {
       return super.mapToSqlParameter(context, dartValue);
     }
@@ -77,6 +78,36 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
   DartT read(SqlTypes types, Object fromSql) {
     if (types.dialect == SqlDialect.postgres) {
       return fromSql as DartT;
+    } else {
+      return super.read(types, fromSql);
+    }
+  }
+}
+
+class CustomElectricTypeEnum<DartT extends Object>
+    extends CustomElectricTypeGeneric<DartT, String> {
+  const CustomElectricTypeEnum({
+    required super.codec,
+    required super.typeName,
+  });
+
+  @override
+  Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
+    if (context.dialect == SqlDialect.postgres) {
+      // Enums are treated as null pgtype
+      const PgType? pgType = null;
+      final String enumStr = codec.encode(dartValue);
+      return pg_mapping.mapToSql(pgType, enumStr);
+    } else {
+      return super.mapToSqlParameter(context, dartValue);
+    }
+  }
+
+  @override
+  DartT read(SqlTypes types, Object fromSql) {
+    if (types.dialect == SqlDialect.postgres) {
+      final enumStr = pg_mapping.readEnum(fromSql);
+      return codec.decode(enumStr);
     } else {
       return super.read(types, fromSql);
     }

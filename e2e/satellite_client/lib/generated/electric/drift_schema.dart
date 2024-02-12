@@ -187,7 +187,7 @@ class ElectricEnumCodecs {
 /// Drift custom types for Electric enums
 class ElectricEnumTypes {
   /// Codec for Dart enum "Color"
-  static final color = CustomElectricTypeGeneric(
+  static final color = CustomElectricTypeEnum(
     codec: ElectricEnumCodecs.color,
     typeName: 'Color',
   );

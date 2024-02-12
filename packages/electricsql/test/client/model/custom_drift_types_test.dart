@@ -330,6 +330,12 @@ void main() async {
       );
     });
   });
+
+  group('enum', () {
+    test('regular', () async {
+      await _testColorEnum(db, DbColor.blue);
+    });
+  });
 }
 
 Future<void> _testDate(TestsDatabase db, DateTime value) async {
@@ -536,6 +542,18 @@ Future<void> _testJson(TestsDatabase db, Object value) async {
       json: Value(v),
     ),
     customT: ElectricTypes.json,
+  );
+}
+
+Future<void> _testColorEnum(TestsDatabase db, DbColor value) async {
+  await _testCustomType<DbColor>(
+    db,
+    value: value,
+    column: db.dataTypes.enumCol,
+    insertCol: (c, v) => c.copyWith(
+      enumCol: Value(v),
+    ),
+    customT: ElectricEnumTypes.color,
   );
 }
 

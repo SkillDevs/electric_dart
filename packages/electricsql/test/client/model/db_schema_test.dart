@@ -19,7 +19,8 @@ void main() async {
     final dataTypesFields = dbDescription.getFields('DataTypes');
 
     final numCols = db.dataTypes.$columns.length;
-    expect(dataTypesFields.length, numCols);
+    // Don't count the enum column
+    expect(dataTypesFields.length, numCols - 1);
 
     expect(dataTypesFields, {
       'id': PgType.integer,
