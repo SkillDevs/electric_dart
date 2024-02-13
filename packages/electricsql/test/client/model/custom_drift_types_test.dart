@@ -601,9 +601,18 @@ Future<void> _testCustomType<DartT extends Object>(
     final mappedValue = customT.mapToSqlParameter(context, value);
     expect(mappedValue, isA<pg.TypedValue>());
 
+    final typedValue = mappedValue as pg.TypedValue;
+    final Object sqlValue;
+    if (typedValue.type == pg.Type.unspecified) {
+      final enumStr = typedValue.value! as String;
+      sqlValue = _getUndecodedBytesForString(enumStr);
+    } else {
+      sqlValue = typedValue.value!;
+    }
+
     final deserialized = customT.read(
       context.typeMapping,
-      (mappedValue as pg.TypedValue).value!,
+      sqlValue,
     );
 
     if (value is double && value.isNaN) {
@@ -612,4 +621,14 @@ Future<void> _testCustomType<DartT extends Object>(
       expect(deserialized, value);
     }
   }
+}
+
+pg.UndecodedBytes _getUndecodedBytesForString(String str) {
+  const Encoding encoding = Utf8Codec();
+  return pg.UndecodedBytes(
+    typeOid: 12345,
+    isBinary: true,
+    bytes: Uint8List.fromList(encoding.encode(str)),
+    encoding: encoding,
+  );
 }

@@ -33,6 +33,7 @@ Object mapToSql(PgType? type, Object dartValue) {
 }
 
 String readEnum(Object sqlValue) {
+  if (sqlValue is String) return sqlValue;
   final enumStr = (sqlValue as pg.UndecodedBytes).asString;
   return enumStr;
 }
