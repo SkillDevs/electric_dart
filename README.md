@@ -74,7 +74,7 @@ final electric = await electrify<AppDatabase>(
             token: '<your JWT>',
         ),
         // logger: LoggerConfig(
-        //     level: Level.debug, // in production you can use Logger.off
+        //     level: Level.debug, // in production you can use Level.off
         // ),
     ),
 );
