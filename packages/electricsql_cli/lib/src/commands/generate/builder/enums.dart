@@ -94,7 +94,7 @@ Class getElectricEnumTypesClass(DriftSchemaInfo driftSchemaInfo) {
     final customTypeRef = TypeReference(
       (b) => b
         ..url = kElectricSqlDriftImport
-        ..symbol = 'CustomElectricTypeGeneric',
+        ..symbol = 'CustomElectricTypeEnum',
     );
 
     final enumCodecField = Field(

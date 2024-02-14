@@ -240,19 +240,19 @@ class ElectricEnumCodecs {
 /// Drift custom types for Electric enums
 class ElectricEnumTypes {
   /// Codec for Dart enum "color"
-  static final color = CustomElectricTypeGeneric(
+  static final color = CustomElectricTypeEnum(
     codec: ElectricEnumCodecs.color,
     typeName: 'color',
   );
 
   /// Codec for Dart enum "integer"
-  static final integer = CustomElectricTypeGeneric(
+  static final integer = CustomElectricTypeEnum(
     codec: ElectricEnumCodecs.integer,
     typeName: 'integer',
   );
 
   /// Codec for Dart enum "snake_case_enum"
-  static final snakeCaseEnum = CustomElectricTypeGeneric(
+  static final snakeCaseEnum = CustomElectricTypeEnum(
     codec: ElectricEnumCodecs.snakeCaseEnum,
     typeName: 'snake_case_enum',
   );

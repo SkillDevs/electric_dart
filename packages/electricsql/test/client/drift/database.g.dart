@@ -80,7 +80,7 @@ class TableFromDriftFileData extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['timestamp'] = Variable<DateTime>(timestamp);
+    map['timestamp'] = Variable<DateTime>(timestamp, ElectricTypes.timestampTZ);
     return map;
   }
 
@@ -1136,7 +1136,7 @@ class DummyData extends DataClass implements Insertable<DummyData> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     if (!nullToAbsent || timestamp != null) {
-      map['timestamp'] = Variable<DateTime>(timestamp);
+      map['timestamp'] = Variable<DateTime>(timestamp, ElectricTypes.timestamp);
     }
     return map;
   }
@@ -1331,6 +1331,12 @@ class $DataTypesTable extends DataTypes
   late final GeneratedColumn<Object> json = GeneratedColumn<Object>(
       'json', aliasedName, true,
       type: ElectricTypes.json, requiredDuringInsert: false);
+  static const VerificationMeta _enumColMeta =
+      const VerificationMeta('enumCol');
+  @override
+  late final GeneratedColumn<DbColor> enumCol = GeneratedColumn<DbColor>(
+      'enum', aliasedName, true,
+      type: ElectricEnumTypes.color, requiredDuringInsert: false);
   static const VerificationMeta _relatedIdMeta =
       const VerificationMeta('relatedId');
   @override
@@ -1357,6 +1363,7 @@ class $DataTypesTable extends DataTypes
         float4,
         float8,
         json,
+        enumCol,
         relatedId
       ];
   @override
@@ -1432,6 +1439,10 @@ class $DataTypesTable extends DataTypes
       context.handle(
           _jsonMeta, json.isAcceptableOrUnknown(data['json']!, _jsonMeta));
     }
+    if (data.containsKey('enum')) {
+      context.handle(_enumColMeta,
+          enumCol.isAcceptableOrUnknown(data['enum']!, _enumColMeta));
+    }
     if (data.containsKey('relatedId')) {
       context.handle(_relatedIdMeta,
           relatedId.isAcceptableOrUnknown(data['relatedId']!, _relatedIdMeta));
@@ -1475,6 +1486,8 @@ class $DataTypesTable extends DataTypes
           .read(ElectricTypes.float8, data['${effectivePrefix}float8']),
       json: attachedDatabase.typeMapping
           .read(ElectricTypes.json, data['${effectivePrefix}json']),
+      enumCol: attachedDatabase.typeMapping
+          .read(ElectricEnumTypes.color, data['${effectivePrefix}enum']),
       relatedId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}relatedId']),
     );
@@ -1502,6 +1515,7 @@ class DataType extends DataClass implements Insertable<DataType> {
   final double? float4;
   final double? float8;
   final Object? json;
+  final DbColor? enumCol;
   final int? relatedId;
   const DataType(
       {required this.id,
@@ -1519,52 +1533,57 @@ class DataType extends DataClass implements Insertable<DataType> {
       this.float4,
       this.float8,
       this.json,
+      this.enumCol,
       this.relatedId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     if (!nullToAbsent || date != null) {
-      map['date'] = Variable<DateTime>(date);
+      map['date'] = Variable<DateTime>(date, ElectricTypes.date);
     }
     if (!nullToAbsent || time != null) {
-      map['time'] = Variable<DateTime>(time);
+      map['time'] = Variable<DateTime>(time, ElectricTypes.time);
     }
     if (!nullToAbsent || timetz != null) {
-      map['timetz'] = Variable<DateTime>(timetz);
+      map['timetz'] = Variable<DateTime>(timetz, ElectricTypes.timeTZ);
     }
     if (!nullToAbsent || timestamp != null) {
-      map['timestamp'] = Variable<DateTime>(timestamp);
+      map['timestamp'] = Variable<DateTime>(timestamp, ElectricTypes.timestamp);
     }
     if (!nullToAbsent || timestamptz != null) {
-      map['timestamptz'] = Variable<DateTime>(timestamptz);
+      map['timestamptz'] =
+          Variable<DateTime>(timestamptz, ElectricTypes.timestampTZ);
     }
     if (!nullToAbsent || boolCol != null) {
       map['bool'] = Variable<bool>(boolCol);
     }
     if (!nullToAbsent || uuid != null) {
-      map['uuid'] = Variable<String>(uuid);
+      map['uuid'] = Variable<String>(uuid, ElectricTypes.uuid);
     }
     if (!nullToAbsent || int2 != null) {
-      map['int2'] = Variable<int>(int2);
+      map['int2'] = Variable<int>(int2, ElectricTypes.int2);
     }
     if (!nullToAbsent || int4 != null) {
-      map['int4'] = Variable<int>(int4);
+      map['int4'] = Variable<int>(int4, ElectricTypes.int4);
     }
     if (!nullToAbsent || int8 != null) {
-      map['int8'] = Variable<int>(int8);
+      map['int8'] = Variable<int>(int8, ElectricTypes.int8);
     }
     if (!nullToAbsent || int8BigInt != null) {
       map['int8_big_int'] = Variable<BigInt>(int8BigInt);
     }
     if (!nullToAbsent || float4 != null) {
-      map['float4'] = Variable<double>(float4);
+      map['float4'] = Variable<double>(float4, ElectricTypes.float4);
     }
     if (!nullToAbsent || float8 != null) {
-      map['float8'] = Variable<double>(float8);
+      map['float8'] = Variable<double>(float8, ElectricTypes.float8);
     }
     if (!nullToAbsent || json != null) {
-      map['json'] = Variable<Object>(json);
+      map['json'] = Variable<Object>(json, ElectricTypes.json);
+    }
+    if (!nullToAbsent || enumCol != null) {
+      map['enum'] = Variable<DbColor>(enumCol, ElectricEnumTypes.color);
     }
     if (!nullToAbsent || relatedId != null) {
       map['relatedId'] = Variable<int>(relatedId);
@@ -1600,6 +1619,9 @@ class DataType extends DataClass implements Insertable<DataType> {
       float8:
           float8 == null && nullToAbsent ? const Value.absent() : Value(float8),
       json: json == null && nullToAbsent ? const Value.absent() : Value(json),
+      enumCol: enumCol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(enumCol),
       relatedId: relatedId == null && nullToAbsent
           ? const Value.absent()
           : Value(relatedId),
@@ -1625,6 +1647,7 @@ class DataType extends DataClass implements Insertable<DataType> {
       float4: serializer.fromJson<double?>(json['float4']),
       float8: serializer.fromJson<double?>(json['float8']),
       json: serializer.fromJson<Object?>(json['json']),
+      enumCol: serializer.fromJson<DbColor?>(json['enumCol']),
       relatedId: serializer.fromJson<int?>(json['relatedId']),
     );
   }
@@ -1647,6 +1670,7 @@ class DataType extends DataClass implements Insertable<DataType> {
       'float4': serializer.toJson<double?>(float4),
       'float8': serializer.toJson<double?>(float8),
       'json': serializer.toJson<Object?>(json),
+      'enumCol': serializer.toJson<DbColor?>(enumCol),
       'relatedId': serializer.toJson<int?>(relatedId),
     };
   }
@@ -1667,6 +1691,7 @@ class DataType extends DataClass implements Insertable<DataType> {
           Value<double?> float4 = const Value.absent(),
           Value<double?> float8 = const Value.absent(),
           Value<Object?> json = const Value.absent(),
+          Value<DbColor?> enumCol = const Value.absent(),
           Value<int?> relatedId = const Value.absent()}) =>
       DataType(
         id: id ?? this.id,
@@ -1684,6 +1709,7 @@ class DataType extends DataClass implements Insertable<DataType> {
         float4: float4.present ? float4.value : this.float4,
         float8: float8.present ? float8.value : this.float8,
         json: json.present ? json.value : this.json,
+        enumCol: enumCol.present ? enumCol.value : this.enumCol,
         relatedId: relatedId.present ? relatedId.value : this.relatedId,
       );
   @override
@@ -1704,6 +1730,7 @@ class DataType extends DataClass implements Insertable<DataType> {
           ..write('float4: $float4, ')
           ..write('float8: $float8, ')
           ..write('json: $json, ')
+          ..write('enumCol: $enumCol, ')
           ..write('relatedId: $relatedId')
           ..write(')'))
         .toString();
@@ -1726,6 +1753,7 @@ class DataType extends DataClass implements Insertable<DataType> {
       float4,
       float8,
       json,
+      enumCol,
       relatedId);
   @override
   bool operator ==(Object other) =>
@@ -1746,6 +1774,7 @@ class DataType extends DataClass implements Insertable<DataType> {
           other.float4 == this.float4 &&
           other.float8 == this.float8 &&
           other.json == this.json &&
+          other.enumCol == this.enumCol &&
           other.relatedId == this.relatedId);
 }
 
@@ -1765,6 +1794,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
   final Value<double?> float4;
   final Value<double?> float8;
   final Value<Object?> json;
+  final Value<DbColor?> enumCol;
   final Value<int?> relatedId;
   const DataTypesCompanion({
     this.id = const Value.absent(),
@@ -1782,6 +1812,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.float4 = const Value.absent(),
     this.float8 = const Value.absent(),
     this.json = const Value.absent(),
+    this.enumCol = const Value.absent(),
     this.relatedId = const Value.absent(),
   });
   DataTypesCompanion.insert({
@@ -1800,6 +1831,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.float4 = const Value.absent(),
     this.float8 = const Value.absent(),
     this.json = const Value.absent(),
+    this.enumCol = const Value.absent(),
     this.relatedId = const Value.absent(),
   });
   static Insertable<DataType> custom({
@@ -1818,6 +1850,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     Expression<double>? float4,
     Expression<double>? float8,
     Expression<Object>? json,
+    Expression<DbColor>? enumCol,
     Expression<int>? relatedId,
   }) {
     return RawValuesInsertable({
@@ -1836,6 +1869,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       if (float4 != null) 'float4': float4,
       if (float8 != null) 'float8': float8,
       if (json != null) 'json': json,
+      if (enumCol != null) 'enum': enumCol,
       if (relatedId != null) 'relatedId': relatedId,
     });
   }
@@ -1856,6 +1890,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       Value<double?>? float4,
       Value<double?>? float8,
       Value<Object?>? json,
+      Value<DbColor?>? enumCol,
       Value<int?>? relatedId}) {
     return DataTypesCompanion(
       id: id ?? this.id,
@@ -1873,6 +1908,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       float4: float4 ?? this.float4,
       float8: float8 ?? this.float8,
       json: json ?? this.json,
+      enumCol: enumCol ?? this.enumCol,
       relatedId: relatedId ?? this.relatedId,
     );
   }
@@ -1927,6 +1963,9 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     if (json.present) {
       map['json'] = Variable<Object>(json.value, ElectricTypes.json);
     }
+    if (enumCol.present) {
+      map['enum'] = Variable<DbColor>(enumCol.value, ElectricEnumTypes.color);
+    }
     if (relatedId.present) {
       map['relatedId'] = Variable<int>(relatedId.value);
     }
@@ -1951,6 +1990,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
           ..write('float4: $float4, ')
           ..write('float8: $float8, ')
           ..write('json: $json, ')
+          ..write('enumCol: $enumCol, ')
           ..write('relatedId: $relatedId')
           ..write(')'))
         .toString();

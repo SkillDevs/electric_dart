@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
 
 part 'database.g.dart';
@@ -85,6 +86,8 @@ class DataTypes extends Table {
   RealColumn get float4 => customType(ElectricTypes.float4).nullable()();
   RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
   Column<Object> get json => customType(ElectricTypes.json).nullable()();
+  Column<DbColor> get enumCol =>
+      customType(ElectricEnumTypes.color).named('enum').nullable()();
 
   IntColumn get relatedId =>
       integer().nullable().named('relatedId').references(Dummy, #id)();
@@ -114,6 +117,49 @@ class TestsDatabase extends _$TestsDatabase {
     );
   }
 
+  factory TestsDatabase.inMemoryPostgres() {
+    return TestsDatabase(
+      NativeDatabase.memory(
+        setup: (db) {
+          db.config.doubleQuotedStringLiterals = false;
+        },
+        // logStatements: true,
+      ).interceptWith(_PretendToBePostgres()),
+    );
+  }
+
   @override
   int get schemaVersion => 1;
+}
+
+class _PretendToBePostgres extends QueryInterceptor {
+  @override
+  SqlDialect dialect(QueryExecutor executor) {
+    return SqlDialect.postgres;
+  }
+}
+
+/// Dart enum for Postgres enum "Color"
+enum DbColor { red, green, blue }
+
+/// Codecs for Electric enums
+class ElectricEnumCodecs {
+  /// Codec for Dart enum "Color"
+  static final color = ElectricEnumCodec<DbColor>(
+    dartEnumToPgEnum: <DbColor, String>{
+      DbColor.red: 'RED',
+      DbColor.green: 'GREEN',
+      DbColor.blue: 'BLUE',
+    },
+    values: DbColor.values,
+  );
+}
+
+/// Drift custom types for Electric enums
+class ElectricEnumTypes {
+  /// Codec for Dart enum "Color"
+  static final color = CustomElectricTypeEnum(
+    codec: ElectricEnumCodecs.color,
+    typeName: 'Color',
+  );
 }

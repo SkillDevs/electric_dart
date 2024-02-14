@@ -4,12 +4,14 @@ import 'package:drift/drift.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
+import 'package:postgres/postgres.dart' as pg;
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 
 void main() async {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   final db = TestsDatabase.memory();
 
   await electrifyTestDatabase(db);
@@ -328,6 +330,12 @@ void main() async {
       );
     });
   });
+
+  group('enum', () {
+    test('regular', () async {
+      await _testColorEnum(db, DbColor.blue);
+    });
+  });
 }
 
 Future<void> _testDate(TestsDatabase db, DateTime value) async {
@@ -537,11 +545,23 @@ Future<void> _testJson(TestsDatabase db, Object value) async {
   );
 }
 
+Future<void> _testColorEnum(TestsDatabase db, DbColor value) async {
+  await _testCustomType<DbColor>(
+    db,
+    value: value,
+    column: db.dataTypes.enumCol,
+    insertCol: (c, v) => c.copyWith(
+      enumCol: Value(v),
+    ),
+    customT: ElectricEnumTypes.color,
+  );
+}
+
 Future<void> _testCustomType<DartT extends Object>(
   TestsDatabase db, {
   required DartT value,
   required GeneratedColumn<DartT> column,
-  required CustomSqlType<DartT>? customT,
+  required DialectAwareSqlType<DartT>? customT,
   required DataTypesCompanion Function(DataTypesCompanion, DartT value)
       insertCol,
   DartT? expected,
@@ -569,8 +589,46 @@ Future<void> _testCustomType<DartT extends Object>(
   final columnDriftValue = (columns[column.name]! as Variable<DartT>).value;
 
   if (value is double && value.isNaN) {
-    expect(columnDriftValue is double && columnDriftValue.isNaN, isTrue);
+    expect(columnDriftValue, isNaN);
   } else {
     expect(columnDriftValue, expected ?? value);
   }
+
+  // Quick sanity check for postgres: it should map to a TypedValue that our
+  // wrappers would interpret correctly.
+  if (customT != null) {
+    final context = GenerationContext.fromDb(TestsDatabase.inMemoryPostgres());
+    final mappedValue = customT.mapToSqlParameter(context, value);
+    expect(mappedValue, isA<pg.TypedValue>());
+
+    final typedValue = mappedValue as pg.TypedValue;
+    final Object sqlValue;
+    if (typedValue.type == pg.Type.unspecified) {
+      final enumStr = typedValue.value! as String;
+      sqlValue = _getUndecodedBytesForString(enumStr);
+    } else {
+      sqlValue = typedValue.value!;
+    }
+
+    final deserialized = customT.read(
+      context.typeMapping,
+      sqlValue,
+    );
+
+    if (value is double && value.isNaN) {
+      expect(deserialized, isNaN);
+    } else {
+      expect(deserialized, value);
+    }
+  }
+}
+
+pg.UndecodedBytes _getUndecodedBytesForString(String str) {
+  const Encoding encoding = Utf8Codec();
+  return pg.UndecodedBytes(
+    typeOid: 12345,
+    isBinary: true,
+    bytes: Uint8List.fromList(encoding.encode(str)),
+    encoding: encoding,
+  );
 }

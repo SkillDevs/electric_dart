@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:todos_electrified/database/database.dart';
 import 'package:todos_electrified/database/drift/database.dart';
+import 'package:todos_electrified/database/drift/drift_repository.dart';
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/theme.dart';
 import 'package:todos_electrified/util/confirmation_dialog.dart';
