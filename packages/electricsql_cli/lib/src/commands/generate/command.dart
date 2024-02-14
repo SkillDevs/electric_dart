@@ -58,7 +58,10 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
       )
       ..addFlag(
         'debug',
-        help: 'Optional flag to enable debug mode',
+        help: '''
+Optional flag to enable debug mode
+
+When enabled, the temporary migration files used to generate the client will be retained for inspection.''',
         defaultsTo: false,
         negatable: false,
       );
@@ -298,6 +301,7 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
   // Create a unique temporary folder in which to save
   // intermediate files without risking collisions
   final tmpDir = await currentDir.createTemp('.electric_migrations_tmp_');
+  // ignore: unused_local_variable
   bool generationFailed = false;
 
   try {
@@ -362,9 +366,7 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
     logger.err('generate command failed: $e');
     rethrow;
   } finally {
-    // Delete our temporary directory unless
-    // generation failed in debug mode
-    if (!generationFailed || !opts.debug) {
+    if (!opts.debug) {
       await tmpDir.delete(recursive: true);
     }
   }
