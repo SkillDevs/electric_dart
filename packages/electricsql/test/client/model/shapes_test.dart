@@ -26,9 +26,7 @@ late DriftElectricClient<TestsDatabase> electric;
 
 List<String> log = [];
 
-const authConfig = AuthConfig(
-  token: 'test-token',
-);
+final authToken = insecureAuthToken({'sub': 'test-token'});
 
 final relations = <String, Relation>{
   'Post': Relation(
@@ -111,6 +109,12 @@ final profile = <String, Object?>{
   'userId': 1,
 };
 
+Future<void> startSatellite(SatelliteProcess satellite, String token) async {
+  await satellite.start(null);
+  satellite.setToken(token);
+  await satellite.connectWithBackoff();
+}
+
 void main() {
   setupLoggerMock(() => log);
 
@@ -124,7 +128,7 @@ void main() {
   });
 
   test('promise resolves when subscription starts loading', () async {
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authToken);
 
     client.setRelations(relations);
     client.setRelationData('Post', post);
@@ -138,7 +142,7 @@ void main() {
   });
 
   test('synced promise resolves when subscription is fulfilled', () async {
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authToken);
 
     // We can request a subscription
     client.setRelations(relations);
@@ -164,7 +168,7 @@ void main() {
   });
 
   test('promise is rejected on failed subscription request', () async {
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authToken);
 
     try {
       await electric.syncTables(['Items']);
@@ -175,7 +179,7 @@ void main() {
   });
 
   test('synced promise is rejected on invalid shape', () async {
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authToken);
 
     bool loadingPromResolved = false;
 

@@ -1,4 +1,3 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:equatable/equatable.dart';
 import 'package:events_emitter/listener.dart';

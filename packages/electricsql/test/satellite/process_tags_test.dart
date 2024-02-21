@@ -40,7 +40,7 @@ void main() {
   test('basic rules for setting tags', () async {
     await context.runMigrations();
 
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
     final clientId = satellite.authState?.clientId ?? 'test_client';
 
     await adapter.run(
@@ -99,7 +99,7 @@ void main() {
 
   test('TX1=INSERT, TX2=DELETE, TX3=INSERT, ack TX1', () async {
     await context.runMigrations();
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
 
     final clientId = satellite.authState?.clientId ?? 'test_id';
 
@@ -207,7 +207,7 @@ void main() {
   test('remote tx (INSERT) concurrently with local tx (INSERT -> DELETE)',
       () async {
     await context.runMigrations();
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
 
     final List<Statement> stmts = [];
 
@@ -326,7 +326,7 @@ void main() {
   test('remote tx (INSERT) concurrently with 2 local txses (INSERT -> DELETE)',
       () async {
     await context.runMigrations();
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
 
     List<Statement> stmts = [];
 
@@ -443,7 +443,7 @@ void main() {
   test('remote tx (INSERT) concurrently with local tx (INSERT -> UPDATE)',
       () async {
     await context.runMigrations();
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
     final clientId = satellite.authState?.clientId ?? 'test_id';
     final stmts = <Statement>[];
 
@@ -582,7 +582,7 @@ void main() {
       () async {
     //
     await context.runMigrations();
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
     final clientId = satellite.authState?.clientId ?? 'test_id';
 
     var stmts = <Statement>[];
@@ -686,7 +686,7 @@ void main() {
 
   test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', () async {
     await context.runMigrations();
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
     final clientId = satellite.authState?.clientId ?? 'test_id';
     final txDate1 = DateTime.now();
 

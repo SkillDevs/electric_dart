@@ -31,14 +31,6 @@ abstract class Registry {
   Future<void> stopAll();
 }
 
-class ConnectionWrapper {
-  final Future<void> connectionFuture;
-
-  ConnectionWrapper({
-    required this.connectionFuture,
-  });
-}
-
 abstract class Satellite {
   DbName get dbName;
   DatabaseAdapter get adapter;
@@ -47,8 +39,10 @@ abstract class Satellite {
 
   ConnectivityState? connectivityState;
 
-  Future<ConnectionWrapper> start(AuthConfig authConfig);
+  Future<void> start(AuthConfig? authConfig);
   Future<void> stop({bool? shutdown});
+  void setToken(String token);
+  Future<void> connectWithBackoff();
   Future<ShapeSubscription> subscribe(
     List<ClientShapeDefinition> shapeDefinitions,
   );

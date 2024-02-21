@@ -6,18 +6,12 @@ import '../support/log_mock.dart';
 
 final log = <String>[];
 
-const AuthConfig validAuth = AuthConfig(token: 'test-token');
-
 void main() {
   setupLoggerMock(() => log);
 
   test('hydrateConfig adds expected defaults', () {
     final hydrated = hydrateConfig(
-      ElectricConfig(
-        auth: const AuthConfig(
-          token: 'test-token',
-        ),
-      ),
+      ElectricConfig(),
     );
 
     expect(hydrated.replication.host, 'localhost');
@@ -25,7 +19,7 @@ void main() {
     expect(hydrated.replication.ssl, false);
     expect(hydrated.replication.timeout, const Duration(milliseconds: 3000));
 
-    expect(hydrated.auth.token, 'test-token');
+    expect(hydrated.auth, const AuthConfig());
 
     //expect(hydrated.debug, false);
   });
@@ -34,7 +28,7 @@ void main() {
     final hydrated = hydrateConfig(
       ElectricConfig(
         auth: const AuthConfig(
-          token: 'test-token-2',
+          clientId: 'some-id',
         ),
         url: 'https://192.169.2.10',
         //debug: true,
@@ -45,7 +39,7 @@ void main() {
     expect(hydrated.replication.port, 443);
     expect(hydrated.replication.ssl, true);
 
-    expect(hydrated.auth.token, 'test-token-2');
+    expect(hydrated.auth.clientId, 'some-id');
 
     //expect(hydrated.debug, true);
   });
@@ -79,7 +73,6 @@ void main() {
 
       final config = hydrateConfig(
         ElectricConfig(
-          auth: validAuth,
           url: '$scheme://1.1.1.1',
         ),
       );
@@ -91,31 +84,11 @@ void main() {
   test('hydrateConfig ssl', () {
     final httpsConfig = hydrateConfig(
       ElectricConfig(
-        auth: validAuth,
         url: 'http://1.1.1.1?ssl=true',
       ),
     );
 
     expect(httpsConfig.replication.ssl, true);
-  });
-
-  test('hydrateConfig checks for auth token', () {
-    expect(
-      () => hydrateConfig(
-        ElectricConfig(
-          auth: const AuthConfig(
-            token: '',
-          ),
-        ),
-      ),
-      throwsA(
-        isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          'Exception: Invalid configuration. Missing authentication token.',
-        ),
-      ),
-    );
   });
 
   test('throws for invalid service url', () {
@@ -127,7 +100,6 @@ void main() {
       expect(
         () => hydrateConfig(
           ElectricConfig(
-            auth: validAuth,
             url: url,
           ),
         ),
@@ -169,7 +141,6 @@ void main() {
 
       hydrateConfig(
         ElectricConfig(
-          auth: validAuth,
           url: url,
         ),
       );

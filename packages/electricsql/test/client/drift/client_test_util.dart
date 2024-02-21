@@ -11,7 +11,7 @@ Future<DriftElectricClient<DB>>
     dbName: 'test-db',
     db: db,
     migrations: [],
-    config: ElectricConfig(auth: const AuthConfig(token: 'test-token')),
+    config: ElectricConfig(),
     opts: ElectrifyOptions(
       registry: MockRegistry(),
     ),

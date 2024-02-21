@@ -3,12 +3,11 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
     show SqliteAdapter;
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart' as adp
     show Transaction;
-import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
@@ -59,6 +58,16 @@ const childRecord = <String, Object?>{
   'parent': 1,
 };
 
+Future<({Future<void> connectionFuture})> startSatellite(
+  SatelliteProcess satellite,
+  AuthConfig authConfig,
+) async {
+  await satellite.start(authConfig);
+  satellite.setToken(insecureAuthToken({'sub': 'test-user'}));
+  final connectionFuture = satellite.connectWithBackoff();
+  return (connectionFuture: connectionFuture);
+}
+
 void main() {
   setUp(() async {
     context = await makeContext();
@@ -69,13 +78,11 @@ void main() {
   });
 
   test('start creates system tables', () async {
-    final conn = await satellite.start(context.authConfig);
+    await satellite.start(context.authConfig);
 
     const sql = "select name from sqlite_master where type = 'table'";
     final rows = await adapter.query(Statement(sql));
     final names = rows.map((row) => row['name']! as String).toList();
-
-    await conn.connectionFuture;
 
     expect(names, contains('_electric_oplog'));
   });
@@ -93,11 +100,11 @@ void main() {
   });
 
   test('set persistent client id', () async {
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authConfig);
     final clientId1 = satellite.authState!.clientId;
     await satellite.stop();
 
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authConfig);
 
     final clientId2 = satellite.authState!.clientId;
 
@@ -105,6 +112,20 @@ void main() {
     // Give time for the starting performSnapshot to finish
     // Otherwise the database might not exist because the test ended
     await Future<void>.delayed(const Duration(milliseconds: 100));
+  });
+
+  test('cannot update user id', () async {
+    await startSatellite(satellite, authConfig);
+    expect(
+      () => satellite.setToken(insecureAuthToken({'sub': 'test-user2'})),
+      throwsA(
+        isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          "Can't change user ID when reconnecting. Previously connected with user ID 'test-user' but trying to reconnect with user ID 'test-user2'",
+        ),
+      ),
+    );
   });
 
   test('cannot UPDATE primary key', () async {
@@ -126,7 +147,7 @@ void main() {
 
   test('snapshot works', () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
 
@@ -156,7 +177,7 @@ void main() {
 
   test('(regression) performSnapshot cant be called concurrently', () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     satellite.updateDatabaseAdapter(
       SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
@@ -183,7 +204,7 @@ void main() {
   test('(regression) throttle with mutex prevents race when snapshot is slow',
       () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     // delay termination of _performSnapshot
     satellite.updateDatabaseAdapter(
@@ -210,7 +231,7 @@ void main() {
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     await Future<void>.delayed(opts.pollingInterval);
@@ -231,7 +252,7 @@ void main() {
     // no txn notified
     expect(notifier.notifications.length, 4);
 
-    final conn1 = await satellite.start(authConfig);
+    final conn1 = await startSatellite(satellite, authConfig);
     await conn1.connectionFuture;
     await Future<void>.delayed(opts.pollingInterval);
 
@@ -265,7 +286,7 @@ void main() {
     await adapter.run(Statement('DELETE FROM parent WHERE id=1'));
     await adapter.run(Statement('INSERT INTO parent(id) VALUES (1)'));
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     await satellite.performSnapshot();
     final entries = await satellite.getEntries();
     final clientId = satellite.authState!.clientId;
@@ -292,7 +313,7 @@ void main() {
       ),
     );
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     await satellite.performSnapshot();
     final entries = await satellite.getEntries();
     final clientId = satellite.authState!.clientId;
@@ -335,7 +356,7 @@ void main() {
       ),
     );
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final localTime = await satellite.performSnapshot();
     final clientId = satellite.authState!.clientId;
 
@@ -388,7 +409,7 @@ void main() {
       ),
     );
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
     await satellite.performSnapshot();
 
@@ -450,7 +471,7 @@ void main() {
 
   test('merge incoming wins on persisted ops', () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     satellite.relations = kTestRelations;
 
     // This operation is persisted
@@ -551,7 +572,7 @@ void main() {
       ),
     );
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTimestamp = await satellite.performSnapshot();
@@ -630,7 +651,7 @@ void main() {
     // satellite must be aware of the relations in order to deserialise oplog entries
     satellite.relations = kTestRelations;
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     await satellite.apply([incomingEntry], 'remote');
 
     const sql = 'SELECT * from parent WHERE id=1';
@@ -644,7 +665,7 @@ void main() {
   test('apply empty incoming', () async {
     await runMigrations();
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     await satellite.apply([], 'external');
   });
@@ -668,7 +689,7 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     satellite.relations =
         kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
@@ -706,7 +727,7 @@ void main() {
       oldValues: {},
     );
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     satellite.relations =
         kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
@@ -728,7 +749,7 @@ void main() {
 
   test('INSERT wins over DELETE and restored deleted values', () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTs = DateTime.now();
@@ -809,7 +830,7 @@ void main() {
 
   test('concurrent updates take all changed values', () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTs = DateTime.now().millisecondsSinceEpoch;
@@ -899,7 +920,7 @@ void main() {
 
   test('merge incoming with empty local', () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final localTs = DateTime.now();
@@ -973,7 +994,7 @@ void main() {
 
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await satellite.setMeta('compensations', 0);
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     final incoming = generateLocalOplogEntry(
       tableInfo,
@@ -988,7 +1009,7 @@ void main() {
       },
     );
 
-    // await satellite.setAuthState(authState);
+    // satellite.setAuthState(authState);
 
     satellite.relations =
         kTestRelations; // satellite must be aware of the relations in order to turn `DataChange`s into `OpLogEntry`s
@@ -1020,7 +1041,7 @@ void main() {
 
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await satellite.setMeta('compensations', 0);
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final childInsertEntry = generateRemoteOplogEntry(
@@ -1096,7 +1117,7 @@ void main() {
     await adapter.run(
       Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
     );
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final ts = await satellite.performSnapshot();
     await satellite.garbageCollectOplog(ts);
 
@@ -1149,7 +1170,7 @@ void main() {
     await adapter.run(
       Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
     );
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
     final ts = await satellite.performSnapshot();
     await satellite.garbageCollectOplog(ts);
 
@@ -1295,7 +1316,7 @@ void main() {
   test('handling connectivity state change stops queueing operations',
       () async {
     await runMigrations();
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authConfig);
 
     await adapter.run(
       Statement(
@@ -1336,7 +1357,7 @@ void main() {
       'garbage collection is triggered when transaction from the same origin is replicated',
       () async {
     await runMigrations();
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authConfig);
 
     await adapter.run(
       Statement(
@@ -1377,7 +1398,7 @@ void main() {
     final base64lsn = base64.encode(numberToBytes(kMockBehindWindowLsn));
     await satellite.setMeta('lsn', base64lsn);
     try {
-      final conn = await satellite.start(authConfig);
+      final conn = await startSatellite(satellite, authConfig);
       await conn.connectionFuture;
       final lsnAfter = await satellite.getMeta<String?>('lsn');
       expect(lsnAfter, isNot(base64lsn));
@@ -1396,7 +1417,7 @@ void main() {
 
     int numExpects = 0;
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await Future.wait<dynamic>(
       [
         satellite.initializing!.waitOn(),
@@ -1423,7 +1444,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1485,7 +1506,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1515,7 +1536,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1554,7 +1575,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1607,7 +1628,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, childRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef1 = ClientShapeDefinition(
@@ -1643,7 +1664,7 @@ void main() {
     client.setRelationData('parent', parentRecord);
     client.setRelationData(tablename, childRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef1 = ClientShapeDefinition(
@@ -1692,7 +1713,7 @@ void main() {
     client.setRelationData('parent', parentRecord);
     client.setRelationData('child', childRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
@@ -1745,7 +1766,7 @@ void main() {
     client.setRelationData(tablename, parentRecord);
     client.setRelationData('another', {});
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
@@ -1803,7 +1824,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef1 = ClientShapeDefinition(
@@ -1877,7 +1898,7 @@ void main() {
 
   test("Garbage collecting the subscription doesn't generate oplog entries",
       () async {
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authConfig);
     await runMigrations();
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
     final ts = await satellite.performSnapshot();
@@ -1910,7 +1931,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await satellite.start(authConfig);
+    final conn = await startSatellite(satellite, authConfig);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1978,7 +1999,7 @@ void main() {
   test('DELETE after DELETE sends clearTags', () async {
     await runMigrations();
 
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     await adapter
         .run(Statement("INSERT INTO parent(id, value) VALUES (1,'val1')"));
@@ -2038,7 +2059,7 @@ void main() {
   // check that performing snapshot doesn't throw without resetting the performing snapshot assertions
   test('(regression) performSnapshot handles exceptions gracefully', () async {
     await runMigrations();
-    await satellite.setAuthState(authState);
+    satellite.setAuthState(authState);
 
     satellite.updateDatabaseAdapter(
       ReplaceTxDatabaseAdapter((satellite.adapter as SqliteAdapter).db),

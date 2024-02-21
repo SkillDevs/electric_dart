@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/auth/secure.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
@@ -147,7 +148,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @override
-  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+  Future<void> start(AuthConfig? authConfig) async {
     if (opts.debug) {
       await _logSQLiteVersion();
     }
@@ -159,11 +160,11 @@ class SatelliteProcess implements Satellite {
       throw Exception('Invalid database schema.');
     }
 
-    final configClientId = authConfig.clientId;
+    final configClientId = authConfig?.clientId;
     final clientId = configClientId != null && configClientId != ''
         ? configClientId
         : await _getClientId();
-    await setAuthState(AuthState(clientId: clientId, token: authConfig.token));
+    setAuthState(AuthState(clientId: clientId));
 
     final notifierSubscriptions = {
       '_authStateSubscription': _unsubscribeFromAuthState,
@@ -223,11 +224,6 @@ This means there is a notifier subscription leak.`''');
     if (subscriptionsState.isNotEmpty) {
       subscriptions.setState(subscriptionsState);
     }
-
-    final connectionFuture = connectWithBackoff();
-    return ConnectionWrapper(
-      connectionFuture: connectionFuture,
-    );
   }
 
   Future<void> _logSQLiteVersion() async {
@@ -237,7 +233,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   @visibleForTesting
-  Future<void> setAuthState(AuthState newAuthState) async {
+  void setAuthState(AuthState newAuthState) {
     authState = newAuthState;
   }
 
@@ -664,8 +660,42 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  @visibleForTesting
+  /// Sets the JWT token.
+  /// @param token The JWT token.
+  @override
+  void setToken(String token) {
+    final jwt = decodeToken(token);
+    final sub = jwt.sub;
+    final String? userId = authState?.userId;
+    if (userId != null && sub != userId) {
+      // We must check that the new token is still using the same user ID.
+      // We can't accept a re-connection that changes the user ID because the Satellite process is statefull.
+      // To change user ID the user must re-electrify the database.
+      throw ArgumentError(
+        "Can't change user ID when reconnecting. Previously connected with user ID '$userId' but trying to reconnect with user ID '$sub'",
+      );
+    }
+    setAuthState(
+      authState!.copyWith(
+        userId: () => sub,
+        token: () => token,
+      ),
+    );
+  }
+
+  @override
   Future<void> connectWithBackoff() async {
+    if (client.isConnected()) {
+      // we're already connected
+      return;
+    }
+
+    if (initializing != null && !initializing!.finished) {
+      // we're already trying to connect to Electric
+      // return the promise that resolves when the connection is established
+      return initializing!.waitOn();
+    }
+
     final _initializing = initializing;
     if (_initializing == null || _initializing.finished) {
       initializing = Waiter();

@@ -27,12 +27,11 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
   final context = useContext();
 
   useEffect(() {
-    bool mounted = true;
     InitData? initData;
 
     Future<void> init() async {
       final driftRepo = await initDriftTodosDatabase();
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       final todosDb = TodosDatabase(driftRepo);
       // final sqliteRepo = initSqliteRepository(dbPath);
@@ -45,7 +44,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
       try {
         electricClient = await startElectricDrift(dbName, driftRepo.db);
       } on SatelliteException catch (e) {
-        if (mounted) {
+        if (context.mounted) {
           if (e.code == SatelliteErrorCode.unknownSchemaVersion) {
             // Ask to delete the database
             final shouldDeleteLocal = await launchConfirmationDialog(
@@ -92,7 +91,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
         rethrow;
       }
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       final connectivityStateController =
           ConnectivityStateController(electricClient)..init();
@@ -107,9 +106,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
 
     init();
 
-    return () {
-      mounted = false;
-    };
+    return null;
   }, [retryVN.value]);
 }
 

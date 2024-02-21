@@ -22,15 +22,14 @@ Future<DriftElectricClient<AppDatabase>> startElectricDrift(
     db: db,
     migrations: kElectricMigrations,
     config: ElectricConfig(
-      auth: AuthConfig(
-        token: authToken(),
-      ),
       logger: LoggerConfig(
         level: Level.debug,
       ),
       // url: '<ELECTRIC_SERVICE_URL>',
     ),
   );
+
+  await client.connect(authToken());
 
   return client;
 }

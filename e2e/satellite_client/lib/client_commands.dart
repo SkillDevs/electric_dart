@@ -29,7 +29,6 @@ Future<MyDriftElectricClient> electrifyDb(
   final config = ElectricConfig(
     url: "electric://$host:$port",
     logger: LoggerConfig(level: Level.debug, colored: false),
-    auth: AuthConfig(token: await mockSecureAuthToken()),
   );
   print("(in electrify_db) config: ${electricConfigToJson(config)}");
 
@@ -41,6 +40,8 @@ Future<MyDriftElectricClient> electrifyDb(
     migrations: migrations,
     config: config,
   );
+  final token = await mockSecureAuthToken();
+  await result.connect(token); // connect to Electric
 
   result.notifier.subscribeToConnectivityStateChanges(
     (ConnectivityStateChangeNotification x) => print(

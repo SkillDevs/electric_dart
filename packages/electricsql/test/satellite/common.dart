@@ -1,4 +1,3 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnectionUser;
@@ -227,7 +226,7 @@ Future<SatelliteTestContext> makeContext({
   final tableInfo = initTableInfo();
   final timestamp = DateTime.now();
 
-  const authConfig = AuthConfig(clientId: '', token: 'test-token');
+  const authConfig = AuthConfig(clientId: '');
 
   return SatelliteTestContext(
     dbName: dbName,
@@ -255,8 +254,7 @@ class SatelliteTestContext {
   final DateTime timestamp;
   final AuthConfig authConfig;
 
-  late final AuthState authState =
-      AuthState(clientId: authConfig.clientId!, token: authConfig.token);
+  late final AuthState authState = AuthState(clientId: authConfig.clientId!);
 
   SatelliteTestContext({
     required this.dbName,
@@ -306,11 +304,11 @@ Future<ElectricClient> mockElectricClient(
     opts: options,
   );
 
-  await satellite.start(const AuthConfig(clientId: '', token: 'test-token'));
+  await satellite.start(const AuthConfig(clientId: ''));
   registry.satellites[dbName] = satellite;
 
-  // @ts-ignore Mock Electric client that does not contain the DAL
-  return ElectricClientImpl.internal(
+  // Mock Electric client that does not contain the DAL
+  final electric = ElectricClientImpl.internal(
     dbName: dbName,
     adapter: adapter,
     notifier: notifier,
@@ -319,6 +317,9 @@ Future<ElectricClient> mockElectricClient(
     shapeManager: ShapeManagerMock(),
     dbDescription: DBSchemaRaw(fields: {}, migrations: []),
   );
+
+  await electric.connect(insecureAuthToken({'sub': 'test-token'}));
+  return electric;
 }
 
 Future<void> cleanAndStopSatelliteRaw({

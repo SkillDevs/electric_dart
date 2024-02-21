@@ -25,6 +25,7 @@ abstract interface class ElectricClient {
 
   Satellite get satellite;
 
+  Future<void> connect(String token);
   Future<ShapeSubscription> syncTables(List<String> tables);
 }
 
@@ -37,6 +38,15 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
 
   @override
   final DBSchema dbDescription;
+
+  /// Connects to the Electric sync service.
+  /// This method is idempotent, it is safe to call it multiple times.
+  /// @param token - The JWT token to use to connect to the Electric sync service.
+  @override
+  Future<void> connect(String token) async {
+    satellite.setToken(token);
+    await satellite.connectWithBackoff();
+  }
 
   factory ElectricClientImpl.create({
     required String dbName,

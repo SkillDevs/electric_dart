@@ -42,7 +42,7 @@ void main() {
   test('throttled snapshot respects window', () async {
     await context.runMigrations();
 
-    await satellite.setAuthState(context.authState);
+    satellite.setAuthState(context.authState);
     await satellite.throttledSnapshot();
     final numNotifications = notifier.notifications.length;
 

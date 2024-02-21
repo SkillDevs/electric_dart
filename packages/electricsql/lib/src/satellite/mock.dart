@@ -62,12 +62,20 @@ class MockSatelliteProcess implements Satellite {
   }
 
   @override
-  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+  Future<void> start(AuthConfig? authConfig) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
 
-    return ConnectionWrapper(
-      connectionFuture: Future.value(),
-    );
+  @override
+  void setToken(String token) {}
+
+  Future<void> connect() async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
+
+  @override
+  Future<void> connectWithBackoff() async {
+    await connect();
   }
 
   @override
@@ -112,7 +120,7 @@ class MockRegistry extends BaseRegistry {
       socketFactory: socketFactory,
       opts: effectiveOpts,
     );
-    await satellite.start(config.auth);
+    await satellite.start(const AuthConfig());
 
     return satellite;
   }

@@ -12,11 +12,7 @@ import 'drift/database.dart';
 late TestsDatabase db;
 
 Future<void> main() async {
-  final config = ElectricConfig(
-    auth: const AuthConfig(
-      token: 'test-token',
-    ),
-  );
+  final config = ElectricConfig();
 
   db = TestsDatabase.memory();
 

@@ -120,7 +120,7 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  Satellite get satellite => throw UnimplementedError();
+  Satellite get satellite => _baseClient.satellite;
 
   @override
   void setIsConnected(ConnectivityState connectivityState) {
@@ -130,5 +130,10 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   @override
   Future<ShapeSubscription> syncTables(List<String> tables) {
     return _baseClient.syncTables(tables);
+  }
+
+  @override
+  Future<void> connect(String token) {
+    return _baseClient.connect(token);
   }
 }
