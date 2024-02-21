@@ -284,6 +284,10 @@ This means there is a notifier subscription leak.`''');
 
   @override
   Future<void> stop({bool? shutdown}) async {
+    await _stop(shutdown: shutdown);
+  }
+
+  Future<void> _stop({bool? shutdown}) async {
     // Stop snapshotting and polling for changes.
     throttledSnapshot.cancel();
 
@@ -307,7 +311,7 @@ This means there is a notifier subscription leak.`''');
       _unsubscribeFromPotentialDataChanges = null;
     }
 
-    _disconnect();
+    _disconnect(null);
 
     if (shutdown == true) {
       client.shutdown();
@@ -543,7 +547,7 @@ This means there is a notifier subscription leak.`''');
     bool keepSubscribedShapes = false,
   }) async {
     logger.warning('resetting client state');
-    _disconnect();
+    _disconnect(null);
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
 
     if (keepSubscribedShapes) {
@@ -589,7 +593,7 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  // handles async client erros: can be a socket error or a server error message
+  // handles async client errors: can be a socket error or a server error message
   Future<void> _handleClientError(SatelliteException satelliteError) async {
     if (initializing != null && !initializing!.finished) {
       if (satelliteError.code == SatelliteErrorCode.socketError) {
@@ -618,8 +622,18 @@ This means there is a notifier subscription leak.`''');
     unawaited(_handleOrThrowClientError(satelliteError));
   }
 
-  Future<void> _handleOrThrowClientError(SatelliteException error) {
-    _disconnect();
+  Future<void> _handleOrThrowClientError(SatelliteException error) async {
+    if (error.code == SatelliteErrorCode.authExpired) {
+      logger.warning('Connection closed by Electric because the JWT expired.');
+      return _disconnect(
+        SatelliteException(
+          error.code,
+          'Connection closed by Electric because the JWT expired.',
+        ),
+      );
+    }
+
+    _disconnect(error);
 
     if (isThrowable(error)) {
       throw error;
@@ -634,22 +648,23 @@ This means there is a notifier subscription leak.`''');
 
   @visibleForTesting
   Future<void> handleConnectivityStateChange(
-    ConnectivityState status,
+    ConnectivityState state,
   ) async {
+    final status = state.status;
     logger.debug('Connectivity state changed: $status');
 
     switch (status) {
-      case ConnectivityState.available:
+      case ConnectivityStatus.available:
         {
           logger.warning('checking network availability and reconnecting');
           return connectWithBackoff();
         }
-      case ConnectivityState.disconnected:
+      case ConnectivityStatus.disconnected:
         {
           client.disconnect();
           return;
         }
-      case ConnectivityState.connected:
+      case ConnectivityStatus.connected:
         {
           return;
         }
@@ -706,7 +721,7 @@ This means there is a notifier subscription leak.`''');
       await _startReplication();
       _subscribePreviousShapeRequests();
 
-      _notifyConnectivityState(ConnectivityState.connected);
+      _notifyConnectivityState(ConnectivityStatus.connected, null);
       initializing?.complete();
     }
 
@@ -737,7 +752,7 @@ This means there is a notifier subscription leak.`''');
               'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
             );
 
-      _disconnect();
+      _disconnect(error is SatelliteException ? error : null);
       initializing?.completeError(error);
       throw error;
     }
@@ -766,17 +781,13 @@ This means there is a notifier subscription leak.`''');
     logger.info('connecting to electric server');
 
     final _authState = authState;
-    if (_authState == null) {
+    if (_authState == null || _authState.token == null) {
       throw Exception('trying to connect before authentication');
     }
 
     try {
       await client.connect();
-      final authResp = await client.authenticate(_authState);
-
-      if (authResp.error != null) {
-        throw authResp.error!;
-      }
+      await authenticate(_authState.token!);
     } catch (error) {
       logger.debug(
         'server returned an error while establishing connection: $error',
@@ -785,9 +796,24 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  void _disconnect() {
+  /// Authenticates with the Electric sync service using the provided token.
+  /// @returns A promise that resolves to void if authentication succeeded. Otherwise, rejects with the reason for the error.
+  @override
+  Future<void> authenticate(String token) async {
+    final authState = AuthState(
+      clientId: this.authState!.clientId,
+      token: token,
+    );
+    final authResp = await client.authenticate(authState);
+    if (authResp.error != null) {
+      throw authResp.error!;
+    }
+    setAuthState(authState);
+  }
+
+  void _disconnect(SatelliteException? error) {
     client.disconnect();
-    _notifyConnectivityState(ConnectivityState.disconnected);
+    _notifyConnectivityState(ConnectivityStatus.disconnected, error);
   }
 
   Future<void> _startReplication() async {
@@ -831,9 +857,15 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  void _notifyConnectivityState(ConnectivityState connectivityState) {
-    this.connectivityState = connectivityState;
-    notifier.connectivityStateChanged(dbName, this.connectivityState!);
+  void _notifyConnectivityState(
+    ConnectivityStatus connectivityStatus,
+    SatelliteException? error,
+  ) {
+    connectivityState = ConnectivityState(
+      status: connectivityStatus,
+      reason: error,
+    );
+    notifier.connectivityStateChanged(dbName, connectivityState!);
   }
 
   Future<bool> _verifyTableStructure() async {

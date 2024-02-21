@@ -59,6 +59,7 @@ enum SatelliteErrorCode {
   authError,
   authFailed,
   authRequired,
+  authExpired,
 
   // server errors
   invalidRequest,
@@ -88,6 +89,18 @@ enum SatelliteErrorCode {
   // shape data errors
   shapeDeliveryError,
   shapeSizeLimitExceeded,
+}
+
+class SocketCloseReason {
+  final SatelliteErrorCode code;
+
+  SocketCloseReason._(this.code);
+
+  static final authExpired =
+      SocketCloseReason._(SatelliteErrorCode.authExpired);
+
+  static final socketError =
+      SocketCloseReason._(SatelliteErrorCode.socketError);
 }
 
 class Replication<TransactionType> {
@@ -325,8 +338,17 @@ class TransactionEvent {
   TransactionEvent(this.transaction, this.ackCb);
 }
 
-enum ConnectivityState {
+enum ConnectivityStatus {
   available,
   connected,
   disconnected,
+}
+
+class ConnectivityState {
+  final ConnectivityStatus status;
+
+  /// reason for `disconnected` status
+  final SatelliteException? reason;
+
+  const ConnectivityState({required this.status, this.reason});
 }

@@ -79,6 +79,9 @@ class MockSatelliteProcess implements Satellite {
   }
 
   @override
+  Future<void> authenticate(String token) async {}
+
+  @override
   Future<void> stop({bool? shutdown}) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
@@ -275,6 +278,10 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   @override
   void Function() subscribeToError(ErrorCallback callback) {
     return _on('error', callback);
+  }
+
+  void emitSocketClosedError(SocketCloseReason ev) {
+    enqueueEmit('error', SatelliteException(ev.code, 'socket closed'));
   }
 
   @override

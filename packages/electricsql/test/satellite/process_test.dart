@@ -46,6 +46,7 @@ MockSatelliteClient get client => context.client;
 String get dbName => context.dbName;
 AuthState get authState => context.authState;
 AuthConfig get authConfig => context.authConfig;
+String get token => context.token;
 
 const parentRecord = <String, Object?>{
   'id': 1,
@@ -61,9 +62,10 @@ const childRecord = <String, Object?>{
 Future<({Future<void> connectionFuture})> startSatellite(
   SatelliteProcess satellite,
   AuthConfig authConfig,
+  String token,
 ) async {
   await satellite.start(authConfig);
-  satellite.setToken(insecureAuthToken({'sub': 'test-user'}));
+  satellite.setToken(token);
   final connectionFuture = satellite.connectWithBackoff();
   return (connectionFuture: connectionFuture);
 }
@@ -100,11 +102,11 @@ void main() {
   });
 
   test('set persistent client id', () async {
-    await startSatellite(satellite, authConfig);
+    await startSatellite(satellite, authConfig, token);
     final clientId1 = satellite.authState!.clientId;
     await satellite.stop();
 
-    await startSatellite(satellite, authConfig);
+    await startSatellite(satellite, authConfig, token);
 
     final clientId2 = satellite.authState!.clientId;
 
@@ -115,7 +117,7 @@ void main() {
   });
 
   test('cannot update user id', () async {
-    await startSatellite(satellite, authConfig);
+    await startSatellite(satellite, authConfig, token);
     expect(
       () => satellite.setToken(insecureAuthToken({'sub': 'test-user2'})),
       throwsA(
@@ -231,7 +233,7 @@ void main() {
 
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     await Future<void>.delayed(opts.pollingInterval);
@@ -252,7 +254,7 @@ void main() {
     // no txn notified
     expect(notifier.notifications.length, 4);
 
-    final conn1 = await startSatellite(satellite, authConfig);
+    final conn1 = await startSatellite(satellite, authConfig, token);
     await conn1.connectionFuture;
     await Future<void>.delayed(opts.pollingInterval);
 
@@ -1316,13 +1318,14 @@ void main() {
   test('handling connectivity state change stops queueing operations',
       () async {
     await runMigrations();
-    await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
 
     await adapter.run(
       Statement(
         "INSERT INTO parent(id, value, other) VALUES (1, 'local', 1)",
       ),
     );
+    await conn.connectionFuture;
 
     await satellite.performSnapshot();
 
@@ -1330,8 +1333,9 @@ void main() {
     final sentLsn = satellite.client.getLastSentLsn();
     expect(sentLsn, numberToBytes(1));
 
-    await satellite
-        .handleConnectivityStateChange(ConnectivityState.disconnected);
+    await satellite.handleConnectivityStateChange(
+      const ConnectivityState(status: ConnectivityStatus.disconnected),
+    );
 
     await adapter.run(
       Statement(
@@ -1346,18 +1350,58 @@ void main() {
     expect(lsn1, sentLsn);
 
     // Once connectivity is restored, we will immediately run a snapshot to send pending rows
-    await satellite.handleConnectivityStateChange(ConnectivityState.available);
+    await satellite.handleConnectivityStateChange(
+      const ConnectivityState(status: ConnectivityStatus.available),
+    );
     // Wait for snapshot to run
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final lsn2 = satellite.client.getLastSentLsn();
     expect(lsn2, numberToBytes(2));
   });
 
+  test('notifies about JWT expiration', () async {
+    await runMigrations();
+    await satellite.start(authConfig);
+
+    // give some time for Satellite to start
+    // (needed because connecting and starting replication are async)
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    bool hasListened = false;
+    notifier.subscribeToConnectivityStateChanges((notification) {
+      if (hasListened) {
+        return;
+      }
+
+      expect(notification.dbName, dbName);
+      expect(
+        notification.connectivityState.status,
+        ConnectivityStatus.disconnected,
+      );
+      expect(
+        notification.connectivityState.reason?.code,
+        SatelliteErrorCode.authExpired,
+      );
+
+      hasListened = true;
+    });
+
+    // mock JWT expiration
+    client.emitSocketClosedError(SocketCloseReason.authExpired);
+
+    // give the notifier some time to fire
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(hasListened, true);
+
+    // check that the client is disconnected
+    expect(client.isConnected(), false);
+  });
+
   test(
       'garbage collection is triggered when transaction from the same origin is replicated',
       () async {
     await runMigrations();
-    await startSatellite(satellite, authConfig);
+    await startSatellite(satellite, authConfig, token);
 
     await adapter.run(
       Statement(
@@ -1398,7 +1442,7 @@ void main() {
     final base64lsn = base64.encode(numberToBytes(kMockBehindWindowLsn));
     await satellite.setMeta('lsn', base64lsn);
     try {
-      final conn = await startSatellite(satellite, authConfig);
+      final conn = await startSatellite(satellite, authConfig, token);
       await conn.connectionFuture;
       final lsnAfter = await satellite.getMeta<String?>('lsn');
       expect(lsnAfter, isNot(base64lsn));
@@ -1417,7 +1461,7 @@ void main() {
 
     int numExpects = 0;
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await Future.wait<dynamic>(
       [
         satellite.initializing!.waitOn(),
@@ -1444,7 +1488,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1506,7 +1550,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1536,7 +1580,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1575,7 +1619,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(
@@ -1628,7 +1672,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, childRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef1 = ClientShapeDefinition(
@@ -1664,7 +1708,7 @@ void main() {
     client.setRelationData('parent', parentRecord);
     client.setRelationData(tablename, childRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef1 = ClientShapeDefinition(
@@ -1713,7 +1757,7 @@ void main() {
     client.setRelationData('parent', parentRecord);
     client.setRelationData('child', childRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
@@ -1766,7 +1810,7 @@ void main() {
     client.setRelationData(tablename, parentRecord);
     client.setRelationData('another', {});
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
@@ -1824,7 +1868,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef1 = ClientShapeDefinition(
@@ -1898,7 +1942,7 @@ void main() {
 
   test("Garbage collecting the subscription doesn't generate oplog entries",
       () async {
-    await startSatellite(satellite, authConfig);
+    await startSatellite(satellite, authConfig, token);
     await runMigrations();
     await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
     final ts = await satellite.performSnapshot();
@@ -1931,7 +1975,7 @@ void main() {
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
-    final conn = await startSatellite(satellite, authConfig);
+    final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
     final shapeDef = ClientShapeDefinition(

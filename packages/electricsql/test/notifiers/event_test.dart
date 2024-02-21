@@ -95,13 +95,16 @@ void main() {
 
     target.subscribeToConnectivityStateChanges((x) => notifications.add(x));
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     expect(notifications.length, 1);
 
     source.connectivityStateChanged(
       'non-existing-db',
-      ConnectivityState.connected,
+      const ConnectivityState(status: ConnectivityStatus.connected),
     );
 
     expect(notifications.length, 1);
@@ -117,11 +120,17 @@ void main() {
       notifications.add(x);
     });
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     unsubscribe();
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     expect(notifications.length, 1);
   });

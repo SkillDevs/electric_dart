@@ -1,6 +1,6 @@
 [global node=>]
 
-[macro connect_to_electric host port migrations]
+[macro connect_to_electric host port migrations connectToElectric]
     # !migrations = await client.read_migrations(process.env.MIGRATION_DIRS + "/index.js")
     # ?$node
     !migrations = $migrations
@@ -9,23 +9,23 @@
     ??$node
     !originalDb = make_db shell_db_path
     ??$node
-    [invoke electrify_db "originalDb" $host $port $migrations]
+    [invoke electrify_db "originalDb" $host $port $migrations $connectToElectric]
     ??(in electrify_db) config:
 [endmacro]
 
-[macro electrify_db db host port migrations]
-    !db = electrify_db originalDb "$host" $port $migrations
+[macro electrify_db db host port migrations connectToElectric]
+     !db = electrify_db originalDb "$host" $port $migrations $connectToElectric
 [endmacro]
 
-[macro setup_client_with_migrations satellite_number electric port migrations]
+[macro setup_client_with_migrations satellite_number electric port migrations connectToElectric]
     [invoke start_satellite $satellite_number]
     -$fail_pattern
     ??$node
-    [invoke connect_to_electric $electric $port $migrations]
+    [invoke connect_to_electric $electric $port $migrations $connectToElectric]
 [endmacro]
 
 [macro setup_client satellite_number electric port]
-    [invoke setup_client_with_migrations $satellite_number $electric $port "[]"]
+    [invoke setup_client_with_migrations $satellite_number $electric $port "[]" "true"]
 [endmacro]
 
 [macro node_await_get match]

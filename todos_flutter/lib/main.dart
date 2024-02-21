@@ -211,25 +211,26 @@ class ConnectivityButton extends HookConsumerWidget {
 
     final theme = Theme.of(context);
 
-    final ({Color color, IconData icon}) iconInfo = switch (connectivityState) {
-      ConnectivityState.available => (
+    final ({Color color, IconData icon}) iconInfo =
+        switch (connectivityState.status) {
+      ConnectivityStatus.available => (
           icon: Symbols.wifi,
           color: Colors.orangeAccent
         ),
-      ConnectivityState.connected => (
+      ConnectivityStatus.connected => (
           icon: Symbols.wifi,
           color: theme.colorScheme.primary
         ),
-      ConnectivityState.disconnected => (
+      ConnectivityStatus.disconnected => (
           icon: Symbols.wifi_off,
           color: theme.colorScheme.error
         ),
     };
 
-    final String label = switch (connectivityState) {
-      ConnectivityState.available => "Available",
-      ConnectivityState.connected => "Connected",
-      ConnectivityState.disconnected => "Disconnected",
+    final String label = switch (connectivityState.status) {
+      ConnectivityStatus.available => "Available",
+      ConnectivityStatus.connected => "Connected",
+      ConnectivityStatus.disconnected => "Disconnected",
     };
 
     return ElevatedButton.icon(

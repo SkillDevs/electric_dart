@@ -35,7 +35,6 @@
     ??[proto] send: #SatOpLog
     ??[proto] recv: #SatOpLog
 
-# TEST:
     # Disconnect the client
     !change_connectivity db 'disconnected'
 

@@ -12,6 +12,7 @@ import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/io.dart';
+import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -213,6 +214,54 @@ void main() {
         ),
       );
     }
+  });
+
+  test('handle socket closure due to JWT expiration', () async {
+    await connectAndAuth();
+    await startReplication();
+
+    // subscribe to errors on the client using subscribeToError
+    bool hasAsserted = false;
+    client.subscribeToError((error) {
+      // check that the subscribed listener is called with the right reason
+      expect(error.code, SatelliteErrorCode.authExpired);
+      hasAsserted = true;
+    });
+
+    // close the socket with a JWT expired reason
+    server.closeSocket(kAuthExpiredCloseEvent);
+
+    // Give `closeSocket` some time
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(hasAsserted, isTrue);
+
+    expect(client.isConnected(), isFalse);
+
+    await server.close();
+  });
+
+  test('handle socket closure for other reasons', () async {
+    await connectAndAuth();
+    await startReplication();
+
+    bool hasAsserted = false;
+    // subscribe to errors on the client using subscribeToError
+    client.subscribeToError((error) {
+      // check that the subscribed listener is called with the right reason
+      expect(error.code, SatelliteErrorCode.socketError);
+      hasAsserted = true;
+    });
+
+    // close the socket with a JWT expired reason
+    server.closeSocket(null);
+
+    // Give `closeSocket` some time
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(hasAsserted, isTrue);
+
+    expect(client.isConnected(), isFalse);
+
+    await server.close();
   });
 
   test('receive transaction over multiple messages', () async {

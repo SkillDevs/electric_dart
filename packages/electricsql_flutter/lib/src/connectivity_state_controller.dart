@@ -1,11 +1,12 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/notifiers.dart';
+import 'package:electricsql_flutter/electricsql_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 class ConnectivityStateController with ChangeNotifier {
   final ElectricClient electric;
 
-  ConnectivityState _connectivityState = ConnectivityState.disconnected;
+  ConnectivityState _connectivityState = _kStates.disconnected;
   ConnectivityState get connectivityState => _connectivityState;
 
   void Function()? _unsubConnectivityChange;
@@ -59,15 +60,15 @@ const ({
   ConnectivityState connected,
   ConnectivityState disconnected,
 }) _kStates = (
-  available: ConnectivityState.available,
-  connected: ConnectivityState.connected,
-  disconnected: ConnectivityState.disconnected,
+  available: ConnectivityState(status: ConnectivityStatus.available),
+  connected: ConnectivityState(status: ConnectivityStatus.connected),
+  disconnected: ConnectivityState(status: ConnectivityStatus.disconnected),
 );
 
-const _kValidStates = <ConnectivityState>{
-  ConnectivityState.available,
-  ConnectivityState.connected,
-  ConnectivityState.disconnected,
+const _kValidStatuses = <ConnectivityStatus>{
+  ConnectivityStatus.available,
+  ConnectivityStatus.connected,
+  ConnectivityStatus.disconnected,
 };
 
 ConnectivityState _getElectricState(ElectricClient? electric) {
@@ -84,6 +85,6 @@ ConnectivityState getNextState(ConnectivityState currentState) =>
         : _kStates.available;
 
 ConnectivityState getValidState(ConnectivityState candidateState) =>
-    _kValidStates.contains(candidateState)
+    _kValidStatuses.contains(candidateState.status)
         ? candidateState
         : _kStates.disconnected;

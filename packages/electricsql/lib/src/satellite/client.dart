@@ -208,13 +208,13 @@ class SatelliteClient implements Client {
         }
         _emitter.enqueueEmitError(error);
       });
-      socket.onClose(() {
+      socket.onClose((reason) {
         disconnect();
         if (_emitter.listenerCount('error') == 0) {
           logger.error('socket closed but no listener is attached');
         }
         _emitter.enqueueEmitError(
-          SatelliteException(SatelliteErrorCode.socketError, 'socket closed'),
+          SatelliteException(reason.code, 'socket closed'),
         );
       });
 

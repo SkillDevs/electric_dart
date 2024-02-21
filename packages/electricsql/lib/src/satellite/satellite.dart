@@ -43,6 +43,7 @@ abstract class Satellite {
   Future<void> stop({bool? shutdown});
   void setToken(String token);
   Future<void> connectWithBackoff();
+  Future<void> authenticate(String token);
   Future<ShapeSubscription> subscribe(
     List<ClientShapeDefinition> shapeDefinitions,
   );

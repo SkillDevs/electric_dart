@@ -61,8 +61,8 @@ Future<void> start() async {
           (value) => value,
         );
       } else if (name == "electrify_db") {
-        await processCommand4Params<ClientDatabase, String, int, List<dynamic>,
-            DriftElectricClient>(
+        await processCommand5Params<ClientDatabase, String, int, List<dynamic>,
+            bool, DriftElectricClient>(
           state,
           command,
           electrifyDb,

@@ -13,6 +13,7 @@ const _fatalErrors = {
   SatelliteErrorCode.invalidRequest,
   SatelliteErrorCode.unknownSchemaVersion,
   SatelliteErrorCode.authRequired,
+  SatelliteErrorCode.authExpired,
 };
 
 const _outOfSyncErrors = [

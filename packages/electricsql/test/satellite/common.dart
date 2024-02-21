@@ -227,6 +227,7 @@ Future<SatelliteTestContext> makeContext({
   final timestamp = DateTime.now();
 
   const authConfig = AuthConfig(clientId: '');
+  final token = insecureAuthToken({'sub': 'test-user'});
 
   return SatelliteTestContext(
     dbName: dbName,
@@ -239,6 +240,7 @@ Future<SatelliteTestContext> makeContext({
     tableInfo: tableInfo,
     timestamp: timestamp,
     authConfig: authConfig,
+    token: token,
   );
 }
 
@@ -253,6 +255,7 @@ class SatelliteTestContext {
   final TableInfo tableInfo;
   final DateTime timestamp;
   final AuthConfig authConfig;
+  final String token;
 
   late final AuthState authState = AuthState(clientId: authConfig.clientId!);
 
@@ -267,6 +270,7 @@ class SatelliteTestContext {
     required this.tableInfo,
     required this.timestamp,
     required this.authConfig,
+    required this.token,
   });
 
   Future<void> runMigrations() async {

@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/util.dart';
 import 'package:satellite_dart_client/drift/database.dart';
@@ -14,6 +13,7 @@ import 'package:satellite_dart_client/util/json.dart';
 import 'package:satellite_dart_client/util/pretty_output.dart';
 
 late String dbName;
+int? tokenExpirationMillis;
 
 typedef MyDriftElectricClient = DriftElectricClient<ClientDatabase>;
 
@@ -25,7 +25,12 @@ Future<ClientDatabase> makeDb(String dbPath) async {
 }
 
 Future<MyDriftElectricClient> electrifyDb(
-    ClientDatabase db, String host, int port, List<dynamic> migrationsJ) async {
+  ClientDatabase db,
+  String host,
+  int port,
+  List<dynamic> migrationsJ,
+  bool connectToElectric,
+) async {
   final config = ElectricConfig(
     url: "electric://$host:$port",
     logger: LoggerConfig(level: Level.debug, colored: false),
@@ -40,15 +45,43 @@ Future<MyDriftElectricClient> electrifyDb(
     migrations: migrations,
     config: config,
   );
-  final token = await mockSecureAuthToken();
-  await result.connect(token); // connect to Electric
 
-  result.notifier.subscribeToConnectivityStateChanges(
-    (ConnectivityStateChangeNotification x) => print(
-        "Connectivity state changed (${x.dbName}, ${x.connectivityState})"),
-  );
+  final Duration? exp = tokenExpirationMillis != null
+      ? Duration(milliseconds: tokenExpirationMillis!)
+      : null;
+  final token = await mockSecureAuthToken(exp: exp);
+
+  result.notifier.subscribeToConnectivityStateChanges((x) =>
+      print('Connectivity state changed: ${x.connectivityState.status}'));
+  if (connectToElectric) {
+    await result.connect(token); // connect to Electric
+  }
 
   return result;
+}
+
+// reconnects with Electric, e.g. after expiration of the JWT
+Future<void> reconnect(ElectricClient electric, Duration exp) async {
+  final token = await mockSecureAuthToken(exp: exp);
+  await electric.connect(token);
+}
+
+Future<void> checkTokenExpiration(
+    ElectricClient electric, int minimalTime) async {
+  final start = DateTime.now().millisecondsSinceEpoch;
+  late void Function() unsubscribe;
+  unsubscribe = electric.notifier.subscribeToConnectivityStateChanges((x) {
+    if (x.connectivityState.status == ConnectivityStatus.disconnected &&
+        x.connectivityState.reason?.code == SatelliteErrorCode.authExpired) {
+      final delta = DateTime.now().millisecondsSinceEpoch - start;
+      if (delta >= minimalTime) {
+        print('JWT expired after $delta ms');
+      } else {
+        print('JWT expired too early, after only $delta ms');
+      }
+      unsubscribe();
+    }
+  });
 }
 
 void setSubscribers(DriftElectricClient db) {
@@ -483,14 +516,21 @@ Future<void> rawStatement(DriftElectricClient db, String statement) async {
 
 void changeConnectivity(DriftElectricClient db, String connectivityName) {
   final dbName = db.notifier.dbName;
-  final ConnectivityState state = switch (connectivityName) {
-    'disconnected' => ConnectivityState.disconnected,
-    'connected' => ConnectivityState.connected,
-    'available' => ConnectivityState.available,
+  final ConnectivityStatus status = switch (connectivityName) {
+    'disconnected' => ConnectivityStatus.disconnected,
+    'connected' => ConnectivityStatus.connected,
+    'available' => ConnectivityStatus.available,
     _ => throw Exception('Unknown connectivity name: $connectivityName'),
   };
 
-  db.notifier.connectivityStateChanged(dbName, state);
+  db.notifier.connectivityStateChanged(
+    dbName,
+    ConnectivityState(status: status),
+  );
+}
+
+void setTokenExpirationMillis(int millis) {
+  tokenExpirationMillis = millis;
 }
 
 /////////////////////////////////

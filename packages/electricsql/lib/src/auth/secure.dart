@@ -40,6 +40,7 @@ Future<String> secureAuthToken({
 }
 
 Future<String> mockSecureAuthToken({
+  Duration? exp,
   String? iss,
   String? key,
 }) {
@@ -50,6 +51,7 @@ Future<String> mockSecureAuthToken({
     claims: {'sub': 'test-user'},
     iss: mockIss,
     key: mockKey,
+    exp: exp,
   );
 }
 
