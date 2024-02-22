@@ -441,20 +441,27 @@ This means there is a notifier subscription leak.`''');
     //
     // [1]: https://medium.com/@JasonWyatt/squeezing-performance-from-sqlite-insertions-971aff98eef2
 
-    final groupedChanges =
-        <String, ({List<String> columns, List<Record> records})>{};
+    final groupedChanges = <String,
+        ({
+      Relation relation,
+      List<InitialDataChange> dataChanges,
+      QualifiedTablename tableName,
+    })>{};
 
     final allArgsForShadowInsert = <Record>[];
 
     // Group all changes by table name to be able to insert them all together
     for (final op in changes) {
       final tableName = QualifiedTablename('main', op.relation.table);
-      if (groupedChanges.containsKey(tableName.toString())) {
-        groupedChanges[tableName.toString()]?.records.add(op.record);
+      final tableNameString = tableName.toString();
+      if (groupedChanges.containsKey(tableNameString)) {
+        final changeGroup = groupedChanges[tableNameString]!;
+        changeGroup.dataChanges.add(op);
       } else {
-        groupedChanges[tableName.toString()] = (
-          columns: op.relation.columns.map((x) => x.name).toList(),
-          records: [op.record]
+        groupedChanges[tableNameString] = (
+          relation: op.relation,
+          dataChanges: [op],
+          tableName: tableName,
         );
       }
 
@@ -481,13 +488,15 @@ This means there is a notifier subscription leak.`''');
     // For each table, do a batched insert
     for (final entry in groupedChanges.entries) {
       final table = entry.key;
-      final (:columns, :records) = entry.value;
-      final sqlBase = "INSERT INTO $table (${columns.join(', ')}) VALUES ";
+      final (:relation, :dataChanges, tableName: _) = entry.value;
+      final records = dataChanges.map((change) => change.record).toList();
+      final columnNames = relation.columns.map((col) => col.name).toList();
+      final sqlBase = "INSERT INTO $table (${columnNames.join(', ')}) VALUES ";
 
       stmts.addAll([
         ...prepareInsertBatchedStatements(
           sqlBase,
-          columns,
+          columnNames,
           records,
           maxSqlParameters,
         ),
@@ -519,15 +528,36 @@ This means there is a notifier subscription leak.`''');
       // We're explicitly not specifying rowids in these changes for now,
       // because nobody uses them and we don't have the machinery to to a
       // `RETURNING` clause in the middle of `runInTransaction`.
-      final notificationChanges = changes
-          .map(
-            (x) => Change(
-              qualifiedTablename: QualifiedTablename('main', x.relation.table),
-              rowids: [],
-            ),
-          )
-          .toList();
-      notifier.actuallyChanged(dbName, notificationChanges);
+      final notificationChanges = <Change>[];
+      for (final entry in groupedChanges.entries) {
+        final (:relation, :dataChanges, :tableName) = entry.value;
+
+        final primaryKeyColNames = relation.columns
+            .where((col) => col.primaryKey == true)
+            .map((col) => col.name)
+            .toList();
+        notificationChanges.add(
+          Change(
+            qualifiedTablename: tableName,
+            rowids: [],
+            recordChanges: dataChanges.map((change) {
+              return RecordChange(
+                primaryKey: Map.fromEntries(
+                  primaryKeyColNames.map((colName) {
+                    return MapEntry(colName, change.record[colName]);
+                  }),
+                ),
+                type: RecordChangeType.initial,
+              );
+            }).toList(),
+          ),
+        );
+      }
+      notifier.actuallyChanged(
+        dbName,
+        notificationChanges,
+        ChangeOrigin.initial,
+      );
     } catch (e) {
       unawaited(
         _handleSubscriptionError(
@@ -1026,7 +1056,7 @@ This means there is a notifier subscription leak.`''');
       });
 
       if (oplogEntries.isNotEmpty) {
-        unawaited(_notifyChanges(oplogEntries));
+        unawaited(_notifyChanges(oplogEntries, ChangeOrigin.local));
       }
 
       if (client.isConnected()) {
@@ -1047,7 +1077,10 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  Future<void> _notifyChanges(List<OplogEntry> results) async {
+  Future<void> _notifyChanges(
+    List<OplogEntry> results,
+    ChangeOrigin origin,
+  ) async {
     logger.info('notify changes');
     final ChangeAccumulator acc = {};
 
@@ -1061,12 +1094,25 @@ This means there is a notifier subscription leak.`''');
         final Change change = acc[key]!;
 
         change.rowids ??= [];
+        change.recordChanges ??= [];
 
         change.rowids!.add(entry.rowid);
+        change.recordChanges!.add(
+          RecordChange(
+            primaryKey: json.decode(entry.primaryKey) as Map<String, Object?>,
+            type: recordChangeTypeFromOpType(entry.optype),
+          ),
+        );
       } else {
         acc[key] = Change(
           qualifiedTablename: qt,
           rowids: [entry.rowid],
+          recordChanges: [
+            RecordChange(
+              primaryKey: json.decode(entry.primaryKey) as Map<String, Object?>,
+              type: recordChangeTypeFromOpType(entry.optype),
+            ),
+          ],
         );
       }
 
@@ -1075,7 +1121,7 @@ This means there is a notifier subscription leak.`''');
     // final changes = Object.values(results.reduce(reduceFn, acc))
 
     final changes = results.fold(acc, reduceFn).values.toList();
-    notifier.actuallyChanged(dbName, changes);
+    notifier.actuallyChanged(dbName, changes, origin);
   }
 
   Future<void> _replicateSnapshotChanges(
@@ -1364,7 +1410,7 @@ This means there is a notifier subscription leak.`''');
       await adapter.runInTransaction(allStatements);
     }
 
-    await _notifyChanges(opLogEntries);
+    await _notifyChanges(opLogEntries, ChangeOrigin.remote);
   }
 
   Future<void> maybeGarbageCollect(

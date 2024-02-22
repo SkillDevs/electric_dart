@@ -172,6 +172,16 @@ void main() {
     final expectedChange = Change(
       qualifiedTablename: const QualifiedTablename('main', 'parent'),
       rowids: [1, 2],
+      recordChanges: [
+        RecordChange(
+          primaryKey: {'id': 1},
+          type: RecordChangeType.insert,
+        ),
+        RecordChange(
+          primaryKey: {'id': 2},
+          type: RecordChangeType.insert,
+        ),
+      ],
     );
 
     expect(changes, [expectedChange]);
@@ -1501,7 +1511,7 @@ void main() {
         await satellite.subscribe([shapeDef]);
     await synced;
 
-// first notification is 'connected'
+    // first notification is 'connected'
     expect(notifier.notifications.length, 2);
     final changeNotification = notifier.notifications[1] as ChangeNotification;
     expect(changeNotification.changes.length, 1);
@@ -1510,9 +1520,16 @@ void main() {
       Change(
         qualifiedTablename: qualified,
         rowids: [],
+        recordChanges: [
+          RecordChange(
+            primaryKey: {'id': 1},
+            type: RecordChangeType.initial,
+          ),
+        ],
       ),
     );
 
+    // wait for process to apply shape data
     try {
       final row = await adapter.query(
         Statement(
