@@ -58,6 +58,7 @@ abstract class Client {
     AuthState authState,
   );
   bool isConnected();
+  ReplicationStatus getOutboundReplicationStatus();
   Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,

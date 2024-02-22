@@ -252,6 +252,11 @@ class SatelliteClient implements Client {
   }
 
   @override
+  ReplicationStatus getOutboundReplicationStatus() {
+    return outbound.isReplicating;
+  }
+
+  @override
   void shutdown() {
     disconnect();
     _emitter.removeAllListeners();

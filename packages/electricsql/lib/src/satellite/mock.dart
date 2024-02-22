@@ -290,6 +290,11 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   }
 
   @override
+  ReplicationStatus getOutboundReplicationStatus() {
+    return isConnected() ? ReplicationStatus.active : ReplicationStatus.stopped;
+  }
+
+  @override
   void shutdown() {
     isDown = true;
   }

@@ -1059,7 +1059,7 @@ This means there is a notifier subscription leak.`''');
         unawaited(_notifyChanges(oplogEntries, ChangeOrigin.local));
       }
 
-      if (client.isConnected()) {
+      if (client.getOutboundReplicationStatus() == ReplicationStatus.active) {
         final enqueued = client.getLastSentLsn();
         final enqueuedLogPos = bytesToNumber(enqueued);
 
@@ -1127,8 +1127,7 @@ This means there is a notifier subscription leak.`''');
   Future<void> _replicateSnapshotChanges(
     List<OplogEntry> results,
   ) async {
-    // TODO: Don't try replicating when outbound is inactive
-    if (!client.isConnected()) {
+    if (client.getOutboundReplicationStatus() != ReplicationStatus.active) {
       return;
     }
 
