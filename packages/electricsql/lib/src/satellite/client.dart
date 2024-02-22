@@ -627,7 +627,13 @@ class SatelliteClient implements Client {
 
     _subscriptionsDataCache.subscriptionRequest(request);
 
-    return _service.subscribe(null, request).then(handleSubscription);
+    return delayIncomingMessages(
+      () async {
+        final resp = await _service.subscribe(null, request);
+        return handleSubscription(resp);
+      },
+      allowedRpcResponses: ['subscribe'],
+    );
   }
 
   @override
