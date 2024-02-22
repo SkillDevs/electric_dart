@@ -133,7 +133,12 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  Future<void> connect(String token) {
+  Future<void> connect([String? token]) {
     return _baseClient.connect(token);
+  }
+
+  @override
+  void disconnect() {
+    return _baseClient.disconnect();
   }
 }

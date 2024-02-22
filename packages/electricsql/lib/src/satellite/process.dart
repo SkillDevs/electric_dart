@@ -183,18 +183,6 @@ This means there is a notifier subscription leak.`''');
     _unsubscribeFromAuthState =
         notifier.subscribeToAuthStateChanges(_updateAuthState);
 
-    // Monitor connectivity state changes.
-    _unsubscribeFromConnectivityChanges =
-        notifier.subscribeToConnectivityStateChanges(
-      (ConnectivityStateChangeNotification notification) async {
-        // Wait for the next event loop to ensure that other listeners get a
-        // chance to handle the change before actually handling it internally in the process
-        await Future<void>.delayed(Duration.zero);
-
-        await handleConnectivityStateChange(notification.connectivityState);
-      },
-    );
-
     // Request a snapshot whenever the data in our database potentially changes.
     _unsubscribeFromPotentialDataChanges =
         notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
@@ -311,7 +299,7 @@ This means there is a notifier subscription leak.`''');
       _unsubscribeFromPotentialDataChanges = null;
     }
 
-    _disconnect(null);
+    disconnect(null);
 
     if (shutdown == true) {
       client.shutdown();
@@ -577,7 +565,7 @@ This means there is a notifier subscription leak.`''');
     bool keepSubscribedShapes = false,
   }) async {
     logger.warning('resetting client state');
-    _disconnect(null);
+    disconnect(null);
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
 
     if (keepSubscribedShapes) {
@@ -655,7 +643,7 @@ This means there is a notifier subscription leak.`''');
   Future<void> _handleOrThrowClientError(SatelliteException error) async {
     if (error.code == SatelliteErrorCode.authExpired) {
       logger.warning('Connection closed by Electric because the JWT expired.');
-      return _disconnect(
+      return disconnect(
         SatelliteException(
           error.code,
           'Connection closed by Electric because the JWT expired.',
@@ -663,7 +651,7 @@ This means there is a notifier subscription leak.`''');
       );
     }
 
-    _disconnect(error);
+    disconnect(error);
 
     if (isThrowable(error)) {
       throw error;
@@ -674,35 +662,6 @@ This means there is a notifier subscription leak.`''');
 
     logger.warning('Client disconnected with a non fatal error, reconnecting');
     return connectWithBackoff();
-  }
-
-  @visibleForTesting
-  Future<void> handleConnectivityStateChange(
-    ConnectivityState state,
-  ) async {
-    final status = state.status;
-    logger.debug('Connectivity state changed: $status');
-
-    switch (status) {
-      case ConnectivityStatus.available:
-        {
-          logger.warning('checking network availability and reconnecting');
-          return connectWithBackoff();
-        }
-      case ConnectivityStatus.disconnected:
-        {
-          client.disconnect();
-          return;
-        }
-      case ConnectivityStatus.connected:
-        {
-          return;
-        }
-      default:
-        {
-          throw Exception('unexpected connectivity state: $status');
-        }
-    }
   }
 
   /// Sets the JWT token.
@@ -728,6 +687,12 @@ This means there is a notifier subscription leak.`''');
     );
   }
 
+  /// @returns True if a JWT token has been set previously. False otherwise.
+  @override
+  bool hasToken() {
+    return authState?.token != null;
+  }
+
   @override
   Future<void> connectWithBackoff() async {
     if (client.isConnected()) {
@@ -746,7 +711,15 @@ This means there is a notifier subscription leak.`''');
       initializing = Waiter();
     }
 
+    final fut = initializing!.waitOn();
+
+    // This is so that the future is not treated as unhandled
+    fut.ignore();
+
     Future<void> _attemptBody() async {
+      if (initializing?.finished == true) {
+        return fut;
+      }
       await _connect();
       await _startReplication();
       _subscribePreviousShapeRequests();
@@ -782,10 +755,11 @@ This means there is a notifier subscription leak.`''');
               'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
             );
 
-      _disconnect(error is SatelliteException ? error : null);
+      disconnect(error is SatelliteException ? error : null);
       initializing?.completeError(error);
-      throw error;
     }
+
+    return fut;
   }
 
   void _subscribePreviousShapeRequests() {
@@ -841,9 +815,27 @@ This means there is a notifier subscription leak.`''');
     setAuthState(authState);
   }
 
-  void _disconnect(SatelliteException? error) {
+  void cancelConnectionWaiter(SatelliteException error) {
+    if (initializing != null && !initializing!.finished) {
+      initializing?.completeError(error);
+    }
+  }
+
+  @override
+  void disconnect(SatelliteException? error) {
     client.disconnect();
     _notifyConnectivityState(ConnectivityStatus.disconnected, error);
+  }
+
+  /// A disconnection issued by the client.
+  @override
+  void clientDisconnect() {
+    final error = SatelliteException(
+      SatelliteErrorCode.connectionCancelledByDisconnect,
+      "Connection cancelled by 'disconnect'",
+    );
+    disconnect(error);
+    cancelConnectionWaiter(error);
   }
 
   Future<void> _startReplication() async {

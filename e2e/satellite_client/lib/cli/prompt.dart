@@ -239,6 +239,12 @@ Future<void> start() async {
           command,
           getItemIds,
         );
+      } else if (name == "exists_item_with_content") {
+        await processCommand2Params<MyDriftElectricClient, String, bool>(
+          state,
+          command,
+          existsItemWithContent,
+        );
       } else if (name == "get_item_columns") {
         await processCommand3Params<MyDriftElectricClient, String, String,
             Rows>(
@@ -301,6 +307,18 @@ Future<void> start() async {
           state,
           command,
           changeConnectivity,
+        );
+      } else if (name == "connect") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          connect,
+        );
+      } else if (name == "disconnect") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          disconnect,
         );
       } else {
         throw Exception("Unknown command: $name");

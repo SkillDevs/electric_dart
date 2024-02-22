@@ -42,6 +42,7 @@ class SatelliteException implements Exception {
 }
 
 enum SatelliteErrorCode {
+  connectionCancelledByDisconnect,
   connectionFailedAfterRetry,
   internal,
   timeout,
@@ -339,7 +340,6 @@ class TransactionEvent {
 }
 
 enum ConnectivityStatus {
-  available,
   connected,
   disconnected,
 }

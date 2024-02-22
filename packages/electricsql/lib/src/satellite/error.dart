@@ -7,6 +7,7 @@ const _kFatalErrorDescription =
 const _throwErrors = {
   SatelliteErrorCode.internal,
   SatelliteErrorCode.fatalError,
+  SatelliteErrorCode.connectionCancelledByDisconnect,
 };
 
 const _fatalErrors = {

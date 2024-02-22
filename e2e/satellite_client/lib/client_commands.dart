@@ -52,7 +52,7 @@ Future<MyDriftElectricClient> electrifyDb(
   final token = await mockSecureAuthToken(exp: exp);
 
   result.notifier.subscribeToConnectivityStateChanges((x) =>
-      print('Connectivity state changed: ${x.connectivityState.status}'));
+      print('Connectivity state changed: ${x.connectivityState.status.name}'));
   if (connectToElectric) {
     await result.connect(token); // connect to Electric
   }
@@ -264,6 +264,16 @@ Future<Rows> getItemIds(DriftElectricClient electric) async {
       )
       .get();
   return _toRows(rows);
+}
+
+Future<bool> existsItemWithContent(
+    MyDriftElectricClient electric, String content) async {
+  final items = await electric.db.select(electric.db.items).get();
+  final Item? item = items.cast<Item?>().firstWhere(
+        (item) => item!.content == content,
+        orElse: () => null,
+      );
+  return item != null;
 }
 
 Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
@@ -519,7 +529,6 @@ void changeConnectivity(DriftElectricClient db, String connectivityName) {
   final ConnectivityStatus status = switch (connectivityName) {
     'disconnected' => ConnectivityStatus.disconnected,
     'connected' => ConnectivityStatus.connected,
-    'available' => ConnectivityStatus.available,
     _ => throw Exception('Unknown connectivity name: $connectivityName'),
   };
 
@@ -531,6 +540,14 @@ void changeConnectivity(DriftElectricClient db, String connectivityName) {
 
 void setTokenExpirationMillis(int millis) {
   tokenExpirationMillis = millis;
+}
+
+void connect(DriftElectricClient db) {
+  db.connect();
+}
+
+void disconnect(DriftElectricClient db) {
+  db.disconnect();
 }
 
 /////////////////////////////////

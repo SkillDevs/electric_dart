@@ -102,8 +102,9 @@ void main() {
   });
 
   test('set persistent client id', () async {
-    await startSatellite(satellite, authConfig, token);
+    final conn = await startSatellite(satellite, authConfig, token);
     final clientId1 = satellite.authState!.clientId;
+    await conn.connectionFuture;
     await satellite.stop();
 
     await startSatellite(satellite, authConfig, token);
@@ -1325,8 +1326,7 @@ void main() {
     expect(opLog, expected);
   });
 
-  test('handling connectivity state change stops queueing operations',
-      () async {
+  test('disconnect stops queueing operations', () async {
     await runMigrations();
     final conn = await startSatellite(satellite, authConfig, token);
 
@@ -1343,9 +1343,7 @@ void main() {
     final sentLsn = satellite.client.getLastSentLsn();
     expect(sentLsn, numberToBytes(1));
 
-    await satellite.handleConnectivityStateChange(
-      const ConnectivityState(status: ConnectivityStatus.disconnected),
-    );
+    satellite.disconnect(null);
 
     await adapter.run(
       Statement(
@@ -1360,9 +1358,8 @@ void main() {
     expect(lsn1, sentLsn);
 
     // Once connectivity is restored, we will immediately run a snapshot to send pending rows
-    await satellite.handleConnectivityStateChange(
-      const ConnectivityState(status: ConnectivityStatus.available),
-    );
+    await satellite.connectWithBackoff();
+
     // Wait for snapshot to run
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final lsn2 = satellite.client.getLastSentLsn();
@@ -1371,7 +1368,7 @@ void main() {
 
   test('notifies about JWT expiration', () async {
     await runMigrations();
-    await satellite.start(authConfig);
+    await startSatellite(satellite, authConfig, token);
 
     // give some time for Satellite to start
     // (needed because connecting and starting replication are async)
@@ -2094,7 +2091,7 @@ void main() {
   });
 
   test('connection backoff success', () async {
-    client.disconnect();
+    client.shutdown();
 
     int numExpects = 0;
 
@@ -2115,6 +2112,30 @@ void main() {
     );
 
     expect(numExpects, 3);
+  });
+
+  test('connection cancelled on disconnect', () async {
+    // such that satellite can't connect to Electric and will keep retrying
+    client.shutdown();
+    final conn = await startSatellite(satellite, authConfig, token);
+
+    // We expect the connection to be cancelled
+    final fut = expectLater(
+      conn.connectionFuture,
+      throwsA(
+        isA<SatelliteException>().having(
+          (e) => e.code,
+          'code',
+          SatelliteErrorCode.connectionCancelledByDisconnect,
+        ),
+      ),
+    );
+
+    // Disconnect Satellite
+    satellite.clientDisconnect();
+
+    // Await until the connection promise is rejected
+    await fut;
   });
 
   // check that performing snapshot doesn't throw without resetting the performing snapshot assertions

@@ -37,6 +37,8 @@ class MockSatelliteProcess implements Satellite {
   final SocketFactory socketFactory;
   final SatelliteOpts opts;
 
+  String? token;
+
   @override
   ConnectivityState? connectivityState;
 
@@ -67,7 +69,14 @@ class MockSatelliteProcess implements Satellite {
   }
 
   @override
-  void setToken(String token) {}
+  void setToken(String token) {
+    this.token = token;
+  }
+
+  @override
+  bool hasToken() {
+    return token != null;
+  }
 
   Future<void> connect() async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -77,6 +86,12 @@ class MockSatelliteProcess implements Satellite {
   Future<void> connectWithBackoff() async {
     await connect();
   }
+
+  @override
+  void disconnect(SatelliteException? error) {}
+
+  @override
+  void clientDisconnect() {}
 
   @override
   Future<void> authenticate(String token) async {}
