@@ -117,6 +117,41 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 100));
   });
 
+  test('can use user_id in JWT', () async {
+    // Doesn't throw
+    await startSatellite(
+      satellite,
+      authConfig,
+      insecureAuthToken({'user_id': 'test-userA'}),
+    );
+  });
+
+  test('can use sub in JWT', () async {
+    // Doesn't throw
+    await startSatellite(
+      satellite,
+      authConfig,
+      insecureAuthToken({'sub': 'test-userB'}),
+    );
+  });
+
+  test('require user_id or sub in JWT', () async {
+    expect(
+      () => startSatellite(
+        satellite,
+        authConfig,
+        insecureAuthToken({'custom_user_claim': 'test-userC'}),
+      ),
+      throwsA(
+        isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          'Token does not contain a sub or user_id claim',
+        ),
+      ),
+    );
+  });
+
   test('cannot update user id', () async {
     await startSatellite(satellite, authConfig, token);
     expect(

@@ -669,19 +669,22 @@ This means there is a notifier subscription leak.`''');
   @override
   void setToken(String token) {
     final jwt = decodeToken(token);
-    final sub = jwt.sub;
+
+    // `sub` is the standard claim, but `user_id` is also used in the Electric service
+    // We first check for sub, and if it's not present, we use user_id
+    final newUserId = jwt.sub ?? jwt.userId!;
     final String? userId = authState?.userId;
-    if (userId != null && sub != userId) {
+    if (userId != null && newUserId != userId) {
       // We must check that the new token is still using the same user ID.
       // We can't accept a re-connection that changes the user ID because the Satellite process is statefull.
       // To change user ID the user must re-electrify the database.
       throw ArgumentError(
-        "Can't change user ID when reconnecting. Previously connected with user ID '$userId' but trying to reconnect with user ID '$sub'",
+        "Can't change user ID when reconnecting. Previously connected with user ID '$userId' but trying to reconnect with user ID '$newUserId'",
       );
     }
     setAuthState(
       authState!.copyWith(
-        userId: () => sub,
+        userId: () => newUserId,
         token: () => token,
       ),
     );
