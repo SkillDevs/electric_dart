@@ -36,7 +36,7 @@
     ??[proto] recv: #SatOpLog
 
     # Disconnect the client
-    !change_connectivity db 'disconnected'
+    !disconnect db
 
 [shell pg_1]
     # Concurrently, update and then delete the referenced row on the server
@@ -52,7 +52,7 @@
 
 [shell satellite_1]
     # Reconnect the client, expecting no errors to show up
-    !change_connectivity db 'available'
+    !connect db
     ??[proto] send: #SatOpLog
     ??[proto] recv: #SatOpLog
 
