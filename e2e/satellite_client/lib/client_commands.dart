@@ -524,20 +524,6 @@ Future<void> rawStatement(DriftElectricClient db, String statement) async {
   await db.db.customStatement(statement);
 }
 
-void changeConnectivity(DriftElectricClient db, String connectivityName) {
-  final dbName = db.notifier.dbName;
-  final ConnectivityStatus status = switch (connectivityName) {
-    'disconnected' => ConnectivityStatus.disconnected,
-    'connected' => ConnectivityStatus.connected,
-    _ => throw Exception('Unknown connectivity name: $connectivityName'),
-  };
-
-  db.notifier.connectivityStateChanged(
-    dbName,
-    ConnectivityState(status: status),
-  );
-}
-
 void setTokenExpirationMillis(int millis) {
   tokenExpirationMillis = millis;
 }

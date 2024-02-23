@@ -172,7 +172,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.10_node_satell
    # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satellite_compensations_work.lux dart/tests/03.11_node_satellite_compensations_work.lux
 --- electric/tests/03.11_node_satellite_compensations_work.lux	2024-02-23 10:16:14.354775137 +0100
-+++ dart/tests/03.11_node_satellite_compensations_work.lux	2024-02-22 22:55:55.561866630 +0100
++++ dart/tests/03.11_node_satellite_compensations_work.lux	2024-02-23 11:02:11.774925295 +0100
 @@ -27,21 +27,16 @@
      [invoke node_await_table "other_items"]
      [invoke node_sync_table "other_items"]
@@ -195,7 +195,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satell
  
      # Disconnect the client
 -    !db.notifier.connectivityStateChanged(db.notifier.dbName, { status: 'disconnected' })
-+    !change_connectivity db 'disconnected'
++    !disconnect db
  
  [shell pg_1]
      # Concurrently, update and then delete the referenced row on the server
@@ -218,7 +218,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satell
  [shell satellite_1]
      # Reconnect the client, expecting no errors to show up
 -    !db.notifier.connectivityStateChanged(db.notifier.dbName, { status: 'available' })
-+    !change_connectivity db 'available'
++    !connect db
      ??[proto] send: #SatOpLog
      ??[proto] recv: #SatOpLog
  
@@ -441,7 +441,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satell
      # Even though JSON can encode the NUL code point and unpaired surrogates, those will fail Postgres' jsonb validation.
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux dart/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux
 --- electric/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux	2024-02-23 10:16:14.356775140 +0100
-+++ dart/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux	2024-02-23 10:14:01.109576432 +0100
++++ dart/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux	2024-02-23 10:17:51.293937640 +0100
 @@ -27,20 +27,20 @@
  
  [shell satellite_1]
@@ -469,7 +469,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.22_node_satell
  [shell satellite_2]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
 --- electric/tests/_satellite_macros.luxinc	2024-02-23 10:16:14.357775141 +0100
-+++ dart/tests/_satellite_macros.luxinc	2024-02-23 10:01:26.426790516 +0100
++++ dart/tests/_satellite_macros.luxinc	2024-02-23 10:17:51.293937640 +0100
 @@ -1,28 +1,20 @@
  [global node=>]
  

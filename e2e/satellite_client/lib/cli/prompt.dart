@@ -302,12 +302,6 @@ Future<void> start() async {
           command,
           rawStatement,
         );
-      } else if (name == "change_connectivity") {
-        await processCommand2Params<MyDriftElectricClient, String, void>(
-          state,
-          command,
-          changeConnectivity,
-        );
       } else if (name == "connect") {
         await processCommand1Param<MyDriftElectricClient, void>(
           state,
