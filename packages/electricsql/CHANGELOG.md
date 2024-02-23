@@ -1,3 +1,9 @@
+## 0.5.2
+
+* Code based on official Typescript client [v0.9.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.3) and [v0.9.4](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.4)
+* The drift schema now supports postgres, allowing reuse in a Dart backend. A simple backend example is provided in the todos demo. Thanks to @simolus3 for the [contribution](https://github.com/SkillDevs/electric_dart/pull/8).
+
+
 ## 0.5.1
 
 * Code based on official Typescript client [v0.9.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.2)
