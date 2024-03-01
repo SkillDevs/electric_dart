@@ -8,7 +8,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 export 'stub.dart'
     if (dart.library.io) 'io.dart'
-    if (dart.library.html) 'html.dart';
+    if (dart.library.js_interop) 'web.dart';
 
 typedef Data = Uint8List;
 
