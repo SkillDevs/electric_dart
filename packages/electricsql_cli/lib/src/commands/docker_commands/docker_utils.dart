@@ -11,13 +11,16 @@ Future<Process> dockerCompose(
 }) async {
   final assetsDir = await getElectricCLIAssetsDir();
   final composeFile = File(path.join(assetsDir.path, 'docker/compose.yaml'));
+  final composeFileWithPostgres =
+      File(path.join(assetsDir.path, 'docker/compose-with-postgres.yaml'));
 
+  final withPostgres = env['COMPOSE_PROFILES'] == 'with-postgres';
   final args = <String>[
     'compose',
     '--ansi',
     'always',
     '-f',
-    composeFile.absolute.path,
+    (withPostgres ? composeFileWithPostgres : composeFile).absolute.path,
     command,
     ...userArgs,
   ];

@@ -1,74 +1,44 @@
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/notifiers.dart';
+import 'package:electricsql/frameworks_shared.dart';
+import 'package:electricsql/util.dart';
 import 'package:electricsql_flutter/electricsql_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 class ConnectivityStateController with ChangeNotifier {
   final ElectricClient electric;
 
-  ConnectivityState _connectivityState = _kStates.disconnected;
+  late ConnectivityState _connectivityState =
+      getElectricConnectivityState(electric);
   ConnectivityState get connectivityState => _connectivityState;
 
-  void Function()? _unsubConnectivityChange;
-  bool _shouldStop = false;
+  void Function()? _unsubscribe;
 
   ConnectivityStateController(this.electric);
 
   void init() {
-    assert(_unsubConnectivityChange == null, 'Already initialized');
+    assert(_unsubscribe == null, 'Already initialized');
 
-    _setConnectivityState(_getElectricState(electric));
+    _unsubscribe = createConnectivityStateSubscribeFunction(electric.notifier)(
+      (ConnectivityState newState) {
+        _setConnectivityState(getValidConnectivityState(newState));
+      },
+    );
 
-    void handler(ConnectivityStateChangeNotification notification) {
-      if (_shouldStop) return;
-
-      final state = notification.connectivityState;
-
-      _setConnectivityState(getValidState(state));
-    }
-
-    _unsubConnectivityChange =
-        electric.notifier.subscribeToConnectivityStateChanges(handler);
+    _connectivityState = getElectricConnectivityState(electric);
   }
 
   @override
   void dispose() {
-    _shouldStop = true;
-    if (_unsubConnectivityChange != null) {
-      _unsubConnectivityChange?.call();
-      _unsubConnectivityChange = null;
+    if (_unsubscribe != null) {
+      _unsubscribe?.call();
+      _unsubscribe = null;
     }
     super.dispose();
   }
 
   void _setConnectivityState(ConnectivityState state) {
+    if (state == _connectivityState) return;
     _connectivityState = state;
     notifyListeners();
   }
 }
-
-const ({
-  ConnectivityState connected,
-  ConnectivityState disconnected,
-}) _kStates = (
-  connected: ConnectivityState(status: ConnectivityStatus.connected),
-  disconnected: ConnectivityState(status: ConnectivityStatus.disconnected),
-);
-
-const _kValidStatuses = <ConnectivityStatus>{
-  ConnectivityStatus.connected,
-  ConnectivityStatus.disconnected,
-};
-
-ConnectivityState _getElectricState(ElectricClient? electric) {
-  if (electric == null) {
-    return _kStates.disconnected;
-  }
-
-  return electric.isConnected ? _kStates.connected : _kStates.disconnected;
-}
-
-ConnectivityState getValidState(ConnectivityState candidateState) =>
-    _kValidStatuses.contains(candidateState.status)
-        ? candidateState
-        : _kStates.disconnected;
