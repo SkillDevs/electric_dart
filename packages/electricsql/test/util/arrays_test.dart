@@ -69,6 +69,7 @@ class EqualChunks<K, T> extends CustomMatcher {
   }
 
   static Object? _mapChunks<K, T>(dynamic chunks) {
+    // We map to a record with an immutable list so that the `equals` matcher works
     return (chunks as List<(K, List<T>)>).map((e) => (e.$1, e.$2.lock));
   }
 }

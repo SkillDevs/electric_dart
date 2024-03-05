@@ -20,12 +20,13 @@ abstract interface class ElectricClient {
   void potentiallyChanged();
 
   Future<void> close();
+  void disconnect();
 
   // ElectricClient methods
 
   Satellite get satellite;
 
-  Future<void> connect(String token);
+  Future<void> connect([String? token]);
   Future<ShapeSubscription> syncTables(List<String> tables);
 }
 
@@ -42,10 +43,22 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
   /// Connects to the Electric sync service.
   /// This method is idempotent, it is safe to call it multiple times.
   /// @param token - The JWT token to use to connect to the Electric sync service.
+  ///                This token is required on first connection but can be left out when reconnecting
+  ///                in which case the last seen token is reused.
   @override
-  Future<void> connect(String token) async {
-    satellite.setToken(token);
+  Future<void> connect([String? token]) async {
+    if (token == null && !satellite.hasToken()) {
+      throw Exception('A token is required the first time you connect.');
+    }
+    if (token != null) {
+      satellite.setToken(token);
+    }
     await satellite.connectWithBackoff();
+  }
+
+  @override
+  void disconnect() {
+    satellite.disconnect(null);
   }
 
   factory ElectricClientImpl.create({

@@ -26,7 +26,7 @@ class ElectricNamespace {
   }
 
   void setIsConnected(ConnectivityState connectivityState) {
-    _isConnected = connectivityState == ConnectivityState.connected;
+    _isConnected = connectivityState.status == ConnectivityStatus.connected;
   }
 
   /// We lift this function a level so the user can call

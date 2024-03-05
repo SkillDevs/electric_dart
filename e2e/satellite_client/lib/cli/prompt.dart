@@ -61,8 +61,8 @@ Future<void> start() async {
           (value) => value,
         );
       } else if (name == "electrify_db") {
-        await processCommand4Params<ClientDatabase, String, int, List<dynamic>,
-            DriftElectricClient>(
+        await processCommand5Params<ClientDatabase, String, int, List<dynamic>,
+            bool, DriftElectricClient>(
           state,
           command,
           electrifyDb,
@@ -239,6 +239,12 @@ Future<void> start() async {
           command,
           getItemIds,
         );
+      } else if (name == "exists_item_with_content") {
+        await processCommand2Params<MyDriftElectricClient, String, bool>(
+          state,
+          command,
+          existsItemWithContent,
+        );
       } else if (name == "get_item_columns") {
         await processCommand3Params<MyDriftElectricClient, String, String,
             Rows>(
@@ -296,11 +302,17 @@ Future<void> start() async {
           command,
           rawStatement,
         );
-      } else if (name == "change_connectivity") {
-        await processCommand2Params<MyDriftElectricClient, String, void>(
+      } else if (name == "connect") {
+        await processCommand1Param<MyDriftElectricClient, void>(
           state,
           command,
-          changeConnectivity,
+          connect,
+        );
+      } else if (name == "disconnect") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          disconnect,
         );
       } else {
         throw Exception("Unknown command: $name");

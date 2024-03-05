@@ -149,17 +149,19 @@ final electric = await electrify<AppDatabase>(
         // Make sure it's not localhost if running on an emulator/usb connected device,
         // but the IP of your machine (192.168.x.x when hosting it yourself)
         url: 'http://<ip>:5133',
-        auth: AuthConfig(
-            // https://electric-sql.com/docs/usage/auth
-            // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
-            token: '<your JWT>',
-        ),
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
         //
     ),
 );
+
+// https://electric-sql.com/docs/usage/auth
+// You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
+final String jwtAuthToken = '<your JWT>';
+
+// Connect to the Electric service
+await electric.connect(jwtAuthToken);
 ```
 
 ### 5. Define the Shapes to sync

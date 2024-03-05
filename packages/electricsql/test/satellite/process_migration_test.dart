@@ -66,6 +66,7 @@ void main() {
 
     final satellite = context.satellite;
     await satellite.start(context.authConfig);
+    satellite.setToken(context.token);
     await satellite.connectWithBackoff();
     clientId = satellite.authState!.clientId; // store clientId in the context
     await populateDB(context);

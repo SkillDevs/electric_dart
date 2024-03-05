@@ -89,7 +89,6 @@ Future<void> runStartCommand({
     ...(withPostgres == true
         ? {
             'COMPOSE_PROFILES': 'with-postgres',
-            'COMPOSE_ELECTRIC_SERVICE': 'electric-with-postgres',
             'DATABASE_URL':
                 'postgresql://postgres:${env['DATABASE_PASSWORD'] ?? 'pg_password'}@postgres:${env['DATABASE_PORT'] ?? '5432'}/${config.read<String>('DATABASE_NAME')}',
             'LOGICAL_PUBLISHER_HOST': 'electric',

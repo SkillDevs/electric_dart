@@ -102,13 +102,17 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  void actuallyChanged(DbName dbName, List<Change> changes) {
+  void actuallyChanged(
+    DbName dbName,
+    List<Change> changes,
+    ChangeOrigin origin,
+  ) {
     logger.info('actually changed notifier');
     if (!_hasDbName(dbName)) {
       return;
     }
 
-    _emitActualChange(dbName, changes);
+    _emitActualChange(dbName, changes, origin);
   }
 
   @override
@@ -205,10 +209,15 @@ class EventNotifier implements Notifier {
     return notification;
   }
 
-  ChangeNotification _emitActualChange(DbName dbName, List<Change> changes) {
+  ChangeNotification _emitActualChange(
+    DbName dbName,
+    List<Change> changes,
+    ChangeOrigin origin,
+  ) {
     final notification = ChangeNotification(
       dbName: dbName,
       changes: changes,
+      origin: origin,
     );
 
     emit(EventNames.actualDataChange, notification);

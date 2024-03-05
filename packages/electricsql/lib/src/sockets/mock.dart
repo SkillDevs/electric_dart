@@ -26,7 +26,7 @@ class MockSocket extends EventEmitter implements Socket {
   }
 
   @override
-  void onClose(void Function() cb) {}
+  void onClose(void Function(SocketCloseReason reason) cb) {}
 
   @override
   void onError(void Function(SatelliteException error) cb) {}

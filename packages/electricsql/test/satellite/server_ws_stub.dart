@@ -120,6 +120,11 @@ class SatelliteWSServerStub {
     }
   }
 
+  void closeSocket(String? reason) {
+    // status codes 4000-4999 are available for applications
+    socket.close(reason != null ? 4000 : null, reason);
+  }
+
   Future<void> close() async {
     await server.close();
   }

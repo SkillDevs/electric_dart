@@ -40,6 +40,7 @@ Future<String> secureAuthToken({
 }
 
 Future<String> mockSecureAuthToken({
+  Duration? exp,
   String? iss,
   String? key,
 }) {
@@ -50,6 +51,7 @@ Future<String> mockSecureAuthToken({
     claims: {'sub': 'test-user'},
     iss: mockIss,
     key: mockKey,
+    exp: exp,
   );
 }
 
@@ -57,18 +59,26 @@ DecodedJWT decodeToken(String token) {
   final decoded = JWT.decode(token);
   final dynamic payload = decoded.payload;
   if (payload is! Map<String, dynamic> ||
-      payload['sub'] == null ||
-      payload['sub'] is! String) {
-    throw ArgumentError('Token does not contain a sub claim');
+      (payload['sub'] == null && payload['user_id'] == null)) {
+    throw ArgumentError('Token does not contain a sub or user_id claim');
   }
 
-  return DecodedJWT(decoded, sub: payload['sub'] as String);
+  return DecodedJWT(
+    decoded,
+    sub: payload['sub'] as String?,
+    userId: payload['user_id'] as String?,
+  );
 }
 
 class DecodedJWT {
   final JWT jwt;
 
-  final String sub;
+  final String? sub;
+  final String? userId;
 
-  DecodedJWT(this.jwt, {required this.sub});
+  DecodedJWT(
+    this.jwt, {
+    required this.sub,
+    required this.userId,
+  });
 }

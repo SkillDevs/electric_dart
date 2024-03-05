@@ -51,6 +51,7 @@ void main() {
     source.actuallyChanged(
       'test.db',
       [Change(qualifiedTablename: qualifiedTablename, rowids: null)],
+      ChangeOrigin.local,
     );
 
     expect(notifications.length, 1);
@@ -69,21 +70,21 @@ void main() {
     const qualifiedTablename = QualifiedTablename('main', 'Items');
     final changes = [Change(qualifiedTablename: qualifiedTablename)];
 
-    source.actuallyChanged('foo.db', changes);
+    source.actuallyChanged('foo.db', changes, ChangeOrigin.local);
     expect(notifications.length, 1);
 
-    source.actuallyChanged('lala.db', changes);
+    source.actuallyChanged('lala.db', changes, ChangeOrigin.local);
     expect(notifications.length, 1);
 
-    source.actuallyChanged('bar.db', changes);
+    source.actuallyChanged('bar.db', changes, ChangeOrigin.local);
     expect(notifications.length, 1);
 
     source.attach('bar.db', 'bar.db');
-    source.actuallyChanged('bar.db', changes);
+    source.actuallyChanged('bar.db', changes, ChangeOrigin.local);
     expect(notifications.length, 2);
 
     t2.attach('foo.db', 'foo.db');
-    source.actuallyChanged('foo.db', changes);
+    source.actuallyChanged('foo.db', changes, ChangeOrigin.local);
     expect(notifications.length, 4);
   });
 
@@ -95,13 +96,16 @@ void main() {
 
     target.subscribeToConnectivityStateChanges((x) => notifications.add(x));
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     expect(notifications.length, 1);
 
     source.connectivityStateChanged(
       'non-existing-db',
-      ConnectivityState.connected,
+      const ConnectivityState(status: ConnectivityStatus.connected),
     );
 
     expect(notifications.length, 1);
@@ -117,11 +121,17 @@ void main() {
       notifications.add(x);
     });
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     unsubscribe();
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     expect(notifications.length, 1);
   });

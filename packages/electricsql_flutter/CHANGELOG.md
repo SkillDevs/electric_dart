@@ -1,3 +1,8 @@
+## 0.5.1
+
+* The `ConnectivityStateController` now only provides the current state of the connectivity. To connect or disconnect, you can now use the `connect` and `disconnect` methods directly on the `ElectricClient` instance.
+
+
 ## 0.5.0
 
 * Support `electricsql` Dart v0.5.0

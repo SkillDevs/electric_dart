@@ -42,7 +42,11 @@ abstract class Satellite {
   Future<void> start(AuthConfig? authConfig);
   Future<void> stop({bool? shutdown});
   void setToken(String token);
+  bool hasToken();
   Future<void> connectWithBackoff();
+  void disconnect(SatelliteException? error);
+  void clientDisconnect();
+  Future<void> authenticate(String token);
   Future<ShapeSubscription> subscribe(
     List<ClientShapeDefinition> shapeDefinitions,
   );
@@ -57,6 +61,7 @@ abstract class Client {
     AuthState authState,
   );
   bool isConnected();
+  ReplicationStatus getOutboundReplicationStatus();
   Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,

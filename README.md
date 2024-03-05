@@ -24,8 +24,8 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 ### Reference implementation: 
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
-* Version `v0.9.2-dev`
-* Commit: `e45a2d27766be32ea4cf420b1a23db88c1487927`
+* Version `v0.9.4-dev`
+* Commit: `85daa6ed1d52eb3111d790d533ca9ffb64f1b6f0`
 
 
 ### What's Electric?
@@ -68,16 +68,18 @@ final electric = await electrify<AppDatabase>(
     config: ElectricConfig(
         // Electric service URL
         url: 'http://<ip>:5133',
-        auth: AuthConfig(
-            // https://electric-sql.com/docs/usage/auth
-            // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
-            token: '<your JWT>',
-        ),
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Level.off
         // ),
     ),
 );
+
+// https://electric-sql.com/docs/usage/auth
+// You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
+final String jwtAuthToken = '<your JWT>';
+
+// Connect to the Electric service
+await electric.connect(jwtAuthToken);
 ```
 
 ### Sync data

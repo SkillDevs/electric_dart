@@ -208,13 +208,13 @@ class SatelliteClient implements Client {
         }
         _emitter.enqueueEmitError(error);
       });
-      socket.onClose(() {
+      socket.onClose((reason) {
         disconnect();
         if (_emitter.listenerCount('error') == 0) {
           logger.error('socket closed but no listener is attached');
         }
         _emitter.enqueueEmitError(
-          SatelliteException(SatelliteErrorCode.socketError, 'socket closed'),
+          SatelliteException(reason.code, 'socket closed'),
         );
       });
 
@@ -249,6 +249,11 @@ class SatelliteClient implements Client {
   @override
   bool isConnected() {
     return socketHandler != null;
+  }
+
+  @override
+  ReplicationStatus getOutboundReplicationStatus() {
+    return outbound.isReplicating;
   }
 
   @override
@@ -627,7 +632,13 @@ class SatelliteClient implements Client {
 
     _subscriptionsDataCache.subscriptionRequest(request);
 
-    return _service.subscribe(null, request).then(handleSubscription);
+    return delayIncomingMessages(
+      () async {
+        final resp = await _service.subscribe(null, request);
+        return handleSubscription(resp);
+      },
+      allowedRpcResponses: ['subscribe'],
+    );
   }
 
   @override
