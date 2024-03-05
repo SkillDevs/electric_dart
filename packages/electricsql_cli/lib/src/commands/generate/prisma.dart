@@ -116,7 +116,7 @@ class PrismaCLI {
         'run',
         '--rm',
         '-v',
-        '${workingDirectory}:/cli',
+        '$workingDirectory:/cli',
         '--network',
         'host',
         _imageName,
