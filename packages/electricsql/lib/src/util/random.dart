@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:electricsql/src/util/common.dart';
+import 'package:uuid/uuid.dart' as uuid_lib;
 
 final _random = Random();
 
@@ -12,6 +12,8 @@ String _randomHex() {
   return _random.nextInt(16).toRadixString(16);
 }
 
+const _uuidGen = uuid_lib.Uuid();
+
 String genUUID() {
-  return uuid();
+  return _uuidGen.v4();
 }

@@ -2,14 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:rate_limiter/rate_limiter.dart' as rt;
 
-import 'package:uuid/uuid.dart' as uuid_lib;
-
-const _uuidGen = uuid_lib.Uuid();
-
-String uuid() {
-  return _uuidGen.v4();
-}
-
 final kDefaultLogPos = numberToBytes(0);
 
 // Typed wrapper around `rate_limiter` [Throttle]

@@ -22,6 +22,7 @@ import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
+import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -127,7 +128,7 @@ class SatelliteProcess implements Satellite {
       opts.minSnapshotWindow,
     );
 
-    subscriptionIdGenerator = () => uuid();
+    subscriptionIdGenerator = () => genUUID();
     shapeRequestIdGenerator = subscriptionIdGenerator;
 
     connectRetryHandler = defaultConnectRetryHandler;
@@ -668,11 +669,7 @@ This means there is a notifier subscription leak.`''');
   /// @param token The JWT token.
   @override
   void setToken(String token) {
-    final jwt = decodeToken(token);
-
-    // `sub` is the standard claim, but `user_id` is also used in the Electric service
-    // We first check for sub, and if it's not present, we use user_id
-    final newUserId = jwt.sub ?? jwt.userId!;
+    final newUserId = decodeUserIdFromToken(token);
     final String? userId = authState?.userId;
     if (userId != null && newUserId != userId) {
       // We must check that the new token is still using the same user ID.
@@ -1486,7 +1483,7 @@ This means there is a notifier subscription leak.`''');
     String clientId = await getMeta<Uuid>(clientIdKey);
 
     if (clientId.isEmpty) {
-      clientId = uuid();
+      clientId = genUUID();
       await setMeta(clientIdKey, clientId);
     }
     return clientId;

@@ -17,6 +17,7 @@ import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/async_event_emitter.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
+import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:meta/meta.dart';
 
@@ -214,7 +215,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
             );
           });
         } else {
-          shapeReqToUuid[shape.requestId] = uuid();
+          shapeReqToUuid[shape.requestId] = genUUID();
           final List<DataRecord> records = relationData[tablename] ?? [];
 
           for (final record in records) {
