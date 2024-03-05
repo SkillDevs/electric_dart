@@ -48,7 +48,7 @@ The script will automatically apply the migrations under the folder `db/migratio
 > More info: https://electric-sql.com/docs/usage/data-modelling/migrations
 
 Most important commands from `electricsql_cli` to get you started:
-1. `start`: Starts the Electric service and optional the Postgres database with the option `--with-postgres`.
+1. `start`: Starts the Electric service and optionally the Postgres database with the option `--with-postgres`.
 2. `stop`: Stops the service. Optionally you can remove all the Electric and Postgres data, in case you want to start from scratch using the option `--remove`.
 3. `generate`: Generates the `drift` schema and the Electric migrations based on the Postgres schema. More info below.
 
@@ -180,7 +180,7 @@ More info: https://electric-sql.com/docs/usage/data-access/shapes
 ### 6. Use the drift database normally
 
 Everything should be working now. You can use the `drift` database normally.
-Inserting, updating or deleting via the drift APIs should automatically sync the data in the Postgres database.
+Inserting, updating or deleting via the drift APIs should automatically sync the data to the Postgres database and to other devices.
 
 You can see some examples of writes and reads in the main [README](https://github.com/SkillDevs/electric_dart/blob/master/README.md).
 
