@@ -7,6 +7,7 @@ import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/configure/command_with_config.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/command_start.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/command_stop.dart';
+import 'package:electricsql_cli/src/commands/docker_commands/precheck.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
@@ -131,15 +132,15 @@ Future<void> runElectricCodeGeneration({
 
   final finalOutFolder = config.read<String>('CLIENT_PATH');
 
-  final valid = await _prechecks(
+  final String? checkErrorReason = await _prechecks(
     // If we run the migrations a temporary docker will be run, so no need to
     // check the input
     service: withMigrations != null ? null : finalService,
     outFolder: finalOutFolder,
     logger: finalLogger,
   );
-  if (!valid) {
-    throw ConfigException();
+  if (checkErrorReason != null) {
+    throw ConfigException(checkErrorReason);
   }
 
   final genCommandOpts = _GeneratorOpts(
@@ -153,42 +154,35 @@ Future<void> runElectricCodeGeneration({
   await _runGenerator(genCommandOpts);
 }
 
-Future<bool> _prechecks({
+Future<String?> _prechecks({
   required String? service,
   required String outFolder,
   required Logger logger,
 }) async {
   if (!(await _isDartProject())) {
-    logger.err('ERROR: This command must be run inside a Dart project');
-    return false;
+    return 'This command must be run inside a Dart project';
   }
 
   // Service might be null if the CLI creates a temporary docker with the service
   // to run the migrations
   if (service != null && !(await _isElectricServiceReachable(service))) {
-    logger.err('ERROR: Could not reach Electric service at $service');
-    return false;
+    return 'Could not reach Electric service at $service';
   }
 
   if (File(outFolder).existsSync() && FileSystemEntity.isFileSync(outFolder)) {
-    logger.err('ERROR: The output path $outFolder is a file');
-    return false;
+    return 'The output path $outFolder is a file';
   }
 
-  // Check that Docker is installed
-  final dockerRes = await Process.run('docker', ['--version']);
-  if (dockerRes.exitCode != 0) {
-    logger.err('ERROR: Could not run docker command');
-    logger.err(
-      'Docker is required in order to introspect the Postgres database with the Prisma CLI',
-    );
-    logger.err('Exit code: ${dockerRes.exitCode}');
-    logger.err('Stderr: ${dockerRes.stderr}');
-    logger.err('Stdout: ${dockerRes.stdout}');
-    return false;
+  // Check that a valid Docker is installed
+  final validDockerRes = await checkValidDockerVersion(
+    installReason:
+        'Docker is required in order to introspect the Postgres database with the Prisma CLI',
+  );
+  if (validDockerRes.errorReason != null) {
+    return validDockerRes.errorReason;
   }
 
-  return true;
+  return null;
 }
 
 Future<bool> _isDartProject() async {

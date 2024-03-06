@@ -176,10 +176,10 @@ int parsePort(String str) {
 }
 
 class ConfigException implements Exception {
-  ConfigException([this.message]);
+  ConfigException(this.message);
 
-  final String? message;
+  final String message;
 
   @override
-  String toString() => message ?? 'ConfigException';
+  String toString() => message;
 }
