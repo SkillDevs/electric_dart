@@ -14,9 +14,9 @@ import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/env.dart';
 import 'package:electricsql_cli/src/get_port.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
 import 'package:http/http.dart' as http;
-import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
 
 const String defaultMigrationsFileName = 'migrations.dart';
@@ -101,7 +101,7 @@ When enabled, the temporary migration files used to generate the client will be 
       logger: _logger,
       driftSchemaGenOpts: _cliDriftGenOpts,
     );
-    return ExitCode.success.code;
+    return 0;
   }
 }
 

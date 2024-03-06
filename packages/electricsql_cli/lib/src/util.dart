@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:electricsql_cli/src/exit_signals.dart';
-import 'package:mason_logger/mason_logger.dart';
+import 'package:electricsql_cli/src/logger.dart';
 
 const int kSigIntExitCode = 130;
 

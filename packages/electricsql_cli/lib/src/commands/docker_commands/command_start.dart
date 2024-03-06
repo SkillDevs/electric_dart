@@ -5,9 +5,9 @@ import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/docker_utils.dart';
 import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
 import 'package:http/http.dart' as http;
-import 'package:mason_logger/mason_logger.dart';
 
 class DockerStartCommand extends Command<int> {
   DockerStartCommand({

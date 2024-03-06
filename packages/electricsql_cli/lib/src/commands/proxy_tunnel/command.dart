@@ -5,8 +5,8 @@ import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/exit_signals.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
-import 'package:mason_logger/mason_logger.dart';
 import 'package:web_socket_channel/io.dart';
 
 const String defaultElectricServiceWSUrl = 'ws://localhost:5133';
@@ -54,7 +54,7 @@ class ProxyTunnelCommand extends Command<int> {
         localPort: finalLocalPort,
         logger: _logger,
       );
-      return ExitCode.success.code;
+      return 0;
     } catch (error) {
       _logger.err(error.toString());
       exit(1);
