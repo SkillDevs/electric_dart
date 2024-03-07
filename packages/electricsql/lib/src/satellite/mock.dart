@@ -164,6 +164,12 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
 
   bool deliverFirst = false;
 
+  Duration? _startReplicationDelay;
+
+  void setStartReplicationDelay(Duration? delay) {
+    _startReplicationDelay = delay;
+  }
+
   void setRelations(RelationsCache relations) {
     this.relations = relations;
 
@@ -307,7 +313,9 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
 
   @override
   ReplicationStatus getOutboundReplicationStatus() {
-    return isConnected() ? ReplicationStatus.active : ReplicationStatus.stopped;
+    return isConnected() && replicating
+        ? ReplicationStatus.active
+        : ReplicationStatus.stopped;
   }
 
   @override
@@ -359,7 +367,11 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     String? schemaVersion,
     List<String>? subscriptionIds,
     //_resume?: boolean | undefined
-  ) {
+  ) async {
+    if (_startReplicationDelay != null) {
+      await Future<void>.delayed(_startReplicationDelay!);
+    }
+
     replicating = true;
     inboundAck = lsn;
 
@@ -370,23 +382,19 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     timeouts.add(t);
 
     if (lsn != null && bytesToNumber(lsn) == kMockBehindWindowLsn) {
-      return Future.value(
-        StartReplicationResponse(
-          error: SatelliteException(
-            SatelliteErrorCode.behindWindow,
-            'MOCK BEHIND_WINDOW_LSN ERROR',
-          ),
+      return StartReplicationResponse(
+        error: SatelliteException(
+          SatelliteErrorCode.behindWindow,
+          'MOCK BEHIND_WINDOW_LSN ERROR',
         ),
       );
     }
 
     if (lsn != null && bytesToNumber(lsn) == kMockInternalError) {
-      return Future.value(
-        StartReplicationResponse(
-          error: SatelliteException(
-            SatelliteErrorCode.internal,
-            'MOCK INTERNAL_ERROR',
-          ),
+      return StartReplicationResponse(
+        error: SatelliteException(
+          SatelliteErrorCode.internal,
+          'MOCK INTERNAL_ERROR',
         ),
       );
     }
@@ -426,6 +434,13 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   void enqueueTransaction(
     DataTransaction transaction,
   ) {
+    if (!replicating) {
+      throw SatelliteException(
+        SatelliteErrorCode.replicationNotStarted,
+        'enqueuing a transaction while outbound replication has not started',
+      );
+    }
+
     outboundSent = transaction.lsn;
   }
 

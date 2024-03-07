@@ -1443,7 +1443,8 @@ void main() {
       'garbage collection is triggered when transaction from the same origin is replicated',
       () async {
     await runMigrations();
-    await startSatellite(satellite, authConfig, token);
+    final conn = await startSatellite(satellite, authConfig, token);
+    await conn.connectionFuture;
 
     await adapter.run(
       Statement(
@@ -2011,6 +2012,25 @@ void main() {
 
     await satellite.performSnapshot();
     expect(await satellite.getEntries(since: 0), <OplogEntry>[]);
+  });
+
+  test("snapshot while not fully connected doesn't throw", () async {
+    client.setStartReplicationDelay(const Duration(milliseconds: 100));
+
+    await runMigrations();
+
+    // Add log entry while offline
+    await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
+
+    final conn = await startSatellite(satellite, authConfig, token);
+
+    // Performing a snapshot while the replication connection has not been stablished
+    // should not throw
+    await satellite.performSnapshot();
+
+    await conn.connectionFuture;
+
+    await satellite.performSnapshot();
   });
 
   test('snapshots: generated oplog entries have the correct tags', () async {
