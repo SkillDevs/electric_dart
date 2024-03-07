@@ -64,16 +64,15 @@ List<Statement> generateOplogTriggers(
   final oldRows = joinColsForJSON(columns, columnTypes, 'old');
 
   return <String>[
+    // Toggles for turning the triggers on and off
     '''
 
-    -- Toggles for turning the triggers on and off
     INSERT OR IGNORE INTO _electric_trigger_settings(tablename,flag) VALUES ('$tableFullName', 1);
     ''',
+    // Triggers for table $tableName
+    // ensures primary key is immutable
     '''
 
-    /* Triggers for table $tableName */
-
-    -- ensures primary key is immutable
     DROP TRIGGER IF EXISTS update_ensure_${namespace}_${tableName}_primarykey;
     ''',
     '''
@@ -87,9 +86,9 @@ List<Statement> generateOplogTriggers(
         END;
     END;
     ''',
+    // Triggers that add INSERT, UPDATE, DELETE operation to the _opslog table
     '''
 
-    -- Triggers that add INSERT, UPDATE, DELETE operation to the _opslog table
     DROP TRIGGER IF EXISTS insert_${namespace}_${tableName}_into_oplog;
     ''',
     '''
@@ -175,8 +174,8 @@ List<Statement> generateCompensationTriggers(Table table) {
     );
 
     return <String>[
+      // Triggers for foreign key compensations
       '''
-      -- Triggers for foreign key compensations
       DROP TRIGGER IF EXISTS compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog;''',
       // The compensation trigger inserts a row in `_electric_oplog` if the row pointed at by the FK exists
       // The way how this works is that the values for the row are passed to the nested SELECT
