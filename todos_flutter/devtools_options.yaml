@@ -1,0 +1,3 @@
+extensions:
+  - electricsql: true
+  - drift: true

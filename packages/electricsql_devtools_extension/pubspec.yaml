@@ -1,0 +1,26 @@
+name: electricsql_devtools_extension
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+
+dependencies:
+  cupertino_icons: ^1.0.6
+  devtools_extensions: ^0.0.13
+  flutter:
+    sdk: flutter
+  vm_service: ^13.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  lint: ^2.3.0
+
+flutter:
+
+  uses-material-design: true

@@ -10,5 +10,14 @@
 			"request": "launch",
 			"type": "dart"
 		},
+		{
+            "name": "devtools_extension + simulated environment",
+            "cwd": "packages/electricsql_devtools_extension",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "--dart-define=use_simulated_environment=true"
+            ],
+        },
 	]
 }
