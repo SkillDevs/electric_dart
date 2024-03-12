@@ -41,7 +41,8 @@ class MockSatelliteProcess implements Satellite {
   String? token;
 
   @override
-  ConnectivityState? connectivityState;
+  late ConnectivityState? connectivityState =
+      const ConnectivityState(status: ConnectivityStatus.disconnected);
 
   MockSatelliteProcess({
     required this.dbName,
