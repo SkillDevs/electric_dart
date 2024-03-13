@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
@@ -27,6 +28,7 @@ TableInfo get tableInfo => context.tableInfo;
 SatelliteProcess get satellite => context.satellite;
 MockSatelliteClient get client => context.client;
 String get dbName => context.dbName;
+AuthState get authState => context.authState;
 
 void main() {
   setUp(() async {
@@ -95,6 +97,142 @@ void main() {
     expect(txDate1, isNot(txDate2));
     expect(txDate2, isNot(txDate3));
     expect(txDate3, isNot(txDate4));
+  });
+
+  test('Tags are correctly set on subsequent operations in a TX', () async {
+    await context.runMigrations();
+
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value) VALUES (1,'val1')",
+      ),
+    );
+
+    // Since no snapshot was made yet
+    // the timestamp in the oplog is not yet set
+    final insertEntry = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 1',
+      ),
+    );
+    expect(insertEntry[0]['timestamp'], null);
+    expect(json.decode(insertEntry[0]['clearTags']! as String), <Object?>[]);
+
+    satellite.setAuthState(authState);
+    await satellite.performSnapshot();
+
+    DateTime parseDate(String date) => DateTime.parse(date);
+
+    // Now the timestamp is set
+    final insertEntryAfterSnapshot = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 1',
+      ),
+    );
+    expect(insertEntryAfterSnapshot[0]['timestamp'] != null, isTrue);
+    final insertTimestamp =
+        parseDate(insertEntryAfterSnapshot[0]['timestamp']! as String);
+    expect(
+      json.decode(insertEntryAfterSnapshot[0]['clearTags']! as String),
+      <Object?>[],
+    );
+
+    // Now update the entry, then delete it, and then insert it again
+    await adapter.run(
+      Statement(
+        "UPDATE parent SET value = 'val2' WHERE id=1",
+      ),
+    );
+
+    await adapter.run(
+      Statement(
+        'DELETE FROM parent WHERE id=1',
+      ),
+    );
+
+    await adapter.run(
+      Statement(
+        "INSERT INTO parent(id, value) VALUES (1,'val3')",
+      ),
+    );
+
+    // Since no snapshot has been taken for these operations
+    // their timestamp and clearTags should not be set
+    final updateEntry = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 2',
+      ),
+    );
+
+    expect(updateEntry[0]['timestamp'], null);
+    expect(json.decode(updateEntry[0]['clearTags']! as String), <Object?>[]);
+
+    final deleteEntry = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 3',
+      ),
+    );
+
+    expect(deleteEntry[0]['timestamp'], null);
+    expect(json.decode(deleteEntry[0]['clearTags']! as String), <Object?>[]);
+
+    final reinsertEntry = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 4',
+      ),
+    );
+
+    expect(reinsertEntry[0]['timestamp'], null);
+    expect(json.decode(reinsertEntry[0]['clearTags']! as String), <Object?>[]);
+
+    // Now take a snapshot for these operations
+    await satellite.performSnapshot();
+
+    // Now the timestamps should be set
+    // The first operation (update) should override
+    // the original insert (i.e. clearTags must contain the timestamp of the insert)
+    final updateEntryAfterSnapshot = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 2',
+      ),
+    );
+
+    final rawTimestampTx2 = updateEntryAfterSnapshot[0]['timestamp']! as String;
+    expect(rawTimestampTx2, isNotNull);
+    final timestampTx2 = parseDate(rawTimestampTx2);
+
+    expect(
+      updateEntryAfterSnapshot[0]['clearTags'],
+      genEncodedTags(authState.clientId, [insertTimestamp]),
+    );
+
+    // The second operation (delete) should have the same timestamp
+    // and should contain the tag of the TX in its clearTags
+    final deleteEntryAfterSnapshot = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 3',
+      ),
+    );
+
+    expect(deleteEntryAfterSnapshot[0]['timestamp'], rawTimestampTx2);
+    expect(
+      deleteEntryAfterSnapshot[0]['clearTags'],
+      genEncodedTags(authState.clientId, [timestampTx2]),
+    );
+
+    // The third operation (reinsert) should have the same timestamp
+    // and should contain the tag of the TX in its clearTags
+    final reinsertEntryAfterSnapshot = await adapter.query(
+      Statement(
+        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 4',
+      ),
+    );
+
+    expect(reinsertEntryAfterSnapshot[0]['timestamp'], rawTimestampTx2);
+    expect(
+      reinsertEntryAfterSnapshot[0]['clearTags'],
+      genEncodedTags(authState.clientId, [timestampTx2]),
+    );
   });
 
   test('TX1=INSERT, TX2=DELETE, TX3=INSERT, ack TX1', () async {
@@ -624,7 +762,7 @@ void main() {
       entries[0].tablename,
       OpType.insert,
       electricEntrySameTs,
-      genEncodedTags(clientId, [txDate1]),
+      '[]',
       newValues: json.decode(entries[0].newRow!) as Map<String, Object?>,
       oldValues: {},
     );
@@ -639,10 +777,7 @@ void main() {
       entries[1].tablename,
       OpType.insert,
       electricEntryConflictTs,
-      encodeTags([
-        generateTag(clientId, txDate1),
-        generateTag('remote', txDate1),
-      ]),
+      encodeTags([generateTag('remote', txDate1)]),
       newValues: json.decode(entries[1].newRow!) as Map<String, Object?>,
       oldValues: {},
     );

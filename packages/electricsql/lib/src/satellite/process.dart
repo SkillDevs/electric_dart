@@ -969,12 +969,20 @@ This means there is a notifier subscription leak.`''');
       );
 
       // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
+      // For the subsequent oplog entries per element, set the `clearTags` array to the current tag for this TX
+      // This is fine because only the first operation of the TX must override previous TXs
+      // and the rest of the operations in the TX just need to be aware of the current TX
+      // because conflict resolution on Electric happens on the level of TXs
       final q2 = Statement(
         '''
       UPDATE $oplog
-      SET clearTags = updates.tags
+      SET clearTags =
+          CASE WHEN rowid = updates.rowid_of_first_op_in_tx
+                THEN updates.tags
+                ELSE ? -- singleton array containing tag of thix TX
+          END
       FROM (
-        SELECT shadow.tags as tags, min(op.rowid) as op_rowid
+        SELECT shadow.tags as tags, min(op.rowid) as rowid_of_first_op_in_tx
         FROM $shadow AS shadow
         JOIN $oplog as op
           ON op.namespace = shadow.namespace
@@ -983,9 +991,13 @@ This means there is a notifier subscription leak.`''');
         WHERE op.timestamp = ?
         GROUP BY op.namespace, op.tablename, op.primaryKey
       ) AS updates
-      WHERE updates.op_rowid = $oplog.rowid
+      WHERE $oplog.timestamp = ? -- only update operations from this TX
     ''',
-        [timestamp.toISOStringUTC()],
+        [
+          encodeTags([newTag]),
+          timestamp.toISOStringUTC(),
+          timestamp.toISOStringUTC(),
+        ],
       );
 
       // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
