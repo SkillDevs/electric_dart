@@ -2099,14 +2099,20 @@ void main() {
     expect(shadowRows[0]['tablename'], 'parent');
 
     await adapter.run(Statement('DELETE FROM $qualified WHERE id = 2'));
-    await satellite.performSnapshot();
+    final deleteTx = await satellite.performSnapshot();
 
     final oplogs = await adapter.query(
       Statement(
         'SELECT * FROM _electric_oplog',
       ),
     );
-    expect(oplogs[0]['clearTags'], genEncodedTags('remote', [expectedTs]));
+    expect(
+      oplogs[0]['clearTags'],
+      encodeTags([
+        generateTag(satellite.authState!.clientId, deleteTx),
+        generateTag('remote', expectedTs),
+      ]),
+    );
   });
 
   test('DELETE after DELETE sends clearTags', () async {

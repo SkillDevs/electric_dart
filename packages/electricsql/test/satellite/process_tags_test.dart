@@ -90,13 +90,52 @@ void main() {
 
     final entries = await satellite.getEntries();
     expect(entries[0].clearTags, encodeTags([]));
-    expect(entries[1].clearTags, genEncodedTags(clientId, [txDate1]));
-    expect(entries[2].clearTags, genEncodedTags(clientId, [txDate2]));
-    expect(entries[3].clearTags, genEncodedTags(clientId, [txDate3]));
+    expect(entries[1].clearTags, genEncodedTags(clientId, [txDate2, txDate1]));
+    expect(entries[2].clearTags, genEncodedTags(clientId, [txDate3, txDate2]));
+    expect(entries[3].clearTags, genEncodedTags(clientId, [txDate4, txDate3]));
 
     expect(txDate1, isNot(txDate2));
     expect(txDate2, isNot(txDate3));
     expect(txDate3, isNot(txDate4));
+  });
+
+  test(
+      'Tags are correctly set on multiple operations within snapshot/transaction',
+      () async {
+    await context.runMigrations();
+    const clientId = 'test_client';
+    satellite.setAuthState(authState.copyWith(clientId: clientId));
+
+    // Insert 4 items in separate snapshots
+    await adapter.run(
+      Statement("INSERT INTO parent (id, value) VALUES (1, 'val1')"),
+    );
+    final ts1 = await satellite.performSnapshot();
+    await adapter.run(
+      Statement("INSERT INTO parent (id, value) VALUES (2, 'val2')"),
+    );
+    final ts2 = await satellite.performSnapshot();
+    await adapter.run(
+      Statement("INSERT INTO parent (id, value) VALUES (3, 'val3')"),
+    );
+    final ts3 = await satellite.performSnapshot();
+    await adapter.run(
+      Statement("INSERT INTO parent (id, value) VALUES (4, 'val4')"),
+    );
+    final ts4 = await satellite.performSnapshot();
+
+    // Now delete them all in a single snapshot
+    await adapter.run(Statement('DELETE FROM parent'));
+    final ts5 = await satellite.performSnapshot();
+
+    // Now check that each delete clears the correct tag
+    final entries = await satellite.getEntries(since: 4);
+    expect(entries.map((x) => x.clearTags).toList(), [
+      genEncodedTags(clientId, [ts5, ts1]),
+      genEncodedTags(clientId, [ts5, ts2]),
+      genEncodedTags(clientId, [ts5, ts3]),
+      genEncodedTags(clientId, [ts5, ts4]),
+    ]);
   });
 
   test('Tags are correctly set on subsequent operations in a TX', () async {
@@ -203,7 +242,7 @@ void main() {
 
     expect(
       updateEntryAfterSnapshot[0]['clearTags'],
-      genEncodedTags(authState.clientId, [insertTimestamp]),
+      genEncodedTags(authState.clientId, [timestampTx2, insertTimestamp]),
     );
 
     // The second operation (delete) should have the same timestamp
@@ -217,7 +256,7 @@ void main() {
     expect(deleteEntryAfterSnapshot[0]['timestamp'], rawTimestampTx2);
     expect(
       deleteEntryAfterSnapshot[0]['clearTags'],
-      genEncodedTags(authState.clientId, [timestampTx2]),
+      genEncodedTags(authState.clientId, [timestampTx2, insertTimestamp]),
     );
 
     // The third operation (reinsert) should have the same timestamp
@@ -231,7 +270,7 @@ void main() {
     expect(reinsertEntryAfterSnapshot[0]['timestamp'], rawTimestampTx2);
     expect(
       reinsertEntryAfterSnapshot[0]['clearTags'],
-      genEncodedTags(authState.clientId, [timestampTx2]),
+      genEncodedTags(authState.clientId, [timestampTx2, insertTimestamp]),
     );
   });
 
@@ -278,7 +317,10 @@ void main() {
     // clearTags contains previous shadowTag
     final localEntry21 = localEntries2[1];
 
-    expect(localEntry21.clearTags, tag1);
+    expect(
+      localEntry21.clearTags,
+      genEncodedTags(clientId, [txDate2, txDate1]),
+    );
     expect(localEntry21.timestamp, txDate2.toISOStringUTC());
 
     // Local INSERT
