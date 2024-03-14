@@ -1,3 +1,9 @@
+## 0.5.4
+
+* Code based on official Typescript client [v0.9.5](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.5).
+* Check that at least Docker v23 is installed before running the CLI commands.
+
+
 ## 0.5.3
 
 * Code based on official Typescript client [v0.9.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.3) and [v0.9.4](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.4)

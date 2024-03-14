@@ -1,3 +1,8 @@
+## 0.5.2
+
+* Code based on official Typescript client [v0.9.5](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.5).
+
+
 ## 0.5.1
 
 * The `ConnectivityStateController` now only provides the current state of the connectivity. To connect or disconnect, you can now use the `connect` and `disconnect` methods directly on the `ElectricClient` instance.
