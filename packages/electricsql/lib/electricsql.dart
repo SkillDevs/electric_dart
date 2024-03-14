@@ -10,8 +10,6 @@ export 'src/client/model/index.dart';
 // Config
 export 'src/config/config.dart' show ElectricConfig, HydratedConfig;
 
-export 'src/electric/adapter.dart' show DatabaseAdapter;
-
 // Electric
 export 'src/electric/index.dart';
 

@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
-import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
+import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';

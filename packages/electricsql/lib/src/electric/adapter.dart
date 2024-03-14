@@ -19,20 +19,20 @@ abstract class DatabaseAdapter {
   /// function passed to the transaction runs "synchronously" through callbacks without
   /// releasing the event loop.
   Future<T> transaction<T>(
-    void Function(Transaction tx, void Function(T res)) setResult,
+    void Function(DbTransaction tx, void Function(T res)) setResult,
   );
 }
 
-abstract class Transaction {
+abstract class DbTransaction {
   void run(
     Statement statement,
-    void Function(Transaction tx, RunResult result)? successCallback, [
+    void Function(DbTransaction tx, RunResult result)? successCallback, [
     void Function(Object error)? errorCallback,
   ]);
 
   void query(
     Statement statement,
-    void Function(Transaction tx, List<Row> res) successCallback, [
+    void Function(DbTransaction tx, List<Row> res) successCallback, [
     void Function(Object error)? errorCallback,
   ]);
 }

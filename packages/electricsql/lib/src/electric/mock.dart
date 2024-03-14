@@ -1,5 +1,5 @@
 import 'package:electricsql/src/electric/adapter.dart';
-import 'package:electricsql/src/util/types.dart' hide Transaction;
+import 'package:electricsql/src/util/types.dart';
 
 class MockDatabaseAdapter implements DatabaseAdapter {
   @override
@@ -19,7 +19,7 @@ class MockDatabaseAdapter implements DatabaseAdapter {
 
   @override
   Future<T> transaction<T>(
-    void Function(Transaction tx, void Function(T res) p1) setResult,
+    void Function(DbTransaction tx, void Function(T res) p1) setResult,
   ) async {
     throw UnimplementedError();
   }

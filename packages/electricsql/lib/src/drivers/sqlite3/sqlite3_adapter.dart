@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:electricsql/src/electric/adapter.dart' as adp;
+import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:synchronized/synchronized.dart';
 
-class SqliteAdapter implements adp.DatabaseAdapter {
+class SqliteAdapter implements DatabaseAdapter {
   final sqlite.Database db;
   final Lock txLock = Lock();
 
@@ -92,7 +92,7 @@ class SqliteAdapter implements adp.DatabaseAdapter {
   }
 }
 
-class Transaction implements adp.Transaction {
+class Transaction implements DbTransaction {
   final SqliteAdapter adapter;
   final void Function(Object reason) signalFailure;
 
