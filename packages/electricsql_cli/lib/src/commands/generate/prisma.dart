@@ -15,7 +15,7 @@ const String _kPrismaVersion = '4.8.1';
 const int _kNodeVersion = 20;
 
 const _kPrismaCLIDockerfile = '''
-FROM node:$_kNodeVersion-alpine
+FROM node:$_kNodeVersion
 
 RUN npm install -g prisma@$_kPrismaVersion
 
