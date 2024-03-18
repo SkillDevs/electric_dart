@@ -302,7 +302,7 @@ packages:
       path: "../packages/electricsql_cli"
       relative: true
     source: path
-    version: "0.5.4"
+    version: "0.5.5"
   electricsql_flutter:
     dependency: "direct main"
     description:
