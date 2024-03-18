@@ -1,3 +1,7 @@
+## 0.5.5
+
+* The Prisma CLI installed through Docker is now based on the non-Alpine Node Docker image. The Alpine version is incompatible with the M1 architecture. Thanks @opsb for the fix. [#12](https://github.com/SkillDevs/electric_dart/pull/12)  
+
 ## 0.5.4
 
 * Code based on official Typescript client [v0.9.5](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.5) and [v0.9.6](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.6).
