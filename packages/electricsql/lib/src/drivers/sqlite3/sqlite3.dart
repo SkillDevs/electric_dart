@@ -6,7 +6,12 @@ import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:sqlite3/sqlite3.dart';
 
-// TODO(dart): Consider removing support for raw sqlite3 electrification
+/// Electrify a [Database] from the [sqlite3] package.
+/// WARNING: This is a very raw and low level driver.
+/// It's recommended to use the Drift electrification instead, as it will handle multiple Electric features
+/// automatically for you, like type mappings and query reactivity.
+/// With this electrification you will need to take care of those yourself with
+/// the [TypeConverters] and with the [Notifier] from the [ElectricClient].
 Future<ElectricClient> electrify({
   required String dbName,
   required Database db,

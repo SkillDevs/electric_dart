@@ -23,24 +23,6 @@ class DriftRepository implements m.TodosRepository {
   }
 
   @override
-  Future<List<m.Todo>> fetchTodos() async {
-    return (db.todo.select()
-          ..orderBy(
-            [(tbl) => OrderingTerm(expression: tbl.text$.lower())],
-          ))
-        .map(
-          (todo) => m.Todo(
-            completed: todo.completed,
-            id: todo.id,
-            listId: todo.listid,
-            editedAt: todo.editedAt,
-            text: todo.text$!,
-          ),
-        )
-        .get();
-  }
-
-  @override
   Future<void> insertTodo(m.Todo todo) async {
     await db.todo.insertOne(
       TodoCompanion.insert(

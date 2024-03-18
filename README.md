@@ -50,11 +50,12 @@ This is a simple Todos app which can sync across all the platforms supported by 
 
 ### Instantiate
 
-You can electrify a [`drift`](https://pub.dev/packages/drift) database or a [`sqlite3`](https://pub.dev/packages/sqlite3) database.
+To handle type conversions and reactivity of the sync system, this package can be integrated with [`drift`](https://pub.dev/packages/drift).
+To start using Electric, you need to `electrify` your database as follows.
 
 ```dart
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql_flutter/drivers/drift.dart'; // or sqlite3.dart
+import 'package:electricsql_flutter/drivers/drift.dart';
 
 // This would be the Drift database
 AppDatabase db;
