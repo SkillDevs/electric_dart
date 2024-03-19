@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:equatable/equatable.dart';
 import 'package:events_emitter/listener.dart';
@@ -86,6 +88,8 @@ enum SatelliteErrorCode {
   referentialIntegrityViolation,
   emptyShapeDefinition,
   duplicateTableInShapeDefinition,
+  invalidWhereClauseInShapeDefinition,
+  invalidIncludeTreeInShapeDefinition,
 
   // shape data errors
   shapeDeliveryError,
@@ -130,6 +134,46 @@ class Replication<TransactionType> {
   }
 }
 
+enum IncompletionType { transaction, additionalData }
+
+class SeenAdditionalDataInfo {
+  final List<String> subscriptions;
+  final List<Int64> dataRefs;
+
+  SeenAdditionalDataInfo({required this.subscriptions, required this.dataRefs});
+}
+
+class InboundReplication extends Replication<ServerTransaction> {
+  Int64? lastTxId;
+  Int64? lastAckedTxId;
+  int unackedTxs;
+  int maxUnackedTxs;
+  Timer ackTimer;
+  int ackPeriod;
+  List<AdditionalData> additionalData;
+  Set<String> unseenAdditionalDataRefs;
+  IncompletionType? incomplete;
+  SeenAdditionalDataInfo seenAdditionalDataSinceLastTx;
+
+  InboundReplication({
+    required super.authenticated,
+    required super.isReplicating,
+    required super.relations,
+    required super.transactions,
+    super.lastLsn,
+    this.lastTxId,
+    this.lastAckedTxId,
+    required this.unackedTxs,
+    required this.maxUnackedTxs,
+    required this.ackTimer,
+    required this.ackPeriod,
+    required this.additionalData,
+    required this.unseenAdditionalDataRefs,
+    this.incomplete,
+    required this.seenAdditionalDataSinceLastTx,
+  });
+}
+
 class BaseTransaction<ChangeT> with EquatableMixin {
   final Int64 commitTimestamp;
   LSN lsn;
@@ -170,11 +214,40 @@ typedef Transaction = BaseTransaction<Change>;
 // i.e. the transaction does not contain migrations
 typedef DataTransaction = BaseTransaction<DataChange>;
 
+class ServerTransaction extends Transaction {
+  final Int64 id;
+  final Int64? additionalDataRef;
+
+  ServerTransaction({
+    required super.commitTimestamp,
+    required super.lsn,
+    required super.changes,
+    super.origin,
+    super.migrationVersion,
+    required this.id,
+    this.additionalDataRef,
+  });
+}
+
+class AdditionalData {
+  final Int64 ref;
+  final List<DataChange> changes;
+
+  AdditionalData({
+    required this.ref,
+    required this.changes,
+  }) : assert(
+          changes.every((element) => element.type == DataChangeType.insert),
+          'AdditionalData changes must be of type insert',
+        );
+}
+
 enum DataChangeType {
   insert,
   update,
   delete,
   compensation,
+  gone,
 }
 
 typedef Record = Map<String, Object?>;
@@ -277,7 +350,7 @@ class RelationColumn with EquatableMixin {
   final String name;
   final String type;
   final bool isNullable;
-  final bool? primaryKey;
+  final int? primaryKey;
 
   RelationColumn({
     required this.name,
@@ -292,7 +365,8 @@ class RelationColumn with EquatableMixin {
 
 typedef ErrorCallback = EventCallbackCall<SatelliteException>;
 typedef RelationCallback = EventCallbackCall<Relation>;
-typedef TransactionCallback = Future<void> Function(Transaction);
+typedef AdditionalDataCallback = EventCallbackCall<AdditionalData>;
+typedef TransactionCallback = Future<void> Function(ServerTransaction);
 typedef IncomingTransactionCallback = EventCallbackCall<TransactionEvent>;
 typedef OutboundStartedCallback = EventCallbackCall<void>;
 

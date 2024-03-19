@@ -158,6 +158,10 @@ const Map<SatSubsResp_SatSubsError_ShapeReqError_Code, SatelliteErrorCode>
   SatSubsResp_SatSubsError_ShapeReqError_Code
           .DUPLICATE_TABLE_IN_SHAPE_DEFINITION:
       SatelliteErrorCode.duplicateTableInShapeDefinition,
+  SatSubsResp_SatSubsError_ShapeReqError_Code.INVALID_WHERE_CLAUSE:
+      SatelliteErrorCode.invalidWhereClauseInShapeDefinition,
+  SatSubsResp_SatSubsError_ShapeReqError_Code.INVALID_INCLUDE_TREE:
+      SatelliteErrorCode.invalidIncludeTreeInShapeDefinition,
 };
 
 const Map<SatSubsDataError_Code, SatelliteErrorCode> subsDataErrorToSatError = {
@@ -260,16 +264,12 @@ List<SatShapeReq> shapeRequestToSatShapeReq(List<ShapeRequest> shapeRequests) {
   final shapeReqs = <SatShapeReq>[];
   for (final sr in shapeRequests) {
     final requestId = sr.requestId;
-    final selects = sr.definition.selects.map(
-      (s) => SatShapeDef_Select(
-        tablename: s.tablename,
-      ),
-    );
-    final shapeDefinition = SatShapeDef(selects: selects);
 
     final req = SatShapeReq(
       requestId: requestId,
-      shapeDefinition: shapeDefinition,
+      shapeDefinition: SatShapeDef(
+        selects: [sr.definition.toProto()],
+      ),
     );
     shapeReqs.add(req);
   }
@@ -333,6 +333,8 @@ String msgToString(Object message) {
     return '#SatRpcRequest{method: ${message.method}, requestId: ${message.requestId}}';
   } else if (message is SatRpcResponse) {
     return '#SatRpcResponse{method: ${message.method}, requestId: ${message.requestId}${message.hasError() ? ', error: ${msgToString(message.error)}' : ''}}';
+  } else if (message is SatOpLogAck) {
+    return '#SatOpLogAck{lsn: ${base64.encode(message.lsn)}, txid: ${message.transactionId}}';
   }
 
   assert(false, "Can't convert ${message.runtimeType} to string");
@@ -353,8 +355,17 @@ String opToString(SatTransOp op) {
   if (op.hasDelete()) {
     return '#Delete{for: ${op.delete.relationId}, tags: [${op.delete.tags}], old: [${op.delete.hasOldRowData() ? rowToString(op.delete.oldRowData) : ''}]}';
   }
+  if (op.hasGone()) {
+    return '#Gone{for: ${op.gone.relationId}, pk: ${rowToString(op.gone.pkData)}}';
+  }
   if (op.hasMigrate()) {
     return '#Migrate{vsn: ${op.migrate.version}, for: ${op.migrate.table.name}, stmts: [${op.migrate.stmts.map((x) => x.sql.replaceAll('\n', '\\n')).join('; ')}]}';
+  }
+  if (op.hasAdditionalBegin()) {
+    return '#AdditionalBegin{ref: ${op.additionalBegin.ref}}';
+  }
+  if (op.hasAdditionalCommit()) {
+    return '#AdditionalCommit{ref: ${op.additionalCommit.ref}}';
   }
   return '';
 }

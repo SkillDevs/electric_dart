@@ -1,3 +1,4 @@
+import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:equatable/equatable.dart';
 
@@ -5,8 +6,11 @@ const kSubscriptionDelivered = 'subscription_delivered';
 const kSubscriptionError = 'subscription_error';
 
 typedef SubscriptionId = String;
+typedef TableName = String;
+typedef ColumnName = String;
 
-typedef SubscriptionDeliveredCallback = void Function(SubscriptionData data);
+typedef SubscriptionDeliveredCallback = Future<void> Function(
+    SubscriptionData data);
 typedef SubscriptionErrorCallback = void Function(SubscriptionErrorData error);
 
 class SubscriptionErrorData {
@@ -34,7 +38,54 @@ class UnsubscribeResponse with EquatableMixin {
   List<Object?> get props => [];
 }
 
-class ClientShapeDefinition with EquatableMixin {
+class Shape with EquatableMixin {
+  final TableName tablename;
+  final List<Rel>? include;
+  final String? where;
+
+  Shape({required this.tablename, this.include, this.where});
+
+  Map<String, dynamic> toMap() {
+    // TODO(dart): Implement
+    throw UnimplementedError();
+  }
+
+  factory Shape.fromMap(Map<String, dynamic> map) {
+    // TODO(dart): Implement
+    throw UnimplementedError();
+  }
+
+  @override
+  List<Object?> get props => [tablename, include, where];
+
+  SatShapeDef_Select toProto() {
+    return SatShapeDef_Select(
+      tablename: tablename,
+      where: where,
+      include: include
+          ?.map(
+            (e) => SatShapeDef_Relation(
+              foreignKey: e.foreignKey,
+              select: e.select.toProto(),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class Rel with EquatableMixin {
+  final List<ColumnName> foreignKey; // allows composite FKs
+  final Shape select;
+
+  Rel({required this.foreignKey, required this.select});
+
+  @override
+  List<Object?> get props => [foreignKey, select];
+}
+
+// TODO(dart): Remove
+/* class ClientShapeDefinition with EquatableMixin {
   final List<ShapeSelect> selects;
 
   ClientShapeDefinition({
@@ -59,10 +110,10 @@ class ClientShapeDefinition with EquatableMixin {
       ),
     );
   }
-}
+} */
 
 sealed class ShapeRequestOrDefinition with EquatableMixin {
-  final ClientShapeDefinition definition;
+  final Shape definition;
 
   ShapeRequestOrDefinition({
     required this.definition,
@@ -105,32 +156,9 @@ class ShapeDefinition extends ShapeRequestOrDefinition {
   factory ShapeDefinition.fromMap(Map<String, dynamic> map) {
     return ShapeDefinition(
       uuid: map['uuid'] as String,
-      definition: ClientShapeDefinition.fromMap(
+      definition: Shape.fromMap(
         map['definition'] as Map<String, dynamic>,
       ),
-    );
-  }
-}
-
-class ShapeSelect with EquatableMixin {
-  final String tablename;
-
-  ShapeSelect({
-    required this.tablename,
-  });
-
-  @override
-  List<Object?> get props => [tablename];
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'tablename': tablename,
-    };
-  }
-
-  factory ShapeSelect.fromMap(Map<String, dynamic> map) {
-    return ShapeSelect(
-      tablename: map['tablename'] as String,
     );
   }
 }

@@ -29,12 +29,13 @@ Future<RelationsCache> inferRelationsFromSQLite(
       columns: [],
     );
     for (final c in columnsForTable) {
+      final int pkColVal = c['pk']! as int;
       relation.columns.add(
         RelationColumn(
           name: c['name']! as String,
           type: c['type']! as String,
           isNullable: (c['notnull']! as int) == 0,
-          primaryKey: (c['pk']! as int) > 0,
+          primaryKey: pkColVal > 0 ? pkColVal : null,
         ),
       );
     }

@@ -8,6 +8,7 @@ import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/types.dart';
+import 'package:fixnum/fixnum.dart';
 
 export 'package:electricsql/src/satellite/process.dart' show ShapeSubscription;
 
@@ -48,7 +49,7 @@ abstract class Satellite {
   void clientDisconnect();
   Future<void> authenticate(String token);
   Future<ShapeSubscription> subscribe(
-    List<ClientShapeDefinition> shapeDefinitions,
+    List<Shape> shapeDefinitions,
   );
   Future<void> unsubscribe(String shapeUuid);
 }
@@ -66,10 +67,12 @@ abstract class Client {
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
+    List<Int64> observedTransactionData,
   );
   Future<StopReplicationResponse> stopReplication();
   void Function() subscribeToRelations(RelationCallback callback);
   void Function() subscribeToTransactions(TransactionCallback callback);
+  void Function() subscribeToAdditionalData(AdditionalDataCallback callback);
   void enqueueTransaction(
     DataTransaction transaction,
   );

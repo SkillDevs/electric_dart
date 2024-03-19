@@ -217,6 +217,12 @@ class SatSubsResp_SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
       DUPLICATE_TABLE_IN_SHAPE_DEFINITION =
       SatSubsResp_SatSubsError_ShapeReqError_Code._(
           4, _omitEnumNames ? '' : 'DUPLICATE_TABLE_IN_SHAPE_DEFINITION');
+  static const SatSubsResp_SatSubsError_ShapeReqError_Code
+      INVALID_WHERE_CLAUSE = SatSubsResp_SatSubsError_ShapeReqError_Code._(
+          5, _omitEnumNames ? '' : 'INVALID_WHERE_CLAUSE');
+  static const SatSubsResp_SatSubsError_ShapeReqError_Code
+      INVALID_INCLUDE_TREE = SatSubsResp_SatSubsError_ShapeReqError_Code._(
+          6, _omitEnumNames ? '' : 'INVALID_INCLUDE_TREE');
 
   static const $core.List<SatSubsResp_SatSubsError_ShapeReqError_Code> values =
       <SatSubsResp_SatSubsError_ShapeReqError_Code>[
@@ -225,6 +231,8 @@ class SatSubsResp_SatSubsError_ShapeReqError_Code extends $pb.ProtobufEnum {
     REFERENTIAL_INTEGRITY_VIOLATION,
     EMPTY_SHAPE_DEFINITION,
     DUPLICATE_TABLE_IN_SHAPE_DEFINITION,
+    INVALID_WHERE_CLAUSE,
+    INVALID_INCLUDE_TREE,
   ];
 
   static final $core.Map<$core.int, SatSubsResp_SatSubsError_ShapeReqError_Code>

@@ -14,6 +14,8 @@ abstract interface class DBSchema {
   bool hasTable(String table);
 
   Fields getFields(String table);
+
+  FieldName getForeignKey(String table, FieldName field);
 }
 
 class DBSchemaDrift implements DBSchema {
@@ -97,6 +99,21 @@ class DBSchemaDrift implements DBSchema {
   Fields getFields(String table) {
     return _fieldsByTable[table]!;
   }
+  
+  @override
+  FieldName getForeignKey(String table, FieldName field) {
+    // TODO(dart): Implement
+    // const relationName = this.getRelationName(table, field)
+    // const relation = this.getRelation(table, relationName)
+    // if (relation.isOutgoingRelation()) {
+    //   return relation.fromField
+    // }
+    // // it's an incoming relation
+    // // we need to fetch the `fromField` from the outgoing relation
+    // const oppositeRelation = relation.getOppositeRelation(this)
+    // return oppositeRelation.fromField
+    throw UnimplementedError();
+  }
 }
 
 @visibleForTesting
@@ -118,5 +135,11 @@ class DBSchemaRaw implements DBSchema {
   @override
   bool hasTable(String table) {
     return fields.containsKey(table);
+  }
+  
+  @override
+  FieldName getForeignKey(String table, FieldName field) {
+    // TODO(dart): implement getForeignKey
+    throw UnimplementedError();
   }
 }
