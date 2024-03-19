@@ -17,11 +17,16 @@ import 'package:electricsql/src/util/async_event_emitter.dart';
 import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/src/util/emitter_helpers.dart';
 import 'package:electricsql/src/util/extension.dart';
+import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
 import 'package:synchronized/synchronized.dart';
+
+const kDefaultAckPeriod = 60000;
 
 typedef IncomingHandler = void Function(Object?);
 
@@ -47,12 +52,22 @@ abstract interface class SafeEventEmitter {
   void Function() onTransaction(
     IncomingTransactionCallback callback,
   );
+  void Function() onAdditionalData(
+    IncomingAdditionalDataCallback callback,
+  );
   void Function() onOutboundStarted(OutboundStartedCallback callback);
+  void Function() onSubscriptionDelivered(
+    SubscriptionDeliveredCallback callback,
+  );
+  void Function() onSubscriptionError(SubscriptionErrorCallback callback);
 
   void enqueueEmitError(SatelliteException error);
+  void enqueueEmitSubscriptionDelivered(SubscriptionData data);
+  void enqueueEmitSubscriptionError(SubscriptionErrorData error);
   void enqueueEmitRelation(Relation relation);
   void enqueueEmitTransaction(TransactionEvent transactionEvent);
   void enqueueEmitOutboundStarted(LSN lsn);
+  void enqueueEmitAdditionalData(AdditionalDataEvent additionalDataEvent);
 
   void removeAllListeners();
 
@@ -69,7 +84,7 @@ class SatelliteClient implements Client {
 
   Socket? socket;
 
-  late Replication<Transaction> inbound;
+  late InboundReplication inbound;
   late Replication<DataTransaction> outbound;
 
   // can only handle a single subscription at a time
@@ -99,6 +114,14 @@ class SatelliteClient implements Client {
     'stopReplication': (o) => handleStopReq(o as SatInStopReplicationReq),
   };
 
+  /*
+   * This remapping actually is generic from a function to a function of the same type,
+   * but there's no way to express that. It's needed because we're wrapping the original
+   * callback in our own, which makes `.removeListener` not work.
+   */
+  // TODO(dart): Remove
+  //Map<Function, Function> _listenerRemapping = {};
+
   SatelliteClient({
     required DBSchema dbDescription,
     required this.socketFactory,
@@ -110,7 +133,7 @@ class SatelliteClient implements Client {
 
     _emitter = SatelliteClientEventEmitter();
 
-    inbound = resetReplication<Transaction>(null, null);
+    inbound = resetInboundReplication(null, null);
     outbound = resetReplication<DataTransaction>(null, null);
 
     rpcClient = RPC(
@@ -141,6 +164,38 @@ class SatelliteClient implements Client {
     );
   }
 
+  InboundReplication resetInboundReplication(
+    LSN? lastLsn,
+    ReplicationStatus? isReplicating,
+  ) {
+    final replicationResetted =
+        resetReplication<ServerTransaction>(lastLsn, isReplicating);
+    return InboundReplication(
+      authenticated: replicationResetted.authenticated,
+      isReplicating: replicationResetted.isReplicating,
+      relations: replicationResetted.relations,
+      transactions: replicationResetted.transactions,
+      lastLsn: replicationResetted.lastLsn,
+      //
+
+      lastTxId: null,
+      lastAckedTxId: null,
+      unackedTxs: 0,
+      maxUnackedTxs: 30,
+      ackPeriod: kDefaultAckPeriod,
+      ackTimer: Timer(
+        const Duration(milliseconds: kDefaultAckPeriod),
+        () => maybeSendAck('timeout'),
+      ),
+      additionalData: [],
+      unseenAdditionalDataRefs: {},
+      seenAdditionalDataSinceLastTx: SeenAdditionalDataInfo(
+        dataRefs: [],
+        subscriptions: [],
+      ),
+    );
+  }
+
   IncomingHandler getIncomingHandlerForMessage(SatMsgType msgType) {
     switch (msgType) {
       case SatMsgType.opLog:
@@ -163,6 +218,8 @@ class SatelliteClient implements Client {
         return (v) => rpcClient.handleResponse(v! as SatRpcResponse);
       case SatMsgType.rpcRequest:
         return (v) => handleRpcRequest(v! as SatRpcRequest);
+      //case SatMsgType.opLogAck:
+      // return (v) => v // Server doesn't send that
     }
   }
 
@@ -236,7 +293,7 @@ class SatelliteClient implements Client {
   @override
   void disconnect() {
     outbound = resetReplication(outbound.lastLsn, null);
-    inbound = resetReplication(inbound.lastLsn, null);
+    inbound = resetInboundReplication(inbound.lastLsn, null);
 
     socketHandler = null;
 
@@ -339,6 +396,16 @@ class SatelliteClient implements Client {
   }
 
   @override
+  void Function() subscribeToAdditionalData(
+    AdditionalDataCallback callback,
+  ) {
+    return _emitter.onAdditionalData((dataEvent) async {
+      await callback(dataEvent.additionalData);
+      dataEvent.ackCb();
+    });
+  }
+
+  @override
   void Function() subscribeToRelations(
     RelationCallback callback,
   ) {
@@ -367,6 +434,7 @@ class SatelliteClient implements Client {
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
+    List<Int64>? observedTransactionData,
   ) async {
     if (inbound.isReplicating != ReplicationStatus.stopped) {
       throw SatelliteException(
@@ -397,11 +465,12 @@ class SatelliteClient implements Client {
       request = SatInStartReplicationReq(
         lsn: lsn,
         subscriptionIds: subscriptionIds,
+        observedTransactionData: observedTransactionData,
       );
     }
 
     // Then set the replication state
-    inbound = resetReplication(lsn, ReplicationStatus.starting);
+    inbound = resetInboundReplication(lsn, ReplicationStatus.starting);
 
     return delayIncomingMessages(
       () async {
@@ -513,6 +582,8 @@ class SatelliteClient implements Client {
         );
       } else {
         inbound.isReplicating = ReplicationStatus.active;
+        inbound.maxUnackedTxs =
+            resp.hasUnackedWindowSize() ? resp.unackedWindowSize : 30;
       }
     } else {
       return StartReplicationResponse(
@@ -592,14 +663,37 @@ class SatelliteClient implements Client {
     SubscriptionDeliveredCallback successCallback,
     SubscriptionErrorCallback errorCallback,
   ) {
-    final successListener =
-        _subscriptionsDataCache.on(kSubscriptionDelivered, successCallback);
-    final errorListener =
-        _subscriptionsDataCache.on(kSubscriptionError, errorCallback);
+    Future<void> newCb(SubscriptionData data) async {
+      await successCallback(data);
+      inbound.seenAdditionalDataSinceLastTx.subscriptions
+          .add(data.subscriptionId);
+      maybeSendAck('additionalData');
+    }
+
+    //_listenerRemapping[successCallback] = newCb;
+
+    // We're remapping this callback to internal emitter to keep event queue correct -
+    // a delivered subscription processing should not interleave with next transaction processing
+    final removeSuccessListener = emitter.onSubscriptionDelivered(newCb);
+    _subscriptionsDataCache.on(
+      kSubscriptionDelivered,
+      (SubscriptionData data) => emitter.enqueueEmitSubscriptionDelivered(data),
+    );
+    final removeErrorListener = emitter.onSubscriptionError(errorCallback);
+    _subscriptionsDataCache.on(
+      kSubscriptionError,
+      (SubscriptionErrorData error) =>
+          emitter.enqueueEmitSubscriptionError(error),
+    );
 
     return SubscriptionEventListeners(
-      removeSuccessListener: () => successListener.cancel(),
-      removeErrorListener: () => errorListener.cancel(),
+      removeListeners: () {
+        removeSuccessListener();
+        removeErrorListener();
+
+        removeListeners(_subscriptionsDataCache, kSubscriptionDelivered);
+        removeListeners(_subscriptionsDataCache, kSubscriptionError);
+      },
     );
   }
 
@@ -607,8 +701,7 @@ class SatelliteClient implements Client {
   void unsubscribeToSubscriptionEvents(
     SubscriptionEventListeners listeners,
   ) {
-    listeners.removeSuccessListener();
-    listeners.removeErrorListener();
+    listeners.removeListeners();
   }
 
   @override
@@ -740,6 +833,11 @@ class SatelliteClient implements Client {
       return;
     }
 
+    /* TODO: This makes a generally incorrect assumption that PK columns come in order in the relation
+             It works in most cases, but we need actual PK order information on the protocol
+             for multi-col PKs to work */
+    int pkPosition = 1;
+
     final relation = Relation(
       id: message.relationId,
       schema: message.schemaName,
@@ -751,7 +849,7 @@ class SatelliteClient implements Client {
               name: c.name,
               type: c.type,
               isNullable: c.isNullable,
-              primaryKey: c.primaryKey,
+              primaryKey: c.primaryKey ? pkPosition++ : null,
             ),
           )
           .toList(),
@@ -819,49 +917,104 @@ class SatelliteClient implements Client {
     return UnsubscribeResponse();
   }
 
+  Relation _getRelation(int relationId) {
+    final rel = inbound.relations[relationId];
+    if (rel == null) {
+      throw SatelliteException(SatelliteErrorCode.protocolViolation,
+          'missing relation $relationId for incoming operation');
+    }
+    return rel;
+  }
+
   void processOpLogMessage(SatOpLog opLogMessage) {
     final replication = inbound;
 
     //print("PROCESS! ${opLogMessage.ops.length}");
     for (final op in opLogMessage.ops) {
       if (op.hasBegin()) {
-        final transaction = Transaction(
+        final transaction = ServerTransaction(
           commitTimestamp: op.begin.commitTimestamp,
           lsn: op.begin.lsn,
           changes: [],
           origin: op.begin.origin,
+          id: op.begin.transactionId,
         );
+        replication.incomplete = IncompletionType.transaction;
         replication.transactions.add(transaction);
       }
 
+      if (op.hasAdditionalBegin()) {
+        replication.incomplete = IncompletionType.additionalData;
+        replication.additionalData.add(
+          AdditionalData(
+            ref: op.additionalBegin.ref,
+            changes: [],
+          ),
+        );
+      }
+
       final lastTxnIdx = replication.transactions.length - 1;
+      final lastDataIdx = replication.additionalData.length - 1;
       if (op.hasCommit()) {
+        if (replication.incomplete != IncompletionType.transaction) {
+          throw Exception(
+              'Unexpected commit message while not waiting for txn');
+        }
+
         final lastTx = replication.transactions[lastTxnIdx];
-        final transaction = Transaction(
+        final transaction = ServerTransaction(
           commitTimestamp: lastTx.commitTimestamp,
           lsn: lastTx.lsn,
           changes: lastTx.changes,
           origin: lastTx.origin,
           migrationVersion: lastTx.migrationVersion,
+          id: lastTx.id,
+          additionalDataRef: op.commit.additionalDataRef.isZero
+              ? null
+              : op.commit.additionalDataRef,
         );
         _emitter.enqueueEmitTransaction(
-          TransactionEvent(
-            transaction,
-            () => inbound.lastLsn = transaction.lsn,
-          ),
+          TransactionEvent(transaction, () {
+            inbound.lastLsn = transaction.lsn;
+            inbound.lastTxId = transaction.id;
+            inbound.unackedTxs++;
+            inbound.seenAdditionalDataSinceLastTx = SeenAdditionalDataInfo(
+              dataRefs: [],
+              subscriptions: [],
+            );
+            maybeSendAck(null);
+          }),
         );
         replication.transactions.removeAt(lastTxnIdx);
+        replication.incomplete = null;
+        if (!op.commit.additionalDataRef.isZero) {
+          replication.unseenAdditionalDataRefs
+              .add(op.commit.additionalDataRef.toString());
+        }
       }
+
+      if (op.hasAdditionalCommit()) {
+        if (replication.incomplete != IncompletionType.additionalData) {
+          throw Exception(
+              'Unexpected additionalCommit message while not waiting for additionalData');
+        }
+        final ref = op.additionalCommit.ref;
+
+        // TODO: We need to include these in the ACKs as well
+        emitter.enqueueEmitAdditionalData(
+          AdditionalDataEvent(replication.additionalData[lastDataIdx], () {
+            inbound.seenAdditionalDataSinceLastTx.dataRefs.add(ref);
+            maybeSendAck('additionalData');
+          }),
+        );
+        replication.additionalData.splice(lastDataIdx);
+        replication.incomplete = null;
+        replication.unseenAdditionalDataRefs.remove(ref.toString());
+      }
+
       if (op.hasInsert()) {
         final rid = op.insert.relationId;
-        final rel = replication.relations[rid];
-
-        if (rel == null) {
-          throw SatelliteException(
-            SatelliteErrorCode.protocolViolation,
-            'missing relation ${op.insert.relationId} for incoming operation',
-          );
-        }
+        final rel = _getRelation(rid);
 
         final change = DataChange(
           relation: rel,
@@ -874,21 +1027,18 @@ class SatelliteClient implements Client {
           tags: op.insert.tags,
         );
 
-        replication.transactions[lastTxnIdx].changes.add(change);
+        if (replication.incomplete == IncompletionType.transaction) {
+          replication.transactions[lastTxnIdx].changes.add(change);
+        } else {
+          replication.additionalData[lastDataIdx].changes.add(change);
+        }
       }
 
       if (op.hasUpdate()) {
         final rid = op.update.relationId;
-        final rel = replication.relations[rid];
+        final rel = _getRelation(rid);
         final rowData = op.update.getNullableRowData();
         final oldRowData = op.update.getNullableOldRowData();
-
-        if (rel == null) {
-          throw SatelliteException(
-            SatelliteErrorCode.protocolViolation,
-            'missing relation for incoming operation',
-          );
-        }
 
         final change = DataChange(
           relation: rel,
@@ -903,13 +1053,7 @@ class SatelliteClient implements Client {
 
       if (op.hasDelete()) {
         final rid = op.delete.relationId;
-        final rel = replication.relations[rid];
-        if (rel == null) {
-          throw SatelliteException(
-            SatelliteErrorCode.protocolViolation,
-            'missing relation for incoming operation',
-          );
-        }
+        final rel = _getRelation(rid);
 
         final oldRowData = op.delete.getNullableOldRowData();
 
@@ -918,6 +1062,19 @@ class SatelliteClient implements Client {
           type: DataChangeType.delete,
           oldRecord: deserializeRow(oldRowData, rel, _dbDescription),
           tags: op.delete.tags,
+        );
+        replication.transactions[lastTxnIdx].changes.add(change);
+      }
+
+      if (op.hasGone()) {
+        final rid = op.delete.relationId;
+        final rel = _getRelation(rid);
+
+        final change = DataChange(
+          relation: rel,
+          type: DataChangeType.gone,
+          oldRecord: deserializeRow(op.gone.pkData, rel, _dbDescription),
+          tags: [],
         );
         replication.transactions[lastTxnIdx].changes.add(change);
       }
@@ -1006,12 +1163,56 @@ class SatelliteClient implements Client {
               tags: tags,
             ),
           );
+        case DataChangeType.gone:
+          throw SatelliteException(
+            SatelliteErrorCode.protocolViolation,
+            'Client is not expected to send GONE messages',
+          );
       }
       ops.add(changeOp);
     }
 
     ops.add(SatTransOp(commit: SatOpCommit()));
     return SatOpLog(ops: ops);
+  }
+
+  void maybeSendAck(String? reason) {
+    // Restart the timer regardless
+    if (reason == 'timeout') {
+      inbound.ackTimer = Timer(
+        Duration(milliseconds: inbound.ackPeriod),
+        () => maybeSendAck('timeout'),
+      );
+    }
+
+    // Cannot ack while offline
+    if (socket == null || !isConnected()) return;
+    // or when there's nothing to be ack'd
+    if (inbound.lastTxId == null) return;
+    // Shouldn't ack the same message
+    // TODO(dart): Check int64 equality
+    if (inbound.lastAckedTxId == inbound.lastTxId) return;
+
+    final SatOpLogAck msg = SatOpLogAck(
+      ackTimestamp: Int64.ZERO + DateTime.now().millisecondsSinceEpoch,
+      lsn: inbound.lastLsn!,
+      transactionId: inbound.lastTxId,
+      subscriptionIds: inbound.seenAdditionalDataSinceLastTx.subscriptions,
+      additionalDataSourceIds: inbound.seenAdditionalDataSinceLastTx.dataRefs,
+    );
+
+    // Send acks earlier rather than later to keep the stream continuous -
+    // definitely send at 70% of allowed lag.
+    final boundary = (inbound.maxUnackedTxs * 0.7).floor();
+
+    // Send the ack if we're over the boundary, or wait to ack until the timer runs
+    // out to avoid making more traffic than required, but we always try to ack on additional data
+    if (inbound.unackedTxs >= boundary ||
+        reason == 'timeout' ||
+        reason == 'additionalData') {
+      sendMessage(msg);
+      inbound.lastAckedTxId = msg.transactionId;
+    }
   }
 }
 
@@ -1226,6 +1427,21 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
   }
 
   @override
+  void enqueueEmitAdditionalData(AdditionalDataEvent additionalDataEvent) {
+    return _enqueueEmit('additionalData', additionalDataEvent);
+  }
+
+  @override
+  void enqueueEmitSubscriptionDelivered(SubscriptionData data) {
+    return _enqueueEmit(kSubscriptionDelivered, data);
+  }
+
+  @override
+  void enqueueEmitSubscriptionError(SubscriptionErrorData error) {
+    return _enqueueEmit(kSubscriptionError, error);
+  }
+
+  @override
   void Function() onError(ErrorCallback callback) {
     return _on('error', callback);
   }
@@ -1245,6 +1461,22 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
   @override
   void Function() onOutboundStarted(OutboundStartedCallback callback) {
     return _on('outbound_started', callback);
+  }
+
+  @override
+  void Function() onAdditionalData(IncomingAdditionalDataCallback callback) {
+    return _on('additionalData', callback);
+  }
+
+  @override
+  void Function() onSubscriptionDelivered(
+      SubscriptionDeliveredCallback callback) {
+    return _on(kSubscriptionDelivered, callback);
+  }
+
+  @override
+  void Function() onSubscriptionError(SubscriptionErrorCallback callback) {
+    return _on(kSubscriptionError, callback);
   }
 
   @override

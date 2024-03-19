@@ -98,6 +98,7 @@ void main() {
       'lsn': '',
       'clientId': '',
       'subscriptions': '',
+      'seenAdditionalData': null,
     });
   });
 
@@ -1534,10 +1535,7 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: tablename)],
-    );
-
+    final shapeDef = Shape(tablename: tablename);
     satellite.relations = kTestRelations;
 
     final ShapeSubscription(synced: synced) =
@@ -1603,9 +1601,7 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: tablename)],
-    );
+    final shapeDef = Shape(tablename: tablename);
 
     satellite.relations = kTestRelations;
 
@@ -1633,9 +1629,7 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: tablename)],
-    );
+    final shapeDef = Shape(tablename: tablename);
 
     satellite.relations = kTestRelations;
 
@@ -1672,9 +1666,7 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: tablename)],
-    );
+    final shapeDef = Shape(tablename: tablename);
 
     satellite.relations = kTestRelations;
     final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
@@ -1709,6 +1701,89 @@ void main() {
     }
   });
 
+// TODO(dart): Implement
+/*   test.only('additional data will be stored properly', async (t) => {
+  const { client, satellite, adapter } = t.context
+  const { runMigrations, authState, token } = t.context
+  await runMigrations()
+  const tablename = 'parent'
+
+  // relations must be present at subscription delivery
+  client.setRelations(relations)
+  client.setRelationData(tablename, parentRecord)
+
+  await startSatellite(satellite, authState, token)
+
+  const shapeDef: Shape = {
+    tablename,
+  }
+
+  satellite!.relations = relations
+  const { synced } = await satellite.subscribe([shapeDef])
+  await synced
+  await satellite._performSnapshot()
+
+  // Send additional data
+  await client.additionalDataCb!({
+    ref: new Long(10),
+    changes: [
+      {
+        relation: relations.parent,
+        tags: ['server@' + Date.now()],
+        type: DataChangeType.INSERT,
+        record: { id: 100, value: 'new_value' },
+      },
+    ],
+  })
+
+  const [result] = await adapter.query({
+    sql: 'SELECT * FROM main.parent WHERE id = 100',
+  })
+  t.deepEqual(result, { id: 100, value: 'new_value', other: null })
+})
+
+test('GONE messages are applied as DELETEs', async (t) => {
+  const { client, satellite, adapter } = t.context
+  const { runMigrations, authState, token } = t.context
+  await runMigrations()
+  const tablename = 'parent'
+
+  // relations must be present at subscription delivery
+  client.setRelations(relations)
+  client.setRelationData(tablename, parentRecord)
+
+  await startSatellite(satellite, authState, token)
+
+  const shapeDef: Shape = {
+    tablename,
+  }
+
+  satellite!.relations = relations
+  const { synced } = await satellite.subscribe([shapeDef])
+  await synced
+  await satellite._performSnapshot()
+
+  // Send additional data
+  await client.transactionsCb!({
+    commit_timestamp: Long.fromNumber(new Date().getTime()),
+    id: new Long(10),
+    lsn: new Uint8Array(),
+    changes: [
+      {
+        relation: relations.parent,
+        tags: [],
+        type: DataChangeType.GONE,
+        record: { id: 1 },
+      },
+    ],
+  })
+
+  const results = await adapter.query({
+    sql: 'SELECT * FROM main.parent',
+  })
+  t.deepEqual(results, [])
+}) */
+
   test(
       'a subscription that failed to apply because of FK constraint triggers GC',
       () async {
@@ -1725,9 +1800,7 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef1 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: tablename)],
-    );
+    final shapeDef1 = Shape(tablename: tablename);
 
     satellite.relations = kTestRelations;
     final ShapeSubscription(synced: dataReceived) =
@@ -1761,12 +1834,8 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef1 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: 'parent')],
-    );
-    final ClientShapeDefinition shapeDef2 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: tablename)],
-    );
+    final shapeDef1 = Shape(tablename: 'parent');
+    final shapeDef2 = Shape(tablename: tablename);
 
     satellite.relations = kTestRelations;
     await satellite.subscribe([shapeDef1]);
@@ -1810,18 +1879,14 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: 'child')],
-    );
-    final shapeDef2 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: 'parent')],
-    );
+    final shapeDef1 = Shape(tablename: 'child');
+    final shapeDef2 = Shape(tablename: 'parent');
 
     satellite.relations = kTestRelations;
 
     final completer = Completer<void>();
     client.subscribeToSubscriptionEvents(
-      (data) {
+      (data) async {
         // child is applied first
         expect(data.data[0].relation.table, 'child');
         expect(data.data[1].relation.table, 'parent');
@@ -1863,12 +1928,8 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final ClientShapeDefinition shapeDef1 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: 'parent')],
-    );
-    final shapeDef2 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: 'another')],
-    );
+    final shapeDef1 = Shape(tablename: 'parent');
+    final shapeDef2 = Shape(tablename: 'another');
 
     satellite.relations = kTestRelations;
 
@@ -1921,13 +1982,9 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef1 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: tablename)],
-    );
+    final shapeDef1 = Shape(tablename: tablename);
 
-    final shapeDef2 = ClientShapeDefinition(
-      selects: [ShapeSelect(tablename: 'failure')],
-    );
+    final shapeDef2 = Shape(tablename: 'failure');
 
     satellite.relations = kTestRelations;
     final ShapeSubscription(synced: dataReceived) =
@@ -2003,9 +2060,7 @@ void main() {
       satellite.garbageCollectShapeHandler([
         ShapeDefinition(
           uuid: '',
-          definition: ClientShapeDefinition(
-            selects: [ShapeSelect(tablename: 'parent')],
-          ),
+          definition: Shape(tablename: 'parent'),
         ),
       ]),
     );
@@ -2047,11 +2102,7 @@ void main() {
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef = ClientShapeDefinition(
-      selects: [
-        ShapeSelect(tablename: tablename),
-      ],
-    );
+    final shapeDef = Shape(tablename: tablename);
 
     satellite.relations = kTestRelations;
     final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);

@@ -96,11 +96,9 @@ abstract class Client {
 }
 
 class SubscriptionEventListeners {
-  final void Function() removeSuccessListener;
-  final void Function() removeErrorListener;
+  final void Function() removeListeners;
 
   SubscriptionEventListeners({
-    required this.removeSuccessListener,
-    required this.removeErrorListener,
+    required this.removeListeners,
   });
 }

@@ -95,6 +95,8 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
 
   @override
   Future<ShapeSubscription> syncTables(List<String> tables) async {
-    return shapeManager.sync(Shape(tables: tables));
+    // TODO(dart): Implement
+    throw UnimplementedError();
+    // return shapeManager.sync(Shape(tables: tables));
   }
 }

@@ -39,31 +39,31 @@ final relations = <String, Relation>{
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'title',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'contents',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'nbr',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'authorId',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -77,19 +77,19 @@ final relations = <String, Relation>{
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'bio',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'userId',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -195,6 +195,56 @@ void main() {
       expect(e.code, SatelliteErrorCode.shapeDeliveryError);
     }
   });
+
+  //TODO(dart): Implement
+ /*  test.serial('nested shape is constructed', async (t) => {
+  const { satellite, client } = t.context as ContextType
+  await startSatellite(satellite, config.auth.token)
+
+  client.setRelations(relations)
+
+  const { Post } = t.context as ContextType
+  const input = {
+    where: {
+      OR: [{ id: 5 }, { id: 42 }],
+      NOT: [{ id: 1 }, { id: 2 }],
+      AND: [{ nbr: 6 }, { nbr: 7 }],
+      title: 'foo',
+      contents: "important'",
+    },
+    include: {
+      author: {
+        include: {
+          profile: true,
+        },
+      },
+    },
+  }
+
+  // @ts-ignore `computeShape` is a protected method
+  const shape = Post.computeShape(input)
+  t.deepEqual(shape, {
+    tablename: 'Post',
+    where:
+      "this.title = 'foo' AND this.contents = 'important''' AND this.nbr = 6 AND this.nbr = 7 AND ((this.id = 5) OR (this.id = 42)) AND NOT ((this.id = 1) OR (this.id = 2))",
+    include: [
+      {
+        foreignKey: ['authorId'],
+        select: {
+          tablename: 'User',
+          include: [
+            {
+              foreignKey: ['userId'],
+              select: {
+                tablename: 'Profile',
+              },
+            },
+          ],
+        },
+      },
+    ],
+  })
+}) */
 }
 
 // ignore: unreachable_from_main

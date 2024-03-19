@@ -215,7 +215,7 @@ typedef Transaction = BaseTransaction<Change>;
 typedef DataTransaction = BaseTransaction<DataChange>;
 
 class ServerTransaction extends Transaction {
-  final Int64 id;
+  final Int64? id;
   final Int64? additionalDataRef;
 
   ServerTransaction({
@@ -365,9 +365,10 @@ class RelationColumn with EquatableMixin {
 
 typedef ErrorCallback = EventCallbackCall<SatelliteException>;
 typedef RelationCallback = EventCallbackCall<Relation>;
-typedef AdditionalDataCallback = EventCallbackCall<AdditionalData>;
+typedef AdditionalDataCallback = Future<void> Function(AdditionalData);
 typedef TransactionCallback = Future<void> Function(ServerTransaction);
 typedef IncomingTransactionCallback = EventCallbackCall<TransactionEvent>;
+typedef IncomingAdditionalDataCallback = EventCallbackCall<AdditionalDataEvent>;
 typedef OutboundStartedCallback = EventCallbackCall<void>;
 
 // class Relation {
@@ -407,10 +408,17 @@ class StopReplicationResponse {
 }
 
 class TransactionEvent {
-  final Transaction transaction;
+  final ServerTransaction transaction;
   final void Function() ackCb;
 
   TransactionEvent(this.transaction, this.ackCb);
+}
+
+class AdditionalDataEvent {
+  final AdditionalData additionalData;
+  final void Function() ackCb;
+
+  AdditionalDataEvent(this.additionalData, this.ackCb);
 }
 
 enum ConnectivityStatus {

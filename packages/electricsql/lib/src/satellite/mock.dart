@@ -19,6 +19,8 @@ import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
 
 typedef DataRecord = Record;
@@ -55,7 +57,7 @@ class MockSatelliteProcess implements Satellite {
 
   @override
   Future<ShapeSubscription> subscribe(
-    List<ClientShapeDefinition> shapeDefinitions,
+    List<Shape> shapeDefinitions,
   ) async {
     return ShapeSubscription(synced: Future.value());
   }
@@ -160,6 +162,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   RelationsCache relations = {};
   void Function(Relation relation)? relationsCb;
   TransactionCallback? transactionsCb;
+  AdditionalDataCallback? additionalDataCb;
 
   Map<String, List<DataRecord>> relationData = {};
 
@@ -204,35 +207,34 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     final Map<String, String> shapeReqToUuid = {};
 
     for (final shape in shapes) {
-      for (final ShapeSelect(:tablename) in shape.definition.selects) {
-        if (tablename == 'failure' || tablename == 'Items') {
-          return Future.value(
-            SubscribeResponse(
-              subscriptionId: subscriptionId,
-              error: SatelliteException(SatelliteErrorCode.tableNotFound, null),
-            ),
+      final Shape(:tablename) = shape.definition;
+      if (tablename == 'failure' || tablename == 'Items') {
+        return Future.value(
+          SubscribeResponse(
+            subscriptionId: subscriptionId,
+            error: SatelliteException(SatelliteErrorCode.tableNotFound, null),
+          ),
+        );
+      }
+      if (tablename == 'another' || tablename == 'User') {
+        return Future(() {
+          sendErrorAfterTimeout(subscriptionId, 1);
+          return SubscribeResponse(
+            subscriptionId: subscriptionId,
+            error: null,
           );
-        }
-        if (tablename == 'another' || tablename == 'User') {
-          return Future(() {
-            sendErrorAfterTimeout(subscriptionId, 1);
-            return SubscribeResponse(
-              subscriptionId: subscriptionId,
-              error: null,
-            );
-          });
-        } else {
-          shapeReqToUuid[shape.requestId] = genUUID();
-          final List<DataRecord> records = relationData[tablename] ?? [];
+        });
+      } else {
+        shapeReqToUuid[shape.requestId] = genUUID();
+        final List<DataRecord> records = relationData[tablename] ?? [];
 
-          for (final record in records) {
-            final dataChange = InitialDataChange(
-              relation: relations[tablename]!,
-              record: record,
-              tags: [generateTag('remote', DateTime.now())],
-            );
-            data.add(dataChange);
-          }
+        for (final record in records) {
+          final dataChange = InitialDataChange(
+            relation: relations[tablename]!,
+            record: record,
+            tags: [generateTag('remote', DateTime.now())],
+          );
+          data.add(dataChange);
         }
       }
     }
@@ -287,15 +289,16 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     final removeErrorListener = _on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
-      removeSuccessListener: removeSuccessListener,
-      removeErrorListener: removeErrorListener,
+      removeListeners: () {
+        removeSuccessListener();
+        removeErrorListener();
+      },
     );
   }
 
   @override
   void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners) {
-    listeners.removeSuccessListener();
-    listeners.removeErrorListener();
+    listeners.removeListeners();
   }
 
   @override
@@ -367,6 +370,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
+    List<Int64>? observedTransactionData,
     //_resume?: boolean | undefined
   ) async {
     if (_startReplicationDelay != null) {
@@ -422,12 +426,21 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
 
   @override
   void Function() subscribeToTransactions(
-    Future<void> Function(Transaction transaction) callback,
+    Future<void> Function(ServerTransaction transaction) callback,
   ) {
     transactionsCb = callback;
 
     return () {
       transactionsCb = null;
+    };
+  }
+
+  @override
+  void Function() subscribeToAdditionalData(AdditionalDataCallback callback) {
+    additionalDataCb = callback;
+
+    return () {
+      additionalDataCb = null;
     };
   }
 

@@ -27,6 +27,7 @@ import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
+import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
 import 'package:retry/retry.dart' as retry_lib;
 import 'package:synchronized/synchronized.dart';
@@ -92,7 +93,7 @@ class SatelliteProcess implements Satellite {
 
   RelationsCache relations = {};
 
-  final List<ClientShapeDefinition> previousShapeSubscriptions = [];
+  final List<Shape> previousShapeSubscriptions = [];
   late SubscriptionsManager subscriptions;
   final Map<String, Completer<void>> subscriptionNotifiers = {};
   late String Function() subscriptionIdGenerator;
@@ -234,8 +235,8 @@ This means there is a notifier subscription leak.`''');
     final tablenames = <String>[];
     // reverts to off on commit/abort
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
-    shapeDefs.expand((ShapeDefinition def) => def.definition.selects).map(
-      (ShapeSelect select) {
+    shapeDefs.expand((ShapeDefinition def) => [def.definition]).map(
+      (Shape select) {
         tablenames.add('main.${select.tablename}');
         // We need "fully qualified" table names in the next calls
         return 'main.${select.tablename}';
@@ -263,6 +264,7 @@ This means there is a notifier subscription leak.`''');
     client.subscribeToError(_handleClientError);
     client.subscribeToRelations(updateRelations);
     client.subscribeToTransactions(applyTransaction);
+    client.subscribeToAdditionalData(_applyAdditionalData);
     client.subscribeToOutboundStarted((_) => throttledSnapshot());
 
     client.subscribeToSubscriptionEvents(
@@ -309,7 +311,7 @@ This means there is a notifier subscription leak.`''');
 
   @override
   Future<ShapeSubscription> subscribe(
-    List<ClientShapeDefinition> shapeDefinitions,
+    List<Shape> shapeDefinitions,
   ) async {
     // Await for client to be ready before doing anything else
     await initializing?.waitOn();
@@ -418,8 +420,9 @@ This means there is a notifier subscription leak.`''');
   // subscriptions for entire tables.
   Future<void> _applySubscriptionData(
     List<InitialDataChange> changes,
-    LSN lsn,
-  ) async {
+    LSN lsn, {
+    List<Statement> additionalStatements = const [],
+  }) async {
     final stmts = <Statement>[];
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
 
@@ -457,7 +460,7 @@ This means there is a notifier subscription leak.`''');
       // Since we're already iterating changes, we can also prepare data for shadow table
       final primaryKeyCols =
           op.relation.columns.fold(<String, Object>{}, (agg, col) {
-        if (col.primaryKey != null && col.primaryKey!) {
+        if (col.primaryKey != null && col.primaryKey != 0) {
           agg[col.name] = op.record[col.name]!;
         }
         return agg;
@@ -480,7 +483,8 @@ This means there is a notifier subscription leak.`''');
       final (:relation, :dataChanges, tableName: _) = entry.value;
       final records = dataChanges.map((change) => change.record).toList();
       final columnNames = relation.columns.map((col) => col.name).toList();
-      final sqlBase = "INSERT INTO $table (${columnNames.join(', ')}) VALUES ";
+      final sqlBase =
+          "INSERT OR IGNORE INTO $table (${columnNames.join(', ')}) VALUES ";
 
       stmts.addAll([
         ...prepareInsertBatchedStatements(
@@ -510,6 +514,7 @@ This means there is a notifier subscription leak.`''');
     // Then update subscription state and LSN
     stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
     stmts.add(updateLsnStmt(lsn));
+    stmts.addAll(additionalStatements);
 
     try {
       await adapter.runInTransaction(stmts);
@@ -570,7 +575,7 @@ This means there is a notifier subscription leak.`''');
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
 
     if (keepSubscribedShapes) {
-      final List<ClientShapeDefinition> shapeDefs = subscriptionIds
+      final List<Shape> shapeDefs = subscriptionIds
           .map((subId) => subscriptions.shapesForActiveSubscription(subId))
           .whereNotNull()
           .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
@@ -846,11 +851,18 @@ This means there is a notifier subscription leak.`''');
       // such that we can resume and inform Electric
       // about fulfilled subscriptions
       final subscriptionIds = subscriptions.getFulfilledSubscriptions();
+      final observedTransactionData =
+          await getMeta<String>('seenAdditionalData');
 
       final StartReplicationResponse(:error) = await client.startReplication(
         _lsn,
         schemaVersion,
         subscriptionIds.isNotEmpty ? subscriptionIds : null,
+        observedTransactionData
+            .split(',')
+            .where((x) => x != '')
+            .map((x) => Int64.parseInt(x))
+            .toList(),
       );
       if (error != null) {
         throw error;
@@ -1166,6 +1178,7 @@ This means there is a notifier subscription leak.`''');
           tags: encodeTags(entryChanges.tags),
         );
         switch (entryChanges.optype) {
+          case ChangesOpType.gone:
           case ChangesOpType.delete:
             stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
             stmts.add(_deleteShadowTagsStatement(shadowEntry));
@@ -1295,6 +1308,7 @@ This means there is a notifier subscription leak.`''');
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
     // update lsn.
     stmts.add(updateLsnStmt(lsn));
+    stmts.add(_resetSeenAdditionalDataStmt());
 
     Future<void> processDML(List<DataChange> changes) async {
       final tx = DataTransaction(
@@ -1405,6 +1419,27 @@ This means there is a notifier subscription leak.`''');
     await _notifyChanges(opLogEntries, ChangeOrigin.remote);
   }
 
+  Future<void> _applyAdditionalData(AdditionalData data) {
+    // Server sends additional data on move-ins and tries to send only data
+    // the client has never seen from its perspective. Because of this, we're writing this
+    // data directly, like subscription data
+    return _applySubscriptionData(
+      data.changes
+          .map(
+            (e) => InitialDataChange(
+              relation: e.relation,
+              record: e.record!,
+              tags: e.tags,
+            ),
+          )
+          .toList(),
+      _lsn!,
+      additionalStatements: [
+        _addSeenAdditionalDataStmt(data.ref.toString()),
+      ],
+    );
+  }
+
   Future<void> maybeGarbageCollect(
     String origin,
     DateTime commitTimestamp,
@@ -1446,6 +1481,22 @@ This means there is a notifier subscription leak.`''');
     } else {
       return [];
     }
+  }
+
+  Statement _addSeenAdditionalDataStmt(String ref) {
+    final meta = opts.metaTable.toString();
+
+    final sql = '''
+      INSERT INTO $meta (key, value) VALUES ('seenAdditionalData', ?)
+        ON CONFLICT (key) DO
+          UPDATE SET value = value || ',' || excluded.value
+    ''';
+    final args = <Object?>[ref];
+    return Statement(sql, args);
+  }
+
+  Statement _resetSeenAdditionalDataStmt() {
+    return _setMetaStatement('seenAdditionalData', '');
   }
 
   Statement _setMetaStatement(String key, Object? value) {
@@ -1520,11 +1571,7 @@ This means there is a notifier subscription leak.`''');
   /// @returns statement to be executed to save the new LSN value in the database
   Statement updateLsnStmt(LSN lsn) {
     _lsn = lsn;
-    final lsnBase64 = base64.encode(lsn);
-    return Statement(
-      'UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?',
-      [lsnBase64, 'lsn'],
-    );
+    return _setMetaStatement('lsn', base64.encode(lsn));
   }
 
   Future<void> checkMaxSqlParameters() async {
