@@ -24,7 +24,6 @@ RecordChangeType recordChangeTypeFromOpType(OpType opType) {
     OpType.insert => RecordChangeType.insert,
     OpType.update => RecordChangeType.update,
     OpType.delete => RecordChangeType.delete,
-    OpType.compensation => RecordChangeType.compensation,
     OpType.gone => RecordChangeType.gone,
   };
 }

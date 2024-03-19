@@ -19,8 +19,6 @@ enum OpType {
   delete,
   insert,
   update,
-  // TODO(dart): Is this needed?
-  compensation,
   gone,
 }
 
@@ -92,18 +90,18 @@ class OplogEntry with EquatableMixin {
       ];
 }
 
-OpType changeTypeToOpType(DataChangeType opTypeStr) {
-  switch (opTypeStr) {
+OpType changeTypeToOpType(DataChangeType opType) {
+  switch (opType) {
     case DataChangeType.insert:
       return OpType.insert;
     case DataChangeType.update:
       return OpType.update;
     case DataChangeType.delete:
       return OpType.delete;
-    case DataChangeType.compensation:
-      return OpType.compensation;
     case DataChangeType.gone:
       return OpType.gone;
+    default:
+      throw Exception('Unexpected opType: $opType');
   }
 }
 
@@ -115,8 +113,6 @@ DataChangeType opTypeToChangeType(OpType opType) {
       return DataChangeType.insert;
     case OpType.update:
       return DataChangeType.update;
-    case OpType.compensation:
-      return DataChangeType.compensation;
     case OpType.gone:
       return DataChangeType.gone;
   }
@@ -132,8 +128,6 @@ OpType opTypeStrToOpType(String str) {
       return OpType.update;
     case 'insert':
       return OpType.insert;
-    case 'compensation':
-      return OpType.compensation;
   }
 
   assert(false, 'OpType $str not handled');
@@ -495,9 +489,6 @@ ChangesOpType optypeToShadow(OpType optype) {
     case OpType.insert:
     case OpType.update:
       return ChangesOpType.upsert;
-    case OpType.compensation:
-    // TODO(dart): revisar
-      throw Exception('Compensation not supported');
   }
 }
 
