@@ -3,6 +3,7 @@ import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
+import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:meta/meta.dart';
 
 abstract interface class ElectricClient {
@@ -95,8 +96,8 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
 
   @override
   Future<ShapeSubscription> syncTables(List<String> tables) async {
+    assert(tables.length == 1, 'Only one table is supported for now');
     // TODO(dart): Implement
-    throw UnimplementedError();
-    // return shapeManager.sync(Shape(tables: tables));
+    return shapeManager.sync(Shape(tablename: tables.first));
   }
 }

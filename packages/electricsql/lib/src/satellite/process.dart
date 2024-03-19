@@ -527,7 +527,7 @@ This means there is a notifier subscription leak.`''');
         final (:relation, :dataChanges, :tableName) = entry.value;
 
         final primaryKeyColNames = relation.columns
-            .where((col) => col.primaryKey == true)
+            .where((col) => col.primaryKey != null)
             .map((col) => col.name)
             .toList();
         notificationChanges.add(

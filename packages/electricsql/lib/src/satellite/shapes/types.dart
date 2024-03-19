@@ -10,7 +10,8 @@ typedef TableName = String;
 typedef ColumnName = String;
 
 typedef SubscriptionDeliveredCallback = Future<void> Function(
-    SubscriptionData data);
+  SubscriptionData data,
+);
 typedef SubscriptionErrorCallback = void Function(SubscriptionErrorData error);
 
 class SubscriptionErrorData {
@@ -46,13 +47,23 @@ class Shape with EquatableMixin {
   Shape({required this.tablename, this.include, this.where});
 
   Map<String, dynamic> toMap() {
-    // TODO(dart): Implement
-    throw UnimplementedError();
+    return {
+      'tablename': tablename,
+      'include': include?.map((e) => e.toMap()).toList(),
+      'where': where,
+    };
   }
 
   factory Shape.fromMap(Map<String, dynamic> map) {
-    // TODO(dart): Implement
-    throw UnimplementedError();
+    return Shape(
+      tablename: map['tablename']! as TableName,
+      include: (map['include'] as List<dynamic>?)
+          ?.map<Rel>(
+            (x) => Rel.fromMap(x as Map<String, dynamic>),
+          )
+          .toList(),
+      where: map['where'] as String?,
+    );
   }
 
   @override
@@ -82,6 +93,20 @@ class Rel with EquatableMixin {
 
   @override
   List<Object?> get props => [foreignKey, select];
+
+  Map<String, dynamic> toMap() {
+    return {
+      'foreignKey': foreignKey,
+      'select': select.toMap(),
+    };
+  }
+
+  factory Rel.fromMap(Map<String, dynamic> map) {
+    return Rel(
+      foreignKey: List<ColumnName>.from(map['foreignKey'] as List<String>),
+      select: Shape.fromMap(map['select'] as Map<String, dynamic>),
+    );
+  }
 }
 
 // TODO(dart): Remove

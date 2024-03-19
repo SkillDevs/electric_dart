@@ -920,8 +920,10 @@ class SatelliteClient implements Client {
   Relation _getRelation(int relationId) {
     final rel = inbound.relations[relationId];
     if (rel == null) {
-      throw SatelliteException(SatelliteErrorCode.protocolViolation,
-          'missing relation $relationId for incoming operation');
+      throw SatelliteException(
+        SatelliteErrorCode.protocolViolation,
+        'missing relation $relationId for incoming operation',
+      );
     }
     return rel;
   }
@@ -958,7 +960,8 @@ class SatelliteClient implements Client {
       if (op.hasCommit()) {
         if (replication.incomplete != IncompletionType.transaction) {
           throw Exception(
-              'Unexpected commit message while not waiting for txn');
+            'Unexpected commit message while not waiting for txn',
+          );
         }
 
         final lastTx = replication.transactions[lastTxnIdx];
@@ -996,7 +999,8 @@ class SatelliteClient implements Client {
       if (op.hasAdditionalCommit()) {
         if (replication.incomplete != IncompletionType.additionalData) {
           throw Exception(
-              'Unexpected additionalCommit message while not waiting for additionalData');
+            'Unexpected additionalCommit message while not waiting for additionalData',
+          );
         }
         final ref = op.additionalCommit.ref;
 
@@ -1195,7 +1199,7 @@ class SatelliteClient implements Client {
 
     final SatOpLogAck msg = SatOpLogAck(
       ackTimestamp: Int64.ZERO + DateTime.now().millisecondsSinceEpoch,
-      lsn: inbound.lastLsn!,
+      lsn: inbound.lastLsn,
       transactionId: inbound.lastTxId,
       subscriptionIds: inbound.seenAdditionalDataSinceLastTx.subscriptions,
       additionalDataSourceIds: inbound.seenAdditionalDataSinceLastTx.dataRefs,
@@ -1470,7 +1474,8 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
 
   @override
   void Function() onSubscriptionDelivered(
-      SubscriptionDeliveredCallback callback) {
+    SubscriptionDeliveredCallback callback,
+  ) {
     return _on(kSubscriptionDelivered, callback);
   }
 

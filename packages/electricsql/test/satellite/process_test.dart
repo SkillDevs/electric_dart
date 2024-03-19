@@ -98,7 +98,7 @@ void main() {
       'lsn': '',
       'clientId': '',
       'subscriptions': '',
-      'seenAdditionalData': null,
+      'seenAdditionalData': '',
     });
   });
 
