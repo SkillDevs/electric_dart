@@ -1171,136 +1171,124 @@ void main() {
     await completer.future;
   });
 
-  // TODO(dart): Implement
-/*   test.serial('client correctly handles additional data messages', async (t) => {
-  await connectAndAuth(t.context)
-  const { client, server } = t.context
+  test('client correctly handles additional data messages', () async {
+    await connectAndAuth();
 
-  const dbDescription = new DbSchema(
-    {
-      table: {
-        fields: new Map([
-          ['name1', PgBasicType.PG_TEXT],
-          ['name2', PgBasicType.PG_TEXT],
-        ]),
-        relations: [],
-      } as unknown as TableSchema<
-        any,
-        any,
-        any,
-        any,
-        any,
-        any,
-        any,
-        any,
-        any,
-        HKT
-      >,
-    },
-    []
-  )
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': {
+          'name1': PgType.text,
+          'name2': PgType.text,
+        },
+      },
+      migrations: [],
+    );
 
-  client['dbDescription'] = dbDescription
+    client.debugSetDbDescription(dbDescription);
 
-  const start = Proto.SatInStartReplicationResp.create()
-  const begin = Proto.SatOpBegin.create({
-    commitTimestamp: Long.ZERO,
-    additionalDataRef: 10,
-  })
-  const commit = Proto.SatOpCommit.create({ additionalDataRef: 10 })
+    final start = SatInStartReplicationResp();
+    final begin = SatOpBegin(
+      commitTimestamp: Int64.ZERO,
+      additionalDataRef: Int64(10),
+    );
+    final commit = SatOpCommit(additionalDataRef: Int64(10));
 
-  const rel: Relation = {
-    id: 1,
-    schema: 'schema',
-    table: 'table',
-    tableType: Proto.SatRelation_RelationType.TABLE,
-    columns: [
-      { name: 'name1', type: 'TEXT', isNullable: true },
-      { name: 'name2', type: 'TEXT', isNullable: true },
-    ],
-  }
+    final rel = Relation(
+      id: 1,
+      schema: 'schema',
+      table: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        RelationColumn(name: 'name1', type: 'TEXT', isNullable: true),
+        RelationColumn(name: 'name2', type: 'TEXT', isNullable: true),
+      ],
+    );
 
-  const relation = Proto.SatRelation.fromPartial({
-    relationId: 1,
-    schemaName: 'schema',
-    tableName: 'table',
-    tableType: Proto.SatRelation_RelationType.TABLE,
-    columns: [
-      Proto.SatRelationColumn.fromPartial({
-        name: 'name1',
-        type: 'TEXT',
-        isNullable: true,
-      }),
-      Proto.SatRelationColumn.fromPartial({
-        name: 'name2',
-        type: 'TEXT',
-        isNullable: true,
-      }),
-    ],
-  })
+    final relation = SatRelation(
+      relationId: 1,
+      schemaName: 'schema',
+      tableName: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        SatRelationColumn(
+          name: 'name1',
+          type: 'TEXT',
+          isNullable: true,
+        ),
+        SatRelationColumn(
+          name: 'name2',
+          type: 'TEXT',
+          isNullable: true,
+        ),
+      ],
+    );
 
-  const insertOp = Proto.SatOpInsert.fromPartial({
-    relationId: 1,
-    rowData: serializeRow({ name1: 'Foo', name2: 'Bar' }, rel, dbDescription),
-  })
+    final insertOp = SatOpInsert(
+      relationId: 1,
+      rowData:
+          serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel, dbDescription),
+    );
 
-  const secondInsertOp = Proto.SatOpInsert.fromPartial({
-    relationId: 1,
-    rowData: serializeRow({ name1: 'More', name2: 'Data' }, rel, dbDescription),
-  })
+    final secondInsertOp = SatOpInsert(
+      relationId: 1,
+      rowData:
+          serializeRow({'name1': 'More', 'name2': 'Data'}, rel, dbDescription),
+    );
 
-  const firstOpLogMessage = Proto.SatOpLog.fromPartial({
-    ops: [
-      Proto.SatTransOp.fromPartial({ begin }),
-      Proto.SatTransOp.fromPartial({ insert: insertOp }),
-      Proto.SatTransOp.fromPartial({ commit }),
-    ],
-  })
+    final firstOpLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(insert: insertOp),
+        SatTransOp(commit: commit),
+      ],
+    );
 
-  const secondOpLogMessage = Proto.SatOpLog.fromPartial({
-    ops: [
-      Proto.SatTransOp.fromPartial({
-        additionalBegin: Proto.SatOpAdditionalBegin.create({ ref: 10 }),
-      }),
-      Proto.SatTransOp.fromPartial({ insert: secondInsertOp }),
-      Proto.SatTransOp.fromPartial({
-        additionalCommit: Proto.SatOpAdditionalCommit.create({ ref: 10 }),
-      }),
-    ],
-  })
+    final secondOpLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(
+          additionalBegin: SatOpAdditionalBegin(ref: Int64(10)),
+        ),
+        SatTransOp(insert: secondInsertOp),
+        SatTransOp(
+          additionalCommit: SatOpAdditionalCommit(ref: Int64(10)),
+        ),
+      ],
+    );
 
-  const stop = Proto.SatInStopReplicationResp.create()
+    final stop = SatInStopReplicationResp();
 
-  server.nextRpcResponse('startReplication', [
-    start,
-    relation,
-    firstOpLogMessage,
-    '100ms',
-    secondOpLogMessage,
-  ])
-  server.nextRpcResponse('stopReplication', [stop])
+    server.nextRpcResponse('startReplication', [
+      start,
+      relation,
+      firstOpLogMessage,
+      '100ms',
+      secondOpLogMessage,
+    ]);
+    server.nextRpcResponse('stopReplication', [stop]);
 
-  await new Promise<void>((res) => {
-    let txnSeen = false
+    final completer = Completer<void>();
 
-    client.subscribeToTransactions(async (transaction) => {
-      t.is(transaction.changes.length, 1)
-      t.assert(transaction.additionalDataRef?.eq(10))
+    bool txnSeen = false;
 
-      txnSeen = true
-    })
+    client.subscribeToTransactions((transaction) async {
+      expect(transaction.changes.length, 1);
+      expect(transaction.additionalDataRef?.toInt(), 10);
 
-    client.subscribeToAdditionalData(async (data) => {
-      t.assert(data.ref.eq(10))
-      t.is(data.changes.length, 1)
-      t.like(data.changes[0].record, { name1: 'More' })
+      txnSeen = true;
+    });
 
-      if (txnSeen) res()
-    })
+    client.subscribeToAdditionalData((data) async {
+      expect(data.ref.toInt(), 10);
+      expect(data.changes.length, 1);
+      expect(data.changes[0].record!['name1'], 'More');
 
-    return client.startReplication()
-  })
-}) */
+      if (txnSeen) completer.complete();
+    });
+
+    unawaited(client.startReplication(null, null, null, null));
+
+    await completer.future;
+  });
 
   test(
     'unsubscribe successfull',

@@ -218,8 +218,8 @@ class SatelliteClient implements Client {
         return (v) => rpcClient.handleResponse(v! as SatRpcResponse);
       case SatMsgType.rpcRequest:
         return (v) => handleRpcRequest(v! as SatRpcRequest);
-      //case SatMsgType.opLogAck:
-      // return (v) => v // Server doesn't send that
+      case SatMsgType.opLogAck:
+        return (v) {}; // Server doesn't send that
     }
   }
 

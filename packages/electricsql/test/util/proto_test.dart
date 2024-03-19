@@ -1,39 +1,37 @@
+import 'package:electricsql/src/proto/satellite.pb.dart';
+import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:electricsql/src/util/proto.dart';
+import 'package:test/test.dart';
+
 void main() {
-  // TODO(dart): IMplmenet
-  /*  test('shapeRequestToSatShapeReq: correctly converts a nested request', (t) => {
-  const shapeReq: ShapeRequest = {
-    requestId: 'fake_id',
-    definition: {
-      tablename: 'fake',
-      include: [
-        { foreignKey: ['fake_table_id'], select: { tablename: 'other' } },
-      ],
-    },
-  }
+  test('shapeRequestToSatShapeReq: correctly converts a nested request', () {
+    final shapeReq = ShapeRequest(
+      requestId: 'fake_id',
+      definition: Shape(
+        tablename: 'fake',
+        include: [
+          Rel(foreignKey: ['fake_table_id'], select: Shape(tablename: 'other')),
+        ],
+      ),
+    );
 
-  const req = proto.shapeRequestToSatShapeReq([shapeReq])
+    final req = shapeRequestToSatShapeReq([shapeReq]);
 
-  t.is(req.length, 1)
-  t.is(req[0].requestId, 'fake_id')
-  t.assert(req[0].shapeDefinition !== undefined)
-  const { selects } = req[0].shapeDefinition!
+    expect(req.length, 1);
+    expect(req[0].requestId, 'fake_id');
+    expect(req[0].shapeDefinition, isNotNull);
+    final SatShapeDef(:selects) = req[0].shapeDefinition;
 
-  t.is(selects.length, 1)
-  t.like(selects[0], {
-    tablename: 'fake',
-    include: [
-      {
-        $type: 'Electric.Satellite.SatShapeDef.Relation',
-        foreignKey: ['fake_table_id'],
-        select: {
-          $type: 'Electric.Satellite.SatShapeDef.Select',
-          include: [],
-          tablename: 'other',
-          where: '',
-        },
-      },
-    ],
-  })
-})
- */
+    expect(selects.length, 1);
+
+    final sel = selects[0];
+    expect(sel.tablename, 'fake');
+    expect(sel.include.length, 1);
+    final include = sel.include[0];
+    expect(include.foreignKey, ['fake_table_id']);
+    final includeSel = include.select;
+    expect(includeSel.tablename, 'other');
+    expect(includeSel.include, <Object>[]);
+    expect(includeSel.where, '');
+  });
 }

@@ -23,7 +23,8 @@ enum SatMsgType {
   shapeDataBegin(code: 17),
   shapeDataEnd(code: 18),
   rpcRequest(code: 21),
-  rpcResponse(code: 22);
+  rpcResponse(code: 22),
+  opLogAck(code: 23);
 
   const SatMsgType({
     required this.code,
@@ -60,6 +61,8 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
       return SatRpcRequest.fromBuffer(data);
     case SatMsgType.rpcResponse:
       return SatRpcResponse.fromBuffer(data);
+    case SatMsgType.opLogAck:
+      return SatOpLogAck.fromBuffer(data);
   }
 }
 
@@ -84,6 +87,8 @@ SatMsgType? getTypeFromSatObject(Object object) {
     return SatMsgType.rpcRequest;
   } else if (object is SatRpcResponse) {
     return SatMsgType.rpcResponse;
+  } else if (object is SatOpLogAck) {
+    return SatMsgType.opLogAck;
   }
 
   return null;
