@@ -109,34 +109,6 @@ class Rel with EquatableMixin {
   }
 }
 
-// TODO(dart): Remove
-/* class ClientShapeDefinition with EquatableMixin {
-  final List<ShapeSelect> selects;
-
-  ClientShapeDefinition({
-    required this.selects,
-  });
-
-  @override
-  List<Object?> get props => [selects];
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'selects': selects.map((x) => x.toMap()).toList(),
-    };
-  }
-
-  factory ClientShapeDefinition.fromMap(Map<String, dynamic> map) {
-    return ClientShapeDefinition(
-      selects: List<ShapeSelect>.from(
-        (map['selects'] as List<dynamic>).map<ShapeSelect>(
-          (x) => ShapeSelect.fromMap(x as Map<String, dynamic>),
-        ),
-      ),
-    );
-  }
-} */
-
 sealed class ShapeRequestOrDefinition with EquatableMixin {
   final Shape definition;
 

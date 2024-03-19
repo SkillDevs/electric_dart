@@ -1701,88 +1701,88 @@ void main() {
     }
   });
 
-// TODO(dart): Implement
-/*   test.only('additional data will be stored properly', async (t) => {
-  const { client, satellite, adapter } = t.context
-  const { runMigrations, authState, token } = t.context
-  await runMigrations()
-  const tablename = 'parent'
+  test('additional data will be stored properly', () async {
+    await runMigrations();
+    const tablename = 'parent';
 
-  // relations must be present at subscription delivery
-  client.setRelations(relations)
-  client.setRelationData(tablename, parentRecord)
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
 
-  await startSatellite(satellite, authState, token)
+    await startSatellite(satellite, authConfig, token);
 
-  const shapeDef: Shape = {
-    tablename,
-  }
+    final shapeDef = Shape(tablename: tablename);
 
-  satellite!.relations = relations
-  const { synced } = await satellite.subscribe([shapeDef])
-  await synced
-  await satellite._performSnapshot()
+    satellite.relations = kTestRelations;
+    final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
+    await synced;
+    await satellite.performSnapshot();
 
-  // Send additional data
-  await client.additionalDataCb!({
-    ref: new Long(10),
-    changes: [
-      {
-        relation: relations.parent,
-        tags: ['server@' + Date.now()],
-        type: DataChangeType.INSERT,
-        record: { id: 100, value: 'new_value' },
-      },
-    ],
-  })
+    // Send additional data
+    await client.additionalDataCb!(
+      AdditionalData(
+        ref: Int64(10),
+        changes: [
+          DataChange(
+            relation: kTestRelations['parent']!,
+            tags: ['server@${DateTime.now().millisecondsSinceEpoch}'],
+            type: DataChangeType.insert,
+            record: {'id': 100, 'value': 'new_value'},
+          ),
+        ],
+      ),
+    );
 
-  const [result] = await adapter.query({
-    sql: 'SELECT * FROM main.parent WHERE id = 100',
-  })
-  t.deepEqual(result, { id: 100, value: 'new_value', other: null })
-})
+    final [result] = await adapter.query(
+      Statement(
+        'SELECT * FROM main.parent WHERE id = 100',
+      ),
+    );
+    expect(result, {'id': 100, 'value': 'new_value', 'other': null});
+  });
 
-test('GONE messages are applied as DELETEs', async (t) => {
-  const { client, satellite, adapter } = t.context
-  const { runMigrations, authState, token } = t.context
-  await runMigrations()
-  const tablename = 'parent'
+  test('GONE messages are applied as DELETEs', () async {
+    await runMigrations();
+    const tablename = 'parent';
 
-  // relations must be present at subscription delivery
-  client.setRelations(relations)
-  client.setRelationData(tablename, parentRecord)
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
 
-  await startSatellite(satellite, authState, token)
+    await startSatellite(satellite, authConfig, token);
 
-  const shapeDef: Shape = {
-    tablename,
-  }
+    final shapeDef = Shape(tablename: tablename);
 
-  satellite!.relations = relations
-  const { synced } = await satellite.subscribe([shapeDef])
-  await synced
-  await satellite._performSnapshot()
+    satellite.relations = kTestRelations;
+    final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
+    await synced;
+    await satellite.performSnapshot();
 
-  // Send additional data
-  await client.transactionsCb!({
-    commit_timestamp: Long.fromNumber(new Date().getTime()),
-    id: new Long(10),
-    lsn: new Uint8Array(),
-    changes: [
-      {
-        relation: relations.parent,
-        tags: [],
-        type: DataChangeType.GONE,
-        record: { id: 1 },
-      },
-    ],
-  })
+    // Send additional data
+    await client.transactionsCb!(
+      ServerTransaction(
+        commitTimestamp: Int64(DateTime.now().millisecondsSinceEpoch),
+        id: Int64(10),
+        lsn: [],
+        origin: 'remote',
+        changes: [
+          DataChange(
+            relation: kTestRelations['parent']!,
+            tags: [],
+            type: DataChangeType.gone,
+            record: {'id': 1},
+          ),
+        ],
+      ),
+    );
 
-  const results = await adapter.query({
-    sql: 'SELECT * FROM main.parent',
-  })
-  t.deepEqual(results, [])
-}) */
+    final results = await adapter.query(
+      Statement(
+        'SELECT * FROM main.parent',
+      ),
+    );
+    expect(results, <dynamic>[]);
+  });
 
   test(
       'a subscription that failed to apply because of FK constraint triggers GC',
