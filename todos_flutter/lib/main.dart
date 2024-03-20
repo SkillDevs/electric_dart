@@ -103,9 +103,10 @@ class MyHomePage extends HookConsumerWidget {
     final todosAV = ref.watch(todosProvider);
 
     final electricClient = ref.watch(electricClientProvider);
+    final db = electricClient.db;
     useEffect(() {
-      electricClient.syncTable("todo");
-      electricClient.syncTable("todolist");
+      electricClient.syncTable(db.todo);
+      electricClient.syncTable(db.todolist);
       return null;
     }, []);
 

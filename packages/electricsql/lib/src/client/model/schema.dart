@@ -1,56 +1,64 @@
-import 'dart:convert';
-
 import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
-import 'package:electricsql/src/migrators/index.dart';
+import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:meta/meta.dart';
 
 typedef FieldName = String;
 
 typedef Fields = Map<FieldName, PgType>;
 
-abstract interface class DBSchema {
-  List<Migration> get migrations;
+abstract class DBSchema {
+  final Map<String, Fields> _fieldsByTable;
+  final List<Migration> _migrations;
 
-  bool hasTable(String table);
+  List<Migration> get migrations => _migrations;
 
-  Fields getFields(String table);
+  DBSchema({
+    required Map<String, Fields> fieldsByTable,
+    required List<Migration> migrations,
+  })  : _fieldsByTable = fieldsByTable,
+        _migrations = migrations;
 
-  FieldName getForeignKey(String table, FieldName field);
-}
-
-class DBSchemaDrift implements DBSchema {
-  @override
-  final List<Migration> migrations;
-
-  final DatabaseConnectionUser db;
-
-  late final Map<String, Fields> _fieldsByTable;
-
-  @override
-  bool hasTable(String tableName) {
-    // ignore: invalid_use_of_visible_for_overriding_member
-    final driftDb = db.attachedDatabase;
-    return driftDb.allTables.any((t) => t.actualTableName == tableName);
+  bool hasTable(String table) {
+    return _fieldsByTable.containsKey(table);
   }
 
-  DBSchemaDrift({
-    required this.db,
-    required this.migrations,
+  Fields getFields(String table) {
+    return _fieldsByTable[table]!;
+  }
+}
+
+class DBSchemaDrift extends DBSchema {
+  final DatabaseConnectionUser db;
+
+  factory DBSchemaDrift({
+    required DatabaseConnectionUser db,
+    required List<Migration> migrations,
   }) {
     // ignore: invalid_use_of_visible_for_overriding_member
     final driftDb = db.attachedDatabase;
 
-    _fieldsByTable = {
+    final _fieldsByTable = {
       for (final table in driftDb.allTables)
         table.actualTableName: _buildFieldsForTable(table, driftDb),
     };
+
+    return DBSchemaDrift._(
+      fieldsByTable: _fieldsByTable,
+      migrations: migrations,
+      db: db,
+    );
   }
 
-  Fields _buildFieldsForTable(
+  DBSchemaDrift._({
+    required super.fieldsByTable,
+    required super.migrations,
+    required this.db,
+  });
+
+  static Fields _buildFieldsForTable(
     TableInfo<dynamic, dynamic> table,
     GeneratedDatabase genDb,
   ) {
@@ -65,7 +73,7 @@ class DBSchemaDrift implements DBSchema {
     return fields;
   }
 
-  PgType? _getPgTypeFromGeneratedDriftColumn(
+  static PgType? _getPgTypeFromGeneratedDriftColumn(
     GeneratedDatabase genDb,
     GeneratedColumn<Object> c,
   ) {
@@ -98,119 +106,46 @@ class DBSchemaDrift implements DBSchema {
         return null;
     }
   }
-
-  @override
-  Fields getFields(String table) {
-    return _fieldsByTable[table]!;
-  }
-
-  @override
-  FieldName getForeignKey(String table, FieldName field) {
-    // TODO(dart): Implement
-    // const relationName = this.getRelationName(table, field)
-    // const relation = this.getRelation(table, relationName)
-    // if (relation.isOutgoingRelation()) {
-    //   return relation.fromField
-    // }
-    // // it's an incoming relation
-    // // we need to fetch the `fromField` from the outgoing relation
-    // const oppositeRelation = relation.getOppositeRelation(this)
-    // return oppositeRelation.fromField
-    throw UnimplementedError();
-  }
 }
 
 @visibleForTesting
-class DBSchemaRaw implements DBSchema {
-  @override
-  final List<Migration> migrations;
-  final Map<String, Fields> fields;
+class DBSchemaRaw extends DBSchema {
+  Map<String, Fields> get fields => _fieldsByTable;
 
   DBSchemaRaw({
-    required this.fields,
-    required this.migrations,
-  });
-
-  @override
-  Fields getFields(String table) {
-    return fields[table]!;
-  }
-
-  @override
-  bool hasTable(String table) {
-    return fields.containsKey(table);
-  }
-
-  @override
-  FieldName getForeignKey(String table, FieldName field) {
-    // TODO(dart): implement getForeignKey
-    throw UnimplementedError();
-  }
+    required Map<String, Fields> fields,
+    required super.migrations,
+  }) : super(fieldsByTable: fields);
 }
 
-  // TODO(dart): Implement
-/* Shape computeShape(DBSchema schema, String tableName, SyncInput i) {
-  // Recursively go over the included fields
-  final include = i.include ?? {};
+@protected
+Shape computeShape(SyncInputRaw i) {
+  final include = i.include ?? [];
   final where = i.where ?? {};
-  final includedFields = include.keys.toList();
-  final includedTables = includedFields.map((String field) {
-    // Fetch the table that is included
-    final relatedTableName = schema.getRelatedTable(
-      tableName,
-      field,
-    );
-    final fkk = schema.getForeignKey(tableName, field);
-    // final relatedTable = this._tables.get(relatedTableName)!
 
-    // And follow nested includes
-    final includedObj = include[field];
-    if ((includedObj is Map<String, Object?>? || includedObj is SyncInput?) &&
-        includedObj != null) {
-      // There is a nested include, follow it
-      final SyncInput recursiveInput;
-      if (includedObj is SyncInput) {
-        recursiveInput = includedObj;
-      } else if (includedObj is Map<String, Object?>) {
-        recursiveInput = SyncInput(
-          include: includedObj['include'] as Map<String, Object?>?,
-          where: includedObj['where'] as Map<String, Object?>?,
-        );
-      } else {
-        throw StateError('Unexpected type');
-      }
-          
-      return Rel(
-        foreignKey: [fkk],
-        select: computeShape(
-          schema,
-          relatedTableName,
-          recursiveInput,
-        ),
-      );
-    } else if (includedObj == true) {
-      return Rel(
-        foreignKey: [fkk],
-        select: Shape(
-          tablename: relatedTableName,
-        ),
-      );
-    } else {
-      throw Exception(
-        'Unexpected value in include tree for sync: ${json.encode(includedObj)}',
-      );
-    }
-  }).toList();
+  Rel includeRelToRel(IncludeRelRaw ir) {
+    return Rel(
+      foreignKey: ir.foreignKey,
+      select: computeShape(
+        ir.select,
+      ),
+    );
+  }
+
+  // Recursively go over the included fields
+  final List<Rel> includedTables =
+      include.map((e) => includeRelToRel(e)).toList();
 
   final whereClause = _makeSqlWhereClause(where);
   return Shape(
-    tablename: tableName,
-    include: includedTables,
+    tablename: i.tableName,
+    include: includedTables.isEmpty ? null : includedTables,
     where: whereClause == '' ? null : whereClause,
   );
 }
- */
+
 String _makeSqlWhereClause(Object where) {
+  return '';
   // TODO(dart): Implement
   throw UnimplementedError();
   // we wrap it in an array and then flatten it

@@ -1,6 +1,17 @@
-class SyncInput {
-  final Map<String, Object?>? include;
+class SyncInputRaw {
+  final String tableName;
+  final List<IncludeRelRaw>? include;
   final Map<String, Object?>? where;
 
-  SyncInput({ this.include,  this.where});
+  SyncInputRaw({required this.tableName, this.include, this.where});
+}
+
+class IncludeRelRaw {
+  final List<String> foreignKey;
+  final SyncInputRaw select;
+
+  IncludeRelRaw({
+    required this.foreignKey,
+    required this.select,
+  });
 }

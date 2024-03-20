@@ -1,12 +1,11 @@
-import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 
 import 'database.dart';
 
-Future<DriftElectricClient<DB>>
-    electrifyTestDatabase<DB extends DatabaseConnectionUser>(DB db) async {
+Future<ElectricClient<TestsDatabase>>
+    electrifyTestDatabase(TestsDatabase db) async {
   final electric = await electrify(
     dbName: 'test-db',
     db: db,
@@ -18,7 +17,7 @@ Future<DriftElectricClient<DB>>
   );
 
   // Sync all shapes such that we don't get warnings on every query
-  await electric.syncTable('DataTypes');
+  await electric.syncTable(db.dataTypes);
 
   return electric;
 }

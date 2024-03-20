@@ -286,7 +286,7 @@ class SatelliteTestContext {
   }
 }
 
-Future<ElectricClient> mockElectricClient(
+Future<ElectricClientRaw> mockElectricClient(
   DatabaseConnectionUser db,
   Registry registry, {
   required DbName dbName,

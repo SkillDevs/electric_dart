@@ -8,6 +8,7 @@ CREATE TABLE "todo" (
     "text" TEXT,
     "completed" BOOLEAN NOT NULL,
     "edited_at" TIMESTAMPTZ NOT NULL,
+    FOREIGN KEY (listid) REFERENCES todolist(id),
     PRIMARY KEY ("id")
 );
 

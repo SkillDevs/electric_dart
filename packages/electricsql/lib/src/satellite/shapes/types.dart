@@ -49,8 +49,8 @@ class Shape with EquatableMixin {
   Map<String, dynamic> toMap() {
     return {
       'tablename': tablename,
-      'include': include?.map((e) => e.toMap()).toList(),
-      'where': where,
+      if (include != null) 'include': include?.map((e) => e.toMap()).toList(),
+      if (where != null) 'where': where,
     };
   }
 

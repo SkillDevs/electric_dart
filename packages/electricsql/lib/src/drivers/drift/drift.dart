@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
@@ -10,7 +11,7 @@ import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:meta/meta.dart';
 
-Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
+Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   required String dbName,
   required DB db,
   required List<Migration> migrations,
@@ -44,11 +45,23 @@ Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
   return driftClient;
 }
 
-class DriftElectricClient<DB extends DatabaseConnectionUser>
-    implements ElectricClient {
+abstract interface class ElectricClient<DB extends GeneratedDatabase>
+    implements BaseElectricClient {
+  DB get db;
+
+  Future<ShapeSubscription> syncTable<T extends Table>(
+    T table, {
+    SyncIncludeBuilder<T>? include,
+    SyncWhereBuilder<T>? where,
+  });
+}
+
+class DriftElectricClient<DB extends GeneratedDatabase>
+    implements ElectricClient<DB> {
+  @override
   final DB db;
 
-  final ElectricClient _baseClient;
+  final ElectricClientRaw _baseClient;
 
   void Function()? _disposeHook;
 
@@ -128,11 +141,6 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  Future<ShapeSubscription> syncTable(String table, [SyncInput? syncInput]) {
-    return _baseClient.syncTable(table, syncInput);
-  }
-
-  @override
   Future<void> connect([String? token]) {
     return _baseClient.connect(token);
   }
@@ -140,5 +148,25 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   @override
   void disconnect() {
     return _baseClient.disconnect();
+  }
+
+  @override
+  Future<ShapeSubscription> syncTable<T extends Table>(
+    T table, {
+    SyncIncludeBuilder<T>? include,
+    SyncWhereBuilder<T>? where,
+  }) {
+    final shape = computeShapeForDrift<T>(
+      db,
+      table,
+      include: include,
+      where: where,
+    );
+
+    // print("SHAPE ${shape.toMap()}");
+
+    return _baseClient
+        // ignore: invalid_use_of_protected_member
+        .syncShapeInternal(shape);
   }
 }

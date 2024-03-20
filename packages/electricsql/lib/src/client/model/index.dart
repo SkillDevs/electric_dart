@@ -1,1 +1,2 @@
-export 'client.dart' show ElectricClient;
+export 'client.dart' show BaseElectricClient, ElectricClientRaw;
+export 'relation.dart' show TableRelation;

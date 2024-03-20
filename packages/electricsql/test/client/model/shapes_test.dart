@@ -5,6 +5,7 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -133,7 +134,7 @@ void main() {
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTable('Post');
+    final ShapeSubscription(:synced) = await electric.syncTable(db.posts);
     // always await this promise otherwise the next test may issue a subscription
     // while this one is not yet fulfilled and that will lead to issues
     await synced;
@@ -149,14 +150,14 @@ void main() {
     client.setRelationData('Profile', profile);
 
     final ShapeSubscription(synced: profileSynced) =
-        await electric.syncTable('Profile');
+        await electric.syncTable(db.profiles);
 
     // Once the subscription has been acknowledged
     // we can request another one
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTable('Post');
+    final ShapeSubscription(:synced) = await electric.syncTable(db.posts);
     await synced;
 
     // Check that the data was indeed received
@@ -171,7 +172,7 @@ void main() {
     await startSatellite(satellite, authToken);
 
     try {
-      await electric.syncTable('Items');
+      await electric.syncTable(db.items);
       fail('Should have thrown');
     } on SatelliteException catch (e) {
       expect(e.code, SatelliteErrorCode.tableNotFound);
@@ -184,7 +185,7 @@ void main() {
     bool loadingPromResolved = false;
 
     try {
-      final ShapeSubscription(:synced) = await electric.syncTable('User');
+      final ShapeSubscription(:synced) = await electric.syncTable(db.users);
       loadingPromResolved = true;
       await synced;
       fail('Should have thrown');
@@ -196,53 +197,95 @@ void main() {
     }
   });
 
-  //TODO(dart): Implement
-  /* test('nested shape is constructed',  () async {
-  await startSatellite(satellite, authToken);
+  test('nested shape is constructed', () async {
+    await startSatellite(satellite, authToken);
 
-  client.setRelations(relations);
+    client.setRelations(relations);
 
-  final input = SyncInput(
-    where: {
-      'OR': [{ 'id': 5 }, { 'id': 42 }],
-      'NOT': [{ 'id': 1 }, { 'id': 2 }],
-      'AND': [{ 'nbr': 6 }, { 'nbr': 7 }],
-      'title': 'foo',
-      'contents': "important'",
-    },
-    include: {
-      'author': SyncInput(
-        include: {
-          'profile': true,
-        },
-      ),
-    },
-  );
-
-  // @ts-ignore `computeShape` is a protected method
-  final shape = computeShape(dbDescription, 'Post', input);
-  expect(shape, Shape(
-    tablename: 'Post',
-    where:
-      "this.title = 'foo' AND this.contents = 'important''' AND this.nbr = 6 AND this.nbr = 7 AND ((this.id = 5) OR (this.id = 42)) AND NOT ((this.id = 1) OR (this.id = 2))",
-    include: [
-      Rel(
-        foreignKey: ['authorId'],
-        select: Shape(
-          tablename: 'User',
-          include: [
-            Rel(
-              foreignKey: ['userId'],
-              select: Shape(
-                tablename: 'Profile',
+    final input = SyncInputRaw(
+      tableName: 'Post',
+      where: {
+        'OR': [
+          {'id': 5},
+          {'id': 42},
+        ],
+        'NOT': [
+          {'id': 1},
+          {'id': 2},
+        ],
+        'AND': [
+          {'nbr': 6},
+          {'nbr': 7},
+        ],
+        'title': 'foo',
+        'contents': "important'",
+      },
+      include: [
+        IncludeRelRaw(
+          foreignKey: ['authorId'],
+          select: SyncInputRaw(
+            tableName: 'User',
+            include: [
+              IncludeRelRaw(
+                foreignKey: ['userId'],
+                select: SyncInputRaw(
+                  tableName: 'Profile',
+                ),
               ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final shape = computeShape(input);
+
+    expect(
+      shape,
+      Shape(
+        tablename: 'Post',
+        // TODO(dart): Test where
+        // where:
+        //   "this.title = 'foo' AND this.contents = 'important''' AND this.nbr = 6 AND this.nbr = 7 AND ((this.id = 5) OR (this.id = 42)) AND NOT ((this.id = 1) OR (this.id = 2))",
+        include: [
+          Rel(
+            foreignKey: ['authorId'],
+            select: Shape(
+              tablename: 'User',
+              include: [
+                Rel(
+                  foreignKey: ['userId'],
+                  select: Shape(
+                    tablename: 'Profile',
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  });
+
+// TODO(dart): Implement
+  test('shape from drift', () async {
+    final shape = computeShapeForDrift(
+      db,
+      db.users,
+      where: (u) => u.name.contains('1'),
+      include: (u) => [
+        SyncInputRelation.from(
+          u.$relations.posts,
+          include: (p) => [
+            SyncInputRelation.from(u.$relations.posts),
           ],
         ),
-  ),
-    ],
-  ),);
-}); */
+      ],
+    );
+    print(shape.toMap());
+
+    // TODO(dart): Add assert
+  });
 }
 
 // ignore: unreachable_from_main
