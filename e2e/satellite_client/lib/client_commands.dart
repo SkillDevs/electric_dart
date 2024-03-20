@@ -101,16 +101,14 @@ void setSubscribers(DriftElectricClient db) {
 
 Future<void> syncTable(DriftElectricClient electric, String table) async {
   if (table == 'other_items') {
-    final ShapeSubscription(:synced) = await electric.syncTables(
-      ["items", "other_items"],
-    );
+    final ShapeSubscription(:synced) = await electric.syncTable("other_items");
 
     return await synced;
   } else {
     final satellite = globalRegistry.satellites[dbName]!;
-    final ShapeSubscription(:synced) = await satellite.subscribe([
-      ClientShapeDefinition(selects: [ShapeSelect(tablename: table)])
-    ]);
+    final ShapeSubscription(:synced) = await satellite.subscribe(
+      [Shape(tablename: table)],
+    );
     return await synced;
   }
 }

@@ -128,8 +128,8 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  Future<ShapeSubscription> syncTables(List<String> tables) {
-    return _baseClient.syncTables(tables);
+  Future<ShapeSubscription> syncTable(String table, [SyncInput? syncInput]) {
+    return _baseClient.syncTable(table, syncInput);
   }
 
   @override

@@ -104,7 +104,8 @@ class MyHomePage extends HookConsumerWidget {
 
     final electricClient = ref.watch(electricClientProvider);
     useEffect(() {
-      electricClient.syncTables(["todo", "todolist"]);
+      electricClient.syncTable("todo");
+      electricClient.syncTable("todolist");
       return null;
     }, []);
 

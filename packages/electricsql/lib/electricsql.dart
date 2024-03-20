@@ -5,6 +5,7 @@ library electricsql;
 export 'src/auth/index.dart';
 
 // ElectricClient
+export 'src/client/input/sync_input.dart';
 export 'src/client/model/index.dart';
 
 // Config

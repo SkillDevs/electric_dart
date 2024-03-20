@@ -28,7 +28,7 @@ abstract interface class ElectricClient {
   Satellite get satellite;
 
   Future<void> connect([String? token]);
-  Future<ShapeSubscription> syncTables(List<String> tables);
+  Future<ShapeSubscription> syncTable(String table, [SyncInput? syncInput]);
 }
 
 class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
@@ -95,9 +95,8 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
   }) : super();
 
   @override
-  Future<ShapeSubscription> syncTables(List<String> tables) async {
-    assert(tables.length == 1, 'Only one table is supported for now');
+  Future<ShapeSubscription> syncTable(String table, [SyncInput? syncInput]) async {
     // TODO(dart): Implement
-    return shapeManager.sync(Shape(tablename: tables.first));
+    return shapeManager.sync(Shape(tablename: table));
   }
 }

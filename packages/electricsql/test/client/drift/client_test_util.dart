@@ -18,7 +18,7 @@ Future<DriftElectricClient<DB>>
   );
 
   // Sync all shapes such that we don't get warnings on every query
-  await electric.syncTables(['DataTypes']);
+  await electric.syncTable('DataTypes');
 
   return electric;
 }

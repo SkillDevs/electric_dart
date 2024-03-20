@@ -27,7 +27,7 @@ Future<void> main() async {
   );
   final notifier = electricClient.notifier;
   final adapter = electricClient.adapter;
-  await electricClient.syncTables(['Items']); // sync the Items table
+  await electricClient.syncTable('Items'); // sync the Items table
 
   Future<int> runAndCheckNotifications(Future<void> Function() f) async {
     int notifications = 0;

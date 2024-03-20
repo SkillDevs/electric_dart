@@ -133,7 +133,7 @@ void main() {
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTables(['Post']);
+    final ShapeSubscription(:synced) = await electric.syncTable('Post');
     // always await this promise otherwise the next test may issue a subscription
     // while this one is not yet fulfilled and that will lead to issues
     await synced;
@@ -149,14 +149,14 @@ void main() {
     client.setRelationData('Profile', profile);
 
     final ShapeSubscription(synced: profileSynced) =
-        await electric.syncTables(['Profile']);
+        await electric.syncTable('Profile');
 
     // Once the subscription has been acknowledged
     // we can request another one
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTables(['Post']);
+    final ShapeSubscription(:synced) = await electric.syncTable('Post');
     await synced;
 
     // Check that the data was indeed received
@@ -171,7 +171,7 @@ void main() {
     await startSatellite(satellite, authToken);
 
     try {
-      await electric.syncTables(['Items']);
+      await electric.syncTable('Items');
       fail('Should have thrown');
     } on SatelliteException catch (e) {
       expect(e.code, SatelliteErrorCode.tableNotFound);
@@ -184,7 +184,7 @@ void main() {
     bool loadingPromResolved = false;
 
     try {
-      final ShapeSubscription(:synced) = await electric.syncTables(['User']);
+      final ShapeSubscription(:synced) = await electric.syncTable('User');
       loadingPromResolved = true;
       await synced;
       fail('Should have thrown');
@@ -197,54 +197,52 @@ void main() {
   });
 
   //TODO(dart): Implement
- /*  test.serial('nested shape is constructed', async (t) => {
-  const { satellite, client } = t.context as ContextType
-  await startSatellite(satellite, config.auth.token)
+  /* test('nested shape is constructed',  () async {
+  await startSatellite(satellite, authToken);
 
-  client.setRelations(relations)
+  client.setRelations(relations);
 
-  const { Post } = t.context as ContextType
-  const input = {
+  final input = SyncInput(
     where: {
-      OR: [{ id: 5 }, { id: 42 }],
-      NOT: [{ id: 1 }, { id: 2 }],
-      AND: [{ nbr: 6 }, { nbr: 7 }],
-      title: 'foo',
-      contents: "important'",
+      'OR': [{ 'id': 5 }, { 'id': 42 }],
+      'NOT': [{ 'id': 1 }, { 'id': 2 }],
+      'AND': [{ 'nbr': 6 }, { 'nbr': 7 }],
+      'title': 'foo',
+      'contents': "important'",
     },
     include: {
-      author: {
+      'author': SyncInput(
         include: {
-          profile: true,
+          'profile': true,
         },
-      },
+      ),
     },
-  }
+  );
 
   // @ts-ignore `computeShape` is a protected method
-  const shape = Post.computeShape(input)
-  t.deepEqual(shape, {
+  final shape = computeShape(dbDescription, 'Post', input);
+  expect(shape, Shape(
     tablename: 'Post',
     where:
       "this.title = 'foo' AND this.contents = 'important''' AND this.nbr = 6 AND this.nbr = 7 AND ((this.id = 5) OR (this.id = 42)) AND NOT ((this.id = 1) OR (this.id = 2))",
     include: [
-      {
+      Rel(
         foreignKey: ['authorId'],
-        select: {
+        select: Shape(
           tablename: 'User',
           include: [
-            {
+            Rel(
               foreignKey: ['userId'],
-              select: {
+              select: Shape(
                 tablename: 'Profile',
-              },
-            },
+              ),
+            ),
           ],
-        },
-      },
+        ),
+  ),
     ],
-  })
-}) */
+  ),);
+}); */
 }
 
 // ignore: unreachable_from_main
