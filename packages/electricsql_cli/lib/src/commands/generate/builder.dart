@@ -5,6 +5,7 @@ import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/enums.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/relations.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
@@ -157,6 +158,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
   final List<Class> tableClasses = _getTableClasses(driftSchemaInfo);
 
   final List<Enum> electricEnums = getElectricEnumDeclarations(driftSchemaInfo);
+  final List<Class> relationClasses = getRelationClasses(driftSchemaInfo);
 
   return _buildLibCode(
     (b) => b
@@ -170,6 +172,11 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
             ...electricEnums,
             getElectricEnumCodecsClass(driftSchemaInfo),
             getElectricEnumTypesClass(driftSchemaInfo),
+          ],
+          if (relationClasses.isNotEmpty) ...[
+            // Relations
+            Code('\n// ${'-' * 30} RELATIONS ${'-' * 30}\n\n'),
+            ...relationClasses,
           ],
         ],
       ),
@@ -206,6 +213,7 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
         if (tableNameGetter != null) tableNameGetter,
         if (primaryKeyGetter != null) primaryKeyGetter,
         _getWithoutRowIdGetter(),
+        if (tableInfo.relations.isNotEmpty) _getRelationsGetter(tableInfo),
       ],
     );
 
@@ -312,6 +320,17 @@ Method _getWithoutRowIdGetter() {
       ..annotations.add(
         const CodeExpression(Code('override')),
       ),
+  );
+}
+
+Method _getRelationsGetter(DriftTableInfo tableInfo) {
+  final tableRelationsRef = refer(getRelationsClassName(tableInfo));
+  return Method(
+    (b) => b
+      ..name = '\$relations'
+      ..returns = tableRelationsRef
+      ..type = MethodType.getter
+      ..body = tableRelationsRef.constInstance([]).code,
   );
 }
 

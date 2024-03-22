@@ -206,7 +206,7 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
 
       final pgNameCamel = pgName.camelCase;
 
-      final String enumFieldName = _ensureValidDartIdentifier(pgNameCamel);
+      final String enumFieldName = ensureValidDartIdentifier(pgNameCamel);
 
       // Prisma could reuse the name of the field for different enum values
       final fieldFreqs = <String, int>{};
@@ -227,7 +227,7 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
         if (fieldFreqs[origField]! > 1) {
           field = '$field\$${usedNTimes + 1}';
         }
-        final dartVal = _ensureValidDartIdentifier(field.camelCase);
+        final dartVal = ensureValidDartIdentifier(field.camelCase);
 
         usedDartValuesFreqs[origField] = usedNTimes + 1;
         return (dartVal: dartVal, pgVal: pgValue);
@@ -324,7 +324,7 @@ _ColumnsAndRelations _extractFromModel(
     // First check if the column has a custom name
     dartName = columnGenOpts?.driftColumnName;
 
-    dartName ??= _ensureValidDartIdentifier(
+    dartName ??= ensureValidDartIdentifier(
       fieldName.camelCase,
       isReservedWord: _isInvalidDartIdentifierForDriftTable,
     );
@@ -545,7 +545,7 @@ List<String> _extractFromList(String rawListStr) {
       .toList();
 }
 
-String _ensureValidDartIdentifier(
+String ensureValidDartIdentifier(
   String name, {
   bool Function(String)? isReservedWord,
   String suffix = '\$',

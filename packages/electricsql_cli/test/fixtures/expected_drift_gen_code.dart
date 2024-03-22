@@ -36,6 +36,8 @@ class Project extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  _$ProjectRelations get $relations => const _$ProjectRelations();
 }
 
 class Membership extends Table {
@@ -57,6 +59,8 @@ class Membership extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  _$MembershipRelations get $relations => const _$MembershipRelations();
 }
 
 class Datatypes extends Table {
@@ -189,6 +193,8 @@ class User extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  _$UserRelations get $relations => const _$UserRelations();
 }
 
 class Post extends Table {
@@ -207,6 +213,8 @@ class Post extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  _$PostRelations get $relations => const _$PostRelations();
 }
 
 class Profile extends Table {
@@ -221,6 +229,8 @@ class Profile extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  _$ProfileRelations get $relations => const _$ProfileRelations();
 }
 
 // ------------------------------ ENUMS ------------------------------
@@ -303,4 +313,62 @@ class ElectricEnumTypes {
     codec: ElectricEnumCodecs.snakeCaseEnum,
     typeName: 'snake_case_enum',
   );
+}
+
+// ------------------------------ RELATIONS ------------------------------
+
+class _$ProjectRelations {
+  const _$ProjectRelations();
+
+  TableRelation<Membership> get memberships => const TableRelation<Membership>(
+        fromField: '',
+        toField: '',
+        relationName: 'MembershipToProject',
+      );
+}
+
+class _$MembershipRelations {
+  const _$MembershipRelations();
+
+  TableRelation<Project> get project => const TableRelation<Project>(
+        fromField: 'project_id',
+        toField: 'id',
+        relationName: 'MembershipToProject',
+      );
+}
+
+class _$UserRelations {
+  const _$UserRelations();
+
+  TableRelation<Post> get posts => const TableRelation<Post>(
+        fromField: '',
+        toField: '',
+        relationName: 'PostToUser',
+      );
+
+  TableRelation<Profile> get profile => const TableRelation<Profile>(
+        fromField: '',
+        toField: '',
+        relationName: 'ProfileToUser',
+      );
+}
+
+class _$PostRelations {
+  const _$PostRelations();
+
+  TableRelation<User> get author => const TableRelation<User>(
+        fromField: 'authorId',
+        toField: 'id',
+        relationName: 'PostToUser',
+      );
+}
+
+class _$ProfileRelations {
+  const _$ProfileRelations();
+
+  TableRelation<User> get user => const TableRelation<User>(
+        fromField: 'userId',
+        toField: 'id',
+        relationName: 'ProfileToUser',
+      );
 }

@@ -3,13 +3,11 @@ import 'package:drift/drift.dart';
 class TableRelation<T extends Table> {
   final String fromField;
   final String toField;
-  final String relatedTable;
   final String relationName;
 
-  TableRelation({
+  const TableRelation({
     required this.fromField,
     required this.toField,
-    required this.relatedTable,
     required this.relationName,
   });
 
