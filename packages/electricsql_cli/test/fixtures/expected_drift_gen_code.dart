@@ -16,6 +16,9 @@ const kElectrifiedTables = [
   GenOptsDriftTable,
   TableWithCustomRowClass,
   Enums,
+  User,
+  Post,
+  Profile,
 ];
 
 class Project extends Table {
@@ -168,6 +171,50 @@ class Enums extends Table {
 
   @override
   String? get tableName => 'enums';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class User extends Table {
+  IntColumn get id => customType(ElectricTypes.int4)();
+
+  TextColumn get name => text().nullable()();
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Post extends Table {
+  IntColumn get id => customType(ElectricTypes.int4)();
+
+  TextColumn get title => text()();
+
+  TextColumn get contents => text()();
+
+  IntColumn get nbr => customType(ElectricTypes.int4).nullable()();
+
+  IntColumn get authorId => customType(ElectricTypes.int4)();
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Profile extends Table {
+  IntColumn get id => customType(ElectricTypes.int4)();
+
+  TextColumn get bio => text()();
+
+  IntColumn get userId => customType(ElectricTypes.int4)();
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
