@@ -1,4 +1,5 @@
 import 'package:electricsql_cli/electricsql_cli.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 
 String getRelationsClassName(DriftTableInfo tableInfo) {
@@ -38,7 +39,7 @@ Method _getTableRelationGetter(
   final relatedDriftTableName =
       schemaInfo.tablesByPrismaModel[relation.relatedModel]!.dartClassName;
 
-  final tableRelationRef = refer('TableRelation<$relatedDriftTableName>');
+  final tableRelationRef = refer('TableRelation<$relatedDriftTableName>', kElectricSqlImport);
   final tableRelationExpr = tableRelationRef.constInstance([], {
     'fromField': literal(relation.fromField),
     'toField': literal(relation.toField),

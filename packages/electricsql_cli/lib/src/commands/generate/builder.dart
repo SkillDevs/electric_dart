@@ -282,7 +282,8 @@ Method _getColumnFieldGetter(
 ) {
   var columnBuilderExpr = _getInitialColumnBuilder(schemaInfo, columnInfo);
 
-  if (columnInfo.columnName != columnInfo.dartName) {
+    // TODO(dart): Make sure @map is used
+  if (true || columnInfo.columnName != columnInfo.dartName) {
     columnBuilderExpr = columnBuilderExpr
         .property('named')
         .call([literal(columnInfo.columnName)]);
@@ -335,9 +336,10 @@ Method _getRelationsGetter(DriftTableInfo tableInfo) {
 }
 
 Method? _getTableNameGetter(DriftTableInfo tableInfo) {
-  if (tableInfo.dartClassName == tableInfo.tableName) {
-    return null;
-  }
+  // TODO(dart): Make sure @map is used
+  // if (tableInfo.dartClassName == tableInfo.tableName) {
+  //   return null;
+  // }
 
   return Method(
     (b) => b

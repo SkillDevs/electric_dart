@@ -134,7 +134,7 @@ void main() {
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTable(db.posts);
+    final ShapeSubscription(:synced) = await electric.syncTable(db.post);
     // always await this promise otherwise the next test may issue a subscription
     // while this one is not yet fulfilled and that will lead to issues
     await synced;
@@ -150,19 +150,19 @@ void main() {
     client.setRelationData('Profile', profile);
 
     final ShapeSubscription(synced: profileSynced) =
-        await electric.syncTable(db.profiles);
+        await electric.syncTable(db.profile);
 
     // Once the subscription has been acknowledged
     // we can request another one
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTable(db.posts);
+    final ShapeSubscription(:synced) = await electric.syncTable(db.post);
     await synced;
 
     // Check that the data was indeed received
     final posts =
-        (await db.posts.select().get()).map((e) => e.toJson()).toList();
+        (await db.post.select().get()).map((e) => e.toJson()).toList();
     expect(posts, [post]);
 
     await profileSynced;
@@ -185,7 +185,7 @@ void main() {
     bool loadingPromResolved = false;
 
     try {
-      final ShapeSubscription(:synced) = await electric.syncTable(db.users);
+      final ShapeSubscription(:synced) = await electric.syncTable(db.user);
       loadingPromResolved = true;
       await synced;
       fail('Should have thrown');
@@ -271,7 +271,7 @@ void main() {
   test('shape from drift', () async {
     final shape = computeShapeForDrift(
       db,
-      db.users,
+      db.user,
       where: (u) => u.name.contains('1'),
       include: (u) => [
         SyncInputRelation.from(

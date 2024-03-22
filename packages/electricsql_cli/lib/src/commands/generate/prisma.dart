@@ -573,6 +573,9 @@ bool _isInvalidDartIdentifier(String name) {
     'null',
     'true',
     'false',
+    'class',
+    'mixin',
+    'enum',
   ].contains(name);
 }
 

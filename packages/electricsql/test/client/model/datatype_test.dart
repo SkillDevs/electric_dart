@@ -27,7 +27,7 @@ void main() async {
     final d = DateTime.parse('$date 23:28:35.421');
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             date: Value(d),
           ),
         );
@@ -46,7 +46,7 @@ void main() async {
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             time: Value(date),
           ),
         );
@@ -69,14 +69,14 @@ void main() async {
 
     final res1 = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timetz: Value(date1),
           ),
         );
 
     final res2 = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(2),
+            id: 2,
             timetz: Value(date2),
           ),
         );
@@ -102,7 +102,7 @@ void main() async {
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamp: Value(date),
           ),
         );
@@ -123,7 +123,7 @@ void main() async {
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamp: Value(dateUTC),
           ),
         );
@@ -149,14 +149,14 @@ void main() async {
 
     final res1 = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamptz: Value(date1),
           ),
         );
 
     final res2 = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(2),
+            id: 2,
             timestamptz: Value(date2),
           ),
         );
@@ -186,7 +186,7 @@ void main() async {
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamptz: Value(dateLocal),
           ),
         );
@@ -203,7 +203,7 @@ void main() async {
   test('support null value for timestamptz type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamptz: const Value(null),
           ),
         );
@@ -223,39 +223,39 @@ void main() async {
     // Check that we can store booleans
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
-            boolCol: const Value(true),
+            id: 1,
+            bool$: const Value(true),
           ),
         );
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(2),
-            boolCol: const Value(false),
+            id: 2,
+            bool$: const Value(false),
           ),
         );
 
     final rows = await db.select(db.dataTypes).get();
 
-    expect(rows.any((r) => r.id == 1 && r.boolCol == true), isTrue);
-    expect(rows.any((r) => r.id == 2 && r.boolCol == false), isTrue);
+    expect(rows.any((r) => r.id == 1 && r.bool$ == true), isTrue);
+    expect(rows.any((r) => r.id == 2 && r.bool$ == false), isTrue);
   });
 
   test('support null value for boolean type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
-            boolCol: const Value(null),
+            id: 1,
+            bool$: const Value(null),
           ),
         );
 
     expect(res.id, 1);
-    expect(res.boolCol, null);
+    expect(res.bool$, null);
 
     final fetchRes = await (db.select(db.dataTypes)
           ..where((t) => t.id.equals(1)))
         .getSingle();
-    expect(fetchRes.boolCol, null);
+    expect(fetchRes.bool$, null);
   });
 
   test('support uuid type', () async {
@@ -263,7 +263,7 @@ void main() async {
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             uuid: const Value(uuid),
           ),
         );
@@ -280,7 +280,7 @@ void main() async {
     await expectLater(
       () async => db.into(db.dataTypes).insertReturning(
             DataTypesCompanion.insert(
-              id: const Value(1),
+              id: 1,
               uuid: const Value('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a111'),
             ),
           ),
@@ -297,7 +297,7 @@ void main() async {
   test('support null value for uuid type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             uuid: const Value(null),
           ),
         );
@@ -320,14 +320,14 @@ void main() async {
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             int2: const Value(validInt1),
           ),
         );
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(2),
+            id: 2,
             int2: const Value(validInt2),
           ),
         );
@@ -339,7 +339,7 @@ void main() async {
       await expectLater(
         () async => db.into(db.dataTypes).insertReturning(
               DataTypesCompanion.insert(
-                id: Value(id++),
+                id: id++,
                 int2: Value(invalidInt),
               ),
             ),
@@ -359,7 +359,7 @@ void main() async {
   test('support null values for int2 type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             int2: const Value(null),
           ),
         );
@@ -382,14 +382,14 @@ void main() async {
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             int4: const Value(validInt1),
           ),
         );
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(2),
+            id: 2,
             int4: const Value(validInt2),
           ),
         );
@@ -401,7 +401,7 @@ void main() async {
       await expectLater(
         () async => db.into(db.dataTypes).insertReturning(
               DataTypesCompanion.insert(
-                id: Value(id++),
+                id: id++,
                 int4: Value(invalidInt),
               ),
             ),
@@ -421,7 +421,7 @@ void main() async {
   test('support null values for int4 type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             int4: const Value(null),
           ),
         );
@@ -467,7 +467,7 @@ void main() async {
     for (final floatEntry in floats) {
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
-              id: Value(floatEntry.id),
+              id: floatEntry.id,
               float8: Value(floatEntry.float8),
             ),
           );
@@ -490,7 +490,7 @@ void main() async {
   test('support null values for float8 type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             float8: const Value(null),
           ),
         );
@@ -522,7 +522,7 @@ void main() async {
     for (final entry in ints) {
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
-              id: Value(entry.id),
+              id: entry.id,
               int8: Value(entry.int8),
             ),
           );
@@ -538,7 +538,7 @@ void main() async {
   test('support null values for int8 type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             int8: const Value(null),
           ),
         );
@@ -568,16 +568,16 @@ void main() async {
     ];
 
     for (final entry in bigInts) {
-      await db.into(db.dataTypes).insert(
-            DataTypesCompanion.insert(
-              id: Value(entry.id),
+      await db.into(db.extra).insert(
+            ExtraCompanion.insert(
+              id: entry.id,
               int8BigInt: Value(entry.int8),
             ),
           );
     }
 
     // Check that we can read the big ints back
-    final fetchRes = await db.select(db.dataTypes).get();
+    final fetchRes = await db.select(db.extra).get();
     final records =
         fetchRes.map((r) => (id: r.id, int8: r.int8BigInt)).toList();
 
@@ -585,9 +585,9 @@ void main() async {
   });
 
   test('support null values for bigint type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
+    final res = await db.into(db.extra).insertReturning(
+          ExtraCompanion.insert(
+            id: 1,
             int8BigInt: const Value(null),
           ),
         );
@@ -595,7 +595,7 @@ void main() async {
     expect(res.id, 1);
     expect(res.int8BigInt, null);
 
-    final fetchRes = await (db.select(db.dataTypes)
+    final fetchRes = await (db.select(db.extra)
           ..where((t) => t.id.equals(1)))
         .getSingle();
     expect(fetchRes.int8BigInt, null);
@@ -610,9 +610,9 @@ void main() async {
     int id = 1;
     for (final invalidInt in invalidBigInts) {
       await expectLater(
-        () async => db.into(db.dataTypes).insertReturning(
-              DataTypesCompanion.insert(
-                id: Value(id++),
+        () async => db.into(db.extra).insertReturning(
+              ExtraCompanion.insert(
+                id: id++,
                 int8BigInt: Value(invalidInt),
               ),
             ),
@@ -661,7 +661,7 @@ void main() async {
     for (final floatEntry in floats) {
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
-              id: Value(floatEntry.id),
+              id: floatEntry.id,
               float4: Value(floatEntry.float4),
             ),
           );
@@ -712,7 +712,7 @@ void main() async {
     for (final floatEntry in floats) {
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
-              id: Value(floatEntry.id),
+              id: floatEntry.id,
               float4: Value(floatEntry.float4),
             ),
           );
@@ -756,7 +756,7 @@ void main() async {
 
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             json: Value(json),
           ),
         );
@@ -771,7 +771,7 @@ void main() async {
     // Also test that we can write the special JsonNull value
     final res2 = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(2),
+            id: 2,
             json: const Value(kJsonNull),
           ),
         );
@@ -787,7 +787,7 @@ void main() async {
   test('support null values for JSON type', () async {
     final res = await db.into(db.dataTypes).insertReturning(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             json: const Value(null),
           ),
         );

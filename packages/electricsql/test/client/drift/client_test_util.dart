@@ -29,4 +29,9 @@ Future<void> initClientTestsDb(TestsDatabase db) async {
     "'timestamptz' varchar, 'bool' int, 'uuid' varchar, 'int2' int2, 'int4' int4, 'int8' integer, 'int8_big_int' integer, "
     "'float4' real, 'float8' real, 'json' varchar, 'enum' varchar, 'relatedId' int);",
   );
+
+  await db.customStatement('DROP TABLE IF EXISTS Extra');
+  await db.customStatement(
+    "CREATE TABLE Extra('id' int PRIMARY KEY, 'int8_big_int' integer);",
+  );
 }
