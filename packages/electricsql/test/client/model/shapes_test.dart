@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' hide Migrator;
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
@@ -271,18 +273,24 @@ void main() {
   test('shape from drift', () async {
     final shape = computeShapeForDrift(
       db,
-      db.user,
-      where: (u) => u.name.contains('1'),
-      include: (u) => [
+      db.post,
+      where: (p) =>
+          p.title.equals('foo') &
+          p.contents.equals("important'") &
+          p.nbr.equals(6) &
+          p.nbr.equals(7) &
+          (p.id.equals(5) | p.id.equals(42)) &
+          (p.id.equals(1) | p.id.equals(2)).not(),
+      include: (p) => [
         SyncInputRelation.from(
-          u.$relations.posts,
-          include: (p) => [
-            SyncInputRelation.from(u.$relations.posts),
+          p.$relations.author,
+          include: (u) => [
+            SyncInputRelation.from(u.$relations.profile),
           ],
         ),
       ],
     );
-    print(shape.toMap());
+    print(JsonEncoder.withIndent('  ').convert(shape.toMap()));
 
     // TODO(dart): Add assert
   });

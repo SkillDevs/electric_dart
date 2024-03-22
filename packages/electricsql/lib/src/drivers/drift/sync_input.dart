@@ -46,7 +46,6 @@ Shape computeShapeForDrift<T extends Table>(
   SyncIncludeBuilder<T>? include,
   SyncWhereBuilder<T>? where,
 }) {
-  final Expression<bool>? whereExpr = where?.call(table);
   final relationsToInclude = include?.call(table);
 
   final List<Rel>? rels = relationsToInclude?.map((syncRel) {
@@ -71,10 +70,33 @@ Shape computeShapeForDrift<T extends Table>(
 
   // print("t $table   $genTable  T $T");
 
+  String? whereStr;
+  if (where != null) {
+    final Expression<bool> whereExpr =
+        // The alias "this" is needed, because it's expected by the Electric service
+        where.call(genTable.createAlias('this') as T);
+
+    final generationContext = _PGGenerationContext.fromDb(
+      db,
+      supportsVariables: false,
+    );
+    generationContext.hasMultipleTables = true;
+    
+    whereExpr.writeInto(generationContext);
+    whereStr = generationContext.sql;
+  }
+
   return Shape(
     tablename: genTable.actualTableName,
+    where: whereStr,
     include: rels,
-    // TODO(dart): implement where
-    // where: syncInputBuilder?.call(table)?.where,
   );
+}
+
+class _PGGenerationContext extends GenerationContext {
+  _PGGenerationContext.fromDb(super.executor, {super.supportsVariables})
+      : super.fromDb();
+
+  @override
+  SqlDialect get dialect => SqlDialect.postgres;
 }
