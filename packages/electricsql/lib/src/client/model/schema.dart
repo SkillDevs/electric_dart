@@ -9,6 +9,10 @@ typedef FieldName = String;
 
 typedef Fields = Map<FieldName, PgType>;
 
+mixin ElectricTableMixin on Table {
+  TableRelations? get $relations => null;
+}
+
 abstract class DBSchema {
   final Map<String, Fields> _fieldsByTable;
   final List<Migration> _migrations;

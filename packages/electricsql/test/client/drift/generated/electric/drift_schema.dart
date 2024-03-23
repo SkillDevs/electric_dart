@@ -30,7 +30,7 @@ class Items extends Table {
   bool get withoutRowId => true;
 }
 
-class User extends Table {
+class User extends Table with ElectricTableMixin {
   IntColumn get id => customType(ElectricTypes.int4).named('id')();
 
   TextColumn get name => text().named('name').nullable()();
@@ -44,10 +44,11 @@ class User extends Table {
   @override
   bool get withoutRowId => true;
 
+  @override
   _$UserRelations get $relations => const _$UserRelations();
 }
 
-class Post extends Table {
+class Post extends Table with ElectricTableMixin {
   IntColumn get id => customType(ElectricTypes.int4).named('id')();
 
   TextColumn get title => text().named('title')();
@@ -67,10 +68,11 @@ class Post extends Table {
   @override
   bool get withoutRowId => true;
 
+  @override
   _$PostRelations get $relations => const _$PostRelations();
 }
 
-class Profile extends Table {
+class Profile extends Table with ElectricTableMixin {
   IntColumn get id => customType(ElectricTypes.int4).named('id')();
 
   TextColumn get bio => text().named('bio')();
@@ -86,10 +88,11 @@ class Profile extends Table {
   @override
   bool get withoutRowId => true;
 
+  @override
   _$ProfileRelations get $relations => const _$ProfileRelations();
 }
 
-class DataTypes extends Table {
+class DataTypes extends Table with ElectricTableMixin {
   IntColumn get id => customType(ElectricTypes.int4).named('id')();
 
   Column<DateTime> get date =>
@@ -145,10 +148,11 @@ class DataTypes extends Table {
   @override
   bool get withoutRowId => true;
 
+  @override
   _$DataTypesRelations get $relations => const _$DataTypesRelations();
 }
 
-class Dummy extends Table {
+class Dummy extends Table with ElectricTableMixin {
   IntColumn get id => customType(ElectricTypes.int4).named('id')();
 
   Column<DateTime> get timestamp =>
@@ -163,6 +167,7 @@ class Dummy extends Table {
   @override
   bool get withoutRowId => true;
 
+  @override
   _$DummyRelations get $relations => const _$DummyRelations();
 }
 
@@ -195,7 +200,7 @@ class ElectricEnumTypes {
 
 // ------------------------------ RELATIONS ------------------------------
 
-class _$UserRelations {
+class _$UserRelations implements TableRelations {
   const _$UserRelations();
 
   TableRelation<Post> get posts => const TableRelation<Post>(
@@ -209,9 +214,15 @@ class _$UserRelations {
         toField: '',
         relationName: 'ProfileToUser',
       );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [
+        posts,
+        profile,
+      ];
 }
 
-class _$PostRelations {
+class _$PostRelations implements TableRelations {
   const _$PostRelations();
 
   TableRelation<User> get author => const TableRelation<User>(
@@ -219,9 +230,12 @@ class _$PostRelations {
         toField: 'id',
         relationName: 'PostToUser',
       );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [author];
 }
 
-class _$ProfileRelations {
+class _$ProfileRelations implements TableRelations {
   const _$ProfileRelations();
 
   TableRelation<User> get user => const TableRelation<User>(
@@ -229,9 +243,12 @@ class _$ProfileRelations {
         toField: 'id',
         relationName: 'ProfileToUser',
       );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [user];
 }
 
-class _$DataTypesRelations {
+class _$DataTypesRelations implements TableRelations {
   const _$DataTypesRelations();
 
   TableRelation<Dummy> get related => const TableRelation<Dummy>(
@@ -239,9 +256,12 @@ class _$DataTypesRelations {
         toField: 'id',
         relationName: 'DataTypesToDummy',
       );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [related];
 }
 
-class _$DummyRelations {
+class _$DummyRelations implements TableRelations {
   const _$DummyRelations();
 
   TableRelation<DataTypes> get datatype => const TableRelation<DataTypes>(
@@ -249,4 +269,7 @@ class _$DummyRelations {
         toField: '',
         relationName: 'DataTypesToDummy',
       );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [datatype];
 }

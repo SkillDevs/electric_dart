@@ -49,11 +49,14 @@ Shape computeShapeForDrift<T extends Table>(
   final relationsToInclude = include?.call(table);
 
   final List<Rel>? rels = relationsToInclude?.map((syncRel) {
-    final relatedDriftTable = syncRel.relation.getDriftTable(db);
+    final relation = syncRel.relation;
+    final relatedDriftTable = relation.getDriftTable(db);
+
+    final String foreignKey = _getForeignKey(db, relation);
 
     return Rel(
       foreignKey: [
-        // TODO(dart)
+        foreignKey,
       ],
       select: computeShapeForDrift(
         db,
@@ -81,7 +84,7 @@ Shape computeShapeForDrift<T extends Table>(
       supportsVariables: false,
     );
     generationContext.hasMultipleTables = true;
-    
+
     whereExpr.writeInto(generationContext);
     whereStr = generationContext.sql;
   }
@@ -91,6 +94,16 @@ Shape computeShapeForDrift<T extends Table>(
     where: whereStr,
     include: rels,
   );
+}
+
+String _getForeignKey(GeneratedDatabase db, TableRelation<Table> relation) {
+  if (relation.isOutgoingRelation()) {
+    return relation.fromField;
+  }
+  // it's an incoming relation
+  // we need to fetch the `fromField` from the outgoing relation
+  final oppositeRelation = relation.getOppositeRelation(db);
+  return oppositeRelation.fromField;
 }
 
 class _PGGenerationContext extends GenerationContext {

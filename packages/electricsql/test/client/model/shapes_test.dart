@@ -1,4 +1,4 @@
-import 'dart:convert';
+// import 'dart:convert';
 
 import 'package:drift/drift.dart' hide Migrator;
 import 'package:electricsql/drivers/drift.dart';
@@ -269,7 +269,6 @@ void main() {
     );
   });
 
-// TODO(dart): Implement
   test('shape from drift', () async {
     final shape = computeShapeForDrift(
       db,
@@ -290,9 +289,32 @@ void main() {
         ),
       ],
     );
-    print(JsonEncoder.withIndent('  ').convert(shape.toMap()));
+    // print(JsonEncoder.withIndent('  ').convert(shape.toMap()));
 
-    // TODO(dart): Add assert
+    expect(
+      shape,
+      Shape(
+        tablename: 'Post',
+        where:
+            '"this"."title" = \'foo\' AND "this"."contents" = \'important\'\'\' AND "this"."nbr" = 6 AND "this"."nbr" = 7 AND ("this"."id" = 5 OR "this"."id" = 42) AND NOT ("this"."id" = 1 OR "this"."id" = 2)',
+        include: [
+          Rel(
+            foreignKey: ['authorId'],
+            select: Shape(
+              tablename: 'User',
+              include: [
+                Rel(
+                  foreignKey: ['userId'],
+                  select: Shape(
+                    tablename: 'Profile',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   });
 }
 

@@ -239,7 +239,13 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
         ..extend = tableRef
         ..name = tableInfo.dartClassName
         ..methods.addAll(methods)
-        ..annotations.addAll(annotations),
+        ..annotations.addAll(annotations)
+        ..mixins.addAll(
+          [
+            if (tableInfo.relations.isNotEmpty)
+              refer(kElectricTableMixin, kElectricSqlImport),
+          ],
+        ),
     );
     tableClasses.add(tableClass);
   }
@@ -282,7 +288,7 @@ Method _getColumnFieldGetter(
 ) {
   var columnBuilderExpr = _getInitialColumnBuilder(schemaInfo, columnInfo);
 
-    // TODO(dart): Make sure @map is used
+  // TODO(dart): Make sure @map is used
   if (true || columnInfo.columnName != columnInfo.dartName) {
     columnBuilderExpr = columnBuilderExpr
         .property('named')
@@ -331,6 +337,9 @@ Method _getRelationsGetter(DriftTableInfo tableInfo) {
       ..name = '\$relations'
       ..returns = tableRelationsRef
       ..type = MethodType.getter
+      ..annotations.add(
+        const CodeExpression(Code('override')),
+      )
       ..body = tableRelationsRef.constInstance([]).code,
   );
 }
