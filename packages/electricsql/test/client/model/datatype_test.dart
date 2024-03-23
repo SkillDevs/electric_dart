@@ -595,9 +595,8 @@ void main() async {
     expect(res.id, 1);
     expect(res.int8BigInt, null);
 
-    final fetchRes = await (db.select(db.extra)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
+    final fetchRes =
+        await (db.select(db.extra)..where((t) => t.id.equals(1))).getSingle();
     expect(fetchRes.int8BigInt, null);
   });
 

@@ -149,9 +149,8 @@ Shape computeShape(SyncInputRaw i) {
 }
 
 String _makeSqlWhereClause(Object where) {
-  return '';
   // TODO(dart): Implement
-  throw UnimplementedError();
+  return '';
   // we wrap it in an array and then flatten it
   // in case the user provided an object instead of an array of objects
   /*  const orConnectedObjects = [

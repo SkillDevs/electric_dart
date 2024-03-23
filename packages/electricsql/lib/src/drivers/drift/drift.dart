@@ -108,8 +108,8 @@ class DriftElectricClient<DB extends GeneratedDatabase>
 
       // These are tables that were not obtained by the notifier.subscribeToDataChanges
       // that caused this update
-      final tablesPotentiallyChanged =<String>[];
-      
+      final tablesPotentiallyChanged = <String>[];
+
       for (final tableName in tableNames) {
         if (pendingTableChanges.contains(tableName)) {
           pendingTableChanges.remove(tableName);

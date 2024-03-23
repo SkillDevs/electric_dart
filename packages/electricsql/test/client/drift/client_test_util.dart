@@ -4,8 +4,9 @@ import 'package:electricsql/src/satellite/mock.dart';
 
 import 'database.dart';
 
-Future<ElectricClient<TestsDatabase>>
-    electrifyTestDatabase(TestsDatabase db) async {
+Future<ElectricClient<TestsDatabase>> electrifyTestDatabase(
+  TestsDatabase db,
+) async {
   final electric = await electrify(
     dbName: 'test-db',
     db: db,
