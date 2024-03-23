@@ -345,13 +345,16 @@ String opToString(SatTransOp op) {
   }
   if (op.hasCommit()) return '#Commit{lsn: ${base64.encode(op.commit.lsn)}}';
   if (op.hasInsert()) {
-    return '#Insert{for: ${op.insert.relationId}, tags: [${op.insert.tags}], new: [${op.insert.hasRowData() ? rowToString(op.insert.rowData) : ''}]}';
+    return '#Insert{for: ${op.insert.relationId}, tags: ${op.insert.tags}, new: [${op.insert.hasRowData() ? rowToString(op.insert.rowData) : ''}]}';
   }
   if (op.hasUpdate()) {
-    return '#Update{for: ${op.update.relationId}, tags: [${op.update.tags}], new: [${op.update.hasRowData() ? rowToString(op.update.rowData) : ''}], old: data: [${op.update.hasOldRowData() ? rowToString(op.update.oldRowData) : ''}]}';
+    return '#Update{for: ${op.update.relationId}, tags: ${op.update.tags}, new: [${op.update.hasRowData() ? rowToString(op.update.rowData) : ''}], old: data: [${op.update.hasOldRowData() ? rowToString(op.update.oldRowData) : ''}]}';
   }
   if (op.hasDelete()) {
-    return '#Delete{for: ${op.delete.relationId}, tags: [${op.delete.tags}], old: [${op.delete.hasOldRowData() ? rowToString(op.delete.oldRowData) : ''}]}';
+    return '#Delete{for: ${op.delete.relationId}, tags: ${op.delete.tags}, old: [${op.delete.hasOldRowData() ? rowToString(op.delete.oldRowData) : ''}]}';
+  }
+  if (op.hasCompensation()) {
+    return '#Compensation{for: ${op.compensation.relationId}, pk: ${rowToString(op.compensation.pkData)}, tags: ${op.compensation.tags}}';
   }
   if (op.hasMigrate()) {
     return '#Migrate{vsn: ${op.migrate.version}, for: ${op.migrate.table.name}, stmts: [${op.migrate.stmts.map((x) => x.sql.replaceAll('\n', '\\n')).join('; ')}]}';
