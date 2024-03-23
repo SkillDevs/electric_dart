@@ -92,34 +92,24 @@ class DriftElectricClient<DB extends GeneratedDatabase>
           return tableName;
         }).toSet();
 
-        final tableUpdates = tablesChanged.map((e) => TableUpdate(e)).toSet();
+        final Set<_TableUpdateFromElectric> tableUpdates =
+            tablesChanged.map((e) => _TableUpdateFromElectric(e)).toSet();
         logger.info('Notifying table changes to drift: $tablesChanged');
 
-        // Keep track of the table updates we do here, to avoid
-        // notifying (again) Electric when handling the drift table update
-        pendingTableChanges.addAll(tablesChanged);
-
+        // Notify drift
         db.notifyUpdates(tableUpdates);
       },
     );
 
     final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
-      final tableNames = updatedTables.map((update) => update.table).toSet();
+      final tableNames = updatedTables
+          .where((update) => update is! _TableUpdateFromElectric)
+          .map((update) => update.table)
+          .toSet();
 
-      // These are tables that were not obtained by the notifier.subscribeToDataChanges
-      // that caused this update
-      final tablesPotentiallyChanged = <String>[];
-
-      for (final tableName in tableNames) {
-        if (pendingTableChanges.contains(tableName)) {
-          pendingTableChanges.remove(tableName);
-        } else {
-          tablesPotentiallyChanged.add(tableName);
-        }
-      }
-
-      // Only notify Electric for the tables not listened in the previous run
-      if (tablesPotentiallyChanged.isNotEmpty) {
+      // Only notify Electric for the tables that were not triggered
+      // by Electric itself in "notifier.subscribeToDataChanges"
+      if (tableNames.isNotEmpty) {
         logger.info(
           'Drift tables have been updated $updatedTables. Notifying Electric.',
         );
@@ -193,4 +183,8 @@ class DriftElectricClient<DB extends GeneratedDatabase>
         // ignore: invalid_use_of_protected_member
         .syncShapeInternal(shape);
   }
+}
+
+class _TableUpdateFromElectric extends TableUpdate {
+  _TableUpdateFromElectric(super.table);
 }
