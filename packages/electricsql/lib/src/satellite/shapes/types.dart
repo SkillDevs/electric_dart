@@ -103,7 +103,7 @@ class Rel with EquatableMixin {
 
   factory Rel.fromMap(Map<String, dynamic> map) {
     return Rel(
-      foreignKey: List<ColumnName>.from(map['foreignKey'] as List<String>),
+      foreignKey: List<ColumnName>.from(map['foreignKey'] as List<dynamic>),
       select: Shape.fromMap(map['select'] as Map<String, dynamic>),
     );
   }

@@ -1061,7 +1061,7 @@ class SatelliteClient implements Client {
       }
 
       if (op.hasGone()) {
-        final rid = op.delete.relationId;
+        final rid = op.gone.relationId;
         final rel = _getRelation(rid);
 
         final change = DataChange(

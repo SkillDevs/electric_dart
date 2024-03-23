@@ -114,6 +114,16 @@ Future<void> syncTable(MyDriftElectricClient electric, String table) async {
   }
 }
 
+Future<void> lowLevelSubscribe(
+  MyDriftElectricClient electric,
+  Shape shape,
+) async {
+  final ShapeSubscription(:synced) = await electric.satellite.subscribe(
+    [shape],
+  );
+  return await synced;
+}
+
 Future<Rows> getTables(DriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect("SELECT name FROM sqlite_master WHERE type='table';")
