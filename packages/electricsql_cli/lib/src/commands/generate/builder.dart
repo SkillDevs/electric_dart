@@ -194,7 +194,6 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
     final List<Method> methods = [];
 
     final Method? primaryKeyGetter = _getPrimaryKeyGetter(tableInfo);
-    final Method? tableNameGetter = _getTableNameGetter(tableInfo);
 
     methods.addAll(
       [
@@ -210,7 +209,7 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
             ),
           ),
 
-        if (tableNameGetter != null) tableNameGetter,
+        _getTableNameGetter(tableInfo),
         if (primaryKeyGetter != null) primaryKeyGetter,
         _getWithoutRowIdGetter(),
         if (tableInfo.relations.isNotEmpty) _getRelationsGetter(tableInfo),
@@ -288,13 +287,6 @@ Method _getColumnFieldGetter(
 ) {
   var columnBuilderExpr = _getInitialColumnBuilder(schemaInfo, columnInfo);
 
-  // TODO(dart): Make sure @map is used
-  if (true || columnInfo.columnName != columnInfo.dartName) {
-    columnBuilderExpr = columnBuilderExpr
-        .property('named')
-        .call([literal(columnInfo.columnName)]);
-  }
-
   if (columnInfo.isNullable) {
     columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
   }
@@ -344,12 +336,7 @@ Method _getRelationsGetter(DriftTableInfo tableInfo) {
   );
 }
 
-Method? _getTableNameGetter(DriftTableInfo tableInfo) {
-  // TODO(dart): Make sure @map is used
-  // if (tableInfo.dartClassName == tableInfo.tableName) {
-  //   return null;
-  // }
-
+Method _getTableNameGetter(DriftTableInfo tableInfo) {
   return Method(
     (b) => b
       ..name = 'tableName'

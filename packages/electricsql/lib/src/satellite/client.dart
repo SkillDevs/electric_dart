@@ -114,14 +114,6 @@ class SatelliteClient implements Client {
     'stopReplication': (o) => handleStopReq(o as SatInStopReplicationReq),
   };
 
-  /*
-   * This remapping actually is generic from a function to a function of the same type,
-   * but there's no way to express that. It's needed because we're wrapping the original
-   * callback in our own, which makes `.removeListener` not work.
-   */
-  // TODO(dart): Remove
-  //Map<Function, Function> _listenerRemapping = {};
-
   SatelliteClient({
     required DBSchema dbDescription,
     required this.socketFactory,
@@ -670,8 +662,6 @@ class SatelliteClient implements Client {
       maybeSendAck('additionalData');
     }
 
-    //_listenerRemapping[successCallback] = newCb;
-
     // We're remapping this callback to internal emitter to keep event queue correct -
     // a delivered subscription processing should not interleave with next transaction processing
     final removeSuccessListener = emitter.onSubscriptionDelivered(newCb);
@@ -1194,7 +1184,6 @@ class SatelliteClient implements Client {
     // or when there's nothing to be ack'd
     if (inbound.lastTxId == null) return;
     // Shouldn't ack the same message
-    // TODO(dart): Check int64 equality
     if (inbound.lastAckedTxId == inbound.lastTxId) return;
 
     final SatOpLogAck msg = SatOpLogAck(
