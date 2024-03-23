@@ -77,17 +77,29 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
           return tableName;
         }).toSet();
 
-        final tableUpdates = tablesChanged.map((e) => TableUpdate(e)).toSet();
+        final Set<_TableUpdateFromElectric> tableUpdates =
+            tablesChanged.map((e) => _TableUpdateFromElectric(e)).toSet();
         logger.info('Notifying table changes to drift: $tablesChanged');
+
+        // Notify drift
         db.notifyUpdates(tableUpdates);
       },
     );
 
     final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
-      logger.info(
-        'Drift tables have been updated $updatedTables. Notifying Electric.',
-      );
-      notifier.potentiallyChanged();
+      final tableNames = updatedTables
+          .where((update) => update is! _TableUpdateFromElectric)
+          .map((update) => update.table)
+          .toSet();
+
+      // Only notify Electric for the tables that were not triggered
+      // by Electric itself in "notifier.subscribeToDataChanges"
+      if (tableNames.isNotEmpty) {
+        logger.info(
+          'Drift tables have been updated $updatedTables. Notifying Electric.',
+        );
+        notifier.potentiallyChanged();
+      }
     });
 
     return () {
@@ -141,4 +153,8 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   void disconnect() {
     return _baseClient.disconnect();
   }
+}
+
+class _TableUpdateFromElectric extends TableUpdate {
+  _TableUpdateFromElectric(super.table);
 }
