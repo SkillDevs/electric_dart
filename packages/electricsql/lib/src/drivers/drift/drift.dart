@@ -70,6 +70,8 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   void Function() _hookToNotifier() {
+    final Set<String> pendingTableChanges = {};
+
     final _unsubDataChanges = notifier.subscribeToDataChanges(
       (notification) {
         final tablesChanged = notification.changes.map((e) {
@@ -79,15 +81,37 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
 
         final tableUpdates = tablesChanged.map((e) => TableUpdate(e)).toSet();
         logger.info('Notifying table changes to drift: $tablesChanged');
+
+        // Keep track of the table updates we do here, to avoid
+        // notifying (again) Electric when handling the drift table update
+        pendingTableChanges.addAll(tablesChanged);
+
         db.notifyUpdates(tableUpdates);
       },
     );
 
     final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
-      logger.info(
-        'Drift tables have been updated $updatedTables. Notifying Electric.',
-      );
-      notifier.potentiallyChanged();
+      final tableNames = updatedTables.map((update) => update.table).toSet();
+
+      // These are tables that were not obtained by the notifier.subscribeToDataChanges
+      // that caused this update
+      final tablesPotentiallyChanged =<String>[];
+      
+      for (final tableName in tableNames) {
+        if (pendingTableChanges.contains(tableName)) {
+          pendingTableChanges.remove(tableName);
+        } else {
+          tablesPotentiallyChanged.add(tableName);
+        }
+      }
+
+      // Only notify Electric for the tables not listened in the previous run
+      if (tablesPotentiallyChanged.isNotEmpty) {
+        logger.info(
+          'Drift tables have been updated $updatedTables. Notifying Electric.',
+        );
+        notifier.potentiallyChanged();
+      }
     });
 
     return () {
