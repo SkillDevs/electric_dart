@@ -15,7 +15,7 @@ import 'package:satellite_dart_client/util/pretty_output.dart';
 late String dbName;
 int? tokenExpirationMillis;
 
-typedef MyDriftElectricClient = DriftElectricClient<ClientDatabase>;
+typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
 Future<ClientDatabase> makeDb(String dbPath) async {
   final db = ClientDatabase(NativeDatabase(File(dbPath)));
@@ -99,9 +99,10 @@ void setSubscribers(DriftElectricClient db) {
   });
 }
 
-Future<void> syncTable(DriftElectricClient electric, String table) async {
+Future<void> syncTable(MyDriftElectricClient electric, String table) async {
   if (table == 'other_items') {
-    final ShapeSubscription(:synced) = await electric.syncTable("other_items");
+    final ShapeSubscription(:synced) =
+        await electric.syncTable(electric.db.otherItems);
 
     return await synced;
   } else {
@@ -246,7 +247,7 @@ Future<void> getDatetimes(MyDriftElectricClient electric) async {
   throw UnimplementedError();
 }
 
-Future<Rows> getItems(DriftElectricClient electric) async {
+Future<Rows> getItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT * FROM items;",
@@ -255,7 +256,7 @@ Future<Rows> getItems(DriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<Rows> getItemIds(DriftElectricClient electric) async {
+Future<Rows> getItemIds(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT id FROM items;",
@@ -412,7 +413,7 @@ SingleRow _enumClassToRawRow(Enum item) {
 }
 
 Future<Rows> getItemColumns(
-    DriftElectricClient electric, String table, String column) async {
+    MyDriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
       .customSelect(
         "SELECT $column FROM $table;",
@@ -421,7 +422,8 @@ Future<Rows> getItemColumns(
   return _toRows(rows);
 }
 
-Future<void> insertItem(DriftElectricClient electric, List<String> keys) async {
+Future<void> insertItem(
+    MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
       await electric.db.customInsert(
@@ -436,14 +438,14 @@ Future<void> insertItem(DriftElectricClient electric, List<String> keys) async {
 }
 
 Future<void> insertExtendedItem(
-  DriftElectricClient electric,
+  MyDriftElectricClient electric,
   Map<String, Object?> values,
 ) async {
   insertExtendedInto(electric, "items", values);
 }
 
 Future<void> insertExtendedInto(
-  DriftElectricClient electric,
+  MyDriftElectricClient electric,
   String table,
   Map<String, Object?> values,
 ) async {
@@ -471,7 +473,7 @@ Future<void> insertExtendedInto(
 }
 
 Future<void> deleteItem(
-  DriftElectricClient electric,
+  MyDriftElectricClient electric,
   List<String> keys,
 ) async {
   for (final key in keys) {
@@ -482,7 +484,7 @@ Future<void> deleteItem(
   }
 }
 
-Future<Rows> getOtherItems(DriftElectricClient electric) async {
+Future<Rows> getOtherItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT * FROM other_items;",
@@ -492,7 +494,7 @@ Future<Rows> getOtherItems(DriftElectricClient electric) async {
 }
 
 Future<void> insertOtherItem(
-    DriftElectricClient electric, List<String> keys) async {
+    MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.customInsert(
     "INSERT INTO items(id, content) VALUES (?,?);",
     variables: [
@@ -514,11 +516,11 @@ Future<void> insertOtherItem(
   });
 }
 
-Future<void> stop(DriftElectricClient db) async {
+Future<void> stop(MyDriftElectricClient db) async {
   await globalRegistry.stopAll();
 }
 
-Future<void> rawStatement(DriftElectricClient db, String statement) async {
+Future<void> rawStatement(MyDriftElectricClient db, String statement) async {
   await db.db.customStatement(statement);
 }
 
@@ -526,11 +528,11 @@ void setTokenExpirationMillis(int millis) {
   tokenExpirationMillis = millis;
 }
 
-void connect(DriftElectricClient db) {
+void connect(MyDriftElectricClient db) {
   db.connect();
 }
 
-void disconnect(DriftElectricClient db) {
+void disconnect(MyDriftElectricClient db) {
   db.disconnect();
 }
 

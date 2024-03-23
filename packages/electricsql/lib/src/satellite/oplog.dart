@@ -19,6 +19,7 @@ enum OpType {
   delete,
   insert,
   update,
+  compensation,
   gone,
 }
 
@@ -115,6 +116,8 @@ DataChangeType opTypeToChangeType(OpType opType) {
       return DataChangeType.update;
     case OpType.gone:
       return DataChangeType.gone;
+    case OpType.compensation:
+      return DataChangeType.compensation;
   }
 }
 
@@ -128,10 +131,11 @@ OpType opTypeStrToOpType(String str) {
       return OpType.update;
     case 'insert':
       return OpType.insert;
+    case 'compensation':
+      return OpType.compensation;
   }
 
-  assert(false, 'OpType $str not handled');
-  return OpType.insert;
+  throw Exception('Unknown opType: $str');
 }
 
 List<OplogEntry> fromTransaction(
@@ -489,6 +493,9 @@ ChangesOpType optypeToShadow(OpType optype) {
     case OpType.insert:
     case OpType.update:
       return ChangesOpType.upsert;
+    default:
+      // TODO(dart): Ask if "compensation" should be considered
+      throw Exception('Unexpected optype: $optype');
   }
 }
 

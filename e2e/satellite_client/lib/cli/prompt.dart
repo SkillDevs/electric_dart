@@ -62,13 +62,13 @@ Future<void> start() async {
         );
       } else if (name == "electrify_db") {
         await processCommand5Params<ClientDatabase, String, int, List<dynamic>,
-            bool, DriftElectricClient>(
+            bool, MyDriftElectricClient>(
           state,
           command,
           electrifyDb,
         );
       } else if (name == "sync_table") {
-        await processCommand2Params<DriftElectricClient, String, void>(
+        await processCommand2Params<MyDriftElectricClient, String, void>(
           state,
           command,
           syncTable,
