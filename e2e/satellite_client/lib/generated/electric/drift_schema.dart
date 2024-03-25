@@ -20,9 +20,9 @@ const kElectrifiedTables = [
 ];
 
 class Items extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  TextColumn get content => text()();
+  TextColumn get content => text().named('content')();
 
   TextColumn get contentTextNull =>
       text().named('content_text_null').nullable()();
@@ -38,6 +38,9 @@ class Items extends Table {
       .nullable()();
 
   @override
+  String? get tableName => 'Items';
+
+  @override
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
@@ -45,11 +48,14 @@ class Items extends Table {
 }
 
 class OtherItems extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  TextColumn get content => text()();
+  TextColumn get content => text().named('content')();
 
   TextColumn get itemId => text().named('item_id').nullable()();
+
+  @override
+  String? get tableName => 'OtherItems';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -59,13 +65,16 @@ class OtherItems extends Table {
 }
 
 class Timestamps extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
   Column<DateTime> get createdAt =>
       customType(ElectricTypes.timestamp).named('created_at')();
 
   Column<DateTime> get updatedAt =>
       customType(ElectricTypes.timestampTZ).named('updated_at')();
+
+  @override
+  String? get tableName => 'Timestamps';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -75,11 +84,14 @@ class Timestamps extends Table {
 }
 
 class Datetimes extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  Column<DateTime> get d => customType(ElectricTypes.date)();
+  Column<DateTime> get d => customType(ElectricTypes.date).named('d')();
 
-  Column<DateTime> get t => customType(ElectricTypes.time)();
+  Column<DateTime> get t => customType(ElectricTypes.time).named('t')();
+
+  @override
+  String? get tableName => 'Datetimes';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -89,9 +101,12 @@ class Datetimes extends Table {
 }
 
 class Bools extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  BoolColumn get b => boolean().nullable()();
+  BoolColumn get b => boolean().named('b').nullable()();
+
+  @override
+  String? get tableName => 'Bools';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -101,7 +116,10 @@ class Bools extends Table {
 }
 
 class Uuids extends Table {
-  TextColumn get id => customType(ElectricTypes.uuid)();
+  TextColumn get id => customType(ElectricTypes.uuid).named('id')();
+
+  @override
+  String? get tableName => 'Uuids';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -111,13 +129,16 @@ class Uuids extends Table {
 }
 
 class Ints extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  IntColumn get i2 => customType(ElectricTypes.int2).nullable()();
+  IntColumn get i2 => customType(ElectricTypes.int2).named('i2').nullable()();
 
-  IntColumn get i4 => customType(ElectricTypes.int4).nullable()();
+  IntColumn get i4 => customType(ElectricTypes.int4).named('i4').nullable()();
 
-  Int64Column get i8 => int64().nullable()();
+  Int64Column get i8 => int64().named('i8').nullable()();
+
+  @override
+  String? get tableName => 'Ints';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -127,11 +148,16 @@ class Ints extends Table {
 }
 
 class Floats extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  RealColumn get f4 => customType(ElectricTypes.float4).nullable()();
+  RealColumn get f4 =>
+      customType(ElectricTypes.float4).named('f4').nullable()();
 
-  RealColumn get f8 => customType(ElectricTypes.float8).nullable()();
+  RealColumn get f8 =>
+      customType(ElectricTypes.float8).named('f8').nullable()();
+
+  @override
+  String? get tableName => 'Floats';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -141,11 +167,16 @@ class Floats extends Table {
 }
 
 class Jsons extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  Column<Object> get js => customType(ElectricTypes.json).nullable()();
+  Column<Object> get js =>
+      customType(ElectricTypes.json).named('js').nullable()();
 
-  Column<Object> get jsb => customType(ElectricTypes.jsonb).nullable()();
+  Column<Object> get jsb =>
+      customType(ElectricTypes.jsonb).named('jsb').nullable()();
+
+  @override
+  String? get tableName => 'Jsons';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -155,9 +186,13 @@ class Jsons extends Table {
 }
 
 class Enums extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  Column<DbColor> get c => customType(ElectricEnumTypes.color).nullable()();
+  Column<DbColor> get c =>
+      customType(ElectricEnumTypes.color).named('c').nullable()();
+
+  @override
+  String? get tableName => 'Enums';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};

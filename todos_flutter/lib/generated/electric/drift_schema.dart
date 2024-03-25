@@ -11,13 +11,13 @@ const kElectrifiedTables = [
 ];
 
 class Todo extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  TextColumn get listid => text().nullable()();
+  TextColumn get listid => text().named('listid').nullable()();
 
   TextColumn get text$ => text().named('text').nullable()();
 
-  BoolColumn get completed => boolean()();
+  BoolColumn get completed => boolean().named('completed')();
 
   Column<DateTime> get editedAt =>
       customType(ElectricTypes.timestampTZ).named('edited_at')();
@@ -33,11 +33,11 @@ class Todo extends Table {
 }
 
 class Todolist extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  TextColumn get filter => text().nullable()();
+  TextColumn get filter => text().named('filter').nullable()();
 
-  TextColumn get editing => text().nullable()();
+  TextColumn get editing => text().named('editing').nullable()();
 
   @override
   String? get tableName => 'todolist';

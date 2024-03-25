@@ -56,7 +56,7 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'items';
+  static const String $name = 'Items';
   @override
   VerificationContext validateIntegrity(Insertable<Item> instance,
       {bool isInserting = false}) {
@@ -158,10 +158,11 @@ class Item extends DataClass implements Insertable<Item> {
           Variable<String>(contentTextNullDefault);
     }
     if (!nullToAbsent || intvalueNull != null) {
-      map['intvalue_null'] = Variable<int>(intvalueNull);
+      map['intvalue_null'] = Variable<int>(intvalueNull, ElectricTypes.int4);
     }
     if (!nullToAbsent || intvalueNullDefault != null) {
-      map['intvalue_null_default'] = Variable<int>(intvalueNullDefault);
+      map['intvalue_null_default'] =
+          Variable<int>(intvalueNullDefault, ElectricTypes.int4);
     }
     return map;
   }
@@ -394,7 +395,7 @@ class $OtherItemsTable extends OtherItems
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'other_items';
+  static const String $name = 'OtherItems';
   @override
   VerificationContext validateIntegrity(Insertable<OtherItem> instance,
       {bool isInserting = false}) {
@@ -607,7 +608,7 @@ class $TimestampsTable extends Timestamps
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'timestamps';
+  static const String $name = 'Timestamps';
   @override
   VerificationContext validateIntegrity(Insertable<Timestamp> instance,
       {bool isInserting = false}) {
@@ -667,8 +668,9 @@ class Timestamp extends DataClass implements Insertable<Timestamp> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['created_at'] = Variable<DateTime>(createdAt, ElectricTypes.timestamp);
+    map['updated_at'] =
+        Variable<DateTime>(updatedAt, ElectricTypes.timestampTZ);
     return map;
   }
 
@@ -820,7 +822,7 @@ class $DatetimesTable extends Datetimes
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'datetimes';
+  static const String $name = 'Datetimes';
   @override
   VerificationContext validateIntegrity(Insertable<Datetime> instance,
       {bool isInserting = false}) {
@@ -877,8 +879,8 @@ class Datetime extends DataClass implements Insertable<Datetime> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['d'] = Variable<DateTime>(d);
-    map['t'] = Variable<DateTime>(t);
+    map['d'] = Variable<DateTime>(d, ElectricTypes.date);
+    map['t'] = Variable<DateTime>(t, ElectricTypes.time);
     return map;
   }
 
@@ -1022,7 +1024,7 @@ class $BoolsTable extends Bools with TableInfo<$BoolsTable, Bool> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'bools';
+  static const String $name = 'Bools';
   @override
   VerificationContext validateIntegrity(Insertable<Bool> instance,
       {bool isInserting = false}) {
@@ -1186,7 +1188,7 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'uuids';
+  static const String $name = 'Uuids';
   @override
   VerificationContext validateIntegrity(Insertable<Uuid> instance,
       {bool isInserting = false}) {
@@ -1226,7 +1228,7 @@ class Uuid extends DataClass implements Insertable<Uuid> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
+    map['id'] = Variable<String>(id, ElectricTypes.uuid);
     return map;
   }
 
@@ -1340,7 +1342,7 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'ints';
+  static const String $name = 'Ints';
   @override
   VerificationContext validateIntegrity(Insertable<Int> instance,
       {bool isInserting = false}) {
@@ -1400,10 +1402,10 @@ class Int extends DataClass implements Insertable<Int> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || i2 != null) {
-      map['i2'] = Variable<int>(i2);
+      map['i2'] = Variable<int>(i2, ElectricTypes.int2);
     }
     if (!nullToAbsent || i4 != null) {
-      map['i4'] = Variable<int>(i4);
+      map['i4'] = Variable<int>(i4, ElectricTypes.int4);
     }
     if (!nullToAbsent || i8 != null) {
       map['i8'] = Variable<BigInt>(i8);
@@ -1575,7 +1577,7 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'floats';
+  static const String $name = 'Floats';
   @override
   VerificationContext validateIntegrity(Insertable<Float> instance,
       {bool isInserting = false}) {
@@ -1629,10 +1631,10 @@ class Float extends DataClass implements Insertable<Float> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || f4 != null) {
-      map['f4'] = Variable<double>(f4);
+      map['f4'] = Variable<double>(f4, ElectricTypes.float4);
     }
     if (!nullToAbsent || f8 != null) {
-      map['f8'] = Variable<double>(f8);
+      map['f8'] = Variable<double>(f8, ElectricTypes.float8);
     }
     return map;
   }
@@ -1781,7 +1783,7 @@ class $JsonsTable extends Jsons with TableInfo<$JsonsTable, Json> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'jsons';
+  static const String $name = 'Jsons';
   @override
   VerificationContext validateIntegrity(Insertable<Json> instance,
       {bool isInserting = false}) {
@@ -1836,10 +1838,10 @@ class Json extends DataClass implements Insertable<Json> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || js != null) {
-      map['js'] = Variable<Object>(js);
+      map['js'] = Variable<Object>(js, ElectricTypes.json);
     }
     if (!nullToAbsent || jsb != null) {
-      map['jsb'] = Variable<Object>(jsb);
+      map['jsb'] = Variable<Object>(jsb, ElectricTypes.jsonb);
     }
     return map;
   }
@@ -1983,7 +1985,7 @@ class $EnumsTable extends Enums with TableInfo<$EnumsTable, Enum> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'enums';
+  static const String $name = 'Enums';
   @override
   VerificationContext validateIntegrity(Insertable<Enum> instance,
       {bool isInserting = false}) {
@@ -2031,7 +2033,7 @@ class Enum extends DataClass implements Insertable<Enum> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || c != null) {
-      map['c'] = Variable<DbColor>(c);
+      map['c'] = Variable<DbColor>(c, ElectricEnumTypes.color);
     }
     return map;
   }

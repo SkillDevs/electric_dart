@@ -287,6 +287,11 @@ Method _getColumnFieldGetter(
 ) {
   var columnBuilderExpr = _getInitialColumnBuilder(schemaInfo, columnInfo);
 
+  // Column name in SQL
+  columnBuilderExpr = columnBuilderExpr
+      .property('named')
+      .call([literal(columnInfo.columnName)]);
+
   if (columnInfo.isNullable) {
     columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
   }
