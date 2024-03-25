@@ -70,6 +70,7 @@ void expectValidProjectsModel(DriftSchemaInfo schemaInfo) {
     membersRel,
     DriftRelationInfo(
       relationField: 'memberships',
+      relationFieldDartName: 'memberships',
       fromField: '',
       toField: '',
       relatedModel: 'membership',
@@ -117,6 +118,7 @@ void expectValidMembershipsModel(DriftSchemaInfo schemaInfo) {
     projectsRel,
     DriftRelationInfo(
       relationField: 'project',
+      relationFieldDartName: 'project',
       fromField: 'project_id',
       toField: 'id',
       relatedModel: 'project',
@@ -141,6 +143,7 @@ void expectRelations(DriftSchemaInfo schemaInfo) {
     userPostRel,
     DriftRelationInfo(
       relationField: 'posts',
+      relationFieldDartName: 'posts',
       fromField: '',
       toField: '',
       relatedModel: 'Post',
@@ -153,6 +156,7 @@ void expectRelations(DriftSchemaInfo schemaInfo) {
     userProfileRel,
     DriftRelationInfo(
       relationField: 'profile',
+      relationFieldDartName: 'profile',
       fromField: '',
       toField: '',
       relatedModel: 'Profile',
@@ -168,6 +172,7 @@ void expectRelations(DriftSchemaInfo schemaInfo) {
     postUserRel,
     DriftRelationInfo(
       relationField: 'author',
+      relationFieldDartName: 'author',
       fromField: 'authorId',
       toField: 'id',
       relatedModel: 'User',
@@ -183,6 +188,7 @@ void expectRelations(DriftSchemaInfo schemaInfo) {
     profileUserRel,
     DriftRelationInfo(
       relationField: 'user',
+      relationFieldDartName: 'user',
       fromField: 'userId',
       toField: 'id',
       relatedModel: 'User',

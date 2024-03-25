@@ -101,6 +101,7 @@ class DriftEnum {
 
 class DriftRelationInfo with EquatableMixin {
   final String relationField;
+  final String relationFieldDartName;
   final String fromField;
   final String toField;
   final String relatedModel;
@@ -108,6 +109,7 @@ class DriftRelationInfo with EquatableMixin {
 
   DriftRelationInfo({
     required this.relationField,
+    required this.relationFieldDartName,
     required this.fromField,
     required this.toField,
     required this.relatedModel,
@@ -116,11 +118,12 @@ class DriftRelationInfo with EquatableMixin {
 
   @override
   String toString() =>
-      'DriftRelationInfo(relationField: $relationField, fromField: $fromField, toField: $toField, relatedModel: $relatedModel, relationName: $relationName)';
+      'DriftRelationInfo(relationField: $relationField, relationFieldDartName: $relationFieldDartName, fromField: $fromField, toField: $toField, relatedModel: $relatedModel, relationName: $relationName)';
 
   @override
   List<Object?> get props => [
         relationField,
+        relationFieldDartName,
         fromField,
         toField,
         relatedModel,

@@ -47,7 +47,7 @@ class Items extends Table with ElectricTableMixin {
   bool get withoutRowId => true;
 
   @override
-  _$ItemsRelations get $relations => const _$ItemsRelations();
+  $ItemsTableRelations get $relations => const $ItemsTableRelations();
 }
 
 class OtherItems extends Table with ElectricTableMixin {
@@ -67,7 +67,7 @@ class OtherItems extends Table with ElectricTableMixin {
   bool get withoutRowId => true;
 
   @override
-  _$OtherItemsRelations get $relations => const _$OtherItemsRelations();
+  $OtherItemsTableRelations get $relations => const $OtherItemsTableRelations();
 }
 
 class Timestamps extends Table {
@@ -236,21 +236,21 @@ class ElectricEnumTypes {
 
 // ------------------------------ RELATIONS ------------------------------
 
-class _$ItemsRelations implements TableRelations {
-  const _$ItemsRelations();
+class $ItemsTableRelations implements TableRelations {
+  const $ItemsTableRelations();
 
-  TableRelation<OtherItems> get other_items => const TableRelation<OtherItems>(
+  TableRelation<OtherItems> get otherItems => const TableRelation<OtherItems>(
         fromField: '',
         toField: '',
         relationName: 'OtherItemsToItems',
       );
 
   @override
-  List<TableRelation<Table>> get $relationsList => [other_items];
+  List<TableRelation<Table>> get $relationsList => [otherItems];
 }
 
-class _$OtherItemsRelations implements TableRelations {
-  const _$OtherItemsRelations();
+class $OtherItemsTableRelations implements TableRelations {
+  const $OtherItemsTableRelations();
 
   TableRelation<Items> get items => const TableRelation<Items>(
         fromField: 'item_id',

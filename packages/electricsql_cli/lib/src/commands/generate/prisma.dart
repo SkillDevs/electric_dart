@@ -36,14 +36,10 @@ Future<File> createIntrospectionSchema(
 
   final proxyUrl = buildProxyUrlForIntrospection(config);
 
-  // RelationMode = "prisma" is used so that "array like" foreign key relations
-  // are not created in the prisma schema
-
   final schema = '''
 datasource db {
   provider = "postgresql"
   url      = "$proxyUrl"
-  relationMode = "prisma"
 }
 ''';
 
@@ -361,6 +357,7 @@ DriftRelationInfo _extractOutgoindRelation(
   Attribute relationAttr,
 ) {
   final fieldName = field.field;
+  final fieldNameDart = ensureValidDartIdentifier(fieldName.camelCase);
   final relatedModel = nonNullableType;
 
   final List<String> fieldsInRel =
@@ -378,6 +375,7 @@ DriftRelationInfo _extractOutgoindRelation(
 
   return DriftRelationInfo(
     relationField: fieldName,
+    relationFieldDartName: fieldNameDart,
     relatedModel: relatedModel,
     fromField: fromField,
     toField: toField,
@@ -394,10 +392,12 @@ DriftRelationInfo _extractIncomingRelation(
   String nonNullableType,
 ) {
   final fieldName = field.field;
+  final fieldNameDart = ensureValidDartIdentifier(fieldName.camelCase);
   final relatedModel = nonNullableType;
 
   return DriftRelationInfo(
     relationField: fieldName,
+    relationFieldDartName: fieldNameDart,
     relatedModel: relatedModel,
     fromField: '',
     toField: '',

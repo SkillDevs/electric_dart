@@ -197,7 +197,8 @@ List<Map<String, Object?>> _extractWhereConditionsFor(
       conditions.add(raw);
     } else {
       throw Exception(
-          'Invalid where clause, expected List or Map for $key section');
+        'Invalid where clause, expected List or Map for $key section',
+      );
     }
   }
 

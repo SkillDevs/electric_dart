@@ -1,10 +1,9 @@
 import 'package:electricsql_cli/electricsql_cli.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
-import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 
 String getRelationsClassName(DriftTableInfo tableInfo) {
   final driftTableName = tableInfo.dartClassName;
-  return '_\$${driftTableName}Relations';
+  return '\$${driftTableName}TableRelations';
 }
 
 List<Class> getRelationClasses(DriftSchemaInfo driftSchemaInfo) {
@@ -57,7 +56,7 @@ Method _getTableRelationGetter(
 
   return Method(
     (b) => b
-      ..name = ensureValidDartIdentifier(relation.relationField)
+      ..name = relation.relationFieldDartName
       ..returns = tableRelationRef
       ..type = MethodType.getter
       ..body = tableRelationExpr.code,

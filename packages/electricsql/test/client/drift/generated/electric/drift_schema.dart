@@ -45,7 +45,7 @@ class User extends Table with ElectricTableMixin {
   bool get withoutRowId => true;
 
   @override
-  _$UserRelations get $relations => const _$UserRelations();
+  $UserTableRelations get $relations => const $UserTableRelations();
 }
 
 class Post extends Table with ElectricTableMixin {
@@ -69,7 +69,7 @@ class Post extends Table with ElectricTableMixin {
   bool get withoutRowId => true;
 
   @override
-  _$PostRelations get $relations => const _$PostRelations();
+  $PostTableRelations get $relations => const $PostTableRelations();
 }
 
 class Profile extends Table with ElectricTableMixin {
@@ -89,7 +89,7 @@ class Profile extends Table with ElectricTableMixin {
   bool get withoutRowId => true;
 
   @override
-  _$ProfileRelations get $relations => const _$ProfileRelations();
+  $ProfileTableRelations get $relations => const $ProfileTableRelations();
 }
 
 class DataTypes extends Table with ElectricTableMixin {
@@ -149,7 +149,7 @@ class DataTypes extends Table with ElectricTableMixin {
   bool get withoutRowId => true;
 
   @override
-  _$DataTypesRelations get $relations => const _$DataTypesRelations();
+  $DataTypesTableRelations get $relations => const $DataTypesTableRelations();
 }
 
 class Dummy extends Table with ElectricTableMixin {
@@ -168,7 +168,7 @@ class Dummy extends Table with ElectricTableMixin {
   bool get withoutRowId => true;
 
   @override
-  _$DummyRelations get $relations => const _$DummyRelations();
+  $DummyTableRelations get $relations => const $DummyTableRelations();
 }
 
 // ------------------------------ ENUMS ------------------------------
@@ -200,8 +200,8 @@ class ElectricEnumTypes {
 
 // ------------------------------ RELATIONS ------------------------------
 
-class _$UserRelations implements TableRelations {
-  const _$UserRelations();
+class $UserTableRelations implements TableRelations {
+  const $UserTableRelations();
 
   TableRelation<Post> get posts => const TableRelation<Post>(
         fromField: '',
@@ -222,8 +222,8 @@ class _$UserRelations implements TableRelations {
       ];
 }
 
-class _$PostRelations implements TableRelations {
-  const _$PostRelations();
+class $PostTableRelations implements TableRelations {
+  const $PostTableRelations();
 
   TableRelation<User> get author => const TableRelation<User>(
         fromField: 'authorId',
@@ -235,8 +235,8 @@ class _$PostRelations implements TableRelations {
   List<TableRelation<Table>> get $relationsList => [author];
 }
 
-class _$ProfileRelations implements TableRelations {
-  const _$ProfileRelations();
+class $ProfileTableRelations implements TableRelations {
+  const $ProfileTableRelations();
 
   TableRelation<User> get user => const TableRelation<User>(
         fromField: 'userId',
@@ -248,8 +248,8 @@ class _$ProfileRelations implements TableRelations {
   List<TableRelation<Table>> get $relationsList => [user];
 }
 
-class _$DataTypesRelations implements TableRelations {
-  const _$DataTypesRelations();
+class $DataTypesTableRelations implements TableRelations {
+  const $DataTypesTableRelations();
 
   TableRelation<Dummy> get related => const TableRelation<Dummy>(
         fromField: 'relatedId',
@@ -261,8 +261,8 @@ class _$DataTypesRelations implements TableRelations {
   List<TableRelation<Table>> get $relationsList => [related];
 }
 
-class _$DummyRelations implements TableRelations {
-  const _$DummyRelations();
+class $DummyTableRelations implements TableRelations {
+  const $DummyTableRelations();
 
   TableRelation<DataTypes> get datatype => const TableRelation<DataTypes>(
         fromField: '',
