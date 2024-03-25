@@ -494,7 +494,6 @@ ChangesOpType optypeToShadow(OpType optype) {
     case OpType.update:
       return ChangesOpType.upsert;
     default:
-      // TODO(dart): Ask if "compensation" should be considered
       throw Exception('Unexpected optype: $optype');
   }
 }

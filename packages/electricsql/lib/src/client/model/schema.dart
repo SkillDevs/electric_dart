@@ -148,49 +148,58 @@ Shape computeShape(SyncInputRaw i) {
   );
 }
 
-String _makeSqlWhereClause(Object where) {
-  // TODO(dart): Implement
-  return '';
+String _makeSqlWhereClause(Map<String, Object?> where) {
   // we wrap it in an array and then flatten it
   // in case the user provided an object instead of an array of objects
-  /*  const orConnectedObjects = [
-    (where as { OR?: object | object[] })['OR'] ?? [],
-  ].flat()
-  const orSqlClause =
-    orConnectedObjects.length === 0
+  final orConnectedObjects = _extractWhereConditionsFor('OR', where);
+  final orSqlClause = orConnectedObjects.isEmpty
       ? ''
-      : '(' +
-        orConnectedObjects
-          .map((o) => `(${makeSqlWhereClause(o)})`)
-          .join(' OR ') +
-        ')'
-  const notConnector = [
-    (where as { NOT?: object | object[] })['NOT'] ?? [],
-  ].flat()
-  const notSqlClause =
-    notConnector.length === 0
+      : '(${orConnectedObjects.map((o) => '(${_makeSqlWhereClause(o)})').join(' OR ')})';
+  final notConnector = _extractWhereConditionsFor('NOT', where);
+
+  final notSqlClause = notConnector.isEmpty
       ? ''
-      : 'NOT (' +
-        notConnector.map((o) => `(${makeSqlWhereClause(o)})`).join(' OR ') +
-        ')'
-  const andConnector = [
-    (where as { AND?: object | object[] })['AND'] ?? [],
-  ].flat()
-  const andSqlClause = andConnector.map(makeSqlWhereClause).join(' AND ')
-  const fieldSqlClause = Object.entries(where)
-    .filter(([key, _]) => !['AND', 'OR', 'NOT'].includes(key))
-    .map(([key, value]) => {
-      if (typeof value === 'string') {
-        return `this.${key} = '${value.replace("'", "''")}'`
-      } else if (typeof value === 'number' || typeof value === 'bigint') {
-        return `this.${key} = ${value}`
-      } else {
-        throw new Error(
-          'Current implementation does not support non-string comparisons'
-        )
-      }
-    })
-    .join(' AND ')
-  const clauses = [fieldSqlClause, andSqlClause, orSqlClause, notSqlClause]
-  return clauses.filter((clause) => clause !== '').join(' AND ') */
+      : 'NOT (${notConnector.map((o) => '(${_makeSqlWhereClause(o)})').join(' OR ')})';
+
+  final andConnector = _extractWhereConditionsFor('AND', where);
+
+  final andSqlClause = andConnector.map(_makeSqlWhereClause).join(' AND ');
+  final fieldSqlClause = where.entries
+      .where((entry) => !['AND', 'OR', 'NOT'].contains(entry.key))
+      .map((entry) {
+    final key = entry.key;
+    final value = entry.value;
+    if (value is String) {
+      return "this.$key = '${value.replaceAll("'", "''")}'";
+    } else if (value is num || value is BigInt) {
+      return 'this.$key = $value';
+    } else {
+      throw Exception(
+        'Current implementation does not support non-string comparisons',
+      );
+    }
+  }).join(' AND ');
+  final clauses = [fieldSqlClause, andSqlClause, orSqlClause, notSqlClause];
+  return clauses.where((clause) => clause != '').join(' AND ');
+}
+
+List<Map<String, Object?>> _extractWhereConditionsFor(
+  String key,
+  Map<String, Object?> where,
+) {
+  final List<Map<String, Object?>> conditions = [];
+
+  if (where.containsKey(key)) {
+    final raw = where[key];
+    if (raw is List<dynamic>) {
+      conditions.addAll(raw.cast<Map<String, Object?>>());
+    } else if (raw is Map<String, Object?>) {
+      conditions.add(raw);
+    } else {
+      throw Exception(
+          'Invalid where clause, expected List or Map for $key section');
+    }
+  }
+
+  return conditions;
 }
