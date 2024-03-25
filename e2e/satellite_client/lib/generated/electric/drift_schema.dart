@@ -19,7 +19,7 @@ const kElectrifiedTables = [
   Enums,
 ];
 
-class Items extends Table {
+class Items extends Table with ElectricTableMixin {
   TextColumn get id => text().named('id')();
 
   TextColumn get content => text().named('content')();
@@ -38,16 +38,19 @@ class Items extends Table {
       .nullable()();
 
   @override
-  String? get tableName => 'Items';
+  String? get tableName => 'items';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
   bool get withoutRowId => true;
+
+  @override
+  _$ItemsRelations get $relations => const _$ItemsRelations();
 }
 
-class OtherItems extends Table {
+class OtherItems extends Table with ElectricTableMixin {
   TextColumn get id => text().named('id')();
 
   TextColumn get content => text().named('content')();
@@ -55,13 +58,16 @@ class OtherItems extends Table {
   TextColumn get itemId => text().named('item_id').nullable()();
 
   @override
-  String? get tableName => 'OtherItems';
+  String? get tableName => 'other_items';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
   bool get withoutRowId => true;
+
+  @override
+  _$OtherItemsRelations get $relations => const _$OtherItemsRelations();
 }
 
 class Timestamps extends Table {
@@ -74,7 +80,7 @@ class Timestamps extends Table {
       customType(ElectricTypes.timestampTZ).named('updated_at')();
 
   @override
-  String? get tableName => 'Timestamps';
+  String? get tableName => 'timestamps';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -91,7 +97,7 @@ class Datetimes extends Table {
   Column<DateTime> get t => customType(ElectricTypes.time).named('t')();
 
   @override
-  String? get tableName => 'Datetimes';
+  String? get tableName => 'datetimes';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -106,7 +112,7 @@ class Bools extends Table {
   BoolColumn get b => boolean().named('b').nullable()();
 
   @override
-  String? get tableName => 'Bools';
+  String? get tableName => 'bools';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -119,7 +125,7 @@ class Uuids extends Table {
   TextColumn get id => customType(ElectricTypes.uuid).named('id')();
 
   @override
-  String? get tableName => 'Uuids';
+  String? get tableName => 'uuids';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -138,7 +144,7 @@ class Ints extends Table {
   Int64Column get i8 => int64().named('i8').nullable()();
 
   @override
-  String? get tableName => 'Ints';
+  String? get tableName => 'ints';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -157,7 +163,7 @@ class Floats extends Table {
       customType(ElectricTypes.float8).named('f8').nullable()();
 
   @override
-  String? get tableName => 'Floats';
+  String? get tableName => 'floats';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -176,7 +182,7 @@ class Jsons extends Table {
       customType(ElectricTypes.jsonb).named('jsb').nullable()();
 
   @override
-  String? get tableName => 'Jsons';
+  String? get tableName => 'jsons';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
@@ -226,4 +232,32 @@ class ElectricEnumTypes {
     codec: ElectricEnumCodecs.color,
     typeName: 'Color',
   );
+}
+
+// ------------------------------ RELATIONS ------------------------------
+
+class _$ItemsRelations implements TableRelations {
+  const _$ItemsRelations();
+
+  TableRelation<OtherItems> get other_items => const TableRelation<OtherItems>(
+        fromField: '',
+        toField: '',
+        relationName: 'OtherItemsToItems',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [other_items];
+}
+
+class _$OtherItemsRelations implements TableRelations {
+  const _$OtherItemsRelations();
+
+  TableRelation<Items> get items => const TableRelation<Items>(
+        fromField: 'item_id',
+        toField: 'id',
+        relationName: 'OtherItemsToItems',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [items];
 }

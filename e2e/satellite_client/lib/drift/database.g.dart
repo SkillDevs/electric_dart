@@ -56,7 +56,7 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Items';
+  static const String $name = 'items';
   @override
   VerificationContext validateIntegrity(Insertable<Item> instance,
       {bool isInserting = false}) {
@@ -395,7 +395,7 @@ class $OtherItemsTable extends OtherItems
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'OtherItems';
+  static const String $name = 'other_items';
   @override
   VerificationContext validateIntegrity(Insertable<OtherItem> instance,
       {bool isInserting = false}) {
@@ -608,7 +608,7 @@ class $TimestampsTable extends Timestamps
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Timestamps';
+  static const String $name = 'timestamps';
   @override
   VerificationContext validateIntegrity(Insertable<Timestamp> instance,
       {bool isInserting = false}) {
@@ -822,7 +822,7 @@ class $DatetimesTable extends Datetimes
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Datetimes';
+  static const String $name = 'datetimes';
   @override
   VerificationContext validateIntegrity(Insertable<Datetime> instance,
       {bool isInserting = false}) {
@@ -1024,7 +1024,7 @@ class $BoolsTable extends Bools with TableInfo<$BoolsTable, Bool> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Bools';
+  static const String $name = 'bools';
   @override
   VerificationContext validateIntegrity(Insertable<Bool> instance,
       {bool isInserting = false}) {
@@ -1188,7 +1188,7 @@ class $UuidsTable extends Uuids with TableInfo<$UuidsTable, Uuid> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Uuids';
+  static const String $name = 'uuids';
   @override
   VerificationContext validateIntegrity(Insertable<Uuid> instance,
       {bool isInserting = false}) {
@@ -1342,7 +1342,7 @@ class $IntsTable extends Ints with TableInfo<$IntsTable, Int> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Ints';
+  static const String $name = 'ints';
   @override
   VerificationContext validateIntegrity(Insertable<Int> instance,
       {bool isInserting = false}) {
@@ -1577,7 +1577,7 @@ class $FloatsTable extends Floats with TableInfo<$FloatsTable, Float> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Floats';
+  static const String $name = 'floats';
   @override
   VerificationContext validateIntegrity(Insertable<Float> instance,
       {bool isInserting = false}) {
@@ -1783,7 +1783,7 @@ class $JsonsTable extends Jsons with TableInfo<$JsonsTable, Json> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Jsons';
+  static const String $name = 'jsons';
   @override
   VerificationContext validateIntegrity(Insertable<Json> instance,
       {bool isInserting = false}) {
