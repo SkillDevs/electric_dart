@@ -83,8 +83,6 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   }
 
   void Function() _hookToNotifier() {
-    final Set<String> pendingTableChanges = {};
-
     final _unsubDataChanges = notifier.subscribeToDataChanges(
       (notification) {
         final tablesChanged = notification.changes.map((e) {
