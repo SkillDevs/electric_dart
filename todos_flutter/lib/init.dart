@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' hide Column;
 import 'package:electricsql/util.dart';
 import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:electricsql_flutter/electricsql_flutter.dart';
@@ -10,6 +11,7 @@ import 'package:todos_electrified/database/database.dart';
 import 'package:todos_electrified/database/drift/database.dart';
 import 'package:todos_electrified/database/drift/drift_repository.dart';
 import 'package:todos_electrified/electric.dart';
+import 'package:todos_electrified/main.dart';
 import 'package:todos_electrified/theme.dart';
 import 'package:todos_electrified/util/confirmation_dialog.dart';
 import 'package:todos_electrified/database/drift/connection/connection.dart'
@@ -43,6 +45,8 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
       final ElectricClient<AppDatabase> electricClient;
       try {
         electricClient = await startElectricDrift(dbName, driftRepo.db);
+
+        await _populateList(electricClient);
       } on SatelliteException catch (e) {
         if (context.mounted) {
           if (e.code == SatelliteErrorCode.unknownSchemaVersion) {
@@ -108,6 +112,17 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
 
     return null;
   }, [retryVN.value]);
+}
+
+Future<void> _populateList(ElectricClient<AppDatabase> electricClient) async {
+  final db = electricClient.db;
+
+  final list = await (db.todolist.select()..where((l) => l.id.equals(kListId)))
+      .getSingleOrNull();
+  if (list == null) {
+    await electricClient.db.todolist
+        .insertOne(TodolistCompanion.insert(id: kListId));
+  }
 }
 
 class InitAppLoader extends HookWidget {

@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' hide Column;
 import 'package:electricsql/util.dart' show genUUID;
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -104,9 +106,15 @@ class MyHomePage extends HookConsumerWidget {
 
     final electricClient = ref.watch(electricClientProvider);
     final db = electricClient.db;
+
     useEffect(() {
-      electricClient.syncTable(db.todo);
-      electricClient.syncTable(db.todolist);
+      // Sync todo list and all its todos through the Foreign Key relationship
+      electricClient.syncTable(
+        db.todolist,
+        include: (tl) => [
+          SyncInputRelation.from(db.todolist.$relations.todo),
+        ],
+      );
       return null;
     }, []);
 
@@ -190,10 +198,17 @@ class _DeleteDbButton extends ConsumerWidget {
       onPressed: () async {
         ref.read(dbDeletedProvider.notifier).update((state) => true);
 
+        print("Closing Electric and deleting local database");
+
+        final electric = ref.read(electricClientProvider);
+        await electric.close();
+        print("Electric closed");
+
         final todosDb = ref.read(todosDatabaseProvider);
         await todosDb.todosRepo.close();
 
         await impl.deleteTodosDbFile();
+        print("Local database deleted");
       },
       icon: const Icon(Symbols.delete),
       label: const Text("Delete local database"),
