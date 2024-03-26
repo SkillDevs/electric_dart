@@ -9,6 +9,7 @@ import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
 import '../drift/database.dart';
+import '../drift/generated/electric/drift_schema.dart';
 
 void main() async {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -434,9 +435,9 @@ Future<void> _testBool(TestsDatabase db, bool value) async {
   await _testCustomType(
     db,
     value: value,
-    column: db.dataTypes.boolCol,
+    column: db.dataTypes.bool$,
     insertCol: (c, v) => c.copyWith(
-      boolCol: Value(v),
+      bool$: Value(v),
     ),
     // We can use Drift default bool type
     customT: null,
@@ -492,10 +493,10 @@ Future<void> _testInt8(TestsDatabase db, int value) async {
 }
 
 Future<void> _testInt8BigInt(TestsDatabase db, BigInt value) async {
-  await _testCustomType(
+  await _testCustomTypeExtra(
     db,
     value: value,
-    column: db.dataTypes.int8BigInt,
+    column: db.extra.int8BigInt,
     insertCol: (c, v) => c.copyWith(
       int8BigInt: Value(v),
     ),
@@ -549,9 +550,9 @@ Future<void> _testColorEnum(TestsDatabase db, DbColor value) async {
   await _testCustomType<DbColor>(
     db,
     value: value,
-    column: db.dataTypes.enumCol,
+    column: db.dataTypes.enum$,
     insertCol: (c, v) => c.copyWith(
-      enumCol: Value(v),
+      enum$: Value(v),
     ),
     customT: ElectricEnumTypes.color,
   );
@@ -566,28 +567,30 @@ Future<void> _testCustomType<DartT extends Object>(
       insertCol,
   DartT? expected,
 }) async {
-  final baseCompanion = DataTypesCompanion.insert(
-    id: const Value(97),
+  final driftValue = await _insertAndFetchFromDataTypes(
+    db,
+    value: value,
+    column: column,
+    insertCol: insertCol,
+    customT: customT,
   );
 
-  final insertCompanion = insertCol(baseCompanion, value);
+  _expectCorrectValue(
+    db,
+    columnDriftValue: driftValue,
+    value: value,
+    customT: customT,
+    expected: expected,
+  );
+}
 
-  await db.into(db.dataTypes).insert(insertCompanion);
-
-  /* final allRows = await db.customSelect("select * from DataTypes").get();
-  print("All rows:");
-  for (final row in allRows) {
-    print(row.data);
-  } */
-
-  final res = await (db.select(db.dataTypes)
-        ..where((tbl) => column.equalsExp(Constant(value, customT))))
-      .getSingle();
-  expect(res.id, 97);
-
-  final columns = res.toColumns(false);
-  final columnDriftValue = (columns[column.name]! as Variable<DartT>).value;
-
+void _expectCorrectValue<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT columnDriftValue,
+  required DartT value,
+  required DialectAwareSqlType<DartT>? customT,
+  DartT? expected,
+}) {
   if (value is double && value.isNaN) {
     expect(columnDriftValue, isNaN);
   } else {
@@ -621,6 +624,94 @@ Future<void> _testCustomType<DartT extends Object>(
       expect(deserialized, value);
     }
   }
+}
+
+Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT value,
+  required GeneratedColumn<DartT> column,
+  required DataTypesCompanion Function(DataTypesCompanion, DartT value)
+      insertCol,
+  required DialectAwareSqlType<DartT>? customT,
+}) async {
+  final baseCompanion = DataTypesCompanion.insert(
+    id: 97,
+  );
+
+  final insertCompanion = insertCol(baseCompanion, value);
+
+  await db.into(db.dataTypes).insert(insertCompanion);
+
+  /* final allRows = await db.customSelect("select * from DataTypes").get();
+  print("All rows:");
+  for (final row in allRows) {
+    print(row.data);
+  } */
+
+  final res = await (db.select(db.dataTypes)
+        ..where((tbl) => column.equalsExp(Constant(value, customT))))
+      .getSingle();
+  expect(res.id, 97);
+
+  final columns = res.toColumns(false);
+  final columnDriftValue = (columns[column.name]! as Variable<DartT>).value!;
+  return columnDriftValue;
+}
+
+Future<DartT> _insertAndFetchFromExtra<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT value,
+  required GeneratedColumn<DartT> column,
+  required ExtraCompanion Function(ExtraCompanion, DartT value) insertCol,
+  required DialectAwareSqlType<DartT>? customT,
+}) async {
+  final baseCompanion = ExtraCompanion.insert(
+    id: 77,
+  );
+
+  final insertCompanion = insertCol(baseCompanion, value);
+
+  await db.into(db.extra).insert(insertCompanion);
+
+  /* final allRows = await db.customSelect("select * from Extra").get();
+  print("All rows:");
+  for (final row in allRows) {
+    print(row.data);
+  } */
+
+  final res = await (db.select(db.extra)
+        ..where((tbl) => column.equalsExp(Constant(value, customT))))
+      .getSingle();
+  expect(res.id, 77);
+
+  final columns = res.toColumns(false);
+  final columnDriftValue = (columns[column.name]! as Variable<DartT>).value!;
+  return columnDriftValue;
+}
+
+Future<void> _testCustomTypeExtra<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT value,
+  required GeneratedColumn<DartT> column,
+  required DialectAwareSqlType<DartT>? customT,
+  required ExtraCompanion Function(ExtraCompanion, DartT value) insertCol,
+  DartT? expected,
+}) async {
+  final driftValue = await _insertAndFetchFromExtra(
+    db,
+    value: value,
+    column: column,
+    insertCol: insertCol,
+    customT: customT,
+  );
+
+  _expectCorrectValue(
+    db,
+    columnDriftValue: driftValue,
+    value: value,
+    customT: customT,
+    expected: expected,
+  );
 }
 
 pg.UndecodedBytes _getUndecodedBytesForString(String str) {

@@ -240,7 +240,7 @@ class SubscriptionsDataCache extends EventEmitter {
 
     emit(
       kSubscriptionError,
-      SubscriptionErrorData(subscriptionId: null, error: error),
+      SubscriptionErrorData(subscriptionId: msg.subscriptionId, error: error),
     );
     throw error;
   }

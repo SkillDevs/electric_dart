@@ -17,7 +17,7 @@ import 'package:todos_electrified/database/drift/connection/connection.dart'
 
 typedef InitData = ({
   TodosDatabase todosDb,
-  ElectricClient electricClient,
+  ElectricClient<AppDatabase> electricClient,
   ConnectivityStateController connectivityStateController,
 });
 
@@ -40,7 +40,7 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
 
       const dbName = "todos_db";
 
-      final DriftElectricClient<AppDatabase> electricClient;
+      final ElectricClient<AppDatabase> electricClient;
       try {
         electricClient = await startElectricDrift(dbName, driftRepo.db);
       } on SatelliteException catch (e) {

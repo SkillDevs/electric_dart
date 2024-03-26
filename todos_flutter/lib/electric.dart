@@ -6,14 +6,14 @@ import 'package:todos_electrified/database/drift/database.dart';
 import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:todos_electrified/generated/electric/migrations.dart';
 
-final Provider<ElectricClient> electricClientProvider =
+final Provider<ElectricClient<AppDatabase>> electricClientProvider =
     Provider((ref) => throw UnimplementedError());
 
 final connectivityStateControllerProvider =
     ChangeNotifierProvider<ConnectivityStateController>(
         (ref) => throw UnimplementedError());
 
-Future<DriftElectricClient<AppDatabase>> startElectricDrift(
+Future<ElectricClient<AppDatabase>> startElectricDrift(
   String dbName,
   AppDatabase db,
 ) async {

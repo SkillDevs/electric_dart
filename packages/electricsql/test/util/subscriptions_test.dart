@@ -24,13 +24,7 @@ void main() {
     };
 
     // the shape
-    final definition = ClientShapeDefinition(
-      selects: [
-        ShapeSelect(
-          tablename: tablename,
-        ),
-      ],
-    );
+    final definition = Shape(tablename: tablename);
 
     final shapeRequest = ShapeRequest(
       requestId: requestId,

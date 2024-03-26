@@ -91,7 +91,7 @@ class InMemorySubscriptionsManager extends EventEmitter
 
   @override
   DuplicatingSubRes? getDuplicatingSubscription(
-    List<ClientShapeDefinition> shapes,
+    List<Shape> shapes,
   ) {
     final subId = _shapeRequestHashmap[computeClientDefsHash(shapes)];
     if (subId != null) {
@@ -209,7 +209,7 @@ String computeRequestsHash(List<ShapeRequestOrDefinition> requests) {
   return computeClientDefsHash(requests.map((x) => x.definition).toList());
 }
 
-String computeClientDefsHash(List<ClientShapeDefinition> requests) {
+String computeClientDefsHash(List<Shape> requests) {
   // Mimics ohash from NPM
   final StringBuffer buf = StringBuffer();
   buf.write('list:${requests.length}:');
@@ -236,15 +236,13 @@ class MockSubscriptionsManager extends InMemorySubscriptionsManager {
       '1': [
         ShapeDefinition(
           uuid: '00000000-0000-0000-0000-000000000001',
-          definition:
-              ClientShapeDefinition(selects: [ShapeSelect(tablename: 'users')]),
+          definition: Shape(tablename: 'users'),
         ),
       ],
       '2': [
         ShapeDefinition(
           uuid: '00000000-0000-0000-0000-000000000002',
-          definition:
-              ClientShapeDefinition(selects: [ShapeSelect(tablename: 'posts')]),
+          definition: Shape(tablename: 'posts'),
         ),
       ],
     };

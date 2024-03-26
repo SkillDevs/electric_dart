@@ -5,7 +5,7 @@ import 'package:electricsql_flutter/electricsql_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 class ConnectivityStateController with ChangeNotifier {
-  final ElectricClient electric;
+  final BaseElectricClient electric;
 
   late ConnectivityState _connectivityState =
       getElectricConnectivityState(electric);

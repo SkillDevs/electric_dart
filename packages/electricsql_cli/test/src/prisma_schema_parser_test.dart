@@ -15,7 +15,7 @@ void main() {
 
     final schemaInfo = extractInfoFromPrismaSchema(_prismaSchema);
 
-    expect(schemaInfo.tables.length, 7);
+    expect(schemaInfo.tables.length, 10);
 
     expectValidProjectsModel(schemaInfo);
     expectValidMembershipsModel(schemaInfo);
@@ -23,6 +23,8 @@ void main() {
     expectValidWeirdNames(schemaInfo);
 
     expectEnums(schemaInfo);
+
+    expectRelations(schemaInfo);
   });
 }
 
@@ -58,6 +60,23 @@ void expectValidProjectsModel(DriftSchemaInfo schemaInfo) {
   expect(ownerColumn.type, DriftElectricColumnType.string);
   expect(ownerColumn.isNullable, false);
   expect(ownerColumn.dartName, 'ownerId');
+
+  // Relations
+  final relations = projectsTable.relations;
+  expect(relations.length, 1);
+  final membersRel =
+      relations.firstWhere((rel) => rel.relatedModel == 'membership');
+  expect(
+    membersRel,
+    DriftRelationInfo(
+      relationField: 'memberships',
+      relationFieldDartName: 'memberships',
+      fromField: '',
+      toField: '',
+      relatedModel: 'membership',
+      relationName: 'MembershipToProject',
+    ),
+  );
 }
 
 void expectValidMembershipsModel(DriftSchemaInfo schemaInfo) {
@@ -89,6 +108,93 @@ void expectValidMembershipsModel(DriftSchemaInfo schemaInfo) {
       membersTable.columns.firstWhere((c) => c.columnName == 'inserted_at');
   expect(insertedAtColumn.type, DriftElectricColumnType.date);
   expect(insertedAtColumn.isNullable, false);
+
+  // Relations
+  final relations = membersTable.relations;
+  expect(relations.length, 1);
+  final projectsRel =
+      relations.firstWhere((rel) => rel.relatedModel == 'project');
+  expect(
+    projectsRel,
+    DriftRelationInfo(
+      relationField: 'project',
+      relationFieldDartName: 'project',
+      fromField: 'project_id',
+      toField: 'id',
+      relatedModel: 'project',
+      relationName: 'MembershipToProject',
+    ),
+  );
+}
+
+void expectRelations(DriftSchemaInfo schemaInfo) {
+  final userTable = schemaInfo.tables
+      .firstWhere((element) => element.prismaModelName == 'User');
+  final postTable = schemaInfo.tables
+      .firstWhere((element) => element.prismaModelName == 'Post');
+  final profileTable = schemaInfo.tables
+      .firstWhere((element) => element.prismaModelName == 'Profile');
+
+  final userRelations = userTable.relations;
+  expect(userRelations.length, 2);
+  final userPostRel =
+      userRelations.firstWhere((rel) => rel.relatedModel == 'Post');
+  expect(
+    userPostRel,
+    DriftRelationInfo(
+      relationField: 'posts',
+      relationFieldDartName: 'posts',
+      fromField: '',
+      toField: '',
+      relatedModel: 'Post',
+      relationName: 'PostToUser',
+    ),
+  );
+  final userProfileRel =
+      userRelations.firstWhere((rel) => rel.relatedModel == 'Profile');
+  expect(
+    userProfileRel,
+    DriftRelationInfo(
+      relationField: 'profile',
+      relationFieldDartName: 'profile',
+      fromField: '',
+      toField: '',
+      relatedModel: 'Profile',
+      relationName: 'ProfileToUser',
+    ),
+  );
+
+  final postRelations = postTable.relations;
+  expect(postRelations.length, 1);
+  final postUserRel =
+      postRelations.firstWhere((rel) => rel.relatedModel == 'User');
+  expect(
+    postUserRel,
+    DriftRelationInfo(
+      relationField: 'author',
+      relationFieldDartName: 'author',
+      fromField: 'authorId',
+      toField: 'id',
+      relatedModel: 'User',
+      relationName: 'PostToUser',
+    ),
+  );
+
+  final profileRelations = profileTable.relations;
+  expect(profileRelations.length, 1);
+  final profileUserRel =
+      profileRelations.firstWhere((rel) => rel.relatedModel == 'User');
+  expect(
+    profileUserRel,
+    DriftRelationInfo(
+      relationField: 'user',
+      relationFieldDartName: 'user',
+      fromField: 'userId',
+      toField: 'id',
+      relatedModel: 'User',
+      relationName: 'ProfileToUser',
+    ),
+  );
 }
 
 /*

@@ -45,13 +45,20 @@ PendingChanges mergeEntries(
       }
       final localChanges = localInfo.oplogEntryChanges;
 
-      final changes = mergeChangesLastWriteWins(
-        localOrigin,
-        localChanges.changes,
-        incomingOrigin,
-        incomingChanges.changes,
-        incomingChanges.fullRow,
-      );
+      OplogColumnChanges changes;
+
+      if (incomingChanges.optype == ChangesOpType.gone) {
+        changes = localChanges.changes;
+      } else {
+        changes = mergeChangesLastWriteWins(
+          localOrigin,
+          localChanges.changes,
+          incomingOrigin,
+          incomingChanges.changes,
+          incomingChanges.fullRow,
+        );
+      }
+
       late final ChangesOpType optype;
 
       final tags = mergeOpTags(localChanges, incomingChanges);
@@ -127,6 +134,13 @@ OplogColumnChanges mergeChangesLastWriteWins(
 }
 
 List<Tag> mergeOpTags(OplogEntryChanges local, ShadowEntryChanges remote) {
+  // When the server sends a GONE message, it means we need to delete this row from our side as no further
+  // updates will come through. Server doesn't keep track of seen tags, however, so we make the GONE operation
+  // have a higher priority than anything else.
+
+  // TODO: Does deleting on GONE make sense at all?
+  if (remote.optype == ChangesOpType.gone) return [];
+
   return calculateTags(local.tag, remote.tags, local.clearTags);
 }
 

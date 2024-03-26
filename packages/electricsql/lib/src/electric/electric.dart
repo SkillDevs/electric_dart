@@ -53,7 +53,7 @@ Future<void> defaultPrepare(DatabaseAdapter connection) async {
 /// call once they've constructed their implementations. This function can
 /// also be called directly by tests that don't want to go via the adapter
 /// entrypoints in order to avoid loading the environment dependencies.
-Future<ElectricClient> electrifyBase<DB extends DBSchema>({
+Future<ElectricClientRaw> electrifyBase<DB extends DBSchema>({
   required DbName dbName,
   required DB dbDescription,
   required ElectricConfig config,

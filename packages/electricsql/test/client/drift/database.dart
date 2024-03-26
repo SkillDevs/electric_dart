@@ -1,106 +1,28 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
+
+import 'generated/electric/drift_schema.dart';
 
 part 'database.g.dart';
 
-class Items extends Table {
-  TextColumn get value => text()();
-  IntColumn get nbr => integer().nullable()();
-
-  @override
-  String? get tableName => 'Items';
-
-  @override
-  Set<Column<Object>>? get primaryKey => {value};
-}
-
-class Users extends Table {
+class Extra extends Table {
   IntColumn get id => integer()();
-  TextColumn get name => text().nullable()();
 
-  @override
-  String? get tableName => 'User';
-
-  @override
-  Set<Column<Object>>? get primaryKey => {id};
-}
-
-class Posts extends Table {
-  IntColumn get id => integer()();
-  TextColumn get title => text().unique()();
-  TextColumn get contents => text()();
-  IntColumn get nbr => integer().nullable()();
-  IntColumn get authorId =>
-      integer().named('authorId').references(Users, #id)();
-
-  @override
-  String? get tableName => 'Post';
-
-  @override
-  Set<Column<Object>>? get primaryKey => {id};
-}
-
-class Profiles extends Table {
-  IntColumn get id => integer()();
-  TextColumn get bio => text()();
-  TextColumn get contents => text()();
-  IntColumn get userId =>
-      integer().unique().named('userId').references(Users, #id)();
-
-  @override
-  String? get tableName => 'Profile';
-
-  @override
-  Set<Column<Object>>? get primaryKey => {id};
-}
-
-class Dummy extends Table {
-  IntColumn get id => integer()();
-  Column<DateTime> get timestamp =>
-      customType(ElectricTypes.timestamp).nullable()();
-
-  @override
-  String? get tableName => 'Dummy';
-
-  @override
-  Set<Column<Object>>? get primaryKey => {id};
-}
-
-class DataTypes extends Table {
-  IntColumn get id => integer()();
-  Column<DateTime> get date => customType(ElectricTypes.date).nullable()();
-  Column<DateTime> get time => customType(ElectricTypes.time).nullable()();
-  Column<DateTime> get timetz => customType(ElectricTypes.timeTZ).nullable()();
-  Column<DateTime> get timestamp =>
-      customType(ElectricTypes.timestamp).nullable()();
-  Column<DateTime> get timestamptz =>
-      customType(ElectricTypes.timestampTZ).nullable()();
-  BoolColumn get boolCol => boolean().named('bool').nullable()();
-  TextColumn get uuid => customType(ElectricTypes.uuid).nullable()();
-  IntColumn get int2 => customType(ElectricTypes.int2).nullable()();
-  IntColumn get int4 => customType(ElectricTypes.int4).nullable()();
-  IntColumn get int8 => customType(ElectricTypes.int8).nullable()();
   Int64Column get int8BigInt => int64().nullable()();
-  RealColumn get float4 => customType(ElectricTypes.float4).nullable()();
-  RealColumn get float8 => customType(ElectricTypes.float8).nullable()();
-  Column<Object> get json => customType(ElectricTypes.json).nullable()();
-  Column<DbColor> get enumCol =>
-      customType(ElectricEnumTypes.color).named('enum').nullable()();
-
-  IntColumn get relatedId =>
-      integer().nullable().named('relatedId').references(Dummy, #id)();
 
   @override
-  String? get tableName => 'DataTypes';
+  String? get tableName => 'Extra';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
 }
 
 @DriftDatabase(
-  tables: [Items, Users, Posts, Profiles, Dummy, DataTypes],
+  tables: [...kElectrifiedTables, Extra],
   include: {'./other_tables.drift'},
 )
 class TestsDatabase extends _$TestsDatabase {
@@ -137,29 +59,4 @@ class _PretendToBePostgres extends QueryInterceptor {
   SqlDialect dialect(QueryExecutor executor) {
     return SqlDialect.postgres;
   }
-}
-
-/// Dart enum for Postgres enum "Color"
-enum DbColor { red, green, blue }
-
-/// Codecs for Electric enums
-class ElectricEnumCodecs {
-  /// Codec for Dart enum "Color"
-  static final color = ElectricEnumCodec<DbColor>(
-    dartEnumToPgEnum: <DbColor, String>{
-      DbColor.red: 'RED',
-      DbColor.green: 'GREEN',
-      DbColor.blue: 'BLUE',
-    },
-    values: DbColor.values,
-  );
-}
-
-/// Drift custom types for Electric enums
-class ElectricEnumTypes {
-  /// Codec for Dart enum "Color"
-  static final color = CustomElectricTypeEnum(
-    codec: ElectricEnumCodecs.color,
-    typeName: 'Color',
-  );
 }

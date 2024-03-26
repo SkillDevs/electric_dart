@@ -16,12 +16,15 @@ const kElectrifiedTables = [
   GenOptsDriftTable,
   TableWithCustomRowClass,
   Enums,
+  User,
+  Post,
+  Profile,
 ];
 
-class Project extends Table {
-  TextColumn get id => text()();
+class Project extends Table with ElectricTableMixin {
+  TextColumn get id => text().named('id')();
 
-  TextColumn get name => text().nullable()();
+  TextColumn get name => text().named('name').nullable()();
 
   TextColumn get ownerId => text().named('owner_id')();
 
@@ -33,9 +36,12 @@ class Project extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  @override
+  $ProjectTableRelations get $relations => const $ProjectTableRelations();
 }
 
-class Membership extends Table {
+class Membership extends Table with ElectricTableMixin {
   TextColumn get projectId => text().named('project_id')();
 
   TextColumn get userId => text().named('user_id')();
@@ -54,6 +60,9 @@ class Membership extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  @override
+  $MembershipTableRelations get $relations => const $MembershipTableRelations();
 }
 
 class Datatypes extends Table {
@@ -111,7 +120,7 @@ class Weirdnames extends Table {
 
   TextColumn get text$ => text().named('text')();
 
-  Column<Object> get braces => customType(ElectricTypes.json)();
+  Column<Object> get braces => customType(ElectricTypes.json).named('braces')();
 
   Column<DbInteger> get int$ =>
       customType(ElectricEnumTypes.integer).named('int').nullable()();
@@ -134,9 +143,10 @@ class GenOptsDriftTable extends Table {
   @JsonKey('my_id')
   IntColumn get myIdCol => customType(ElectricTypes.int4).named('id')();
 
-  TextColumn get value => text()();
+  TextColumn get value => text().named('value')();
 
   Column<DateTime> get timestamp => customType(ElectricTypes.timestampTZ)
+      .named('timestamp')
       .clientDefault(() => DateTime.now())();
 
   @override
@@ -151,20 +161,24 @@ class GenOptsDriftTable extends Table {
   constructor: 'fromDb',
 )
 class TableWithCustomRowClass extends Table {
-  IntColumn get id => customType(ElectricTypes.int4)();
+  IntColumn get id => customType(ElectricTypes.int4).named('id')();
 
-  TextColumn get value => text()();
+  TextColumn get value => text().named('value')();
 
-  RealColumn get d => customType(ElectricTypes.float4)();
+  RealColumn get d => customType(ElectricTypes.float4).named('d')();
+
+  @override
+  String? get tableName => 'TableWithCustomRowClass';
 
   @override
   bool get withoutRowId => true;
 }
 
 class Enums extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text().named('id')();
 
-  Column<DbColor> get c => customType(ElectricEnumTypes.color).nullable()();
+  Column<DbColor> get c =>
+      customType(ElectricEnumTypes.color).named('c').nullable()();
 
   @override
   String? get tableName => 'enums';
@@ -174,6 +188,68 @@ class Enums extends Table {
 
   @override
   bool get withoutRowId => true;
+}
+
+class User extends Table with ElectricTableMixin {
+  IntColumn get id => customType(ElectricTypes.int4).named('id')();
+
+  TextColumn get name => text().named('name').nullable()();
+
+  @override
+  String? get tableName => 'User';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+
+  @override
+  $UserTableRelations get $relations => const $UserTableRelations();
+}
+
+class Post extends Table with ElectricTableMixin {
+  IntColumn get id => customType(ElectricTypes.int4).named('id')();
+
+  TextColumn get title => text().named('title')();
+
+  TextColumn get contents => text().named('contents')();
+
+  IntColumn get nbr => customType(ElectricTypes.int4).named('nbr').nullable()();
+
+  IntColumn get authorId => customType(ElectricTypes.int4).named('authorId')();
+
+  @override
+  String? get tableName => 'Post';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+
+  @override
+  $PostTableRelations get $relations => const $PostTableRelations();
+}
+
+class Profile extends Table with ElectricTableMixin {
+  IntColumn get id => customType(ElectricTypes.int4).named('id')();
+
+  TextColumn get bio => text().named('bio')();
+
+  IntColumn get userId => customType(ElectricTypes.int4).named('userId')();
+
+  @override
+  String? get tableName => 'Profile';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+
+  @override
+  $ProfileTableRelations get $relations => const $ProfileTableRelations();
 }
 
 // ------------------------------ ENUMS ------------------------------
@@ -256,4 +332,80 @@ class ElectricEnumTypes {
     codec: ElectricEnumCodecs.snakeCaseEnum,
     typeName: 'snake_case_enum',
   );
+}
+
+// ------------------------------ RELATIONS ------------------------------
+
+class $ProjectTableRelations implements TableRelations {
+  const $ProjectTableRelations();
+
+  TableRelation<Membership> get memberships => const TableRelation<Membership>(
+        fromField: '',
+        toField: '',
+        relationName: 'MembershipToProject',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [memberships];
+}
+
+class $MembershipTableRelations implements TableRelations {
+  const $MembershipTableRelations();
+
+  TableRelation<Project> get project => const TableRelation<Project>(
+        fromField: 'project_id',
+        toField: 'id',
+        relationName: 'MembershipToProject',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [project];
+}
+
+class $UserTableRelations implements TableRelations {
+  const $UserTableRelations();
+
+  TableRelation<Post> get posts => const TableRelation<Post>(
+        fromField: '',
+        toField: '',
+        relationName: 'PostToUser',
+      );
+
+  TableRelation<Profile> get profile => const TableRelation<Profile>(
+        fromField: '',
+        toField: '',
+        relationName: 'ProfileToUser',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [
+        posts,
+        profile,
+      ];
+}
+
+class $PostTableRelations implements TableRelations {
+  const $PostTableRelations();
+
+  TableRelation<User> get author => const TableRelation<User>(
+        fromField: 'authorId',
+        toField: 'id',
+        relationName: 'PostToUser',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [author];
+}
+
+class $ProfileTableRelations implements TableRelations {
+  const $ProfileTableRelations();
+
+  TableRelation<User> get user => const TableRelation<User>(
+        fromField: 'userId',
+        toField: 'id',
+        relationName: 'ProfileToUser',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [user];
 }

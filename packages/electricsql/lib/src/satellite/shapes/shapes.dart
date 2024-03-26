@@ -29,7 +29,7 @@ abstract class SubscriptionsManager {
   /// Check if a subscription with exactly the same shape requests has already been issued
   /// @param shapes Shapes for a potential request
   DuplicatingSubRes? getDuplicatingSubscription(
-    List<ClientShapeDefinition> shapes,
+    List<Shape> shapes,
   );
 
   /// Deletes the subscription(s) from the manager.
