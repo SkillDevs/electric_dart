@@ -87,6 +87,18 @@ await electric.connect(jwtAuthToken);
 
 Shapes are the core primitive for controlling sync in the ElectricSQL system. [Shapes docs](https://electric-sql.com/docs/usage/data-access/shapes)
 
+#### Wait for sync finished
+
+If the shape subscription is invalid, the first promise will be rejected. If the data load fails for some reason, the second promise will be rejected.
+
+```dart
+// Resolves once the shape subscription is confirmed by the server.
+final shape = await electric.syncTable(<some_shape>);
+
+// Resolves once the initial data load for the shape is complete.
+await shape.synced
+```
+
 #### Sync a full table
 
 ```dart

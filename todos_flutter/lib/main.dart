@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' hide Column;
 import 'package:electricsql/util.dart' show genUUID;
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql_flutter/drivers/drift.dart';
