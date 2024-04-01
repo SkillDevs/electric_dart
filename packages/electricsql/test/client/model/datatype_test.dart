@@ -798,4 +798,37 @@ void main() async {
         .getSingle();
     expect(fetchRes.json, null);
   });
+
+  test('support BLOB type', () async {
+    final blob = Uint8List.fromList([1, 2, 3, 4, 5]);
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: 1,
+            bytea: Value(blob),
+          ),
+        );
+
+    expect(res.bytea, blob);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.bytea, blob);
+  });
+
+  test('support null values for BLOB type', () async {
+    final res = await db.into(db.dataTypes).insertReturning(
+          DataTypesCompanion.insert(
+            id: 1,
+            bytea: const Value(null),
+          ),
+        );
+
+    expect(res.bytea, null);
+
+    final fetchRes = await (db.select(db.dataTypes)
+          ..where((t) => t.id.equals(1)))
+        .getSingle();
+    expect(fetchRes.bytea, null);
+  });
 }

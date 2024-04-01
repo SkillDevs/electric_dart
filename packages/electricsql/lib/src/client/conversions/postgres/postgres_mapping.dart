@@ -25,6 +25,7 @@ Object mapToSql(PgType? type, Object dartValue) {
     PgType.timeTz =>
       pg.TypedValue(pg.Type.timestampWithTimezone, dartValue),
     PgType.date => pg.TypedValue(pg.Type.date, dartValue),
+    PgType.bytea => pg.TypedValue(pg.Type.byteArray, dartValue),
     // We use the string representation for the enums
     // Because we don't have the oid, we need to use Type.unspecified
     // and decode UndecodedBytes when reading the value

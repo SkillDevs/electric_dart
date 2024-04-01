@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
@@ -400,5 +402,68 @@ void main() async {
       variables: [const Variable(5)],
     ).get();
     expect(rawRes5[0].read<String>('json'), jsonEncode([1, 2, 3]));
+  });
+
+  test('bytea is converted correctly to SQLite', () async {
+    // inserting
+    final bytea1 = Uint8List.fromList([1, 2, 3, 4]);
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: 1,
+            bytea: Value(bytea1),
+          ),
+        );
+
+    final rawRes1 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+    expect(rawRes1[0].read<Uint8List>('bytea'), bytea1);
+
+    // updating
+    final bytea2 = Uint8List.fromList([1, 2, 3, 5]);
+    await (db.update(db.dataTypes)..where((d) => d.id.equals(1))).write(
+      DataTypesCompanion(
+        bytea: Value(bytea2),
+      ),
+    );
+
+    final rawRes2 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+    expect(rawRes2[0].read<Uint8List>('bytea'), bytea2);
+
+    // inserting null
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: 2,
+            bytea: const Value(null),
+          ),
+        );
+
+    final rawRes3 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(2)],
+    ).get();
+    expect(rawRes3[0].read<Uint8List?>('bytea'), null);
+
+    // inserting large buffer
+    const sizeInBytes = 1000000;
+    final bytea3 = Uint8List(sizeInBytes);
+    final r = Random();
+    bytea3.forEachIndexed((i, _) => bytea3[i] = r.nextInt(256));
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: 3,
+            bytea: Value(bytea3),
+          ),
+        );
+
+    final rawRes4 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(3)],
+    ).get();
+    expect(rawRes4[0].read<Uint8List>('bytea'), bytea3);
   });
 }

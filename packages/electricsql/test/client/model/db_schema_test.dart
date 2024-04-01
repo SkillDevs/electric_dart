@@ -37,6 +37,7 @@ void main() async {
       'float4': PgType.float4,
       'float8': PgType.float8,
       'json': PgType.jsonb,
+      'bytea': PgType.bytea,
       'relatedId': PgType.int4,
     });
 

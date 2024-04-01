@@ -382,7 +382,7 @@ String rowToString(SatOpRow row) {
   return row.values
       .mapIndexed(
         (i, x) => getMaskBit(row.nullsBitmask, i) == 0
-            ? json.encode(TypeDecoder.text(x))
+            ? json.encode(TypeDecoder.text(x, allowMalformed: true))
             : '∅',
       )
       .join(', ');

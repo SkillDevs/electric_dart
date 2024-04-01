@@ -133,6 +133,8 @@ class DataTypes extends Table with ElectricTableMixin {
   Column<Object> get json =>
       customType(ElectricTypes.jsonb).named('json').nullable()();
 
+  BlobColumn get bytea => blob().named('bytea').nullable()();
+
   Column<DbColor> get enum$ =>
       customType(ElectricEnumTypes.color).named('enum').nullable()();
 

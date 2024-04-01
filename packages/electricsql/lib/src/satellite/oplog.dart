@@ -309,6 +309,7 @@ PendingChanges remoteOperationsToTableChanges(
 
 /// Serialises a row that is represented by a record.
 /// `NaN`, `+Inf`, and `-Inf` are transformed to their string equivalent.
+/// Bytestrings are encoded as hex strings
 /// @param record The row to serialise.
 String serialiseRow(Row row) {
   final convertedToSpec = row.map((key, value) {
@@ -322,6 +323,10 @@ String serialiseRow(Row row) {
       return MapEntry(key, value.toString());
     }
 
+    if (value is List<int>) {
+      return MapEntry(key, blobToHexString(value));
+    }
+
     return MapEntry(key, value);
   });
 
@@ -331,6 +336,7 @@ String serialiseRow(Row row) {
 /// Deserialises a row back into a record.
 /// `"NaN"`, `"+Inf"`, and `"-Inf"` are transformed back into their numeric equivalent
 /// if the column type is a float.
+/// Hex encoded bytestrings are transformed back to `Uint8Array` instances
 /// @param str The row to deserialise.
 /// @param rel The relation for the table to which this row belongs.
 Row deserialiseRow(String str, Relation rel) {
@@ -359,6 +365,9 @@ Row deserialiseRow(String str, Relation rel) {
 
     if (columnType == 'INT8' || columnType == 'BIGINT') {
       return MapEntry(key, BigInt.parse(value.toString()));
+    }
+    if ((columnType == 'BYTEA' || columnType == 'BLOB') && value is String) {
+      return MapEntry(key, hexStringToBlob(value));
     }
 
     return MapEntry(key, value);

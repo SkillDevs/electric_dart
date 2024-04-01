@@ -148,5 +148,6 @@ enum DriftElectricColumnType {
   json,
   jsonb,
   bigint,
+  blob,
   enumT,
 }

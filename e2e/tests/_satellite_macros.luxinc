@@ -61,6 +61,10 @@
 
 [endmacro]
 
+[macro node_await_get_blob id]
+    [invoke wait-for "get_blob db '${id}'" "${id}" 10 $node]
+[endmacro]
+
 [macro node_get_uuid id]
     !get_uuid db '${id}'
     ??{ id: '${id}' }
@@ -109,6 +113,12 @@
     ??$node
 [endmacro]
 
+[macro node_get_blob id expected_blob]
+    !get_blob db '${id}'
+    ??{ id: '${id}', blob: ${expected_blob} }
+    ??$node
+[endmacro]
+
 [macro node_write_float id f4_value f8_value]
     # Can write valid floats to the DB
     !write_float db '${id}' ${f4_value} ${f8_value}
@@ -128,6 +138,13 @@
     !write_json db '${id}' ${json_value} ${jsonb_value}
     #??{ id: '${id}', js: ${json_value}, jsb: ${jsonb_value} }
     # ??{ id: '${id}', jsb: ${jsonb_value} }
+    ??$node
+[endmacro]
+
+[macro node_write_blob id value]
+    # Can write valid blobs to the DB
+    !write_blob db '${id}' ${value}
+    ??{ id: '${id}', blob:
     ??$node
 [endmacro]
 

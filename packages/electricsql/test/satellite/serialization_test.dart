@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
@@ -24,6 +25,9 @@ void main() {
         RelationColumn(name: 'name1', type: 'TEXT', isNullable: true),
         RelationColumn(name: 'name2', type: 'TEXT', isNullable: true),
         RelationColumn(name: 'name3', type: 'TEXT', isNullable: true),
+        RelationColumn(name: 'blob1', type: 'BYTEA', isNullable: true),
+        RelationColumn(name: 'blob2', type: 'BYTEA', isNullable: true),
+        RelationColumn(name: 'blob3', type: 'BYTEA', isNullable: true),
         RelationColumn(name: 'int1', type: 'INTEGER', isNullable: true),
         RelationColumn(name: 'int2', type: 'INTEGER', isNullable: true),
         RelationColumn(name: 'float1', type: 'REAL', isNullable: true),
@@ -44,6 +48,9 @@ void main() {
           'name1': PgType.text,
           'name2': PgType.text,
           'name3': PgType.text,
+          'blob1': PgType.bytea,
+          'blob2': PgType.bytea,
+          'blob3': PgType.bytea,
           'int1': PgType.integer,
           'int2': PgType.integer,
           'float1': PgType.real,
@@ -64,6 +71,9 @@ void main() {
       'name1': 'Hello',
       'name2': 'World!',
       'name3': null,
+      'blob1': Uint8List.fromList([1, 15, 255, 145]),
+      'blob2': Uint8List.fromList([]),
+      'blob3': null,
       'int1': 1,
       'int2': -30,
       'float1': 1.0,
@@ -75,13 +85,20 @@ void main() {
       'enum1': 'red',
       'enum2': null,
     };
+    final recordKeys = record.keys.toList();
     final sRow = serializeRow(record, rel, dbDescription);
     expect(
-      sRow.values.map((bytes) => utf8.decode(bytes)),
+      sRow.values.mapIndexed(
+        (i, bytes) =>
+            recordKeys[i].startsWith('blob') ? 'blob' : utf8.decode(bytes),
+      ),
       [
         'Hello',
         'World!',
         '',
+        'blob',
+        'blob',
+        'blob',
         '1',
         '-30',
         '1',
@@ -103,6 +120,9 @@ void main() {
       'name1': 'Edge cases for Floats',
       'name2': null,
       'name3': null,
+      'blob1': Uint8List.fromList([1, 15, 255, 145]),
+      'blob2': Uint8List.fromList([]),
+      'blob3': null,
       'int1': null,
       'int2': null,
       'float1': double.nan,
@@ -115,13 +135,20 @@ void main() {
       'enum2': null,
     };
 
+    final recordKeys2 = record2.keys.toList();
     final sRow2 = serializeRow(record2, rel, dbDescription);
     expect(
-      sRow2.values.map((bytes) => utf8.decode(bytes)),
+      sRow2.values.mapIndexed(
+        (i, bytes) =>
+            recordKeys2[i].startsWith('blob') ? 'blob' : utf8.decode(bytes),
+      ),
       [
         'Edge cases for Floats',
         '',
         '',
+        'blob',
+        'blob',
+        'blob',
         '',
         '',
         'NaN',

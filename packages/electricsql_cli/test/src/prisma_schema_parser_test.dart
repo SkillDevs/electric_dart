@@ -222,7 +222,7 @@ ALTER TABLE datatypes ENABLE ELECTRIC;
 void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final table = schemaInfo.tables[2];
 
-  expect(table.columns.length, 15);
+  expect(table.columns.length, 16);
 
   expect(table.tableName, 'datatypes');
   expect(table.dartClassName, 'Datatypes');
@@ -281,6 +281,9 @@ void expectValidDatatypesModel(DriftSchemaInfo schemaInfo) {
   final jsonBColumn =
       table.columns.firstWhere((c) => c.columnName == 'c_jsonb');
   expect(jsonBColumn.type, DriftElectricColumnType.jsonb);
+
+  final blobColumn = table.columns.firstWhere((c) => c.columnName == 'c_bytea');
+  expect(blobColumn.type, DriftElectricColumnType.blob);
 }
 
 void expectValidWeirdNames(DriftSchemaInfo schemaInfo) {

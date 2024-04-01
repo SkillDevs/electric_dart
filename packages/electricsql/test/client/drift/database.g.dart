@@ -1113,6 +1113,11 @@ class $DataTypesTable extends DataTypes
   late final GeneratedColumn<Object> json = GeneratedColumn<Object>(
       'json', aliasedName, true,
       type: ElectricTypes.jsonb, requiredDuringInsert: false);
+  static const VerificationMeta _byteaMeta = const VerificationMeta('bytea');
+  @override
+  late final GeneratedColumn<Uint8List> bytea = GeneratedColumn<Uint8List>(
+      'bytea', aliasedName, true,
+      type: DriftSqlType.blob, requiredDuringInsert: false);
   static const VerificationMeta _enum$Meta = const VerificationMeta('enum\$');
   @override
   late final GeneratedColumn<DbColor> enum$ = GeneratedColumn<DbColor>(
@@ -1140,6 +1145,7 @@ class $DataTypesTable extends DataTypes
         float4,
         float8,
         json,
+        bytea,
         enum$,
         relatedId
       ];
@@ -1212,6 +1218,10 @@ class $DataTypesTable extends DataTypes
       context.handle(
           _jsonMeta, json.isAcceptableOrUnknown(data['json']!, _jsonMeta));
     }
+    if (data.containsKey('bytea')) {
+      context.handle(
+          _byteaMeta, bytea.isAcceptableOrUnknown(data['bytea']!, _byteaMeta));
+    }
     if (data.containsKey('enum')) {
       context.handle(
           _enum$Meta, enum$.isAcceptableOrUnknown(data['enum']!, _enum$Meta));
@@ -1257,6 +1267,8 @@ class $DataTypesTable extends DataTypes
           .read(ElectricTypes.float8, data['${effectivePrefix}float8']),
       json: attachedDatabase.typeMapping
           .read(ElectricTypes.jsonb, data['${effectivePrefix}json']),
+      bytea: attachedDatabase.typeMapping
+          .read(DriftSqlType.blob, data['${effectivePrefix}bytea']),
       enum$: attachedDatabase.typeMapping
           .read(ElectricEnumTypes.color, data['${effectivePrefix}enum']),
       relatedId: attachedDatabase.typeMapping
@@ -1288,6 +1300,7 @@ class DataType extends DataClass implements Insertable<DataType> {
   final double? float4;
   final double? float8;
   final Object? json;
+  final Uint8List? bytea;
   final DbColor? enum$;
   final int? relatedId;
   const DataType(
@@ -1305,6 +1318,7 @@ class DataType extends DataClass implements Insertable<DataType> {
       this.float4,
       this.float8,
       this.json,
+      this.bytea,
       this.enum$,
       this.relatedId});
   @override
@@ -1351,6 +1365,9 @@ class DataType extends DataClass implements Insertable<DataType> {
     if (!nullToAbsent || json != null) {
       map['json'] = Variable<Object>(json, ElectricTypes.jsonb);
     }
+    if (!nullToAbsent || bytea != null) {
+      map['bytea'] = Variable<Uint8List>(bytea);
+    }
     if (!nullToAbsent || enum$ != null) {
       map['enum'] = Variable<DbColor>(enum$, ElectricEnumTypes.color);
     }
@@ -1384,6 +1401,8 @@ class DataType extends DataClass implements Insertable<DataType> {
       float8:
           float8 == null && nullToAbsent ? const Value.absent() : Value(float8),
       json: json == null && nullToAbsent ? const Value.absent() : Value(json),
+      bytea:
+          bytea == null && nullToAbsent ? const Value.absent() : Value(bytea),
       enum$:
           enum$ == null && nullToAbsent ? const Value.absent() : Value(enum$),
       relatedId: relatedId == null && nullToAbsent
@@ -1410,6 +1429,7 @@ class DataType extends DataClass implements Insertable<DataType> {
       float4: serializer.fromJson<double?>(json['float4']),
       float8: serializer.fromJson<double?>(json['float8']),
       json: serializer.fromJson<Object?>(json['json']),
+      bytea: serializer.fromJson<Uint8List?>(json['bytea']),
       enum$: serializer.fromJson<DbColor?>(json['enum\$']),
       relatedId: serializer.fromJson<int?>(json['relatedId']),
     );
@@ -1432,6 +1452,7 @@ class DataType extends DataClass implements Insertable<DataType> {
       'float4': serializer.toJson<double?>(float4),
       'float8': serializer.toJson<double?>(float8),
       'json': serializer.toJson<Object?>(json),
+      'bytea': serializer.toJson<Uint8List?>(bytea),
       'enum\$': serializer.toJson<DbColor?>(enum$),
       'relatedId': serializer.toJson<int?>(relatedId),
     };
@@ -1452,6 +1473,7 @@ class DataType extends DataClass implements Insertable<DataType> {
           Value<double?> float4 = const Value.absent(),
           Value<double?> float8 = const Value.absent(),
           Value<Object?> json = const Value.absent(),
+          Value<Uint8List?> bytea = const Value.absent(),
           Value<DbColor?> enum$ = const Value.absent(),
           Value<int?> relatedId = const Value.absent()}) =>
       DataType(
@@ -1469,6 +1491,7 @@ class DataType extends DataClass implements Insertable<DataType> {
         float4: float4.present ? float4.value : this.float4,
         float8: float8.present ? float8.value : this.float8,
         json: json.present ? json.value : this.json,
+        bytea: bytea.present ? bytea.value : this.bytea,
         enum$: enum$.present ? enum$.value : this.enum$,
         relatedId: relatedId.present ? relatedId.value : this.relatedId,
       );
@@ -1489,6 +1512,7 @@ class DataType extends DataClass implements Insertable<DataType> {
           ..write('float4: $float4, ')
           ..write('float8: $float8, ')
           ..write('json: $json, ')
+          ..write('bytea: $bytea, ')
           ..write('enum\$: ${enum$}, ')
           ..write('relatedId: $relatedId')
           ..write(')'))
@@ -1511,6 +1535,7 @@ class DataType extends DataClass implements Insertable<DataType> {
       float4,
       float8,
       json,
+      $driftBlobEquality.hash(bytea),
       enum$,
       relatedId);
   @override
@@ -1531,6 +1556,7 @@ class DataType extends DataClass implements Insertable<DataType> {
           other.float4 == this.float4 &&
           other.float8 == this.float8 &&
           other.json == this.json &&
+          $driftBlobEquality.equals(other.bytea, this.bytea) &&
           other.enum$ == this.enum$ &&
           other.relatedId == this.relatedId);
 }
@@ -1550,6 +1576,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
   final Value<double?> float4;
   final Value<double?> float8;
   final Value<Object?> json;
+  final Value<Uint8List?> bytea;
   final Value<DbColor?> enum$;
   final Value<int?> relatedId;
   const DataTypesCompanion({
@@ -1567,6 +1594,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.float4 = const Value.absent(),
     this.float8 = const Value.absent(),
     this.json = const Value.absent(),
+    this.bytea = const Value.absent(),
     this.enum$ = const Value.absent(),
     this.relatedId = const Value.absent(),
   });
@@ -1585,6 +1613,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.float4 = const Value.absent(),
     this.float8 = const Value.absent(),
     this.json = const Value.absent(),
+    this.bytea = const Value.absent(),
     this.enum$ = const Value.absent(),
     this.relatedId = const Value.absent(),
   }) : id = Value(id);
@@ -1603,6 +1632,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     Expression<double>? float4,
     Expression<double>? float8,
     Expression<Object>? json,
+    Expression<Uint8List>? bytea,
     Expression<DbColor>? enum$,
     Expression<int>? relatedId,
   }) {
@@ -1621,6 +1651,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       if (float4 != null) 'float4': float4,
       if (float8 != null) 'float8': float8,
       if (json != null) 'json': json,
+      if (bytea != null) 'bytea': bytea,
       if (enum$ != null) 'enum': enum$,
       if (relatedId != null) 'relatedId': relatedId,
     });
@@ -1641,6 +1672,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       Value<double?>? float4,
       Value<double?>? float8,
       Value<Object?>? json,
+      Value<Uint8List?>? bytea,
       Value<DbColor?>? enum$,
       Value<int?>? relatedId}) {
     return DataTypesCompanion(
@@ -1658,6 +1690,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       float4: float4 ?? this.float4,
       float8: float8 ?? this.float8,
       json: json ?? this.json,
+      bytea: bytea ?? this.bytea,
       enum$: enum$ ?? this.enum$,
       relatedId: relatedId ?? this.relatedId,
     );
@@ -1710,6 +1743,9 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     if (json.present) {
       map['json'] = Variable<Object>(json.value, ElectricTypes.jsonb);
     }
+    if (bytea.present) {
+      map['bytea'] = Variable<Uint8List>(bytea.value);
+    }
     if (enum$.present) {
       map['enum'] = Variable<DbColor>(enum$.value, ElectricEnumTypes.color);
     }
@@ -1736,6 +1772,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
           ..write('float4: $float4, ')
           ..write('float8: $float8, ')
           ..write('json: $json, ')
+          ..write('bytea: $bytea, ')
           ..write('enum\$: ${enum$}, ')
           ..write('relatedId: $relatedId')
           ..write(')'))

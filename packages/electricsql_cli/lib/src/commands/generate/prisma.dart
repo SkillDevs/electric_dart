@@ -502,6 +502,8 @@ DriftElectricColumnType? _convertPrismaTypeToDrift(
         return DriftElectricColumnType.bigint;
       }
       return DriftElectricColumnType.int8;
+    case 'Bytes':
+      return DriftElectricColumnType.blob;
     default:
       return null;
   }

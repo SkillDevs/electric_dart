@@ -1330,6 +1330,8 @@ Object deserializeColumnData(
       return TypeDecoder.float(column);
     case PgType.timeTz:
       return TypeDecoder.timetz(column);
+    case PgType.bytea:
+      return column;
   }
 }
 
@@ -1340,6 +1342,8 @@ List<int> serializeColumnData(Object columnValue, PgType? columnType) {
       return TypeEncoder.boolean(columnValue as int);
     case PgType.timeTz:
       return TypeEncoder.timetz(columnValue as String);
+    case PgType.bytea:
+      return columnValue as List<int>;
     default:
       // Enums (pgType == null) are encoded as text
       return TypeEncoder.text(_getDefaultStringToSerialize(columnValue));

@@ -250,6 +250,7 @@ List<Statement> generateTriggers(Tables tables) {
 /// that can be used to build a JSON object in a SQLite `json_object` function call.
 /// Values of type REAL are cast to text to avoid a bug in SQLite's `json_object` function (see below).
 /// Similarly, values of type INT8 (i.e. BigInts) are cast to text because JSON does not support BigInts.
+/// All BLOB or BYTEA bytestrings are also encoded as hex strings to make them part of a JSON
 ///
 /// NOTE: There is a bug with SQLite's `json_object` function up to version 3.41.2
 ///       that causes it to return an invalid JSON object if some value is +Infinity or -Infinity.
@@ -294,30 +295,32 @@ String joinColsForJSON(
   ColumnTypes colTypes,
   String? target,
 ) {
-  // casts the value to TEXT if it is of type REAL
-  // to work around the bug in SQLite's `json_object` function
-  String castIfNeeded(String col, String targettedCol) {
+  // Perform transformations on some columns to ensure consistent
+  // serializability into JSON
+  String transformIfNeeded(String col, String targetedCol) {
     final tpes = colTypes[col]!;
     final sqliteType = tpes.sqliteType;
     final pgType = tpes.pgType;
-    if (
-        // REAL has a special handling for NaN and Infinities
-        sqliteType == 'REAL' ||
-            // INT8 and BIGINT encoded as string in oplog JSON
-            (pgType == 'INT8' || pgType == 'BIGINT')) {
-      return 'cast($targettedCol as TEXT)';
-    } else {
-      return targettedCol;
+
+    // cast REALs, INT8s, BIGINTs to TEXT to work around SQLite's `json_object` bug
+    if (sqliteType == 'REAL' || pgType == 'INT8' || pgType == 'BIGINT') {
+      return 'cast($targetedCol as TEXT)';
     }
+
+    // transform blobs/bytestrings into hexadecimal strings for JSON encoding
+    if (sqliteType == 'BLOB' || pgType == 'BYTEA') {
+      return 'CASE WHEN $targetedCol IS NOT NULL THEN hex($targetedCol) ELSE NULL END';
+    }
+    return targetedCol;
   }
 
   if (target == null) {
     return (cols..sort())
-        .map((col) => "'$col', ${castIfNeeded(col, '"$col"')}")
+        .map((col) => "'$col', ${transformIfNeeded(col, '"$col"')}")
         .join(', ');
   } else {
     return (cols..sort())
-        .map((col) => "'$col', ${castIfNeeded(col, '$target."$col"')}")
+        .map((col) => "'$col', ${transformIfNeeded(col, '$target."$col"')}")
         .join(', ');
   }
 }

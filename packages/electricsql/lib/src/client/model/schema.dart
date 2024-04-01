@@ -103,6 +103,7 @@ class DBSchemaDrift extends DBSchema {
       case DriftSqlType.bigInt:
         return PgType.int8;
       case DriftSqlType.blob:
+        return PgType.bytea;
       case DriftSqlType.any:
         // Unsupported
         return null;

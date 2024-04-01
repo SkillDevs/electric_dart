@@ -245,6 +245,17 @@ Future<void> start() async {
           command,
           getEnum,
         );
+      } else if (name == "get_blob") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+            state, command, getBlob);
+      } else if (name == "write_blob") {
+        await processCommand3Params<MyDriftElectricClient, String,
+            List<dynamic>?, SingleRow>(
+          state,
+          command,
+          (electric, id, byteList) =>
+              writeBlob(electric, id, byteList?.cast<int>()),
+        );
       } else if (name == "get_items") {
         await processCommand1Param<MyDriftElectricClient, Rows>(
           state,

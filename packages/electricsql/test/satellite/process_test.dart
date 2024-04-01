@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
@@ -378,6 +379,38 @@ void main() {
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, BigInt.from(1));
+  });
+
+  test('snapshot of INSERT with blob/Uint8Array', () async {
+    await runMigrations();
+
+    final blob = Uint8List.fromList([1, 2, 255, 244, 160, 1]);
+
+    await adapter.run(
+      Statement(
+        'INSERT INTO blobTable(value) VALUES (?)',
+        [blob],
+      ),
+    );
+
+    satellite.setAuthState(authState);
+    await satellite.performSnapshot();
+    final entries = await satellite.getEntries();
+    final clientId = satellite.authState!.clientId;
+
+    final merged = localOperationsToTableChanges(
+      entries,
+      (timestamp) {
+        return generateTag(clientId, timestamp);
+      },
+      kTestRelations,
+    );
+
+    final opLogTableChange =
+        merged['main.blobTable']!['{"value":"${blobToHexString(blob)}"}']!;
+    final keyChanges = opLogTableChange.oplogEntryChanges;
+    final resultingValue = keyChanges.changes['value']!.value;
+    expect(resultingValue, blob);
   });
 
   test('take snapshot and merge local wins', () async {

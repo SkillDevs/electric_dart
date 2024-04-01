@@ -103,6 +103,8 @@ class Datatypes extends Table {
   Column<Object> get cJsonb =>
       customType(ElectricTypes.jsonb).named('c_jsonb')();
 
+  BlobColumn get cBytea => blob().named('c_bytea')();
+
   @override
   String? get tableName => 'datatypes';
 

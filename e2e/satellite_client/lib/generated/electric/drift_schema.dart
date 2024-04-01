@@ -17,6 +17,7 @@ const kElectrifiedTables = [
   Floats,
   Jsons,
   Enums,
+  Blobs,
 ];
 
 class Items extends Table with ElectricTableMixin {
@@ -199,6 +200,21 @@ class Enums extends Table {
 
   @override
   String? get tableName => 'Enums';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Blobs extends Table {
+  TextColumn get id => text().named('id')();
+
+  BlobColumn get blob$ => blob().named('blob').nullable()();
+
+  @override
+  String? get tableName => 'blobs';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};

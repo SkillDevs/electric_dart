@@ -422,6 +422,23 @@ SingleRow _enumClassToRawRow(Enum item) {
   return SingleRow(driftCols);
 }
 
+Future<SingleRow> getBlob(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.blobs.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  return SingleRow.fromItem(item);
+}
+
+Future<SingleRow> writeBlob(
+    MyDriftElectricClient electric, String id, List<int>? blob) async {
+  final item = await electric.db.blobs.insertReturning(
+    BlobsCompanion.insert(
+      id: id,
+      blob$: Value(blob == null ? null : Uint8List.fromList(blob)),
+    ),
+  );
+  return SingleRow.fromItem(item);
+}
+
 Future<Rows> getItemColumns(
     MyDriftElectricClient electric, String table, String column) async {
   final rows = await electric.db

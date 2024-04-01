@@ -179,6 +179,12 @@ Map<String, Relation> kTestRelations = {
         isNullable: true,
         primaryKey: null,
       ),
+      RelationColumn(
+        name: 'blob',
+        type: 'BYTEA',
+        isNullable: true,
+        primaryKey: null,
+      ),
     ],
   ),
   'bigIntTable': Relation(
@@ -192,6 +198,20 @@ Map<String, Relation> kTestRelations = {
         type: 'INT8',
         isNullable: false,
         primaryKey: 1,
+      ),
+    ],
+  ),
+  'blobTable': Relation(
+    id: 6,
+    schema: 'public',
+    table: 'blobTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'value',
+        type: 'BYTEA',
+        isNullable: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -343,7 +363,7 @@ void migrateDb(Database db, Table table) {
   final tableName = table.tableName;
   // Create the table in the database
   final createTableSQL =
-      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER)';
+      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER, blob BLOB)';
   db.execute(createTableSQL);
 
   // Apply the initial migration on the database
@@ -362,7 +382,7 @@ void migrateDb(Database db, Table table) {
 final kPersonTable = Table(
   namespace: 'main',
   tableName: 'personTable',
-  columns: ['id', 'name', 'age', 'bmi', 'int8'],
+  columns: ['id', 'name', 'age', 'bmi', 'int8', 'blob'],
   primary: ['id'],
   foreignKeys: [],
   columnTypes: {
@@ -371,5 +391,6 @@ final kPersonTable = Table(
     'age': (sqliteType: 'INTEGER', pgType: 'INTEGER'),
     'bmi': (sqliteType: 'REAL', pgType: 'REAL'),
     'int8': (sqliteType: 'INTEGER', pgType: 'INT8'),
+    'blob': (sqliteType: 'BLOB', pgType: 'BYTEA'),
   },
 );

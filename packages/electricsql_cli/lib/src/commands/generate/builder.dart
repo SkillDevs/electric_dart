@@ -398,6 +398,8 @@ Expression _getInitialColumnBuilder(
       return _customElectricTypeExpr('jsonb');
     case DriftElectricColumnType.bigint:
       return refer('int64', kDriftImport).call([]);
+    case DriftElectricColumnType.blob:
+      return refer('blob', kDriftImport).call([]);
   }
 }
 
@@ -439,5 +441,7 @@ Reference _getOutColumnTypeFromColumnInfo(
       return refer('Column<Object>', kDriftImport);
     case DriftElectricColumnType.bigint:
       return refer('Int64Column', kDriftImport);
+    case DriftElectricColumnType.blob:
+      return refer('BlobColumn', kDriftImport);
   }
 }
