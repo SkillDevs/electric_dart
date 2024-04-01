@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:electricsql/drivers/drift.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:satellite_dart_client/client_commands.dart';
 import 'package:satellite_dart_client/cli/reader.dart';
 import 'package:satellite_dart_client/cli/tokens.dart';
@@ -62,16 +63,24 @@ Future<void> start() async {
         );
       } else if (name == "electrify_db") {
         await processCommand5Params<ClientDatabase, String, int, List<dynamic>,
-            bool, DriftElectricClient>(
+            bool, MyDriftElectricClient>(
           state,
           command,
           electrifyDb,
         );
       } else if (name == "sync_table") {
-        await processCommand2Params<DriftElectricClient, String, void>(
+        await processCommand2Params<MyDriftElectricClient, String, void>(
           state,
           command,
           syncTable,
+        );
+      } else if (name == "low_level_subscribe") {
+        await processCommand2Params<MyDriftElectricClient, Map<String, Object?>,
+            void>(
+          state,
+          command,
+          (electric, shapeJson) =>
+              lowLevelSubscribe(electric, Shape.fromMap(shapeJson)),
         );
       } else if (name == "get_tables") {
         await processCommand1Param<DriftElectricClient, Rows>(
@@ -90,6 +99,15 @@ Future<void> start() async {
           state,
           command,
           getRows,
+        );
+      } else if (name == "print_num_rows") {
+        await processCommand2Params<DriftElectricClient, String, String>(
+          state,
+          command,
+          (electric, table) async {
+            final rows = await getRows(electric, table);
+            return 'There are ${rows.rows.length} rows in table $table';
+          },
         );
       } else if (name == "get_timestamps") {
         await processCommand1Param<MyDriftElectricClient, void>(

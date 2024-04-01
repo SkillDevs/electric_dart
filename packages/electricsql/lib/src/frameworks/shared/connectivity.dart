@@ -13,7 +13,7 @@ const _kValidStatuses = <ConnectivityStatus>{
   ConnectivityStatus.disconnected,
 };
 
-ConnectivityState getElectricConnectivityState(ElectricClient? electric) {
+ConnectivityState getElectricConnectivityState(BaseElectricClient? electric) {
   if (electric == null) {
     return _kStates.disconnected;
   }

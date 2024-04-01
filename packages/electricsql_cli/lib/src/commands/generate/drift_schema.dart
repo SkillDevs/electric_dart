@@ -1,9 +1,14 @@
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
+import 'package:equatable/equatable.dart';
 
 class DriftSchemaInfo {
   final List<DriftTableInfo> tables;
   final Map<String, DriftEnum> enums;
   final ElectricDriftGenOpts? genOpts;
+
+  late final Map<String, DriftTableInfo> tablesByPrismaModel = Map.fromEntries(
+    tables.map((info) => MapEntry(info.prismaModelName, info)),
+  );
 
   DriftSchemaInfo({
     required this.tables,
@@ -16,6 +21,9 @@ class DriftSchemaInfo {
 }
 
 class DriftTableInfo {
+  /// The name of the model in the Prisma schema
+  final String prismaModelName;
+
   /// The name of the table in the database
   final String tableName;
 
@@ -25,18 +33,29 @@ class DriftTableInfo {
   /// Information for the columns
   final List<DriftColumn> columns;
 
+  final List<DriftRelationInfo> relations;
+
+  late final Map<String, DriftColumn> columnsByPrismaField = Map.fromEntries(
+    columns.map((c) => MapEntry(c.prismaFieldName, c)),
+  );
+
   DriftTableInfo({
+    required this.prismaModelName,
     required this.tableName,
     required this.dartClassName,
     required this.columns,
+    required this.relations,
   });
 
   @override
   String toString() =>
-      'DriftTableInfo(tableName: $tableName, dartClassName: $dartClassName, columns: $columns)';
+      'DriftTableInfo(tableName: $tableName, dartClassName: $dartClassName, columns: $columns, relations: $relations)';
 }
 
 class DriftColumn {
+  /// The name of the column field in the prisma schema
+  final String prismaFieldName;
+
   final String columnName;
   final String dartName;
   final DriftElectricColumnType type;
@@ -45,6 +64,7 @@ class DriftColumn {
   final String? enumPgType;
 
   DriftColumn({
+    required this.prismaFieldName,
     required this.columnName,
     required this.dartName,
     required this.type,
@@ -77,6 +97,38 @@ class DriftEnum {
   @override
   String toString() =>
       'DriftEnum(name: $pgName, values: $values, dartEnumName: $dartEnumName, enumCodecName: $enumCodecName, driftTypeName: $driftTypeName)';
+}
+
+class DriftRelationInfo with EquatableMixin {
+  final String relationField;
+  final String relationFieldDartName;
+  final String fromField;
+  final String toField;
+  final String relatedModel;
+  final String relationName;
+
+  DriftRelationInfo({
+    required this.relationField,
+    required this.relationFieldDartName,
+    required this.fromField,
+    required this.toField,
+    required this.relatedModel,
+    required this.relationName,
+  });
+
+  @override
+  String toString() =>
+      'DriftRelationInfo(relationField: $relationField, relationFieldDartName: $relationFieldDartName, fromField: $fromField, toField: $toField, relatedModel: $relatedModel, relationName: $relationName)';
+
+  @override
+  List<Object?> get props => [
+        relationField,
+        relationFieldDartName,
+        fromField,
+        toField,
+        relatedModel,
+        relationName,
+      ];
 }
 
 enum DriftElectricColumnType {

@@ -1,3 +1,5 @@
+// import 'dart:convert';
+
 import 'package:drift/drift.dart' hide Migrator;
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
@@ -5,6 +7,7 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -39,31 +42,31 @@ final relations = <String, Relation>{
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'title',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'contents',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'nbr',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'authorId',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -77,19 +80,19 @@ final relations = <String, Relation>{
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'bio',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'userId',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -133,7 +136,7 @@ void main() {
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTables(['Post']);
+    final ShapeSubscription(:synced) = await electric.syncTable(db.post);
     // always await this promise otherwise the next test may issue a subscription
     // while this one is not yet fulfilled and that will lead to issues
     await synced;
@@ -149,19 +152,19 @@ void main() {
     client.setRelationData('Profile', profile);
 
     final ShapeSubscription(synced: profileSynced) =
-        await electric.syncTables(['Profile']);
+        await electric.syncTable(db.profile);
 
     // Once the subscription has been acknowledged
     // we can request another one
     client.setRelations(relations);
     client.setRelationData('Post', post);
 
-    final ShapeSubscription(:synced) = await electric.syncTables(['Post']);
+    final ShapeSubscription(:synced) = await electric.syncTable(db.post);
     await synced;
 
     // Check that the data was indeed received
     final posts =
-        (await db.posts.select().get()).map((e) => e.toJson()).toList();
+        (await db.post.select().get()).map((e) => e.toJson()).toList();
     expect(posts, [post]);
 
     await profileSynced;
@@ -171,7 +174,7 @@ void main() {
     await startSatellite(satellite, authToken);
 
     try {
-      await electric.syncTables(['Items']);
+      await electric.syncTable(db.items);
       fail('Should have thrown');
     } on SatelliteException catch (e) {
       expect(e.code, SatelliteErrorCode.tableNotFound);
@@ -184,7 +187,7 @@ void main() {
     bool loadingPromResolved = false;
 
     try {
-      final ShapeSubscription(:synced) = await electric.syncTables(['User']);
+      final ShapeSubscription(:synced) = await electric.syncTable(db.user);
       loadingPromResolved = true;
       await synced;
       fail('Should have thrown');
@@ -194,6 +197,123 @@ void main() {
       expect(loadingPromResolved, isTrue);
       expect(e.code, SatelliteErrorCode.shapeDeliveryError);
     }
+  });
+
+  test('nested shape is constructed', () async {
+    await startSatellite(satellite, authToken);
+
+    client.setRelations(relations);
+
+    final input = SyncInputRaw(
+      tableName: 'Post',
+      where: {
+        'OR': [
+          {'id': 5},
+          {'id': 42},
+        ],
+        'NOT': [
+          {'id': 1},
+          {'id': 2},
+        ],
+        'AND': [
+          {'nbr': 6},
+          {'nbr': 7},
+        ],
+        'title': 'foo',
+        'contents': "important'",
+      },
+      include: [
+        IncludeRelRaw(
+          foreignKey: ['authorId'],
+          select: SyncInputRaw(
+            tableName: 'User',
+            include: [
+              IncludeRelRaw(
+                foreignKey: ['userId'],
+                select: SyncInputRaw(
+                  tableName: 'Profile',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final shape = computeShape(input);
+
+    expect(
+      shape,
+      Shape(
+        tablename: 'Post',
+        where:
+            "this.title = 'foo' AND this.contents = 'important''' AND this.nbr = 6 AND this.nbr = 7 AND ((this.id = 5) OR (this.id = 42)) AND NOT ((this.id = 1) OR (this.id = 2))",
+        include: [
+          Rel(
+            foreignKey: ['authorId'],
+            select: Shape(
+              tablename: 'User',
+              include: [
+                Rel(
+                  foreignKey: ['userId'],
+                  select: Shape(
+                    tablename: 'Profile',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  });
+
+  test('shape from drift', () async {
+    final shape = computeShapeForDrift(
+      db,
+      db.post,
+      where: (p) =>
+          p.title.equals('foo') &
+          p.contents.equals("important'") &
+          p.nbr.equals(6) &
+          p.nbr.equals(7) &
+          (p.id.equals(5) | p.id.equals(42)) &
+          (p.id.equals(1) | p.id.equals(2)).not(),
+      include: (p) => [
+        SyncInputRelation.from(
+          p.$relations.author,
+          include: (u) => [
+            SyncInputRelation.from(u.$relations.profile),
+          ],
+        ),
+      ],
+    );
+    // print(JsonEncoder.withIndent('  ').convert(shape.toMap()));
+
+    expect(
+      shape,
+      Shape(
+        tablename: 'Post',
+        where:
+            '"this"."title" = \'foo\' AND "this"."contents" = \'important\'\'\' AND "this"."nbr" = 6 AND "this"."nbr" = 7 AND ("this"."id" = 5 OR "this"."id" = 42) AND NOT ("this"."id" = 1 OR "this"."id" = 2)',
+        include: [
+          Rel(
+            foreignKey: ['authorId'],
+            select: Shape(
+              tablename: 'User',
+              include: [
+                Rel(
+                  foreignKey: ['userId'],
+                  select: Shape(
+                    tablename: 'Profile',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   });
 }
 

@@ -23,7 +23,7 @@ void main() async {
     expect(dataTypesFields.length, numCols - 1);
 
     expect(dataTypesFields, {
-      'id': PgType.integer,
+      'id': PgType.int4,
       'date': PgType.date,
       'time': PgType.time,
       'timetz': PgType.timeTz,
@@ -34,20 +34,25 @@ void main() async {
       'int2': PgType.int2,
       'int4': PgType.int4,
       'int8': PgType.int8,
-      'int8_big_int': PgType.int8,
       'float4': PgType.float4,
       'float8': PgType.float8,
-      'json': PgType.json,
-      'relatedId': PgType.integer,
+      'json': PgType.jsonb,
+      'relatedId': PgType.int4,
     });
 
     final postsFields = dbDescription.getFields('Post');
     expect(postsFields, {
-      'id': PgType.integer,
+      'id': PgType.int4,
       'title': PgType.text,
       'contents': PgType.text,
-      'nbr': PgType.integer,
-      'authorId': PgType.integer,
+      'nbr': PgType.int4,
+      'authorId': PgType.int4,
+    });
+
+    final extraFields = dbDescription.getFields('Extra');
+    expect(extraFields, {
+      'id': PgType.integer,
+      'int8_big_int': PgType.int8,
     });
   });
 }

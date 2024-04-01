@@ -15,6 +15,7 @@ enum RecordChangeType {
   update,
   delete,
   compensation,
+  gone,
   initial,
 }
 
@@ -23,6 +24,7 @@ RecordChangeType recordChangeTypeFromOpType(OpType opType) {
     OpType.insert => RecordChangeType.insert,
     OpType.update => RecordChangeType.update,
     OpType.delete => RecordChangeType.delete,
+    OpType.gone => RecordChangeType.gone,
     OpType.compensation => RecordChangeType.compensation,
   };
 }

@@ -3,9 +3,10 @@ import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
+import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:meta/meta.dart';
 
-abstract interface class ElectricClient {
+abstract interface class BaseElectricClient {
   // ElectricNamespace methods
   String get dbName;
   DatabaseAdapter get adapter;
@@ -27,10 +28,17 @@ abstract interface class ElectricClient {
   Satellite get satellite;
 
   Future<void> connect([String? token]);
-  Future<ShapeSubscription> syncTables(List<String> tables);
 }
 
-class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
+abstract interface class ElectricClientRaw implements BaseElectricClient {
+  Future<ShapeSubscription> sync(SyncInputRaw sync);
+
+  @protected
+  Future<ShapeSubscription> syncShapeInternal(Shape shape);
+}
+
+class ElectricClientImpl extends ElectricNamespace
+    implements ElectricClientRaw {
   @override
   final Satellite satellite;
 
@@ -94,7 +102,13 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
   }) : super();
 
   @override
-  Future<ShapeSubscription> syncTables(List<String> tables) async {
-    return shapeManager.sync(Shape(tables: tables));
+  Future<ShapeSubscription> sync(SyncInputRaw syncInput) async {
+    final shape = computeShape(syncInput);
+    return syncShapeInternal(shape);
+  }
+
+  @override
+  Future<ShapeSubscription> syncShapeInternal(Shape shape) {
+    return shapeManager.sync(shape);
   }
 }

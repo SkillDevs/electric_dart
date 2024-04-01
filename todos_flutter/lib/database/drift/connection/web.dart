@@ -44,7 +44,6 @@ Future<void> deleteTodosDbFile() async {
 
   if (db != null) {
     await probeRes.deleteDatabase(db);
-    print("deleted web database");
   }
 }
 

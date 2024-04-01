@@ -29,7 +29,7 @@ void main() async {
     final d = DateTime.parse('${date}T23:33:04.271');
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             date: Value(d),
           ),
         );
@@ -47,7 +47,7 @@ void main() async {
     final date = DateTime.parse('2023-08-07 18:28:35.421');
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             time: Value(date),
           ),
         );
@@ -65,11 +65,11 @@ void main() async {
 
     await db.dataTypes.insertAll([
       DataTypesCompanion.insert(
-        id: const Value(1),
+        id: 1,
         timetz: Value(date1),
       ),
       DataTypesCompanion.insert(
-        id: const Value(2),
+        id: 2,
         timetz: Value(date2),
       ),
     ]);
@@ -96,7 +96,7 @@ void main() async {
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamp: Value(date),
           ),
         );
@@ -131,7 +131,7 @@ void main() async {
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamp: Value(dateUTC),
           ),
         );
@@ -153,11 +153,11 @@ void main() async {
 
     await db.dataTypes.insertAll([
       DataTypesCompanion.insert(
-        id: const Value(1),
+        id: 1,
         timestamptz: Value(date1),
       ),
       DataTypesCompanion.insert(
-        id: const Value(2),
+        id: 2,
         timestamptz: Value(date2),
       ),
     ]);
@@ -181,12 +181,12 @@ void main() async {
   test('booleans are converted correctly to SQLite', () async {
     await db.dataTypes.insertAll([
       DataTypesCompanion.insert(
-        id: const Value(1),
-        boolCol: const Value(true),
+        id: 1,
+        bool$: const Value(true),
       ),
       DataTypesCompanion.insert(
-        id: const Value(2),
-        boolCol: const Value(false),
+        id: 2,
+        bool$: const Value(false),
       ),
     ]);
 
@@ -216,7 +216,7 @@ void main() async {
       final (id, f4, f8) = entry;
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
-              id: Value(id),
+              id: id,
               float4: Value(f4),
               float8: Value(f8),
             ),
@@ -259,7 +259,7 @@ void main() async {
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             int8: const Value(int8),
           ),
         );
@@ -277,15 +277,15 @@ void main() async {
   test('BigInts are converted correctly to SQLite', () async {
     final bigInt = BigInt.parse('9223372036854775807');
 
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
+    await db.into(db.extra).insert(
+          ExtraCompanion.insert(
+            id: 1,
             int8BigInt: Value(bigInt),
           ),
         );
 
     final rawRes = await db.customSelect(
-      'SELECT id, int8_big_int FROM DataTypes WHERE id = ?',
+      'SELECT id, int8_big_int FROM Extra WHERE id = ?',
       variables: [const Variable(1)],
     ).get();
 
@@ -329,7 +329,7 @@ void main() async {
     };
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             json: Value(json),
           ),
         );
@@ -346,7 +346,7 @@ void main() async {
     // but a DB NULL that indicates absence of a value
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(2),
+            id: 2,
             json: const Value(null),
           ),
         );
@@ -361,7 +361,7 @@ void main() async {
     // Also test JSON null value
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(3),
+            id: 3,
             json: const Value(kJsonNull),
           ),
         );
@@ -376,7 +376,7 @@ void main() async {
     // also test regular values
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(4),
+            id: 4,
             json: const Value('foo'),
           ),
         );
@@ -390,7 +390,7 @@ void main() async {
     // also test arrays
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(5),
+            id: 5,
             json: const Value([1, 2, 3]),
           ),
         );

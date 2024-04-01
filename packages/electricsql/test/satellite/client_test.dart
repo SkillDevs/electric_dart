@@ -73,7 +73,7 @@ void main() {
     await client.connect();
 
     try {
-      await client.startReplication(null, null, null);
+      await client.startReplication(null, null, null, null);
       fail('start replication should throw');
     } catch (error) {
       expect(
@@ -96,7 +96,7 @@ void main() {
     server.nextRpcResponse('startReplication', [startResp]);
 
     try {
-      final resp = await client.startReplication(null, null, null);
+      final resp = await client.startReplication(null, null, null, null);
       expect(resp.error?.code, SatelliteErrorCode.behindWindow);
     } catch (e) {
       fail('Should not throw. Error: $e');
@@ -123,7 +123,7 @@ void main() {
     final startResp = SatInStartReplicationResp();
     server.nextRpcResponse('startReplication', [startResp]);
 
-    await client.startReplication(null, null, null);
+    await client.startReplication(null, null, null, null);
   });
 
   test('replication start sends empty', () async {
@@ -140,7 +140,7 @@ void main() {
         return [SatInStartReplicationResp()];
       },
     );
-    unawaited(client.startReplication(null, null, null));
+    unawaited(client.startReplication(null, null, null, null));
     await completer.future;
   });
 
@@ -157,7 +157,7 @@ void main() {
         return [SatInStartReplicationResp()];
       },
     );
-    unawaited(client.startReplication([], '20230711', null));
+    unawaited(client.startReplication([], '20230711', null, null));
 
     await completer.future;
   });
@@ -169,8 +169,8 @@ void main() {
     server.nextRpcResponse('startReplication', [startResp]);
 
     try {
-      await client.startReplication(null, null, null);
-      await client.startReplication(null, null, null); // fails
+      await client.startReplication(null, null, null, null);
+      await client.startReplication(null, null, null, null); // fails
     } catch (error) {
       expect(
         error,
@@ -191,7 +191,7 @@ void main() {
     server.nextRpcResponse('startReplication', [start]);
     server.nextRpcResponse('stopReplication', [stop]);
 
-    await client.startReplication(null, null, null);
+    await client.startReplication(null, null, null, null);
     await client.stopReplication();
   });
 
@@ -363,7 +363,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null, null, null);
+    await client.startReplication(null, null, null, null);
     await completer.future;
   });
 
@@ -435,13 +435,15 @@ void main() {
 
     final completer = Completer<void>();
 
-    client.subscribeToTransactions((Transaction transaction) async {
+    client.subscribeToTransactions((ServerTransaction transaction) async {
       expect(transaction.migrationVersion, migrationVersion);
       expect(
         transaction,
-        Transaction(
+        ServerTransaction(
           commitTimestamp: commit.commitTimestamp,
           lsn: begin.lsn,
+          id: null,
+          additionalDataRef: null,
           changes: [
             SchemaChange(
               migrationType: SatOpMigrate_Type.CREATE_TABLE,
@@ -457,7 +459,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null, null, null);
+    await client.startReplication(null, null, null, null);
 
     await completer.future;
   });
@@ -497,7 +499,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null, null, null);
+    await client.startReplication(null, null, null, null);
     await completer.future;
   });
 
@@ -619,7 +621,7 @@ void main() {
     });
     addTearDown(() => timeoutTimer.cancel());
 
-    await client.startReplication(null, null, null);
+    await client.startReplication(null, null, null, null);
 
     // wait a little for replication to start in the opposite direction
     await Future.delayed(
@@ -818,7 +820,7 @@ void main() {
       completer.complete();
     });
 
-    await client.startReplication(null, null, null);
+    await client.startReplication(null, null, null, null);
 
     await completer.future;
   });
@@ -830,8 +832,11 @@ void main() {
 
     final shapeReq = ShapeRequest(
       requestId: 'fake',
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: 'fake')],
+      definition: Shape(
+        tablename: 'fake',
+        include: [
+          Rel(foreignKey: ['foreign_id'], select: Shape(tablename: 'other')),
+        ],
       ),
     );
 
@@ -853,9 +858,7 @@ void main() {
 
     final shapeReq = ShapeRequest(
       requestId: 'fake',
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: 'fake')],
-      ),
+      definition: Shape(tablename: 'fake'),
     );
 
     const subscriptionId = 'THE_ID';
@@ -876,16 +879,12 @@ void main() {
 
     final shapeReq1 = ShapeRequest(
       requestId: 'fake1',
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: 'fake1')],
-      ),
+      definition: Shape(tablename: 'fake1'),
     );
 
     final shapeReq2 = ShapeRequest(
       requestId: 'fake2',
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: 'fake2')],
-      ),
+      definition: Shape(tablename: 'fake2'),
     );
 
     const subscriptionId1 = 'subscription id 1';
@@ -924,9 +923,7 @@ void main() {
 
     final shapeReq = ShapeRequest(
       requestId: 'fake',
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: 'fake')],
-      ),
+      definition: Shape(tablename: 'fake'),
     );
 
     const subscriptionId = 'THE_ID';
@@ -943,7 +940,7 @@ void main() {
     server
         .nextRpcResponse('subscribe', [subsResp, '50ms', subsData, subsError]);
 
-    void success(_) => fail('Should have failed');
+    Future<void> success(_) => fail('Should have failed');
     void error(_) {}
 
     client.subscribeToSubscriptionEvents(success, error);
@@ -963,9 +960,7 @@ void main() {
 
     final shapeReq = ShapeRequest(
       requestId: requestId,
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: tablename)],
-      ),
+      definition: Shape(tablename: tablename),
     );
 
     final subsResp = SatSubsResp(subscriptionId: subscriptionId);
@@ -1046,7 +1041,7 @@ void main() {
       server.nextRpcResponse('subscribe', next);
 
       final completer = Completer<void>();
-      void success(_) {
+      Future<void> success(_) async {
         completer.completeError(
           'expected the client to fail on an invalid message sequence',
         );
@@ -1111,16 +1106,12 @@ void main() {
 
     final shapeReq1 = ShapeRequest(
       requestId: requestId1,
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: tablename)],
-      ),
+      definition: Shape(tablename: tablename),
     );
 
     final shapeReq2 = ShapeRequest(
       requestId: requestId2,
-      definition: ClientShapeDefinition(
-        selects: [ShapeSelect(tablename: tablename)],
-      ),
+      definition: Shape(tablename: tablename),
     );
 
     final subsResp = SatSubsResp(subscriptionId: subscriptionId);
@@ -1137,7 +1128,7 @@ void main() {
     final endSub = SatSubsDataEnd();
 
     final completer = Completer<void>();
-    void success(_) {
+    Future<void> success(_) async {
       //t.pass()
       completer.complete(null);
     }
@@ -1180,6 +1171,125 @@ void main() {
     await completer.future;
   });
 
+  test('client correctly handles additional data messages', () async {
+    await connectAndAuth();
+
+    final dbDescription = DBSchemaRaw(
+      fields: {
+        'table': {
+          'name1': PgType.text,
+          'name2': PgType.text,
+        },
+      },
+      migrations: [],
+    );
+
+    client.debugSetDbDescription(dbDescription);
+
+    final start = SatInStartReplicationResp();
+    final begin = SatOpBegin(
+      commitTimestamp: Int64.ZERO,
+      additionalDataRef: Int64(10),
+    );
+    final commit = SatOpCommit(additionalDataRef: Int64(10));
+
+    final rel = Relation(
+      id: 1,
+      schema: 'schema',
+      table: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        RelationColumn(name: 'name1', type: 'TEXT', isNullable: true),
+        RelationColumn(name: 'name2', type: 'TEXT', isNullable: true),
+      ],
+    );
+
+    final relation = SatRelation(
+      relationId: 1,
+      schemaName: 'schema',
+      tableName: 'table',
+      tableType: SatRelation_RelationType.TABLE,
+      columns: [
+        SatRelationColumn(
+          name: 'name1',
+          type: 'TEXT',
+          isNullable: true,
+        ),
+        SatRelationColumn(
+          name: 'name2',
+          type: 'TEXT',
+          isNullable: true,
+        ),
+      ],
+    );
+
+    final insertOp = SatOpInsert(
+      relationId: 1,
+      rowData:
+          serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel, dbDescription),
+    );
+
+    final secondInsertOp = SatOpInsert(
+      relationId: 1,
+      rowData:
+          serializeRow({'name1': 'More', 'name2': 'Data'}, rel, dbDescription),
+    );
+
+    final firstOpLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(insert: insertOp),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    final secondOpLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(
+          additionalBegin: SatOpAdditionalBegin(ref: Int64(10)),
+        ),
+        SatTransOp(insert: secondInsertOp),
+        SatTransOp(
+          additionalCommit: SatOpAdditionalCommit(ref: Int64(10)),
+        ),
+      ],
+    );
+
+    final stop = SatInStopReplicationResp();
+
+    server.nextRpcResponse('startReplication', [
+      start,
+      relation,
+      firstOpLogMessage,
+      '100ms',
+      secondOpLogMessage,
+    ]);
+    server.nextRpcResponse('stopReplication', [stop]);
+
+    final completer = Completer<void>();
+
+    bool txnSeen = false;
+
+    client.subscribeToTransactions((transaction) async {
+      expect(transaction.changes.length, 1);
+      expect(transaction.additionalDataRef?.toInt(), 10);
+
+      txnSeen = true;
+    });
+
+    client.subscribeToAdditionalData((data) async {
+      expect(data.ref.toInt(), 10);
+      expect(data.changes.length, 1);
+      expect(data.changes[0].record!['name1'], 'More');
+
+      if (txnSeen) completer.complete();
+    });
+
+    unawaited(client.startReplication(null, null, null, null));
+
+    await completer.future;
+  });
+
   test(
     'unsubscribe successfull',
     () async {
@@ -1207,5 +1317,5 @@ AuthState createAuthState() {
 Future<void> startReplication() async {
   final startResp = SatInStartReplicationResp();
   server.nextRpcResponse('startReplication', [startResp]);
-  await client.startReplication(null, null, null);
+  await client.startReplication(null, null, null, null);
 }

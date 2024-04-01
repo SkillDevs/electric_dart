@@ -12,7 +12,7 @@ import 'package:sqlite3/sqlite3.dart';
 /// automatically for you, like type mappings and query reactivity.
 /// With this electrification you will need to take care of those yourself with
 /// the [TypeConverters] and with the [Notifier] from the [ElectricClient].
-Future<ElectricClient> electrify({
+Future<ElectricClientRaw> electrify({
   required String dbName,
   required Database db,
   required DBSchema dbDescription,

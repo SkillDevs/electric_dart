@@ -3,12 +3,6 @@ import 'package:electricsql/src/satellite/shapes/types.dart';
 
 typedef TableName = String;
 
-class Shape {
-  final List<TableName> tables;
-
-  Shape({required this.tables});
-}
-
 abstract interface class IShapeManager {
   Future<ShapeSubscription> sync(Shape shape);
   bool hasBeenSubscribed(TableName table);
@@ -30,21 +24,13 @@ class ShapeManager extends BaseShapeManager {
 
   @override
   Future<ShapeSubscription> sync(Shape shape) async {
-    // Convert the shape to the format expected by the Satellite process
-    final shapeDef = ClientShapeDefinition(
-      selects: shape.tables.map((tbl) {
-        return ShapeSelect(
-          tablename: tbl,
-        );
-      }).toList(),
-    );
-
-    final sub = await satellite.subscribe([shapeDef]);
+    final sub = await satellite.subscribe([shape]);
+    final tables = _getTableNames(shape);
 
     final dataReceivedProm = sub.synced.then((_) {
       // When all data is received
       // we store the fact that these tables are synced
-      for (final tbl in shape.tables) {
+      for (final tbl in tables) {
         tablesPreviouslySubscribed.add(tbl);
       }
     });
@@ -64,7 +50,7 @@ class ShapeManagerMock extends BaseShapeManager {
   @override
   Future<ShapeSubscription> sync(Shape shape) async {
     // Do not contact the server but directly store the synced tables
-    for (final tbl in shape.tables) {
+    for (final tbl in _getTableNames(shape)) {
       tablesPreviouslySubscribed.add(tbl);
     }
 
@@ -72,4 +58,11 @@ class ShapeManagerMock extends BaseShapeManager {
       synced: Future.value(),
     );
   }
+}
+
+List<TableName> _getTableNames(Shape shape) {
+  return [
+    shape.tablename,
+    ...(shape.include ?? []).expand((rel) => _getTableNames(rel.select)),
+  ];
 }

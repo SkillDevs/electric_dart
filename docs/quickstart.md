@@ -166,12 +166,18 @@ await electric.connect(jwtAuthToken);
 
 ### 5. Define the Shapes to sync
 
-Sync data into the local database. This only needs to be called once.
+Sync data into the local database. With this you can sync, tables, related tables, and even filtered tables by a WHERE expression.
+You can find more information regarding Shapes in the README.md of `electric_dart`.
 
 ```dart
-final shape = await electric.syncTables([
-    'todos',
-])
+// This would be the Drift database
+AppDatabase db;
+
+// Resolves once the shape subscription is confirmed by the server.
+final shape = await electric.syncTable(db.todos);
+
+// Resolves once the initial data load for the shape is complete.
+await shape.synced
 ```
 
 More info: https://electric-sql.com/docs/usage/data-access/shapes

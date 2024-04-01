@@ -32,7 +32,7 @@ Before starting the app, we need to start the Electric service and a Postgres da
 dart run electricsql_cli start --with-postgres
 ```
 > [!NOTE]  
-> If you are running the example from a non tagged commit, it is highly recommended to add the `ELECTRIC_IMAGE` in the `.env` file with the value `electric:local-build` and run `make` on the main Electric repository (https://github.com/electric-sql/electric) at the same commit the Dart client is based on. You can find that commit in the Dart client README. This will ensure that the client matches the Electric service behavior, as the protocol can vary depending on the version.
+> If you are running the example from a non tagged commit, it is highly recommended to run the Electric service with the `canary` Docker image. Check out the `.env` file to see instructions on how to do it. This will ensure that the client matches the Electric service behavior, as the protocol can vary depending on the version and the example app might be using non released features.
 
 ### 2. Apply migrations in Postgres
 
