@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:electricsql/src/client/conversions/types.dart';
 
 /// Map the [dartValue] into a value understood by drift's postgres driver.
@@ -11,9 +13,12 @@ Object mapToSql(PgType? type, Object dartValue) {
   return dartValue;
 }
 
-/// Read an enum value from the database as a String.
-/// Enums need to be treated differently because we don't have the oid for them,
-/// so we use the string representation and decode it when reading the value.
-String readEnum(Object sqlValue) {
+/// Map the [dartValue] into a SQL literal understood by postgres.
+String mapToSqlLiteral(PgType type, Object dartValue, String typeName, Codec<Object, Object> codec) {
+  throw UnsupportedError('Needs to be run in a dart:io environment.');
+}
+
+/// Map the [sqlValue] into the Dart value used by the Drift schema.
+Object mapToUser(PgType? type, Object sqlValue, Codec<Object, Object> codec) {
   throw UnsupportedError('Needs to be run in a dart:io environment.');
 }
