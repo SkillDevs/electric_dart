@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:drift_postgres/drift_postgres.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
+import 'package:postgres/postgres.dart' as pg;
 
 import 'generated/electric/drift_schema.dart';
 
@@ -50,8 +52,28 @@ class TestsDatabase extends _$TestsDatabase {
     );
   }
 
+  factory TestsDatabase.postgres(
+    pg.Endpoint endpoint, {
+    pg.ConnectionSettings? settings,
+  }) {
+    return TestsDatabase(
+      PgDatabase(
+        endpoint: endpoint,
+        settings: settings,
+        // logStatements: true,
+      ),
+    );
+  }
+
   @override
   int get schemaVersion => 1;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.create(tableFromDriftFile);
+        },
+      );
 }
 
 class _PretendToBePostgres extends QueryInterceptor {
