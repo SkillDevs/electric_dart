@@ -12,10 +12,10 @@ import 'package:todos_electrified/database/drift/database.dart';
 import 'package:todos_electrified/database/drift/drift_repository.dart';
 import 'package:todos_electrified/electric.dart';
 import 'package:todos_electrified/main.dart';
-import 'package:todos_electrified/theme.dart';
-import 'package:todos_electrified/util/confirmation_dialog.dart';
+import 'package:todos_electrified/presentation/theme.dart';
+import 'package:todos_electrified/presentation/util/confirmation_dialog.dart';
 import 'package:todos_electrified/database/drift/connection/connection.dart'
-    as impl;
+    as db_lib;
 
 typedef InitData = ({
   TodosDatabase todosDb,
@@ -23,6 +23,9 @@ typedef InitData = ({
   ConnectivityStateController connectivityStateController,
 });
 
+
+/// Initialize the app by opening the local database and electrifying it
+/// and handle errors in the process
 void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
   final retryVN = useState(0);
 
@@ -31,9 +34,9 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
   useEffect(() {
     InitData? initData;
 
-    Future<void> init() async {
+    Future<bool> init() async {
       final driftRepo = await initDriftTodosDatabase();
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
 
       final todosDb = TodosDatabase(driftRepo);
       // final sqliteRepo = initSqliteRepository(dbPath);
@@ -42,70 +45,50 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
 
       const dbName = "todos_db";
 
-      final ElectricClient<AppDatabase> electricClient;
+      ElectricClient<AppDatabase>? electricClient;
       try {
+        // Electrify
         electricClient = await startElectricDrift(dbName, driftRepo.db);
 
-        await _populateList(electricClient);
-      } on SatelliteException catch (e) {
-        if (context.mounted) {
-          if (e.code == SatelliteErrorCode.unknownSchemaVersion) {
-            // Ask to delete the database
-            final shouldDeleteLocal = await launchConfirmationDialog(
-              title: "Local schema doesn't match server's",
-              content: const Text("Delete local state and retry?"),
-              context: context,
-              barrierDismissible: false,
-            );
+        await _populateList(electricClient.db);
+      } catch (e, st) {
+        print("Unexpected error occurred when starting: $e\n$st");
 
-            if (shouldDeleteLocal == true) {
-              await driftRepo.close();
+        if (!context.mounted) return false;
 
-              if (!kIsWeb) {
-                await impl.deleteTodosDbFile();
+        final bool shouldDelete = await _askUserToDeleteLocalState(
+          context,
+          error: e,
+          stackTrace: st,
+        );
+        if (!context.mounted) return false;
 
-                retryVN.value++;
-                return;
-              } else {
-                // On web, we cannot properly retry automatically, so just ask the user to refresh
-                // the page
-
-                unawaited(impl.deleteTodosDbFile());
-                await Future<void>.delayed(const Duration(milliseconds: 200));
-
-                if (!context.mounted) return;
-
-                await showDialog<void>(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) {
-                      return const AlertDialog(
-                        title: Text("Local database deleted"),
-                        content: Text("Please refresh the page"),
-                      );
-                    });
-
-                // Wait indefinitely until user refreshes
-                await Future<void>.delayed(const Duration(days: 9999));
-              }
-            }
-          }
+        if (shouldDelete) {
+          await deleteLocalStateAndRetry(
+            context,
+            driftRepo: driftRepo,
+            electricClient: electricClient,
+            retryVN: retryVN,
+          );
         }
 
-        rethrow;
+        return false;
       }
 
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
 
       final connectivityStateController =
           ConnectivityStateController(electricClient)..init();
 
+      // Everything started successfully
       initData = (
         todosDb: todosDb,
         electricClient: electricClient,
         connectivityStateController: connectivityStateController,
       );
       initDataVN.value = initData;
+
+      return true;
     }
 
     init();
@@ -114,14 +97,11 @@ void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
   }, [retryVN.value]);
 }
 
-Future<void> _populateList(ElectricClient<AppDatabase> electricClient) async {
-  final db = electricClient.db;
-
+Future<void> _populateList(AppDatabase db) async {
   final list = await (db.todolist.select()..where((l) => l.id.equals(kListId)))
       .getSingleOrNull();
   if (list == null) {
-    await electricClient.db.todolist
-        .insertOne(TodolistCompanion.insert(id: kListId));
+    await db.todolist.insertOne(TodolistCompanion.insert(id: kListId));
   }
 }
 
@@ -162,5 +142,69 @@ class InitAppLoader extends HookWidget {
         );
       }),
     );
+  }
+}
+
+Future<bool> _askUserToDeleteLocalState(
+  BuildContext context, {
+  required Object error,
+  required StackTrace stackTrace,
+}) async {
+  final String dialogTitle;
+
+  if (error is SatelliteException &&
+      error.code == SatelliteErrorCode.unknownSchemaVersion) {
+    dialogTitle = "Local schema doesn't match server's";
+  } else {
+    dialogTitle = "Unexpected error occurred when starting. Check logs.";
+  }
+
+  // Ask to delete the database
+  final shouldDeleteLocal = await launchConfirmationDialog(
+    title: dialogTitle,
+    content: const Text("Delete local state and retry?"),
+    context: context,
+    barrierDismissible: false,
+  );
+
+  return shouldDeleteLocal == true;
+}
+
+Future<void> deleteLocalStateAndRetry(
+  BuildContext context, {
+  required ElectricClient<AppDatabase>? electricClient,
+  required DriftRepository driftRepo,
+  required ValueNotifier<int> retryVN,
+}) async {
+  await electricClient?.close();
+
+  await driftRepo.close();
+
+  if (!kIsWeb) {
+    await db_lib.deleteTodosDbFile();
+
+    retryVN.value++;
+    return;
+  } else {
+    // On web, we cannot properly retry automatically, so just ask the user to refresh
+    // the page
+
+    unawaited(db_lib.deleteTodosDbFile());
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+
+    if (!context.mounted) return;
+
+    await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return const AlertDialog(
+            title: Text("Local database deleted"),
+            content: Text("Please refresh the page"),
+          );
+        });
+
+    // Wait indefinitely until user refreshes
+    await Future<void>.delayed(const Duration(days: 9999));
   }
 }

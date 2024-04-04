@@ -1,24 +1,23 @@
 import 'dart:async';
 
 import 'package:electricsql/util.dart' show genUUID;
-import 'package:electricsql/electricsql.dart';
 import 'package:electricsql_flutter/drivers/drift.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:todos_electrified/database/database.dart';
-import 'package:todos_electrified/database/drift/connection/connection.dart'
-    as impl;
+
 import 'package:todos_electrified/electric.dart';
-import 'package:todos_electrified/init.dart';
-import 'package:todos_electrified/theme.dart';
-import 'package:todos_electrified/todos.dart';
+import 'package:todos_electrified/features/init_app.dart';
+import 'package:todos_electrified/presentation/theme.dart';
+import 'package:todos_electrified/features/todos.dart';
 import 'package:animated_emoji/animated_emoji.dart';
+import 'package:todos_electrified/features/delete_local_db.dart';
+import 'package:todos_electrified/features/electric_connection.dart';
+import 'package:todos_electrified/presentation/util/platform.dart';
 
 const kListId = "LIST-ID-SAMPLE";
 
@@ -27,8 +26,6 @@ Future<void> main() async {
 
   runApp(_Entrypoint());
 }
-
-StateProvider<bool> dbDeletedProvider = StateProvider((ref) => false);
 
 class _Entrypoint extends HookWidget {
   @override
@@ -86,7 +83,7 @@ class MyApp extends StatelessWidget {
           final dbDeleted = ref.watch(dbDeletedProvider);
 
           if (dbDeleted) {
-            return const _DeleteDbScreen();
+            return const DeleteDbScreen();
           }
 
           return const MyHomePage();
@@ -106,16 +103,23 @@ class MyHomePage extends HookConsumerWidget {
     final electricClient = ref.watch(electricClientProvider);
     final db = electricClient.db;
 
+    // Connect to Electric, and listen for connection success/failure
+    final connectToElectricAV = useConnectToElectric(ref);
+
     useEffect(() {
-      // Sync todo list and all its todos through the Foreign Key relationship
-      electricClient.syncTable(
-        db.todolist,
-        include: (tl) => [
-          SyncInputRelation.from(db.todolist.$relations.todo),
-        ],
-      );
+      // Only define sync shapes if connected to Electric
+      if (connectToElectricAV.hasValue) {
+        // Sync todo list and all its todos through the Foreign Key relationship
+        electricClient.syncTable(
+          db.todolist,
+          include: (tl) => [
+            SyncInputRelation.from(db.todolist.$relations.todo),
+          ],
+        );
+      }
+
       return null;
-    }, []);
+    }, [connectToElectricAV]);
 
     return Scaffold(
       appBar: AppBar(
@@ -142,7 +146,9 @@ class MyHomePage extends HookConsumerWidget {
       body: Column(
         children: [
           const SizedBox(height: 10),
-          const ConnectivityButton(),
+          connectToElectricAV.isLoading
+              ? const ConnectingToElectric()
+              : const ConnectivityButton(),
           const SizedBox(height: 10),
           Expanded(
             child: todosAV.when(
@@ -177,89 +183,11 @@ class MyHomePage extends HookConsumerWidget {
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: EdgeInsets.all(8.0),
-              child: _DeleteDbButton(),
+              child: DeleteLocalDbButton(),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DeleteDbButton extends ConsumerWidget {
-  const _DeleteDbButton();
-
-  @override
-  Widget build(BuildContext context, ref) {
-    return TextButton.icon(
-      style: TextButton.styleFrom(
-          foregroundColor: Theme.of(context).colorScheme.error),
-      onPressed: () async {
-        ref.read(dbDeletedProvider.notifier).update((state) => true);
-
-        print("Closing Electric and deleting local database");
-
-        final electric = ref.read(electricClientProvider);
-        await electric.close();
-        print("Electric closed");
-
-        final todosDb = ref.read(todosDatabaseProvider);
-        await todosDb.todosRepo.close();
-
-        await impl.deleteTodosDbFile();
-        print("Local database deleted");
-      },
-      icon: const Icon(Symbols.delete),
-      label: const Text("Delete local database"),
-    );
-  }
-}
-
-class ConnectivityButton extends HookConsumerWidget {
-  const ConnectivityButton({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final connectivityState = ref.watch(
-      connectivityStateControllerProvider
-          .select((value) => value.connectivityState),
-    );
-
-    final theme = Theme.of(context);
-
-    final ({Color color, IconData icon}) iconInfo =
-        switch (connectivityState.status) {
-      ConnectivityStatus.connected => (
-          icon: Symbols.wifi,
-          color: theme.colorScheme.primary
-        ),
-      ConnectivityStatus.disconnected => (
-          icon: Symbols.wifi_off,
-          color: theme.colorScheme.error
-        ),
-    };
-
-    final String label = switch (connectivityState.status) {
-      ConnectivityStatus.connected => "Connected",
-      ConnectivityStatus.disconnected => "Disconnected",
-    };
-
-    return ElevatedButton.icon(
-      onPressed: () async {
-        final connectivityStateController =
-            ref.read(connectivityStateControllerProvider);
-        final electricClient = ref.read(electricClientProvider);
-        final state = connectivityStateController.connectivityState;
-        switch (state.status) {
-          case ConnectivityStatus.connected:
-            electricClient.disconnect();
-          case ConnectivityStatus.disconnected:
-            electricClient.connect();
-        }
-      },
-      style: ElevatedButton.styleFrom(foregroundColor: iconInfo.color),
-      icon: Icon(iconInfo.icon),
-      label: Text(label),
     );
   }
 }
@@ -377,58 +305,5 @@ class TodoTile extends ConsumerWidget {
         icon: const Icon(Symbols.delete),
       ),
     );
-  }
-}
-
-class _DeleteDbScreen extends StatelessWidget {
-  const _DeleteDbScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Local database has been deleted, please restart the app'),
-      ),
-    );
-  }
-}
-
-IconData getIconForPlatform() {
-  if (kIsWeb) {
-    return MdiIcons.web;
-  } else if (defaultTargetPlatform == TargetPlatform.android) {
-    return MdiIcons.android;
-  } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-    return MdiIcons.appleIos;
-  } else if (defaultTargetPlatform == TargetPlatform.fuchsia) {
-    return MdiIcons.google;
-  } else if (defaultTargetPlatform == TargetPlatform.linux) {
-    return MdiIcons.linux;
-  } else if (defaultTargetPlatform == TargetPlatform.windows) {
-    return MdiIcons.microsoftWindows;
-  } else if (defaultTargetPlatform == TargetPlatform.macOS) {
-    return MdiIcons.apple;
-  } else {
-    return Icons.help_outline;
-  }
-}
-
-String getPlatformName() {
-  if (kIsWeb) {
-    return "Web";
-  } else if (defaultTargetPlatform == TargetPlatform.android) {
-    return "Android";
-  } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-    return "iOS";
-  } else if (defaultTargetPlatform == TargetPlatform.fuchsia) {
-    return "Fuchsia";
-  } else if (defaultTargetPlatform == TargetPlatform.linux) {
-    return "Linux";
-  } else if (defaultTargetPlatform == TargetPlatform.windows) {
-    return "Windows";
-  } else if (defaultTargetPlatform == TargetPlatform.macOS) {
-    return "macOS";
-  } else {
-    return "Unknown";
   }
 }

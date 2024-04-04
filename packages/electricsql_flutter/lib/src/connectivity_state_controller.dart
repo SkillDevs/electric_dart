@@ -20,7 +20,9 @@ class ConnectivityStateController with ChangeNotifier {
 
     _unsubscribe = createConnectivityStateSubscribeFunction(electric.notifier)(
       (ConnectivityState newState) {
-        _setConnectivityState(getValidConnectivityState(newState));
+        Future(() {
+          _setConnectivityState(getValidConnectivityState(newState));
+        });
       },
     );
 
