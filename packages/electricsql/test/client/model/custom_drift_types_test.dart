@@ -337,6 +337,18 @@ void main() async {
       await _testColorEnum(db, DbColor.blue);
     });
   });
+
+  group('bytea', () {
+    test('regular', () async {
+      final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+      await _testBytea(db, bytes);
+    });
+
+    test('empty', () async {
+      final bytes = Uint8List.fromList([]);
+      await _testBytea(db, bytes);
+    });
+  });
 }
 
 Future<void> _testDate(TestsDatabase db, DateTime value) async {
@@ -543,6 +555,19 @@ Future<void> _testJson(TestsDatabase db, Object value) async {
       json: Value(v),
     ),
     customT: ElectricTypes.json,
+  );
+}
+
+Future<void> _testBytea(TestsDatabase db, Uint8List value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.bytea,
+    insertCol: (c, v) => c.copyWith(
+      bytea: Value(v),
+    ),
+    // Bytea is supported natively by drift
+    customT: null,
   );
 }
 
