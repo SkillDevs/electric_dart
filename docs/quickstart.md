@@ -191,8 +191,11 @@ Inserting, updating or deleting via the drift APIs should automatically sync the
 You can see some examples of writes and reads in the main [README](https://github.com/SkillDevs/electric_dart/blob/master/README.md).
 
 > [!NOTE]  
-> If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
+> EMULATORS AND MOBILE DEVICES: If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
 
+
+> [!NOTE]  
+> WEB APPS: If you are running the app on web, in order for the browser to store the local database for your app make sure you are running the app in a non Guest/Incognito window and that you are using always the same port. You can do that with: `flutter run -d web-server --web-port=8081`
 
 ### 7. (Optional) Configure how the Drift code for Electric is generated
 

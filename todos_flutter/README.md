@@ -75,7 +75,11 @@ flutter run
 You can run additional Flutter apps to test how they sync automatically. For example, you can run the web version and the mobile version at the same time. `flutter run -d <device_id>`
 
 > [!NOTE]  
-> If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
+> EMULATORS AND MOBILE DEVICES: If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
+
+
+> [!NOTE]  
+> WEB APPS: If you are running the app on web, in order for the browser to store the local database for your app make sure you are running the app in a non Guest/Incognito window and that you are using always the same port. You can do that with: `flutter run -d web-server --web-port=8081`
 
 ### 5. (Optional) Tweak the Electric configuration
 
