@@ -23,7 +23,6 @@ typedef InitData = ({
   ConnectivityStateController connectivityStateController,
 });
 
-
 /// Initialize the app by opening the local database and electrifying it
 /// and handle errors in the process
 void useInitializeApp(ValueNotifier<InitData?> initDataVN) {
