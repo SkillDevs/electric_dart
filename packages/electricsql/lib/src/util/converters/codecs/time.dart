@@ -18,7 +18,7 @@ final class _Decoder extends Converter<String, DateTime> {
   DateTime convert(String input) {
     // interpret as local time
     final timestamp = '1970-01-01 $input';
-    return DateTime.parse(timestamp);
+    return DateTime.parse(timestamp).asUtc();
   }
 }
 

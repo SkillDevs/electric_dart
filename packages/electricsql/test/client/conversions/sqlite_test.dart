@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
-import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
@@ -118,18 +117,8 @@ void main() async {
     final dateUTC = DateTime.utc(2023, 8, 7, 18, 28, 35, 421);
     expect(dateUTC.isUtc, isTrue);
 
-    // The local date is stored as String, without the T and Z characters
-    final localDate = dateUTC.toLocal();
-    final expectedLocalStr = DateTime.utc(
-      localDate.year,
-      localDate.month,
-      localDate.day,
-      localDate.hour,
-      localDate.minute,
-      localDate.second,
-      localDate.millisecond,
-      localDate.microsecond,
-    ).toISOStringUTC().replaceAll('T', ' ').replaceAll('Z', '');
+    // The date is stored as String, without the T and Z characters
+    const expectedLocalStr = '2023-08-07 18:28:35.421';
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(

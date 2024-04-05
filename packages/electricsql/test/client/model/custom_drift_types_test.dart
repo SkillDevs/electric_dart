@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:postgres/postgres.dart' as pg;
 import 'package:test/test.dart';
 
@@ -23,14 +24,54 @@ void main() async {
 
   group('date', () {
     test('today', () async {
-      final today = DateTime.now().copyWith(
-        hour: 0,
-        minute: 0,
-        second: 0,
-        millisecond: 0,
-        microsecond: 0,
-      );
+      final today = DateTime.now();
 
+      await _testDate(db, today);
+    });
+
+    test('today with extra info', () async {
+      final today = DateTime.now();
+      await _testDate(db, today);
+    });
+
+    test('local at edge', () async {
+      // 2000-01-15 00:05:00
+      await _testDate(
+        db,
+        DateTime(2000, 1, 15, 0, 5),
+        expected: DateTime.utc(2000, 1, 15),
+      );
+    });
+
+    test('local at edge 2', () async {
+      // 2000-01-15 23:55:00
+      await _testDate(
+        db,
+        DateTime(2000, 1, 15, 23, 55),
+        expected: DateTime.utc(2000, 1, 15),
+      );
+    });
+
+    test('utc at edge 1', () async {
+      // 2000-01-15 00:05:00
+      await _testDate(
+        db,
+        DateTime.utc(2000, 1, 15, 0, 5),
+        expected: DateTime.utc(2000, 1, 15),
+      );
+    });
+
+    test('utc at edge 2', () async {
+      // 2000-01-15 23:55:00
+      await _testDate(
+        db,
+        DateTime.utc(2000, 1, 15, 23, 55),
+        expected: DateTime.utc(2000, 1, 15),
+      );
+    });
+
+    test('utc', () async {
+      final today = DateTime.now().toUtc();
       await _testDate(db, today);
     });
 
@@ -83,7 +124,25 @@ void main() async {
 
     test('regular', () async {
       final date = DateTime.parse('2023-08-07 18:28:35.421');
-      await _testTimestamp(db, date);
+      await _testTimestamp(
+        db,
+        date,
+        expected: DateTime.utc(2023, 8, 7, 18, 28, 35, 421),
+      );
+    });
+
+    test('regular 2', () async {
+      final date = DateTime.parse('2023-08-07 18:28:35');
+      await _testTimestamp(
+        db,
+        date,
+        expected: DateTime.utc(2023, 8, 7, 18, 28, 35),
+      );
+    });
+
+    test('utc', () async {
+      final now = DateTime.now().toUtc();
+      await _testTimestamp(db, now);
     });
 
     test('min', () async {
@@ -351,7 +410,21 @@ void main() async {
   });
 }
 
-Future<void> _testDate(TestsDatabase db, DateTime value) async {
+Future<void> _testDate(
+  TestsDatabase db,
+  DateTime value, {
+  DateTime? expected,
+}) async {
+  final effectiveExpected = expected ??
+      // hours, min, secs, millis and microseconds removed
+      value.asUtc().copyWith(
+            hour: 0,
+            minute: 0,
+            second: 0,
+            millisecond: 0,
+            microsecond: 0,
+          );
+
   await _testCustomType<DateTime>(
     db,
     value: value,
@@ -360,17 +433,18 @@ Future<void> _testDate(TestsDatabase db, DateTime value) async {
       date: Value(v),
     ),
     customT: ElectricTypes.date,
+    expected: effectiveExpected,
   );
 }
 
 Future<void> _testTime(TestsDatabase db, DateTime value) async {
   // Day and microseconds removed
-  final expected = value.copyWith(
-    year: 1970,
-    month: 1,
-    day: 1,
-    microsecond: 0,
-  );
+  final expected = value.asUtc().copyWith(
+        year: 1970,
+        month: 1,
+        day: 1,
+        microsecond: 0,
+      );
 
   await _testCustomType<DateTime>(
     db,
@@ -407,10 +481,15 @@ Future<void> _testTimeTZ(TestsDatabase db, DateTime value) async {
   );
 }
 
-Future<void> _testTimestamp(TestsDatabase db, DateTime value) async {
-  final expected = value.copyWith(
-    microsecond: 0,
-  );
+Future<void> _testTimestamp(
+  TestsDatabase db,
+  DateTime value, {
+  DateTime? expected,
+}) async {
+  final DateTime effectiveExpected = expected ??
+      value
+          .asUtc() //
+          .copyWith(microsecond: 0);
 
   await _testCustomType<DateTime>(
     db,
@@ -420,7 +499,7 @@ Future<void> _testTimestamp(TestsDatabase db, DateTime value) async {
       timestamp: Value(v),
     ),
     customT: ElectricTypes.timestamp,
-    expected: expected,
+    expected: effectiveExpected,
   );
 }
 

@@ -37,3 +37,4 @@ dev_dependencies:
   pub_semver: ^2.1.4 # Lowest version supported
   test: ^1.24.6
   watcher: ^1.1.0 # Lowest version supported
+

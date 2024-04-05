@@ -16,7 +16,7 @@ final class _Decoder extends Converter<String, DateTime> {
 
   @override
   DateTime convert(String input) {
-    return DateTime.parse(input);
+    return DateTime.parse(input).asUtc();
   }
 }
 
