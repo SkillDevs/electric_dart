@@ -99,7 +99,7 @@ void main() {
       );
 
       // ignoredTZ - inputDate = timezone offset
-      expect(out.difference(inputDateUTC), mockTimezoneOffset);
+      expect(out, inputDateUTC);
     });
 
     test('input local', () {

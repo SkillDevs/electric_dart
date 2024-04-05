@@ -1,10 +1,13 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
 import '../drift/database.dart';
+
+// TODO(dart): Remove drift dependency_overrides until new version releases fixing the issue https://github.com/SkillDevs/electric_dart/issues/10
 
 void main() async {
   final db = TestsDatabase.memory();
@@ -32,13 +35,27 @@ void main() async {
           ),
         );
 
-    expect(res.date, DateTime.parse(date));
+    final expectedDate = DateTime.utc(2023, 8, 7);
+
+    expect(res.date, expectedDate);
 
     final fetchRes = await (db.select(db.dataTypes)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
 
-    expect(fetchRes?.date, DateTime.parse(date));
+    expect(fetchRes?.date, expectedDate);
+
+    // Search with local date
+    final fetchRes2 = await (db.select(db.dataTypes)
+          ..where((t) => t.date.equals(expectedDate.asLocal())))
+        .getSingleOrNull();
+    expect(fetchRes2?.date, expectedDate);
+
+    // Search with UTC date
+    final fetchRes3 = await (db.select(db.dataTypes)
+          ..where((t) => t.date.equals(expectedDate.asUtc())))
+        .getSingleOrNull();
+    expect(fetchRes3?.date, expectedDate);
   });
 
   test('support time type', () async {
@@ -51,13 +68,26 @@ void main() async {
           ),
         );
 
-    expect(res.time, DateTime.parse('1970-01-01 18:28:35.421'));
+    final expectedDate = DateTime.utc(1970, 1, 1, 18, 28, 35, 421);
+    expect(res.time, expectedDate);
 
     final fetchRes = await (db.select(db.dataTypes)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
 
-    expect(fetchRes?.time, DateTime.parse('1970-01-01 18:28:35.421'));
+    expect(fetchRes?.time, expectedDate);
+
+    // Search with local date
+    final fetchRes2 = await (db.select(db.dataTypes)
+          ..where((t) => t.time.equals(expectedDate.asLocal())))
+        .getSingleOrNull();
+    expect(fetchRes2?.time, expectedDate);
+
+    // Search with UTC date
+    final fetchRes3 = await (db.select(db.dataTypes)
+          ..where((t) => t.time.equals(expectedDate.asUtc())))
+        .getSingleOrNull();
+    expect(fetchRes3?.time, expectedDate);
   });
 
   test('support timetz type', () async {
@@ -81,7 +111,9 @@ void main() async {
           ),
         );
 
-    expect(res1.timetz, DateTime.parse('1970-01-01 18:28:35.421+02'));
+    final expectedDate1 = DateTime.parse('1970-01-01 18:28:35.421+02');
+
+    expect(res1.timetz, expectedDate1);
     expect(res2.timetz, DateTime.parse('1970-01-01 18:28:35.421+03'));
 
     final fetchRes1 = await (db.select(db.dataTypes)
@@ -94,6 +126,22 @@ void main() async {
 
     expect(fetchRes1?.timetz, DateTime.parse('1970-01-01 18:28:35.421+02'));
     expect(fetchRes2?.timetz, DateTime.parse('1970-01-01 18:28:35.421+03'));
+
+    // Search with local date
+    final fetchRes3 = await (db.select(db.dataTypes)
+          ..where(
+            (t) => t.id.equals(1) & t.timetz.equals(expectedDate1.toLocal()),
+          ))
+        .getSingleOrNull();
+    expect(fetchRes3?.timetz, expectedDate1);
+
+    // Search with UTC date
+    final fetchRes4 = await (db.select(db.dataTypes)
+          ..where(
+            (t) => t.id.equals(1) & t.timetz.equals(expectedDate1.toUtc()),
+          ))
+        .getSingleOrNull();
+    expect(fetchRes4?.timetz, expectedDate1);
   });
 
   test('support timestamp type', () async {
@@ -107,13 +155,27 @@ void main() async {
           ),
         );
 
-    expect(res.timestamp, DateTime.parse('2023-08-07 18:28:35.421'));
+    final expected = DateTime.utc(2023, 8, 7, 18, 28, 35, 421);
+
+    expect(res.timestamp, expected);
 
     final fetchRes = await (db.select(db.dataTypes)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
 
-    expect(fetchRes?.timestamp, DateTime.parse('2023-08-07 18:28:35.421'));
+    expect(fetchRes?.timestamp, expected);
+
+    // Search with local date
+    final fetchRes2 = await (db.select(db.dataTypes)
+          ..where((t) => t.timestamp.equals(expected.asLocal())))
+        .getSingleOrNull();
+    expect(fetchRes2?.timestamp, expected);
+
+    // Search with UTC date
+    final fetchRes3 = await (db.select(db.dataTypes)
+          ..where((t) => t.timestamp.equals(expected.asUtc())))
+        .getSingleOrNull();
+    expect(fetchRes3?.timestamp, expected);
   });
 
   test('support timestamp type - input date utc', () async {
@@ -128,16 +190,16 @@ void main() async {
           ),
         );
 
-    final expectedLocalDate = dateUTC.toLocal();
+    final expectedDate = dateUTC;
 
-    expect(res.timestamp, expectedLocalDate);
-    expect(res.timestamp!.isUtc, isFalse);
+    expect(res.timestamp, expectedDate);
+    expect(res.timestamp!.isUtc, isTrue);
 
     final fetchRes = await (db.select(db.dataTypes)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
 
-    expect(fetchRes?.timestamp, expectedLocalDate);
+    expect(fetchRes?.timestamp, expectedDate);
   });
 
   test('support timestamptz type', () async {
@@ -177,6 +239,22 @@ void main() async {
 
     expect(fetchRes1?.timestamptz, date1);
     expect(fetchRes2?.timestamptz, date2);
+
+    // Search with local date
+    final fetchRes3 = await (db.select(db.dataTypes)
+          ..where(
+            (t) => t.id.equals(1) & t.timestamptz.equals(date1.toLocal()),
+          ))
+        .getSingleOrNull();
+    expect(fetchRes3?.timestamptz, date1);
+
+    // Search with UTC date
+    final fetchRes4 = await (db.select(db.dataTypes)
+          ..where(
+            (t) => t.id.equals(1) & t.timestamptz.equals(date1.toUtc()),
+          ))
+        .getSingleOrNull();
+    expect(fetchRes4?.timestamptz, date1);
   });
 
   test('support timestamptz type - local date', () async {
