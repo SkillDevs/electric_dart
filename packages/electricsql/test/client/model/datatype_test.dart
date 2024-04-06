@@ -6,8 +6,6 @@ import 'package:test/test.dart';
 import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 
-// TODO(dart): Remove drift dependency_overrides until new version releases fixing the issue https://github.com/SkillDevs/electric_dart/issues/10
-
 void main() async {
   final db = TestsDatabase.memory();
 
