@@ -14,7 +14,12 @@ Object mapToSql(PgType? type, Object dartValue) {
 }
 
 /// Map the [dartValue] into a SQL literal understood by postgres.
-String mapToSqlLiteral(PgType type, Object dartValue, String typeName, Codec<Object, Object> codec) {
+String mapToSqlLiteral(
+  PgType type,
+  Object dartValue,
+  String typeName,
+  Codec<Object, Object> codec,
+) {
   throw UnsupportedError('Needs to be run in a dart:io environment.');
 }
 
