@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
-import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';

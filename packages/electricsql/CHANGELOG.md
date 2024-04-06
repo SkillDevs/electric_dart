@@ -1,3 +1,9 @@
+## Next
+
+* The `syncTables` function has been removed in favor of the new [Shapes](https://electric-sql.com/docs/usage/data-access/shapes) feature and the function `syncTable`, which can be customized with `WHERE` clauses or to include other related tables. More information in the README.
+* Improved type mapping between a Postgres database and the drift Electric client in a Dart backend.
+* DateTimes obtained for the Postgres types TIME, TIMESTAMP and DATE are now always in UTC. These types don't store timezone information, so for consistency they are in UTC when reading. For example, if you insert "2023-01-15 08:30" (local), "2023-01-15 08:30+00" (UTC) or "2023-01-15 08:30-05" (with offset); timezone is stripped and all of them will be read as "2023-01-15 08:30" (UTC). 
+
 ## 0.5.3
 
 * Code based on official Typescript client [v0.9.5](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.5) and [v0.9.6](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.6).

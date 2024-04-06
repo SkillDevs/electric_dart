@@ -1,3 +1,7 @@
+## Next
+
+* The drift schema generator now generates the relations between tables in a special field named `$relations` in the drift table.
+
 ## 0.5.5
 
 * The Prisma CLI installed through Docker is now based on the non-Alpine Node Docker image. The Alpine version is incompatible with the M1 architecture. Thanks @opsb for the fix. [#12](https://github.com/SkillDevs/electric_dart/pull/12)  
