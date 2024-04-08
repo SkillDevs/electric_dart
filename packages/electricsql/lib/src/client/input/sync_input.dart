@@ -1,7 +1,9 @@
+import 'package:electricsql/src/client/model/schema.dart';
+
 class SyncInputRaw {
   final String tableName;
   final List<IncludeRelRaw>? include;
-  final Map<String, Object?>? where;
+  final SyncWhere? where;
 
   SyncInputRaw({required this.tableName, this.include, this.where});
 }
@@ -14,4 +16,12 @@ class IncludeRelRaw {
     required this.foreignKey,
     required this.select,
   });
+}
+
+class SyncWhere {
+  final String where;
+
+  SyncWhere(Map<String, Object> map) : where = makeSqlWhereClause(map);
+
+  SyncWhere.raw(this.where);
 }

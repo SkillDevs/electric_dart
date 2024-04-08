@@ -3,18 +3,6 @@ datasource db {
   url      = env("PRISMA_DB_URL")
 }
 
-generator electric {
-  provider                 = "../../node_modules/@electric-sql/prisma-generator/dist/bin.js"
-  output                   = "../generated"
-  relationModel            = true
-  writeNullishInModelTypes = true
-}
-
-generator client {
-  provider = "prisma-client-js"
-  output = "../generated/client"
-}
-
 model Items {
   value String @id
   nbr   Int?
@@ -23,6 +11,7 @@ model Items {
 model User {
   id      Int      @id
   name    String?
+  meta    String?
   posts   Post[]
   profile Profile?
 }
@@ -32,15 +21,24 @@ model Post {
   title     String @unique
   contents  String
   nbr       Int?
-  authorId  Int    @map("authorId")
+  authorId  Int 
   author    User?  @relation(fields: [authorId], references: [id])
 }
 
 model Profile {
   id     Int    @id
   bio    String
-  userId Int    @unique @map("userId")
+  meta   Json?
+  userId Int    @unique
   user   User?  @relation(fields: [userId], references: [id])
+  imageId  String? @unique
+  image    ProfileImage? @relation(fields: [imageId], references: [id])
+}
+
+model ProfileImage {
+  id        String    @id
+  image     Bytes
+  profile   Profile?
 }
 
 model DataTypes {
@@ -51,12 +49,12 @@ model DataTypes {
   timestamp   DateTime? @unique @db.Timestamp(3)
   timestamptz DateTime? @db.Timestamptz(3)
   bool        Boolean?
-  uuid        String?   @db.Uuid     /// @zod.string.uuid()
-  int2        Int?      @db.SmallInt /// @zod.number.int().gte(-32768).lte(32767)
-  int4        Int?                   /// @zod.number.int().gte(-2147483648).lte(2147483647)
+  uuid        String?   @db.Uuid
+  int2        Int?      @db.SmallInt
+  int4        Int?
   int8        BigInt?
-  float4      Float?    @db.Real     /// @zod.custom.use(z.number().or(z.nan()))
-  float8      Float?    @db.DoublePrecision /// @zod.custom.use(z.number().or(z.nan()))
+  float4      Float?    @db.Real
+  float8      Float?    @db.DoublePrecision
   json        Json?
   bytea       Bytes?
   enum        Color?

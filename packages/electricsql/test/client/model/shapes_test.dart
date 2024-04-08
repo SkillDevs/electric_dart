@@ -206,7 +206,7 @@ void main() {
 
     final input = SyncInputRaw(
       tableName: 'Post',
-      where: {
+      where: SyncWhere({
         'OR': [
           {'id': 5},
           {'id': 42},
@@ -221,7 +221,7 @@ void main() {
         ],
         'title': 'foo',
         'contents': "important'",
-      },
+      }),
       include: [
         IncludeRelRaw(
           foreignKey: ['authorId'],
@@ -277,11 +277,14 @@ void main() {
           p.contents.equals("important'") &
           p.nbr.equals(6) &
           p.nbr.equals(7) &
-          (p.id.equals(5) | p.id.equals(42)) &
+          (p.id.isIn([3, 2]) | p.title.like('%hello')) &
           (p.id.equals(1) | p.id.equals(2)).not(),
       include: (p) => [
         SyncInputRelation.from(
           p.$relations.author,
+          // This is not allowed on the server (no filtering of many-to-one relations), but we're just testing that `where`
+          // clauses on nested objects are parsed correctly
+          where: (u) => u.id.isSmallerThanValue(5),
           include: (u) => [
             SyncInputRelation.from(u.$relations.profile),
           ],
@@ -295,12 +298,13 @@ void main() {
       Shape(
         tablename: 'Post',
         where:
-            '"this"."title" = \'foo\' AND "this"."contents" = \'important\'\'\' AND "this"."nbr" = 6 AND "this"."nbr" = 7 AND ("this"."id" = 5 OR "this"."id" = 42) AND NOT ("this"."id" = 1 OR "this"."id" = 2)',
+            '"this"."title" = \'foo\' AND "this"."contents" = \'important\'\'\' AND "this"."nbr" = 6 AND "this"."nbr" = 7 AND ("this"."id" IN (3, 2) OR "this"."title" LIKE \'%hello\') AND NOT ("this"."id" = 1 OR "this"."id" = 2)',
         include: [
           Rel(
             foreignKey: ['authorId'],
             select: Shape(
               tablename: 'User',
+              where: '"this"."id" < 5',
               include: [
                 Rel(
                   foreignKey: ['userId'],

@@ -11,6 +11,7 @@ const kElectrifiedTables = [
   User,
   Post,
   Profile,
+  ProfileImage,
   DataTypes,
   Dummy,
 ];
@@ -34,6 +35,8 @@ class User extends Table with ElectricTableMixin {
   IntColumn get id => customType(ElectricTypes.int4).named('id')();
 
   TextColumn get name => text().named('name').nullable()();
+
+  TextColumn get meta => text().named('meta').nullable()();
 
   @override
   String? get tableName => 'User';
@@ -77,7 +80,12 @@ class Profile extends Table with ElectricTableMixin {
 
   TextColumn get bio => text().named('bio')();
 
+  Column<Object> get meta =>
+      customType(ElectricTypes.jsonb).named('meta').nullable()();
+
   IntColumn get userId => customType(ElectricTypes.int4).named('userId')();
+
+  TextColumn get imageId => text().named('imageId').nullable()();
 
   @override
   String? get tableName => 'Profile';
@@ -90,6 +98,25 @@ class Profile extends Table with ElectricTableMixin {
 
   @override
   $ProfileTableRelations get $relations => const $ProfileTableRelations();
+}
+
+class ProfileImage extends Table with ElectricTableMixin {
+  TextColumn get id => text().named('id')();
+
+  BlobColumn get image => blob().named('image')();
+
+  @override
+  String? get tableName => 'ProfileImage';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+
+  @override
+  $ProfileImageTableRelations get $relations =>
+      const $ProfileImageTableRelations();
 }
 
 class DataTypes extends Table with ElectricTableMixin {
@@ -246,8 +273,30 @@ class $ProfileTableRelations implements TableRelations {
         relationName: 'ProfileToUser',
       );
 
+  TableRelation<ProfileImage> get image => const TableRelation<ProfileImage>(
+        fromField: 'imageId',
+        toField: 'id',
+        relationName: 'ProfileToProfileImage',
+      );
+
   @override
-  List<TableRelation<Table>> get $relationsList => [user];
+  List<TableRelation<Table>> get $relationsList => [
+        user,
+        image,
+      ];
+}
+
+class $ProfileImageTableRelations implements TableRelations {
+  const $ProfileImageTableRelations();
+
+  TableRelation<Profile> get profile => const TableRelation<Profile>(
+        fromField: '',
+        toField: '',
+        relationName: 'ProfileToProfileImage',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [profile];
 }
 
 class $DataTypesTableRelations implements TableRelations {

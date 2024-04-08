@@ -330,20 +330,14 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       completeMsg: 'Database introspected',
     );
 
-    final prismaSchemaContent = prismaSchema.readAsStringSync();
-
     // print(prismaSchemaContent);
 
     final outFolder = config.read<String>('CLIENT_PATH');
 
-    final schemaInfo = extractInfoFromPrismaSchema(
-      prismaSchemaContent,
-      genOpts: opts.driftSchemaGenOpts,
-    );
-    final driftSchemaFile = resolveDriftSchemaFile(outFolder);
+    // Generate the Electric client from the given introspected schema
     await wrapWithProgress(
       logger,
-      () => buildDriftSchemaDartFile(schemaInfo, driftSchemaFile),
+      () => _generateClient(prismaSchema, outFolder, opts),
       progressMsg: 'Generating Drift DB schema',
       completeMsg: 'Drift DB schema generated',
     );
@@ -364,6 +358,22 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       await tmpDir.delete(recursive: true);
     }
   }
+}
+
+Future<void> _generateClient(
+  File prismaSchema,
+  String outFolder,
+  _GeneratorOpts opts,
+) async {
+  final prismaSchemaContent = await prismaSchema.readAsString();
+
+  final schemaInfo = extractInfoFromPrismaSchema(
+    prismaSchemaContent,
+    genOpts: opts.driftSchemaGenOpts,
+  );
+  final driftSchemaFile = resolveDriftSchemaFile(outFolder);
+
+  await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
 }
 
 File resolveMigrationsFile(String outFolder) {

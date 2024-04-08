@@ -126,7 +126,7 @@ class DBSchemaRaw extends DBSchema {
 @protected
 Shape computeShape(SyncInputRaw i) {
   final include = i.include ?? [];
-  final where = i.where ?? {};
+  final SyncWhere where = i.where ?? SyncWhere.raw('');
 
   Rel includeRelToRel(IncludeRelRaw ir) {
     return Rel(
@@ -141,7 +141,7 @@ Shape computeShape(SyncInputRaw i) {
   final List<Rel> includedTables =
       include.map((e) => includeRelToRel(e)).toList();
 
-  final whereClause = _makeSqlWhereClause(where);
+  final whereClause = where.where;
   return Shape(
     tablename: i.tableName,
     include: includedTables.isEmpty ? null : includedTables,
@@ -149,22 +149,29 @@ Shape computeShape(SyncInputRaw i) {
   );
 }
 
-String _makeSqlWhereClause(Map<String, Object?> where) {
+// TODO(dart): Equivalent implementation from official electric to add support for other map based
+// operators like "in", "lt", "gt"...
+// Also update the test "nested shape is constructed" if this is done
+// Reference:
+// https://github.com/electric-sql/electric/blob/6adfe2e2859ffef994a60c0c193d49a37abcb091/clients/typescript/src/client/model/table.ts#L1655
+
+/// Compile Prisma-like where-clause object into a SQL where clause that the server can understand.
+String makeSqlWhereClause(Map<String, Object?> where) {
   // we wrap it in an array and then flatten it
   // in case the user provided an object instead of an array of objects
   final orConnectedObjects = _extractWhereConditionsFor('OR', where);
   final orSqlClause = orConnectedObjects.isEmpty
       ? ''
-      : '(${orConnectedObjects.map((o) => '(${_makeSqlWhereClause(o)})').join(' OR ')})';
+      : '(${orConnectedObjects.map((o) => '(${makeSqlWhereClause(o)})').join(' OR ')})';
   final notConnector = _extractWhereConditionsFor('NOT', where);
 
   final notSqlClause = notConnector.isEmpty
       ? ''
-      : 'NOT (${notConnector.map((o) => '(${_makeSqlWhereClause(o)})').join(' OR ')})';
+      : 'NOT (${notConnector.map((o) => '(${makeSqlWhereClause(o)})').join(' OR ')})';
 
   final andConnector = _extractWhereConditionsFor('AND', where);
 
-  final andSqlClause = andConnector.map(_makeSqlWhereClause).join(' AND ');
+  final andSqlClause = andConnector.map(makeSqlWhereClause).join(' AND ');
   final fieldSqlClause = where.entries
       .where((entry) => !['AND', 'OR', 'NOT'].contains(entry.key))
       .map((entry) {

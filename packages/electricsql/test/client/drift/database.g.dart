@@ -383,8 +383,13 @@ class $UserTable extends User with TableInfo<$UserTable, UserData> {
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _metaMeta = const VerificationMeta('meta');
   @override
-  List<GeneratedColumn> get $columns => [id, name];
+  late final GeneratedColumn<String> meta = GeneratedColumn<String>(
+      'meta', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, name, meta];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -404,6 +409,10 @@ class $UserTable extends User with TableInfo<$UserTable, UserData> {
       context.handle(
           _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     }
+    if (data.containsKey('meta')) {
+      context.handle(
+          _metaMeta, meta.isAcceptableOrUnknown(data['meta']!, _metaMeta));
+    }
     return context;
   }
 
@@ -417,6 +426,8 @@ class $UserTable extends User with TableInfo<$UserTable, UserData> {
           .read(ElectricTypes.int4, data['${effectivePrefix}id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name']),
+      meta: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}meta']),
     );
   }
 
@@ -432,13 +443,17 @@ class $UserTable extends User with TableInfo<$UserTable, UserData> {
 class UserData extends DataClass implements Insertable<UserData> {
   final int id;
   final String? name;
-  const UserData({required this.id, this.name});
+  final String? meta;
+  const UserData({required this.id, this.name, this.meta});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id, ElectricTypes.int4);
     if (!nullToAbsent || name != null) {
       map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || meta != null) {
+      map['meta'] = Variable<String>(meta);
     }
     return map;
   }
@@ -447,6 +462,7 @@ class UserData extends DataClass implements Insertable<UserData> {
     return UserCompanion(
       id: Value(id),
       name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      meta: meta == null && nullToAbsent ? const Value.absent() : Value(meta),
     );
   }
 
@@ -456,6 +472,7 @@ class UserData extends DataClass implements Insertable<UserData> {
     return UserData(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String?>(json['name']),
+      meta: serializer.fromJson<String?>(json['meta']),
     );
   }
   @override
@@ -464,56 +481,72 @@ class UserData extends DataClass implements Insertable<UserData> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String?>(name),
+      'meta': serializer.toJson<String?>(meta),
     };
   }
 
-  UserData copyWith({int? id, Value<String?> name = const Value.absent()}) =>
+  UserData copyWith(
+          {int? id,
+          Value<String?> name = const Value.absent(),
+          Value<String?> meta = const Value.absent()}) =>
       UserData(
         id: id ?? this.id,
         name: name.present ? name.value : this.name,
+        meta: meta.present ? meta.value : this.meta,
       );
   @override
   String toString() {
     return (StringBuffer('UserData(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('meta: $meta')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name);
+  int get hashCode => Object.hash(id, name, meta);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is UserData && other.id == this.id && other.name == this.name);
+      (other is UserData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.meta == this.meta);
 }
 
 class UserCompanion extends UpdateCompanion<UserData> {
   final Value<int> id;
   final Value<String?> name;
+  final Value<String?> meta;
   const UserCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.meta = const Value.absent(),
   });
   UserCompanion.insert({
     required int id,
     this.name = const Value.absent(),
+    this.meta = const Value.absent(),
   }) : id = Value(id);
   static Insertable<UserData> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<String>? meta,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (meta != null) 'meta': meta,
     });
   }
 
-  UserCompanion copyWith({Value<int>? id, Value<String?>? name}) {
+  UserCompanion copyWith(
+      {Value<int>? id, Value<String?>? name, Value<String?>? meta}) {
     return UserCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      meta: meta ?? this.meta,
     );
   }
 
@@ -526,6 +559,9 @@ class UserCompanion extends UpdateCompanion<UserData> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (meta.present) {
+      map['meta'] = Variable<String>(meta.value);
+    }
     return map;
   }
 
@@ -533,7 +569,8 @@ class UserCompanion extends UpdateCompanion<UserData> {
   String toString() {
     return (StringBuffer('UserCompanion(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('meta: $meta')
           ..write(')'))
         .toString();
   }
@@ -840,13 +877,24 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
   late final GeneratedColumn<String> bio = GeneratedColumn<String>(
       'bio', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _metaMeta = const VerificationMeta('meta');
+  @override
+  late final GeneratedColumn<Object> meta = GeneratedColumn<Object>(
+      'meta', aliasedName, true,
+      type: ElectricTypes.jsonb, requiredDuringInsert: false);
   static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
   @override
   late final GeneratedColumn<int> userId = GeneratedColumn<int>(
       'userId', aliasedName, false,
       type: ElectricTypes.int4, requiredDuringInsert: true);
+  static const VerificationMeta _imageIdMeta =
+      const VerificationMeta('imageId');
   @override
-  List<GeneratedColumn> get $columns => [id, bio, userId];
+  late final GeneratedColumn<String> imageId = GeneratedColumn<String>(
+      'imageId', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, bio, meta, userId, imageId];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -868,11 +916,19 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
     } else if (isInserting) {
       context.missing(_bioMeta);
     }
+    if (data.containsKey('meta')) {
+      context.handle(
+          _metaMeta, meta.isAcceptableOrUnknown(data['meta']!, _metaMeta));
+    }
     if (data.containsKey('userId')) {
       context.handle(_userIdMeta,
           userId.isAcceptableOrUnknown(data['userId']!, _userIdMeta));
     } else if (isInserting) {
       context.missing(_userIdMeta);
+    }
+    if (data.containsKey('imageId')) {
+      context.handle(_imageIdMeta,
+          imageId.isAcceptableOrUnknown(data['imageId']!, _imageIdMeta));
     }
     return context;
   }
@@ -887,8 +943,12 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
           .read(ElectricTypes.int4, data['${effectivePrefix}id'])!,
       bio: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}bio'])!,
+      meta: attachedDatabase.typeMapping
+          .read(ElectricTypes.jsonb, data['${effectivePrefix}meta']),
       userId: attachedDatabase.typeMapping
           .read(ElectricTypes.int4, data['${effectivePrefix}userId'])!,
+      imageId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}imageId']),
     );
   }
 
@@ -904,15 +964,27 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
 class ProfileData extends DataClass implements Insertable<ProfileData> {
   final int id;
   final String bio;
+  final Object? meta;
   final int userId;
+  final String? imageId;
   const ProfileData(
-      {required this.id, required this.bio, required this.userId});
+      {required this.id,
+      required this.bio,
+      this.meta,
+      required this.userId,
+      this.imageId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id, ElectricTypes.int4);
     map['bio'] = Variable<String>(bio);
+    if (!nullToAbsent || meta != null) {
+      map['meta'] = Variable<Object>(meta, ElectricTypes.jsonb);
+    }
     map['userId'] = Variable<int>(userId, ElectricTypes.int4);
+    if (!nullToAbsent || imageId != null) {
+      map['imageId'] = Variable<String>(imageId);
+    }
     return map;
   }
 
@@ -920,7 +992,11 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
     return ProfileCompanion(
       id: Value(id),
       bio: Value(bio),
+      meta: meta == null && nullToAbsent ? const Value.absent() : Value(meta),
       userId: Value(userId),
+      imageId: imageId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageId),
     );
   }
 
@@ -930,7 +1006,9 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
     return ProfileData(
       id: serializer.fromJson<int>(json['id']),
       bio: serializer.fromJson<String>(json['bio']),
+      meta: serializer.fromJson<Object?>(json['meta']),
       userId: serializer.fromJson<int>(json['userId']),
+      imageId: serializer.fromJson<String?>(json['imageId']),
     );
   }
   @override
@@ -939,70 +1017,100 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'bio': serializer.toJson<String>(bio),
+      'meta': serializer.toJson<Object?>(meta),
       'userId': serializer.toJson<int>(userId),
+      'imageId': serializer.toJson<String?>(imageId),
     };
   }
 
-  ProfileData copyWith({int? id, String? bio, int? userId}) => ProfileData(
+  ProfileData copyWith(
+          {int? id,
+          String? bio,
+          Value<Object?> meta = const Value.absent(),
+          int? userId,
+          Value<String?> imageId = const Value.absent()}) =>
+      ProfileData(
         id: id ?? this.id,
         bio: bio ?? this.bio,
+        meta: meta.present ? meta.value : this.meta,
         userId: userId ?? this.userId,
+        imageId: imageId.present ? imageId.value : this.imageId,
       );
   @override
   String toString() {
     return (StringBuffer('ProfileData(')
           ..write('id: $id, ')
           ..write('bio: $bio, ')
-          ..write('userId: $userId')
+          ..write('meta: $meta, ')
+          ..write('userId: $userId, ')
+          ..write('imageId: $imageId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, bio, userId);
+  int get hashCode => Object.hash(id, bio, meta, userId, imageId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ProfileData &&
           other.id == this.id &&
           other.bio == this.bio &&
-          other.userId == this.userId);
+          other.meta == this.meta &&
+          other.userId == this.userId &&
+          other.imageId == this.imageId);
 }
 
 class ProfileCompanion extends UpdateCompanion<ProfileData> {
   final Value<int> id;
   final Value<String> bio;
+  final Value<Object?> meta;
   final Value<int> userId;
+  final Value<String?> imageId;
   const ProfileCompanion({
     this.id = const Value.absent(),
     this.bio = const Value.absent(),
+    this.meta = const Value.absent(),
     this.userId = const Value.absent(),
+    this.imageId = const Value.absent(),
   });
   ProfileCompanion.insert({
     required int id,
     required String bio,
+    this.meta = const Value.absent(),
     required int userId,
+    this.imageId = const Value.absent(),
   })  : id = Value(id),
         bio = Value(bio),
         userId = Value(userId);
   static Insertable<ProfileData> custom({
     Expression<int>? id,
     Expression<String>? bio,
+    Expression<Object>? meta,
     Expression<int>? userId,
+    Expression<String>? imageId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (bio != null) 'bio': bio,
+      if (meta != null) 'meta': meta,
       if (userId != null) 'userId': userId,
+      if (imageId != null) 'imageId': imageId,
     });
   }
 
   ProfileCompanion copyWith(
-      {Value<int>? id, Value<String>? bio, Value<int>? userId}) {
+      {Value<int>? id,
+      Value<String>? bio,
+      Value<Object?>? meta,
+      Value<int>? userId,
+      Value<String?>? imageId}) {
     return ProfileCompanion(
       id: id ?? this.id,
       bio: bio ?? this.bio,
+      meta: meta ?? this.meta,
       userId: userId ?? this.userId,
+      imageId: imageId ?? this.imageId,
     );
   }
 
@@ -1015,8 +1123,14 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     if (bio.present) {
       map['bio'] = Variable<String>(bio.value);
     }
+    if (meta.present) {
+      map['meta'] = Variable<Object>(meta.value, ElectricTypes.jsonb);
+    }
     if (userId.present) {
       map['userId'] = Variable<int>(userId.value, ElectricTypes.int4);
+    }
+    if (imageId.present) {
+      map['imageId'] = Variable<String>(imageId.value);
     }
     return map;
   }
@@ -1026,7 +1140,184 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     return (StringBuffer('ProfileCompanion(')
           ..write('id: $id, ')
           ..write('bio: $bio, ')
-          ..write('userId: $userId')
+          ..write('meta: $meta, ')
+          ..write('userId: $userId, ')
+          ..write('imageId: $imageId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ProfileImageTable extends ProfileImage
+    with TableInfo<$ProfileImageTable, ProfileImageData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfileImageTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _imageMeta = const VerificationMeta('image');
+  @override
+  late final GeneratedColumn<Uint8List> image = GeneratedColumn<Uint8List>(
+      'image', aliasedName, false,
+      type: DriftSqlType.blob, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, image];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ProfileImage';
+  @override
+  VerificationContext validateIntegrity(Insertable<ProfileImageData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('image')) {
+      context.handle(
+          _imageMeta, image.isAcceptableOrUnknown(data['image']!, _imageMeta));
+    } else if (isInserting) {
+      context.missing(_imageMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ProfileImageData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProfileImageData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      image: attachedDatabase.typeMapping
+          .read(DriftSqlType.blob, data['${effectivePrefix}image'])!,
+    );
+  }
+
+  @override
+  $ProfileImageTable createAlias(String alias) {
+    return $ProfileImageTable(attachedDatabase, alias);
+  }
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class ProfileImageData extends DataClass
+    implements Insertable<ProfileImageData> {
+  final String id;
+  final Uint8List image;
+  const ProfileImageData({required this.id, required this.image});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['image'] = Variable<Uint8List>(image);
+    return map;
+  }
+
+  ProfileImageCompanion toCompanion(bool nullToAbsent) {
+    return ProfileImageCompanion(
+      id: Value(id),
+      image: Value(image),
+    );
+  }
+
+  factory ProfileImageData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProfileImageData(
+      id: serializer.fromJson<String>(json['id']),
+      image: serializer.fromJson<Uint8List>(json['image']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'image': serializer.toJson<Uint8List>(image),
+    };
+  }
+
+  ProfileImageData copyWith({String? id, Uint8List? image}) => ProfileImageData(
+        id: id ?? this.id,
+        image: image ?? this.image,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('ProfileImageData(')
+          ..write('id: $id, ')
+          ..write('image: $image')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, $driftBlobEquality.hash(image));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileImageData &&
+          other.id == this.id &&
+          $driftBlobEquality.equals(other.image, this.image));
+}
+
+class ProfileImageCompanion extends UpdateCompanion<ProfileImageData> {
+  final Value<String> id;
+  final Value<Uint8List> image;
+  const ProfileImageCompanion({
+    this.id = const Value.absent(),
+    this.image = const Value.absent(),
+  });
+  ProfileImageCompanion.insert({
+    required String id,
+    required Uint8List image,
+  })  : id = Value(id),
+        image = Value(image);
+  static Insertable<ProfileImageData> custom({
+    Expression<String>? id,
+    Expression<Uint8List>? image,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (image != null) 'image': image,
+    });
+  }
+
+  ProfileImageCompanion copyWith({Value<String>? id, Value<Uint8List>? image}) {
+    return ProfileImageCompanion(
+      id: id ?? this.id,
+      image: image ?? this.image,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (image.present) {
+      map['image'] = Variable<Uint8List>(image.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileImageCompanion(')
+          ..write('id: $id, ')
+          ..write('image: $image')
           ..write(')'))
         .toString();
   }
@@ -2144,6 +2435,7 @@ abstract class _$TestsDatabase extends GeneratedDatabase {
   late final $UserTable user = $UserTable(this);
   late final $PostTable post = $PostTable(this);
   late final $ProfileTable profile = $ProfileTable(this);
+  late final $ProfileImageTable profileImage = $ProfileImageTable(this);
   late final $DataTypesTable dataTypes = $DataTypesTable(this);
   late final $DummyTable dummy = $DummyTable(this);
   late final $ExtraTable extra = $ExtraTable(this);
@@ -2151,6 +2443,15 @@ abstract class _$TestsDatabase extends GeneratedDatabase {
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [tableFromDriftFile, items, user, post, profile, dataTypes, dummy, extra];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        tableFromDriftFile,
+        items,
+        user,
+        post,
+        profile,
+        profileImage,
+        dataTypes,
+        dummy,
+        extra
+      ];
 }
