@@ -1,6 +1,7 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
+import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
@@ -43,7 +44,10 @@ class ElectricClientImpl extends ElectricNamespace
   final Satellite satellite;
 
   @protected
-  final IShapeManager shapeManager;
+  late final IShapeManager shapeManager;
+
+  @protected
+  late final IReplicationTransformManager replicationTransformManager;
 
   @override
   final DBSchema dbDescription;
@@ -77,14 +81,11 @@ class ElectricClientImpl extends ElectricNamespace
     required Satellite satellite,
     required Registry registry,
   }) {
-    final shapeManager = ShapeManager(satellite);
-
     return ElectricClientImpl.internal(
       dbName: dbName,
       adapter: adapter,
       notifier: notifier,
       satellite: satellite,
-      shapeManager: shapeManager,
       dbDescription: dbDescription,
       registry: registry,
     );
@@ -97,9 +98,11 @@ class ElectricClientImpl extends ElectricNamespace
     required super.notifier,
     required super.registry,
     required this.satellite,
-    required this.shapeManager,
     required this.dbDescription,
-  }) : super();
+  }) : super() {
+    shapeManager = ShapeManager(satellite);
+    replicationTransformManager = ReplicationTransformManager(satellite);
+  }
 
   @override
   Future<ShapeSubscription> sync(SyncInputRaw syncInput) async {

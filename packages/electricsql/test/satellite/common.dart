@@ -7,7 +7,6 @@ import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/schema.dart';
@@ -232,7 +231,7 @@ Future<SatelliteTestContext> makeContext({
 
   final migrator =
       BundleMigrator(adapter: adapter, migrations: kTestMigrations);
-  final notifier = MockNotifier(dbName);
+  final notifier = MockNotifier(dbName, eventEmitter: EventEmitter());
   final client = MockSatelliteClient();
   final satellite = SatelliteProcess(
     dbName: dbName,
@@ -338,7 +337,6 @@ Future<ElectricClientRaw> mockElectricClient(
     notifier: notifier,
     registry: registry,
     satellite: satellite,
-    shapeManager: ShapeManagerMock(),
     dbDescription: DBSchemaRaw(fields: {}, migrations: []),
   );
 

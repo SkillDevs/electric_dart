@@ -30,16 +30,11 @@ class TableRelation<T extends Table> {
 
   TableRelation<Table> getOppositeRelation(GeneratedDatabase db) {
     final relatedTable = getDriftTable(db);
+    final TableRelations? relations = getTableRelations(relatedTable);
 
     Never throwError() => throw Exception(
           'Unexpected state: Table does not have an opposite relation',
         );
-
-    if (relatedTable is! ElectricTableMixin) {
-      throwError();
-    }
-
-    final TableRelations? relations = relatedTable.$relations;
 
     if (relations == null) {
       throwError();
@@ -58,4 +53,11 @@ class TableRelation<T extends Table> {
 
 abstract interface class TableRelations {
   List<TableRelation<Table>> get $relationsList;
+}
+
+TableRelations? getTableRelations<T extends Table>(T table) {
+  if (table is! ElectricTableMixin) {
+    return null;
+  }
+  return table.$relations;
 }

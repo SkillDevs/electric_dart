@@ -543,6 +543,26 @@ Future<void> insertOtherItem(
   });
 }
 
+void setItemReplicatonTransform(MyDriftElectricClient electric) {
+  electric.setTableReplicationTransform(
+    electric.db.items,
+    transformOutbound: (item) {
+      final newContent = item.content
+          .split('')
+          .map((char) => String.fromCharCode(char.codeUnitAt(0) + 1))
+          .join('');
+      return item.copyWith(content: newContent);
+    },
+    transformInbound: (item) {
+      final newContent = item.content
+          .split('')
+          .map((char) => String.fromCharCode(char.codeUnitAt(0) - 1))
+          .join('');
+      return item.copyWith(content: newContent);
+    },
+  );
+}
+
 Future<void> stop(MyDriftElectricClient db) async {
   await globalRegistry.stopAll();
 }

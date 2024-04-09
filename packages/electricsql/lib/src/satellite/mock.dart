@@ -40,8 +40,7 @@ class MockSatelliteProcess implements Satellite {
   String? token;
 
   @override
-  late ConnectivityState? connectivityState =
-      const ConnectivityState(status: ConnectivityStatus.disconnected);
+  ConnectivityState? connectivityState;
 
   MockSatelliteProcess({
     required this.dbName,
@@ -101,6 +100,15 @@ class MockSatelliteProcess implements Satellite {
   Future<void> stop({bool? shutdown}) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
+
+  @override
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  ) {}
+
+  @override
+  void clearReplicationTransform(QualifiedTablename tableName) {}
 }
 
 @visibleForTesting
@@ -152,6 +160,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   List<int>? inboundAck = kDefaultLogPos;
 
   List<int> outboundSent = kDefaultLogPos;
+  List<DataTransaction> outboundTransactionsEnqueued = [];
 
   // to clear any pending timeouts
   List<Timer> timeouts = [];
@@ -452,6 +461,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
       );
     }
 
+    outboundTransactionsEnqueued.add(transaction);
     outboundSent = transaction.lsn;
   }
 
@@ -483,6 +493,19 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
         SubscriptionErrorData(subscriptionId: subscriptionId, error: satError),
       );
     });
+  }
+
+  @override
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void clearReplicationTransform(QualifiedTablename tableName) {
+    throw UnimplementedError();
   }
 
   void Function() _on<T>(

@@ -1590,6 +1590,19 @@ This means there is a notifier subscription leak.`''');
       maxSqlParameters = 999;
     }
   }
+
+  @override
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  ) {
+    client.setReplicationTransform(tableName, transform);
+  }
+
+  @override
+  void clearReplicationTransform(QualifiedTablename tableName) {
+    client.clearReplicationTransform(tableName);
+  }
 }
 
 Statement _applyDeleteOperation(

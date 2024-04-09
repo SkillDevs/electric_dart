@@ -196,6 +196,11 @@
     ??$node
 [endmacro]
 
+[macro node_set_item_replication_transform]
+    !set_item_replication_transform db
+    ??$node
+[endmacro]
+
 [macro node_sync_table table]
     !sync_table db "${table}"
 [endmacro]

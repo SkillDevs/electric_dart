@@ -21,6 +21,7 @@ import 'package:electricsql/src/util/emitter_helpers.dart';
 import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/proto.dart';
+import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
@@ -89,6 +90,9 @@ class SatelliteClient implements Client {
 
   // can only handle a single subscription at a time
   late final SubscriptionsDataCache _subscriptionsDataCache;
+
+  final Map<String, ReplicatedRowTransformer<Record>> replicationTransforms =
+      {};
 
   void Function(Uint8List bytes)? socketHandler;
   Throttle<void>? throttledPushTransaction;
@@ -414,6 +418,13 @@ class SatelliteClient implements Client {
         'enqueuing a transaction while outbound replication has not started',
       );
     }
+
+    // apply any specified transforms to the data changes
+    transaction.changes = transaction.changes
+        .map(
+          (dc) => _applyDataChangeTransform(dc, isInbound: false),
+        )
+        .toList();
 
     outbound.transactions.add(transaction);
     outbound.lastLsn = transaction.lsn;
@@ -955,10 +966,17 @@ class SatelliteClient implements Client {
         }
 
         final lastTx = replication.transactions[lastTxnIdx];
+
+        // apply any specified transforms to the data changes
+        final transformedChanges = lastTx.changes.map((change) {
+          if (change is! DataChange) return change;
+          return _applyDataChangeTransform(change, isInbound: true);
+        }).toList();
+
         final transaction = ServerTransaction(
           commitTimestamp: lastTx.commitTimestamp,
           lsn: lastTx.lsn,
-          changes: lastTx.changes,
+          changes: transformedChanges,
           origin: lastTx.origin,
           migrationVersion: lastTx.migrationVersion,
           id: lastTx.id,
@@ -1205,6 +1223,44 @@ class SatelliteClient implements Client {
         reason == 'additionalData') {
       sendMessage(msg);
       inbound.lastAckedTxId = msg.transactionId;
+    }
+  }
+
+  @override
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  ) {
+    replicationTransforms[tableName.tablename] = transform;
+  }
+
+  @override
+  void clearReplicationTransform(QualifiedTablename tableName) {
+    replicationTransforms.remove(tableName.tablename);
+  }
+
+  DataChange _applyDataChangeTransform(
+    DataChange dataChange, {
+    required bool isInbound,
+  }) {
+    final transforms = replicationTransforms[dataChange.relation.table];
+    if (transforms == null) return dataChange;
+    final transformToUse =
+        isInbound ? transforms.transformInbound : transforms.transformOutbound;
+    try {
+      return dataChange.copyWith(
+        record: () => dataChange.record == null
+            ? null
+            : transformToUse(dataChange.record!),
+        oldRecord: () => dataChange.oldRecord == null
+            ? null
+            : transformToUse(dataChange.oldRecord!),
+      );
+    } catch (err) {
+      throw SatelliteException(
+        SatelliteErrorCode.replicationTransformError,
+        err.toString(),
+      );
     }
   }
 }

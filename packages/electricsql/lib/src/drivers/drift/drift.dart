@@ -1,7 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/client/model/client.dart';
+import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
@@ -9,6 +12,7 @@ import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/util.dart';
 import 'package:meta/meta.dart';
 
 Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
@@ -39,7 +43,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     ),
   );
 
-  final driftClient = DriftElectricClient(namespace, db);
+  final driftClient = DriftElectricClient(namespace as ElectricClientImpl, db);
   driftClient.init();
 
   return driftClient;
@@ -54,6 +58,28 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
     SyncIncludeBuilder<T>? include,
     SyncWhereBuilder<T>? where,
   });
+
+  /// Puts transforms in place such that any data being replicated
+  /// to or from this table is first handled appropriately while
+  /// retaining type consistency.
+  ///
+  /// Can be used to encrypt sensitive fields before they are
+  /// replicated outside of their secure local source.
+  ///
+  /// NOTE: usage is discouraged, but ensure transforms are
+  /// set before replication is initiated using [syncTable]
+  /// to avoid partially transformed tables.
+  void setTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table, {
+    required Insertable<D> Function(D row) transformInbound,
+    required Insertable<D> Function(D row) transformOutbound,
+    Insertable<D> Function(D)? toInsertable,
+  });
+
+  /// Clears any replication transforms set using [setReplicationTransform]
+  void clearTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table,
+  );
 }
 
 class DriftElectricClient<DB extends GeneratedDatabase>
@@ -61,7 +87,7 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   @override
   final DB db;
 
-  final ElectricClientRaw _baseClient;
+  final ElectricClientImpl _baseClient;
 
   void Function()? _disposeHook;
 
@@ -183,6 +209,80 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     return _baseClient
         // ignore: invalid_use_of_protected_member
         .syncShapeInternal(shape);
+  }
+
+  @override
+  void setTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table, {
+    required Insertable<D> Function(D row) transformInbound,
+    required Insertable<D> Function(D row) transformOutbound,
+    Insertable<D> Function(D)? toInsertable,
+  }) {
+    // forbid transforming relation keys to avoid breaking
+    // referential integrity
+    final relations = getTableRelations(table.asDslTable)?.$relationsList ?? [];
+    final immutableFields = relations.map((r) => r.fromField).toList();
+
+    final QualifiedTablename qualifiedTableName = _getQualifiedTableName(table);
+
+    // ignore: invalid_use_of_protected_member
+    _baseClient.replicationTransformManager.setTableTransform(
+      qualifiedTableName,
+      ReplicatedRowTransformer(
+        transformInbound: (Record record) {
+          final dataClass = table.map(record) as D;
+          final insertable = transformTableRecord<TableDsl, D, Record>(
+            table,
+            dataClass,
+            transformInbound,
+            immutableFields,
+            toInsertable: toInsertable,
+          );
+          return insertable
+              .toColumns(false)
+              .map((key, val) => MapEntry(key, expressionToValue(val)));
+        },
+        transformOutbound: (Record record) {
+          final dataClass = table.map(record) as D;
+          final insertable = transformTableRecord<TableDsl, D, Record>(
+            table,
+            dataClass,
+            transformOutbound,
+            immutableFields,
+            toInsertable: toInsertable,
+          );
+          return insertable
+              .toColumns(false)
+              .map((key, val) => MapEntry(key, expressionToValue(val)));
+        },
+      ),
+    );
+  }
+
+  Object? expressionToValue(Expression<Object?> expression) {
+    if (expression is Variable) {
+      return expression.value;
+    } else if (expression is Constant) {
+      return expression.value;
+    } else {
+      throw ArgumentError('Unsupported expression type: $expression');
+    }
+  }
+
+  @override
+  void clearTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table,
+  ) {
+    final qualifiedTableName = _getQualifiedTableName(table);
+    // ignore: invalid_use_of_protected_member
+    _baseClient.replicationTransformManager
+        .clearTableTransform(qualifiedTableName);
+  }
+
+  QualifiedTablename _getQualifiedTableName<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table,
+  ) {
+    return QualifiedTablename('main', table.actualTableName);
   }
 }
 

@@ -8,6 +8,7 @@ const _throwErrors = {
   SatelliteErrorCode.internal,
   SatelliteErrorCode.fatalError,
   SatelliteErrorCode.connectionCancelledByDisconnect,
+  SatelliteErrorCode.replicationTransformError,
 };
 
 const _fatalErrors = {

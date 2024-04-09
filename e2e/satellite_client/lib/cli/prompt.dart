@@ -319,6 +319,12 @@ Future<void> start() async {
           command,
           (electric, keys) => insertOtherItem(electric, keys.cast<String>()),
         );
+      } else if (name == "set_item_replication_transform") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          setItemReplicatonTransform,
+        );
       } else if (name == "stop") {
         await processCommand1Param<MyDriftElectricClient, void>(
           state,

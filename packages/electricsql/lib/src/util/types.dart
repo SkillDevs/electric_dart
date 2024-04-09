@@ -94,6 +94,9 @@ enum SatelliteErrorCode {
   // shape data errors
   shapeDeliveryError,
   shapeSizeLimitExceeded,
+
+  // replication transform errors
+  replicationTransformError,
 }
 
 class SocketCloseReason {
@@ -181,7 +184,7 @@ class BaseTransaction<ChangeT> with EquatableMixin {
   // This field is only set by transactions coming from Electric
   String? origin;
 
-  final List<ChangeT> changes;
+  List<ChangeT> changes;
 
   String? migrationVersion;
 
@@ -301,6 +304,22 @@ class DataChange extends Change with EquatableMixin {
         oldRecord,
         tags,
       ];
+
+  DataChange copyWith({
+    Relation? relation,
+    DataChangeType? type,
+    Record? Function()? record,
+    Record? Function()? oldRecord,
+    List<Tag>? tags,
+  }) {
+    return DataChange(
+      relation: relation ?? this.relation,
+      type: type ?? this.type,
+      record: record?.call() ?? this.record,
+      oldRecord: oldRecord?.call() ?? this.oldRecord,
+      tags: tags ?? this.tags,
+    );
+  }
 }
 
 class Relation with EquatableMixin {
@@ -361,6 +380,16 @@ class RelationColumn with EquatableMixin {
 
   @override
   List<Object?> get props => [name, type, isNullable, primaryKey];
+}
+
+class ReplicatedRowTransformer<RowType> {
+  final RowType Function(RowType row) transformInbound;
+  final RowType Function(RowType row) transformOutbound;
+
+  ReplicatedRowTransformer({
+    required this.transformInbound,
+    required this.transformOutbound,
+  });
 }
 
 typedef ErrorCallback = EventCallbackCall<SatelliteException>;

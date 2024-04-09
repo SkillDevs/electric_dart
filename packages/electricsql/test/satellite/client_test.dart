@@ -15,7 +15,7 @@ import 'package:electricsql/src/sockets/io.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:test/test.dart';
 
@@ -1305,6 +1305,552 @@ void main() {
       expect(resp, UnsubscribeResponse());
     },
   );
+
+  test(
+      'setReplicationTransform transforms outbound INSERTs, UPDATEs, and DELETEs',
+      () async {
+    await client.connect();
+    // set replication transform and perform same operations for replication
+    client.setReplicationTransform(
+      const QualifiedTablename('main', 'parent'),
+      ReplicatedRowTransformer(
+        transformInbound: (row) => {
+          ...row,
+          'value': 'transformed_inbound_${row['value']! as String}',
+        },
+        transformOutbound: (row) => {
+          ...row,
+          'value': 'transformed_outbound_${row['value']! as String}',
+        },
+      ),
+    );
+
+    final startResp = SatInStartReplicationResp();
+
+    final transaction = DataTransaction(
+      commitTimestamp: Int64(3000),
+      lsn: numberToBytes(0),
+      changes: [
+        DataChange(
+          relation: kTestRelations['parent']!,
+          record: {
+            'id': 1,
+            'value': 'local',
+            'other': null,
+          },
+          tags: [],
+          type: DataChangeType.insert,
+        ),
+        DataChange(
+          relation: kTestRelations['parent']!,
+          record: {
+            'id': 1,
+            'value': 'different',
+            'other': 2,
+          },
+          oldRecord: {
+            'id': 1,
+            'value': 'local',
+            'other': null,
+          },
+          tags: [],
+          type: DataChangeType.update,
+        ),
+        DataChange(
+          relation: kTestRelations['parent']!,
+          oldRecord: {
+            'id': 1,
+            'value': 'different',
+            'other': 2,
+          },
+          tags: [],
+          type: DataChangeType.delete,
+        ),
+      ],
+    );
+
+    final completer = Completer<void>();
+
+    server.nextRpcResponse('startReplication', [startResp]);
+    server.nextMsgExpect(SatMsgType.rpcResponse, []);
+    server.nextMsgExpect(SatMsgType.relation, []);
+    server.nextMsgExpect(SatMsgType.opLog, (SatOpLog data) {
+      final satOpLog = data.ops;
+
+      // should have 2 + 3 messages (begin + insert + update + delete + commit)
+      expect(satOpLog.length, 5);
+
+      expect(
+          deserializeRow(
+            satOpLog[1].insert.rowData,
+            kTestRelations['parent']!,
+            kTestDbDescription,
+          ),
+          {
+            'id': 1,
+            'value': 'transformed_outbound_local',
+            'other': null,
+          });
+
+      expect(
+          deserializeRow(
+            satOpLog[2].update.rowData,
+            kTestRelations['parent']!,
+            kTestDbDescription,
+          ),
+          {
+            'id': 1,
+            'value': 'transformed_outbound_different',
+            'other': 2,
+          });
+
+      expect(
+          deserializeRow(
+            satOpLog[2].update.oldRowData,
+            kTestRelations['parent']!,
+            kTestDbDescription,
+          ),
+          {
+            'id': 1,
+            'value': 'transformed_outbound_local',
+            'other': null,
+          });
+
+      expect(
+          deserializeRow(
+            satOpLog[3].delete.oldRowData,
+            kTestRelations['parent']!,
+            kTestDbDescription,
+          ),
+          {
+            'id': 1,
+            'value': 'transformed_outbound_different',
+            'other': 2,
+          });
+
+      completer.complete();
+    });
+
+    final errorTimer = Timer(const Duration(milliseconds: 300), () {
+      completer.completeError(
+        Exception(
+          'Timed out while waiting for server to get all expected requests',
+        ),
+      );
+    });
+
+    await client.startReplication(null, null, null, null);
+    // wait a little for replication to start in the opposite direction
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    client.enqueueTransaction(transaction);
+
+    await completer.future;
+
+    errorTimer.cancel();
+  });
+
+  test(
+      'setReplicationTransform transforms inbound INSERTs, UPDATEs, and DELETEs',
+      () async {
+    await client.connect();
+
+    // set replication transform and perform same operations for replication
+    client.setReplicationTransform(
+      const QualifiedTablename('main', 'parent'),
+      ReplicatedRowTransformer(
+        transformInbound: (row) => {
+          ...row,
+          'value': 'transformed_inbound_${row['value']! as String}',
+        },
+        transformOutbound: (row) => {
+          ...row,
+          'value': 'transformed_outbound_${row['value']! as String}',
+        },
+      ),
+    );
+
+    final start = SatInStartReplicationResp();
+    final begin = SatOpBegin(commitTimestamp: Int64.ZERO);
+    final relation = SatRelation(
+      relationId: kTestRelations['parent']!.id,
+      schemaName: kTestRelations['parent']!.schema,
+      tableName: kTestRelations['parent']!.table,
+      tableType: SatRelation_RelationType.TABLE,
+      columns: kTestRelations['parent']!.columns.map(
+            (c) => SatRelationColumn(
+              name: c.name,
+              type: c.type,
+              isNullable: c.isNullable,
+            ),
+          ),
+    );
+    final commit = SatOpCommit();
+    final stop = SatInStopReplicationResp();
+
+    final insertOp = SatOpInsert(
+      relationId: 1,
+      rowData: serializeRow(
+        {
+          'id': 1,
+          'value': 'remote',
+          'other': null,
+        },
+        kTestRelations['parent']!,
+        kTestDbDescription,
+      ),
+    );
+
+    final updateOp = SatOpUpdate(
+      relationId: 1,
+      rowData: serializeRow(
+        {
+          'id': 1,
+          'value': 'different',
+          'other': 2,
+        },
+        kTestRelations['parent']!,
+        kTestDbDescription,
+      ),
+      oldRowData: serializeRow(
+        {
+          'id': 1,
+          'value': 'remote',
+          'other': null,
+        },
+        kTestRelations['parent']!,
+        kTestDbDescription,
+      ),
+    );
+
+    final deleteOp = SatOpDelete(
+      relationId: 1,
+      oldRowData: serializeRow(
+        {
+          'id': 1,
+          'value': 'different',
+          'other': 2,
+        },
+        kTestRelations['parent']!,
+        kTestDbDescription,
+      ),
+    );
+
+    final opLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(insert: insertOp),
+        SatTransOp(update: updateOp),
+        SatTransOp(delete: deleteOp),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    server.nextRpcResponse('startReplication', [start, relation, opLogMessage]);
+    server.nextRpcResponse('stopReplication', [stop]);
+
+    final completer = Completer<void>();
+
+    client.subscribeToTransactions((transaction) async {
+      final changes = transaction.changes.whereType<DataChange>().toList();
+      expect(changes[0].record, {
+        'id': 1,
+        'value': 'transformed_inbound_remote',
+        'other': null,
+      });
+      expect(changes[1].record, {
+        'id': 1,
+        'value': 'transformed_inbound_different',
+        'other': 2,
+      });
+      expect(changes[1].oldRecord, {
+        'id': 1,
+        'value': 'transformed_inbound_remote',
+        'other': null,
+      });
+      expect(changes[2].oldRecord, {
+        'id': 1,
+        'value': 'transformed_inbound_different',
+        'other': 2,
+      });
+
+      completer.complete();
+    });
+
+    unawaited(client.startReplication(null, null, null, null));
+
+    await completer.future;
+  });
+
+  test(
+      'setReplicationTransform can be overridden and cleared with clearReplicationTransform',
+      () async {
+    await client.connect();
+
+    final startResp = SatInStartReplicationResp();
+
+    final change = DataChange(
+      relation: kTestRelations['parent']!,
+      record: {
+        'id': 1,
+        'value': 'local',
+        'other': null,
+      },
+      tags: [],
+      type: DataChangeType.insert,
+    );
+
+    final transactions = <DataTransaction>[
+      DataTransaction(
+        commitTimestamp: Int64(3000),
+        lsn: numberToBytes(0),
+        changes: [change],
+      ),
+      DataTransaction(
+        commitTimestamp: Int64(3000),
+        lsn: numberToBytes(1),
+        changes: [change],
+      ),
+      DataTransaction(
+        commitTimestamp: Int64(3000),
+        lsn: numberToBytes(2),
+        changes: [change],
+      ),
+    ];
+
+    final completer = Completer<void>();
+
+    server.nextRpcResponse('startReplication', [startResp]);
+    server.nextMsgExpect(SatMsgType.rpcResponse, []);
+    server.nextMsgExpect(SatMsgType.relation, []);
+
+    // should have first transformation
+    server.nextMsgExpect(SatMsgType.opLog, (SatOpLog data) {
+      expect(
+          deserializeRow(
+            data.ops[1].insert.rowData,
+            kTestRelations['parent']!,
+            kTestDbDescription,
+          ),
+          {
+            ...change.record!,
+            'value': 'transformed_outbound_local',
+          });
+    });
+
+    // should have overridden transformation
+    server.nextMsgExpect(SatMsgType.opLog, (SatOpLog data) {
+      expect(
+          deserializeRow(
+            data.ops[1].insert.rowData,
+            kTestRelations['parent']!,
+            kTestDbDescription,
+          ),
+          {
+            ...change.record!,
+            'value': 'transformed_differently_outbound_local',
+          });
+    });
+
+    // should have no transformation
+    server.nextMsgExpect(SatMsgType.opLog, (SatOpLog data) {
+      expect(
+        deserializeRow(
+          data.ops[1].insert.rowData,
+          kTestRelations['parent']!,
+          kTestDbDescription,
+        ),
+        change.record,
+      );
+
+      completer.complete();
+    });
+
+    final timer = Timer(const Duration(milliseconds: 300), () {
+      throw Exception(
+        'Timed out while waiting for server to get all expected requests',
+      );
+    });
+
+    await client.startReplication(null, null, null, null);
+    // wait a little for replication to start in the opposite direction
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    // set initial transform
+    client.setReplicationTransform(
+      const QualifiedTablename('main', 'parent'),
+      ReplicatedRowTransformer(
+        transformInbound: (row) => {
+          ...row,
+          'value': 'transformed_inbound_${row['value']! as String}',
+        },
+        transformOutbound: (row) => {
+          ...row,
+          'value': 'transformed_outbound_${row['value']! as String}',
+        },
+      ),
+    );
+    client.enqueueTransaction(transactions[0]);
+
+    // set override transform
+
+    client.setReplicationTransform(
+      const QualifiedTablename('main', 'parent'),
+      ReplicatedRowTransformer(
+        transformInbound: (row) => {
+          ...row,
+          'value': 'transformed_differently_inbound_${row['value']! as String}',
+        },
+        transformOutbound: (row) => {
+          ...row,
+          'value':
+              'transformed_differently_outbound_${row['value']! as String}',
+        },
+      ),
+    );
+    client.enqueueTransaction(transactions[1]);
+
+    // clear transform
+    client
+        .clearReplicationTransform(const QualifiedTablename('main', 'parent'));
+    client.enqueueTransaction(transactions[2]);
+
+    await completer.future;
+    timer.cancel();
+  });
+
+  test('failing outbound transform should throw satellite error', () async {
+    await client.connect();
+
+    // set failing transform
+    client.setReplicationTransform(
+      const QualifiedTablename('main', 'parent'),
+      ReplicatedRowTransformer(
+        transformInbound: (_) {
+          throw Exception('Inbound transform error');
+        },
+        transformOutbound: (_) {
+          throw Exception('Outbound transform error');
+        },
+      ),
+    );
+
+    final startResp = SatInStartReplicationResp();
+
+    final transaction = DataTransaction(
+      commitTimestamp: Int64(3000),
+      lsn: numberToBytes(0),
+      changes: [
+        DataChange(
+          relation: kTestRelations['parent']!,
+          record: {
+            'id': 1,
+            'value': 'local',
+            'other': null,
+          },
+          tags: [],
+          type: DataChangeType.insert,
+        ),
+      ],
+    );
+
+    final completer = Completer<void>();
+
+    server.nextRpcResponse('startReplication', [startResp]);
+    await client.startReplication(null, null, null, null).then((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(
+        () => client.enqueueTransaction(transaction),
+        throwsA(
+          isA<SatelliteException>()
+              .having(
+                (e) => e.code,
+                'code',
+                SatelliteErrorCode.replicationTransformError,
+              )
+              .having(
+                (e) => e.message,
+                'message',
+                'Exception: Outbound transform error',
+              ),
+        ),
+      );
+
+      completer.complete();
+    });
+
+    await completer.future;
+  });
+
+  test('failing inbound transform should emit satellite error', () async {
+    await client.connect();
+
+    // set failing transform
+    client.setReplicationTransform(
+      const QualifiedTablename('main', 'parent'),
+      ReplicatedRowTransformer(
+        transformInbound: (_) {
+          throw Exception('Inbound transform error');
+        },
+        transformOutbound: (_) {
+          throw Exception('Outbound transform error');
+        },
+      ),
+    );
+
+    final start = SatInStartReplicationResp();
+    final begin = SatOpBegin(commitTimestamp: Int64.ZERO);
+    final relation = SatRelation(
+      relationId: kTestRelations['parent']!.id,
+      schemaName: kTestRelations['parent']!.schema,
+      tableName: kTestRelations['parent']!.table,
+      tableType: SatRelation_RelationType.TABLE,
+      columns: kTestRelations['parent']!.columns.map(
+            (c) => SatRelationColumn(
+              name: c.name,
+              type: c.type,
+              isNullable: c.isNullable,
+            ),
+          ),
+    );
+    final commit = SatOpCommit();
+    final stop = SatInStopReplicationResp();
+
+    final insertOp = SatOpInsert(
+      relationId: kTestRelations['parent']!.id,
+      rowData: serializeRow(
+        {
+          'id': 1,
+          'value': 'remote',
+          'other': null,
+        },
+        kTestRelations['parent']!,
+        kTestDbDescription,
+      ),
+    );
+
+    final opLogMessage = SatOpLog(
+      ops: [
+        SatTransOp(begin: begin),
+        SatTransOp(insert: insertOp),
+        SatTransOp(commit: commit),
+      ],
+    );
+
+    server.nextRpcResponse('startReplication', [start, relation, opLogMessage]);
+    server.nextRpcResponse('stopReplication', [stop]);
+
+    final completer = Completer<void>();
+    client.subscribeToError((error) {
+      expect(error.message, 'Exception: Inbound transform error');
+      expect(error.code, SatelliteErrorCode.replicationTransformError);
+      completer.complete();
+    });
+
+    unawaited(client.startReplication(null, null, null, null));
+
+    await completer.future;
+  });
 }
 
 AuthState createAuthState() {
