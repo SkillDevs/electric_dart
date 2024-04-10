@@ -107,10 +107,15 @@ class EventNotifier implements Notifier {
     List<Change> changes,
     ChangeOrigin origin,
   ) {
-    logger.info('actually changed notifier');
-    if (!_hasDbName(dbName)) {
+    if (!_hasDbName(dbName) || changes.isEmpty) {
       return;
     }
+
+    final tables = Set<String>.of(
+      changes.map((e) => e.qualifiedTablename.tablename),
+    ).toList();
+
+    logger.info('actually changed notifier. Changed tables: $tables');
 
     _emitActualChange(dbName, changes, origin);
   }

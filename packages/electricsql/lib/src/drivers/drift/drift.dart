@@ -120,8 +120,6 @@ class DriftElectricClient<DB extends GeneratedDatabase>
             tablesChanged.map((e) => _TableUpdateFromElectric(e)).toSet();
 
         if (tableUpdates.isNotEmpty) {
-          logger.info('Notifying table changes to drift: $tablesChanged');
-
           // Notify drift
           db.notifyUpdates(tableUpdates);
         }
