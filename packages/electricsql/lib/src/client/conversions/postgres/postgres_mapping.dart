@@ -6,6 +6,7 @@ import 'package:electricsql/src/util/converters/codecs/int2.dart';
 import 'package:electricsql/src/util/converters/codecs/int4.dart';
 import 'package:electricsql/src/util/converters/codecs/uuid.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
+import 'package:electricsql/src/util/converters/type_converters.dart';
 import 'package:postgres/postgres.dart' as pg;
 
 // ignore: implementation_imports
@@ -19,6 +20,8 @@ Object mapToSql(PgType? type, Object inputDartValue) {
   if (type == null) {
     // Enum as string
     typedValue = pg.TypedValue(pgType, dartValue as String);
+  } else if (inputDartValue == kJsonNull) {
+    typedValue = pg.TypedValue(pgType, null, isSqlNull: false);
   } else {
     typedValue = pg.TypedValue(pgType, dartValue);
   }
@@ -81,7 +84,7 @@ String mapToSqlLiteral(
   } else if (pgType == PgType.timestamp) {
     pgEncoded = _encodeDateTimeWithoutTZ(dartValue as DateTime);
   } else if (pgType == PgType.json || pgType == PgType.jsonb) {
-    final jsonEncoded = dartValue == null
+    final jsonEncoded = inputDartValue == kJsonNull
         ? 'null'
         : codec.encode(dartValue as Object) as String;
     pgEncoded = _pgEncoder.convert(jsonEncoded);

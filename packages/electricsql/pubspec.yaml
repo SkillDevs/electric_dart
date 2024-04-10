@@ -40,3 +40,6 @@ dev_dependencies:
   test: ^1.24.6
   watcher: ^1.1.0 # Lowest version supported
 
+dependency_overrides:
+  postgres:
+    path: /home/david/data_ssd/Dev/dart/postgresql-dart

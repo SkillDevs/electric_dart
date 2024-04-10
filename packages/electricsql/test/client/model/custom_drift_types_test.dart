@@ -578,7 +578,6 @@ void typeTests(TestsDatabase Function() getDb, {bool isPostgres = false}) {
 
     test(
       'null',
-      skip: isPostgres,
       () async {
         // final rwos = await db.customSelect('''SELECT null as c1, 'null'::jsonb as c2, '"null"'::jsonb as c3''').get();
         // for (final row in rwos) {
