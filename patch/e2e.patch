@@ -1,6 +1,6 @@
 diff -x lux -x satellite_client -x lux_logs -ur electric/common.mk dart/common.mk
---- electric/common.mk	2024-04-08 18:50:53.858931798 +0200
-+++ dart/common.mk	2024-04-08 18:50:33.699864296 +0200
+--- electric/common.mk	2024-04-11 18:03:45.588744807 +0200
++++ dart/common.mk	2024-04-11 18:02:00.638420173 +0200
 @@ -41,6 +41,15 @@
  	export ELECTRIC_CLIENT_IMAGE=${ELECTRIC_CLIENT_IMAGE_NAME}:${ELECTRIC_IMAGE_TAG}
  endif
@@ -19,8 +19,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/common.mk dart/common.m
  
 Only in dart: electric_repo
 diff -x lux -x satellite_client -x lux_logs -ur electric/elixir_client/Makefile dart/elixir_client/Makefile
---- electric/elixir_client/Makefile	2024-04-08 18:50:53.858931798 +0200
-+++ dart/elixir_client/Makefile	2024-04-08 18:50:33.700864298 +0200
+--- electric/elixir_client/Makefile	2024-04-11 18:03:45.588744807 +0200
++++ dart/elixir_client/Makefile	2024-04-11 18:02:00.638420173 +0200
 @@ -7,7 +7,7 @@
  export DOCKER_REPO ?= europe-docker.pkg.dev/vaxine/ci
  export ELECTRIC_CLIENT_IMAGE_NAME ?= electric-ws-client
@@ -31,8 +31,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/elixir_client/Makefile 
  build:
  	make -C ${ELECTRIC_DIR} docker-build-ws-client
 diff -x lux -x satellite_client -x lux_logs -ur electric/.gitignore dart/.gitignore
---- electric/.gitignore	2024-04-08 18:50:53.857931795 +0200
-+++ dart/.gitignore	2024-04-08 18:50:33.700864298 +0200
+--- electric/.gitignore	2024-04-11 18:03:45.588744807 +0200
++++ dart/.gitignore	2024-04-11 18:02:00.638420173 +0200
 @@ -4,3 +4,4 @@
  lux_logs
  .pull
@@ -40,8 +40,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/.gitignore dart/.gitign
 +electric_repo
 \ No newline at end of file
 diff -x lux -x satellite_client -x lux_logs -ur electric/Makefile dart/Makefile
---- electric/Makefile	2024-04-08 18:50:53.858931798 +0200
-+++ dart/Makefile	2024-04-08 18:50:33.700864298 +0200
+--- electric/Makefile	2024-04-11 18:03:45.588744807 +0200
++++ dart/Makefile	2024-04-11 18:02:00.638420173 +0200
 @@ -1,6 +1,7 @@
  include common.mk
  
@@ -65,8 +65,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/Makefile dart/Makefile
  pull:
 Only in dart: run_client_e2e_with_retries.sh
 diff -x lux -x satellite_client -x lux_logs -ur electric/services_templates.yaml dart/services_templates.yaml
---- electric/services_templates.yaml	2024-04-08 18:50:53.860931804 +0200
-+++ dart/services_templates.yaml	2024-04-08 18:50:33.700864298 +0200
+--- electric/services_templates.yaml	2024-04-11 18:03:45.591744816 +0200
++++ dart/services_templates.yaml	2024-04-11 18:02:00.639420176 +0200
 @@ -42,7 +42,7 @@
        - "host.docker.internal:host-gateway"
  
@@ -77,8 +77,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/services_templates.yaml
        AUTH_JWT_ALG: HS256
        AUTH_JWT_KEY: integration-tests-signing-key-example
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.03_node_satellite_sends_and_recieves_data.lux dart/tests/03.03_node_satellite_sends_and_recieves_data.lux
---- electric/tests/03.03_node_satellite_sends_and_recieves_data.lux	2024-04-08 18:50:53.861931808 +0200
-+++ dart/tests/03.03_node_satellite_sends_and_recieves_data.lux	2024-04-08 18:50:33.700864298 +0200
+--- electric/tests/03.03_node_satellite_sends_and_recieves_data.lux	2024-04-11 18:03:45.592744819 +0200
++++ dart/tests/03.03_node_satellite_sends_and_recieves_data.lux	2024-04-11 18:02:00.639420176 +0200
 @@ -36,10 +36,10 @@
  
  [invoke log "Verify that satellite inserts reached each other"]
@@ -93,8 +93,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.03_node_satell
  [shell pg_1]
      [invoke log "Insert a row on PG side"]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.06_node_satellite_does_sync_on_subscribe.lux dart/tests/03.06_node_satellite_does_sync_on_subscribe.lux
---- electric/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2024-04-08 18:50:53.861931808 +0200
-+++ dart/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2024-04-08 18:50:33.701864302 +0200
+--- electric/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2024-04-11 18:03:45.592744819 +0200
++++ dart/tests/03.06_node_satellite_does_sync_on_subscribe.lux	2024-04-11 18:02:00.639420176 +0200
 @@ -24,7 +24,7 @@
      -$fail_pattern
      [invoke node_sync_table "items"]
@@ -114,8 +114,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.06_node_satell
  
  [shell pg_1]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux dart/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux
---- electric/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2024-04-08 18:50:53.861931808 +0200
-+++ dart/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2024-04-08 18:50:33.701864302 +0200
+--- electric/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2024-04-11 18:03:45.592744819 +0200
++++ dart/tests/03.07_node_satellite_can_delete_freshly_synced_rows.lux	2024-04-11 18:02:00.639420176 +0200
 @@ -28,9 +28,9 @@
      -$fail_pattern
      [invoke node_sync_table "items"]
@@ -129,8 +129,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.07_node_satell
  
  [shell pg_1]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux dart/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux
---- electric/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2024-04-08 18:50:33.701864302 +0200
+--- electric/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2024-04-11 18:03:45.592744819 +0200
++++ dart/tests/03.08_node_satellite_can_resume_subscriptions_on_reconnect.lux	2024-04-11 18:02:00.639420176 +0200
 @@ -24,7 +24,7 @@
      -$fail_pattern
      [invoke node_sync_table "items"]
@@ -159,8 +159,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.08_node_satell
      [progress resuming client]
      [invoke electrify_db "originalDb" "electric_1" 5133 "[]" true]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux dart/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux
---- electric/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2024-04-08 18:50:33.701864302 +0200
+--- electric/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2024-04-11 18:03:45.592744819 +0200
++++ dart/tests/03.10_node_satellite_can_resume_replication_on_reconnect.lux	2024-04-11 18:02:00.639420176 +0200
 @@ -24,7 +24,7 @@
    ?\[proto\] recv: #SatOpLog\{.*#Migrate\{vsn: $migration2_vsn, for: bar
  
@@ -171,8 +171,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.10_node_satell
  
    # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satellite_compensations_work.lux dart/tests/03.11_node_satellite_compensations_work.lux
---- electric/tests/03.11_node_satellite_compensations_work.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.11_node_satellite_compensations_work.lux	2024-04-08 18:50:33.701864302 +0200
+--- electric/tests/03.11_node_satellite_compensations_work.lux	2024-04-11 18:03:45.592744819 +0200
++++ dart/tests/03.11_node_satellite_compensations_work.lux	2024-04-11 18:02:00.639420176 +0200
 @@ -27,21 +27,16 @@
      [invoke node_await_table "other_items"]
      [invoke node_sync_table "other_items"]
@@ -223,8 +223,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satell
      ??[proto] recv: #SatOpLog
  
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.12_server_correctly_continues_the_replication.lux dart/tests/03.12_server_correctly_continues_the_replication.lux
---- electric/tests/03.12_server_correctly_continues_the_replication.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.12_server_correctly_continues_the_replication.lux	2024-04-08 18:50:33.701864302 +0200
+--- electric/tests/03.12_server_correctly_continues_the_replication.lux	2024-04-11 18:03:45.592744819 +0200
++++ dart/tests/03.12_server_correctly_continues_the_replication.lux	2024-04-11 18:02:00.640420179 +0200
 @@ -48,7 +48,7 @@
  
  [shell satellite_1]
@@ -244,8 +244,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.12_server_corr
  
    # Verify that the client retrieves previously stored LSN when it reestablishes the replication connection.
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.13_node_satellite_can_sync_timestamps.lux dart/tests/03.13_node_satellite_can_sync_timestamps.lux
---- electric/tests/03.13_node_satellite_can_sync_timestamps.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.13_node_satellite_can_sync_timestamps.lux	2024-04-08 18:50:33.702864305 +0200
+--- electric/tests/03.13_node_satellite_can_sync_timestamps.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.13_node_satellite_can_sync_timestamps.lux	2024-04-11 18:02:00.640420179 +0200
 @@ -41,11 +41,11 @@
      # check that 2nd satellite also reads the row
      [invoke node_await_assert_timestamp "00000000-0000-0000-0000-000000000001" "2023-09-21 14:39:53.000" "2023-09-21T14:39:53.001Z"]
@@ -263,8 +263,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.13_node_satell
      # check that we can now read that row
      [invoke node_await_assert_timestamp "00000000-0000-0000-0000-000000000002" "2023-08-23 09:10:11.000" "2023-08-23T09:10:11.001Z"]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.14_node_satellite_can_sync_dates_and_times.lux dart/tests/03.14_node_satellite_can_sync_dates_and_times.lux
---- electric/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2024-04-08 18:50:33.702864305 +0200
+--- electric/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.14_node_satellite_can_sync_dates_and_times.lux	2024-04-11 18:02:00.640420179 +0200
 @@ -31,11 +31,11 @@
  [shell satellite_1]
      [invoke node_await_assert_datetime "001" "2023-08-23" "1970-01-01 11:00:59"]
@@ -290,8 +290,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.14_node_satell
      [invoke node_await_assert_datetime "005" "2023-09-26" "1970-01-01 00:00:00.000"]
  
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.15_node_satellite_can_sync_booleans.lux dart/tests/03.15_node_satellite_can_sync_booleans.lux
---- electric/tests/03.15_node_satellite_can_sync_booleans.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.15_node_satellite_can_sync_booleans.lux	2024-04-08 18:50:33.702864305 +0200
+--- electric/tests/03.15_node_satellite_can_sync_booleans.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.15_node_satellite_can_sync_booleans.lux	2024-04-11 18:02:00.640420179 +0200
 @@ -30,7 +30,7 @@
      [invoke node_await_get_bool "002" "false"]
      [invoke node_await_get_bool "003" "null"]
@@ -302,8 +302,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.15_node_satell
      ?$node
  
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.16_node_satellite_can_sync_uuids.lux dart/tests/03.16_node_satellite_can_sync_uuids.lux
---- electric/tests/03.16_node_satellite_can_sync_uuids.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.16_node_satellite_can_sync_uuids.lux	2024-04-08 18:50:33.702864305 +0200
+--- electric/tests/03.16_node_satellite_can_sync_uuids.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.16_node_satellite_can_sync_uuids.lux	2024-04-11 18:02:00.640420179 +0200
 @@ -32,7 +32,7 @@
      [invoke node_get_uuid "67b2db7d-7a4e-4ead-8883-01bf4946fec2"]
  
@@ -338,8 +338,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.16_node_satell
  [cleanup]
    [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.17_node_satellite_can_sync_ints.lux dart/tests/03.17_node_satellite_can_sync_ints.lux
---- electric/tests/03.17_node_satellite_can_sync_ints.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.17_node_satellite_can_sync_ints.lux	2024-04-08 18:50:33.702864305 +0200
+--- electric/tests/03.17_node_satellite_can_sync_ints.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.17_node_satellite_can_sync_ints.lux	2024-04-11 18:02:00.640420179 +0200
 @@ -39,11 +39,11 @@
      [invoke node_get_int "row2" 32767 2147483647 9223372036854775807]
  
@@ -376,8 +376,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.17_node_satell
  [cleanup]
    [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.18_node_satellite_can_sync_float.lux dart/tests/03.18_node_satellite_can_sync_float.lux
---- electric/tests/03.18_node_satellite_can_sync_float.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.18_node_satellite_can_sync_float.lux	2024-04-08 18:50:33.702864305 +0200
+--- electric/tests/03.18_node_satellite_can_sync_float.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.18_node_satellite_can_sync_float.lux	2024-04-11 18:02:00.640420179 +0200
 @@ -45,7 +45,7 @@
      [invoke node_get_float "row2" -1.4020000137922178e+36 -1.797e+308]
  
@@ -416,8 +416,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.18_node_satell
  [cleanup]
    [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satellite_can_sync_json.lux dart/tests/03.19_node_satellite_can_sync_json.lux
---- electric/tests/03.19_node_satellite_can_sync_json.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.19_node_satellite_can_sync_json.lux	2024-04-08 18:50:33.703864309 +0200
+--- electric/tests/03.19_node_satellite_can_sync_json.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.19_node_satellite_can_sync_json.lux	2024-04-11 18:02:00.641420182 +0200
 @@ -60,7 +60,7 @@
      # [invoke node_get_json "row5" "'bar'"]
      [invoke node_get_jsonb "row5" "[ 1, { a: 'foo' }, true ]"]
@@ -428,8 +428,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satell
  
      # Even though JSON can encode the NUL code point and unpaired surrogates, those will fail Postgres' jsonb validation.
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux dart/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux
---- electric/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux	2024-04-08 18:50:33.703864309 +0200
+--- electric/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux	2024-04-11 18:02:00.641420182 +0200
 @@ -50,7 +50,7 @@
  
  [shell satellite_1]
@@ -464,8 +464,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.21_node_satell
  
  [cleanup]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux dart/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux
---- electric/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux	2024-04-08 18:50:33.703864309 +0200
+--- electric/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.22_node_satellite_can_disconnect_and_reconnect.lux	2024-04-11 18:02:00.641420182 +0200
 @@ -27,20 +27,20 @@
  
  [shell satellite_1]
@@ -492,8 +492,8 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.22_node_satell
  
  [shell satellite_2]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.23_node_satellite_can_sync_bytea.lux dart/tests/03.23_node_satellite_can_sync_bytea.lux
---- electric/tests/03.23_node_satellite_can_sync_bytea.lux	2024-04-08 18:50:53.862931811 +0200
-+++ dart/tests/03.23_node_satellite_can_sync_bytea.lux	2024-04-08 18:50:33.703864309 +0200
+--- electric/tests/03.23_node_satellite_can_sync_bytea.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.23_node_satellite_can_sync_bytea.lux	2024-04-11 18:02:00.641420182 +0200
 @@ -30,19 +30,19 @@
      [invoke node_await_get_blob "row1"]
  
@@ -535,9 +535,30 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.23_node_satell
  
  [cleanup]
    [invoke teardown]
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.24_node_satellite_can_transform_at_replication_boundary.lux dart/tests/03.24_node_satellite_can_transform_at_replication_boundary.lux
+--- electric/tests/03.24_node_satellite_can_transform_at_replication_boundary.lux	2024-04-11 18:03:45.593744822 +0200
++++ dart/tests/03.24_node_satellite_can_transform_at_replication_boundary.lux	2024-04-11 18:02:42.360549219 +0200
+@@ -25,7 +25,7 @@
+ [shell satellite_1]
+     # should write and store plaintext values and encrypt at replication
+     [invoke node_await_insert "['private@email.com']"]
+-    [invoke wait-for "await client.get_items(db)" "private@email.com" 10 $node]
++    [invoke wait-for "get_items db" "private@email.com" 10 $node]
+ 
+ [shell pg_1]
+     # should sync the cipher encrypted value
+@@ -33,7 +33,7 @@
+ 
+ [shell satellite_2]
+     # should read plaintext values after decrypting from replication
+-    [invoke wait-for "await client.get_items(db)" "private@email.com" 10 $node]
++    [invoke wait-for "get_items db" "private@email.com" 10 $node]
+ 
+ [cleanup]
+   [invoke teardown]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
---- electric/tests/_satellite_macros.luxinc	2024-04-08 18:50:53.863931814 +0200
-+++ dart/tests/_satellite_macros.luxinc	2024-04-08 18:50:33.704864312 +0200
+--- electric/tests/_satellite_macros.luxinc	2024-04-11 18:03:45.594744825 +0200
++++ dart/tests/_satellite_macros.luxinc	2024-04-11 18:02:48.013566704 +0200
 @@ -1,30 +1,20 @@
  [global node=>]
  
@@ -708,7 +729,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
      #??{ id: '${id}', js: ${json_value}, jsb: ${jsonb_value} }
      # ??{ id: '${id}', jsb: ${jsonb_value} }
      ??$node
-@@ -152,61 +143,61 @@
+@@ -152,66 +143,66 @@
  
  [macro node_write_blob id value]
      # Can write valid blobs to the DB
@@ -777,13 +798,19 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
      ??$node
  [endmacro]
  
+ [macro node_set_item_replication_transform]
+-    !client.set_item_replication_transform(db)
++    !set_item_replication_transform db
+     ??$node
+ [endmacro]
+ 
  [macro node_sync_table table]
 -    !await client.syncTable(db, "${table}")
 +    !sync_table db "${table}"
  [endmacro]
  
  # Makes both satellites and PG write rows
-@@ -234,17 +225,17 @@
+@@ -239,17 +230,17 @@
      
      [invoke log "Verify that satellite inserts reached each other"]
      [shell satellite_1]
