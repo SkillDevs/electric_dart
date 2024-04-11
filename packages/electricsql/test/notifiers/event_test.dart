@@ -135,4 +135,17 @@ void main() {
 
     expect(notifications.length, 1);
   });
+
+  test('empty changes should not emit', () {
+    final source = EventNotifier(dbName: 'foo.db');
+
+    final List<ChangeNotification> notifications = [];
+
+    source.subscribeToDataChanges((x) {
+      notifications.add(x);
+    });
+
+    source.actuallyChanged('foo.db', [], ChangeOrigin.local);
+    expect(notifications.length, 0);
+  });
 }
