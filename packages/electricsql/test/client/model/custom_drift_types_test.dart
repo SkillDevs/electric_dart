@@ -5,88 +5,125 @@ import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
-import 'package:postgres/postgres.dart' as pg;
+import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
+import '../../util/pg_docker.dart';
 import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 import '../drift/generated/electric/drift_schema.dart';
 
-void main() async {
+Future<void> main() async {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
-  final db = TestsDatabase.memory();
 
-  await electrifyTestDatabase(db);
+  group('SQLite', () {
+    late TestsDatabase db;
+
+    setUpAll(() async {
+      db = TestsDatabase.memory();
+      await electrifyTestDatabase(db);
+    });
+
+    typeTests(() => db);
+  });
+
+  withPostgresServer('postgres', (server) {
+    late TestsDatabase db;
+
+    setUpAll(() async {
+      final endpoint = await server.endpoint();
+      db = TestsDatabase.postgres(endpoint);
+      await db.customSelect('SELECT 1').getSingle();
+    });
+
+    typeTests(() => db, isPostgres: true);
+  });
+}
+
+@isTestGroup
+void typeTests(TestsDatabase Function() getDb, {bool isPostgres = false}) {
+  late TestsDatabase db;
 
   setUp(() async {
+    db = getDb();
     await initClientTestsDb(db);
   });
 
   group('date', () {
-    test('today', () async {
-      final today = DateTime.now();
+    group('local', () {
+      test('regular', () async {
+        await _testDate(
+          db,
+          DateTime.parse('2023-08-07 18:28:35.421'),
+          expected: DateTime.utc(2023, 8, 7),
+        );
+      });
 
-      await _testDate(db, today);
+      test('edge 1', () async {
+        // 2000-01-15 00:05:00
+        await _testDate(
+          db,
+          DateTime(2000, 1, 15, 0, 5),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
+
+      test('edge 2', () async {
+        // 2000-01-15 23:55:00
+        await _testDate(
+          db,
+          DateTime(2000, 1, 15, 23, 55),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
     });
 
-    test('today with extra info', () async {
-      final today = DateTime.now();
-      await _testDate(db, today);
-    });
+    group('utc', () {
+      test('regular', () async {
+        // 2023-08-07 18:28:35.421956+00
+        await _testDate(
+          db,
+          DateTime.utc(2023, 8, 7, 18, 28, 35, 421, 956),
+          expected: DateTime.utc(2023, 8, 7),
+        );
+      });
 
-    test('local at edge', () async {
-      // 2000-01-15 00:05:00
-      await _testDate(
-        db,
-        DateTime(2000, 1, 15, 0, 5),
-        expected: DateTime.utc(2000, 1, 15),
-      );
-    });
+      test('edge 1', () async {
+        // 2000-01-15 00:05:00
+        await _testDate(
+          db,
+          DateTime.utc(2000, 1, 15, 0, 5),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
 
-    test('local at edge 2', () async {
-      // 2000-01-15 23:55:00
-      await _testDate(
-        db,
-        DateTime(2000, 1, 15, 23, 55),
-        expected: DateTime.utc(2000, 1, 15),
-      );
-    });
-
-    test('utc at edge 1', () async {
-      // 2000-01-15 00:05:00
-      await _testDate(
-        db,
-        DateTime.utc(2000, 1, 15, 0, 5),
-        expected: DateTime.utc(2000, 1, 15),
-      );
-    });
-
-    test('utc at edge 2', () async {
-      // 2000-01-15 23:55:00
-      await _testDate(
-        db,
-        DateTime.utc(2000, 1, 15, 23, 55),
-        expected: DateTime.utc(2000, 1, 15),
-      );
-    });
-
-    test('utc', () async {
-      final today = DateTime.now().toUtc();
-      await _testDate(db, today);
+      test('edge 2', () async {
+        // 2000-01-15 23:55:00
+        await _testDate(
+          db,
+          DateTime.utc(2000, 1, 15, 23, 55),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
     });
 
     test('min', () async {
-      await _testDate(db, DateTime(1));
+      await _testDate(db, DateTime.utc(1));
     });
 
     test('max', () async {
-      await _testDate(db, DateTime(9999, 12, 31));
+      await _testDate(db, DateTime.utc(9999, 12, 31));
     });
   });
 
   group('time', () {
     test('now', () async {
       final now = DateTime.now();
+      await _testTime(db, now);
+    });
+
+    test('utc', () async {
+      final now = DateTime.now().toUtc();
       await _testTime(db, now);
     });
 
@@ -104,57 +141,95 @@ void main() async {
     });
   });
 
-  group('timetz', () {
-    test('regular 1', () async {
-      final date = DateTime.parse('2023-08-07 18:28:35.421+03');
-      await _testTimeTZ(db, date);
-    });
+  group(
+    'timetz',
+    skip: isPostgres,
+    () {
+      test('regular 1', () async {
+        final date = DateTime.parse('2023-08-07 18:28:35.421+03');
+        await _testTimeTZ(db, date);
+      });
 
-    test('regular 2', () async {
-      final date = DateTime.parse('2023-08-07 18:28:35.421+02');
-      await _testTimeTZ(db, date);
-    });
-  });
+      test('regular 2', () async {
+        final date = DateTime.parse('2023-08-07 18:28:35.421+02');
+        await _testTimeTZ(db, date);
+      });
+
+      test('insert and query', () async {
+        // Check that we store the time without taking into account timezones
+        // such that upon reading we get the same time even if we are in a different time zone
+        // test with 2 different time zones such that they cannot both coincide with the machine's timezone.
+        final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
+        final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
+
+        final res1 = await db.into(db.dataTypes).insertReturning(
+              DataTypesCompanion.insert(
+                id: 1,
+                timetz: Value(date1),
+              ),
+            );
+
+        final res2 = await db.into(db.dataTypes).insertReturning(
+              DataTypesCompanion.insert(
+                id: 2,
+                timetz: Value(date2),
+              ),
+            );
+
+        final expectedDate1 = DateTime.parse('1970-01-01 18:28:35.421+02');
+
+        expect(res1.timetz, expectedDate1);
+        expect(res2.timetz, DateTime.parse('1970-01-01 18:28:35.421+03'));
+
+        final fetchRes1 = await (db.select(db.dataTypes)
+              ..where((t) => t.id.equals(1)))
+            .getSingleOrNull();
+
+        final fetchRes2 = await (db.select(db.dataTypes)
+              ..where((t) => t.id.equals(2)))
+            .getSingleOrNull();
+
+        expect(fetchRes1?.timetz, DateTime.parse('1970-01-01 18:28:35.421+02'));
+        expect(fetchRes2?.timetz, DateTime.parse('1970-01-01 18:28:35.421+03'));
+      });
+    },
+  );
 
   group('timestamp', () {
-    test('now', () async {
-      final now = DateTime.now();
-      await _testTimestamp(db, now);
-    });
-
-    test('regular', () async {
-      final date = DateTime.parse('2023-08-07 18:28:35.421');
+    test('local', () async {
       await _testTimestamp(
         db,
-        date,
-        expected: DateTime.utc(2023, 8, 7, 18, 28, 35, 421),
-      );
-    });
-
-    test('regular 2', () async {
-      final date = DateTime.parse('2023-08-07 18:28:35');
-      await _testTimestamp(
-        db,
-        date,
-        expected: DateTime.utc(2023, 8, 7, 18, 28, 35),
+        DateTime.parse('2023-08-07 18:28:35.421956'),
+        expected: DateTime.utc(2023, 8, 7, 18, 28, 35, 421, 956),
       );
     });
 
     test('utc', () async {
-      final now = DateTime.now().toUtc();
-      await _testTimestamp(db, now);
+      await _testTimestamp(
+        db,
+        // 2023-08-07 18:28:35.421956+00
+        DateTime.utc(2023, 8, 7, 18, 28, 35, 421, 956),
+      );
     });
 
     test('min', () async {
-      await _testTimestamp(db, DateTime(1));
+      await _testTimestamp(db, DateTime.utc(1));
     });
 
     test('max', () async {
-      await _testTimestamp(db, DateTime(9999, 12, 31, 23, 59, 59, 999, 999));
+      await _testTimestamp(
+        db,
+        DateTime.utc(9999, 12, 31, 23, 59, 59, 999, 999),
+      );
     });
   });
 
   group('timestamptz', () {
+    test('now', () async {
+      final now = DateTime.now();
+      await _testTimestampTZ(db, now);
+    });
+
     test('regular 1', () async {
       final date = DateTime.parse('2023-08-07 18:28:35.421+03');
       await _testTimestampTZ(db, date);
@@ -163,6 +238,50 @@ void main() async {
     test('regular 2', () async {
       final date = DateTime.parse('2023-08-07 18:28:35.421+02');
       await _testTimestampTZ(db, date);
+    });
+
+    test('regular 3', () async {
+      final date = DateTime.parse('2023-08-07 18:28:35');
+      await _testTimestampTZ(db, date);
+    });
+
+    test('insert and query', () async {
+      // Check that we store the timestamp without taking into account timezones
+      // such that upon reading we get the same timestamp even if we are in a different time zone
+      // test with 2 different time zones such that they cannot both coincide with the machine's timezone.
+      final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
+      final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
+
+      final res1 = await db.into(db.dataTypes).insertReturning(
+            DataTypesCompanion.insert(
+              id: 1,
+              timestamptz: Value(date1),
+            ),
+          );
+
+      final res2 = await db.into(db.dataTypes).insertReturning(
+            DataTypesCompanion.insert(
+              id: 2,
+              timestamptz: Value(date2),
+            ),
+          );
+
+      expect(res1.timestamptz, date1);
+      expect(res2.timestamptz, date2);
+
+      expect(res1.timestamptz!.isUtc, isTrue);
+      expect(res2.timestamptz!.isUtc, isTrue);
+
+      final fetchRes1 = await (db.select(db.dataTypes)
+            ..where((t) => t.id.equals(1)))
+          .getSingleOrNull();
+
+      final fetchRes2 = await (db.select(db.dataTypes)
+            ..where((t) => t.id.equals(2)))
+          .getSingleOrNull();
+
+      expect(fetchRes1?.timestamptz, date1);
+      expect(fetchRes2?.timestamptz, date2);
     });
   });
 
@@ -184,6 +303,20 @@ void main() async {
     test('empty', () async {
       await _testUUID(db, '00000000-0000-0000-0000-000000000000');
     });
+
+    test('invalid', () async {
+      // Check that it rejects invalid uuids
+      await expectLater(
+        () async => _testUUID(db, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a111'),
+        throwsA(
+          isA<FormatException>().having(
+            (p0) => p0.message,
+            'message',
+            'The provided UUID is invalid.',
+          ),
+        ),
+      );
+    });
   });
 
   group('int2', () {
@@ -202,6 +335,28 @@ void main() async {
     test('min', () async {
       await _testInt2(db, -32768);
     });
+
+    test('invalid', () async {
+      // Check that it rejects invalid integers
+      const invalidInt1 = 32768;
+      const invalidInt2 = -32769;
+
+      const invalidInts = [invalidInt1, invalidInt2];
+      for (final invalidInt in invalidInts) {
+        await expectLater(
+          () async => _testInt2(db, invalidInt),
+          throwsA(
+            isA<RangeError>().having(
+              (p0) => p0.toString(),
+              'error',
+              contains(
+                'Invalid value: Not in inclusive range -32768..32767: $invalidInt',
+              ),
+            ),
+          ),
+        );
+      }
+    });
   });
 
   group('int4', () {
@@ -219,6 +374,28 @@ void main() async {
 
     test('min', () async {
       await _testInt4(db, -2147483648);
+    });
+
+    test('invalid', () async {
+      // Check that it rejects invalid integers
+      const invalidInt1 = 2147483648;
+      const invalidInt2 = -2147483649;
+
+      const invalidInts = [invalidInt1, invalidInt2];
+      for (final invalidInt in invalidInts) {
+        await expectLater(
+          () async => _testInt4(db, invalidInt),
+          throwsA(
+            isA<RangeError>().having(
+              (p0) => p0.toString(),
+              'error',
+              contains(
+                'Invalid value: Not in inclusive range -2147483648..2147483647: $invalidInt',
+              ),
+            ),
+          ),
+        );
+      }
     });
   });
 
@@ -240,35 +417,50 @@ void main() async {
     });
   });
 
-  group('int8 bigint', () {
-    test('regular', () async {
-      await _testInt8BigInt(db, BigInt.from(2));
-    });
+  // Postgres supports int64 without using the BigInt type
+  if (!isPostgres) {
+    group(
+      'int8 bigint',
+      () {
+        test('regular', () async {
+          await _testInt8BigInt(db, BigInt.from(2));
+        });
 
-    test('0', () async {
-      await _testInt8BigInt(db, BigInt.from(0));
-    });
+        test('0', () async {
+          await _testInt8BigInt(db, BigInt.from(0));
+        });
 
-    test('max', () async {
-      await _testInt8BigInt(db, BigInt.from(9223372036854775807));
-    });
+        test('max', () async {
+          await _testInt8BigInt(db, BigInt.from(9223372036854775807));
+        });
 
-    test('min', () async {
-      await _testInt8BigInt(db, BigInt.from(-9223372036854775808));
-    });
+        test('min', () async {
+          await _testInt8BigInt(db, BigInt.from(-9223372036854775808));
+        });
 
-    test('invalid', () async {
-      await expectLater(
-        () async => _testInt8BigInt(db, BigInt.parse('9223372036854775808')),
-        throwsA(isA<Exception>()),
-      );
-
-      await expectLater(
-        () async => _testInt8BigInt(db, BigInt.parse('-9223372036854775809')),
-        throwsA(isA<Exception>()),
-      );
-    });
-  });
+        test('invalid', () async {
+          final invalidBigInts = [
+            BigInt.parse('9223372036854775808'),
+            BigInt.parse('-9223372036854775809'),
+          ];
+          for (final invalidBigInt in invalidBigInts) {
+            await expectLater(
+              () async => _testInt8BigInt(db, invalidBigInt),
+              throwsA(
+                isA<Exception>().having(
+                  (p0) => p0.toString(),
+                  'error',
+                  contains(
+                    'BigInt value exceeds the range of 64 bits',
+                  ),
+                ),
+              ),
+            );
+          }
+        });
+      },
+    );
+  }
 
   group('float4', () {
     test('regular', () async {
@@ -374,10 +566,28 @@ void main() async {
     test('map', () async {
       await _testJson(db, {'a': 1, 'b': 2});
     });
-
-    test('null', () async {
-      await _testJson(db, kJsonNull);
+    test('complex', () async {
+      await _testJson(db, {
+        'a': 1,
+        'b': true,
+        'c': {'d': 'nested'},
+        'e': [1, 2, 3],
+        'f': null,
+      });
     });
+
+    test(
+      'null',
+      skip: isPostgres,
+      () async {
+        // final rwos = await db.customSelect('''SELECT null as c1, 'null'::jsonb as c2, '"null"'::jsonb as c3''').get();
+        // for (final row in rwos) {
+        //   print(row.data.map((key, value) => MapEntry(key, '$value ${value.runtimeType}')));
+        // }
+
+        await _testJson(db, kJsonNull);
+      },
+    );
 
     test('true', () async {
       await _testJson(db, true);
@@ -397,17 +607,22 @@ void main() async {
     });
   });
 
-  group('bytea', () {
-    test('regular', () async {
-      final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-      await _testBytea(db, bytes);
-    });
+  group(
+    'bytea',
+    // TODO(dart): Wait for https://github.com/simolus3/drift/pull/2943
+    skip: isPostgres,
+    () {
+      test('regular', () async {
+        final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+        await _testBytea(db, bytes);
+      });
 
-    test('empty', () async {
-      final bytes = Uint8List.fromList([]);
-      await _testBytea(db, bytes);
-    });
-  });
+      test('empty', () async {
+        final bytes = Uint8List.fromList([]);
+        await _testBytea(db, bytes);
+      });
+    },
+  );
 }
 
 Future<void> _testDate(
@@ -415,16 +630,6 @@ Future<void> _testDate(
   DateTime value, {
   DateTime? expected,
 }) async {
-  final effectiveExpected = expected ??
-      // hours, min, secs, millis and microseconds removed
-      value.asUtc().copyWith(
-            hour: 0,
-            minute: 0,
-            second: 0,
-            millisecond: 0,
-            microsecond: 0,
-          );
-
   await _testCustomType<DateTime>(
     db,
     value: value,
@@ -433,18 +638,25 @@ Future<void> _testDate(
       date: Value(v),
     ),
     customT: ElectricTypes.date,
-    expected: effectiveExpected,
+    expected: expected,
+    alternativeInputs: [
+      value.asLocal(),
+      value.asUtc(),
+    ],
   );
 }
 
 Future<void> _testTime(TestsDatabase db, DateTime value) async {
-  // Day and microseconds removed
-  final expected = value.asUtc().copyWith(
+  // Day removed
+  DateTime expected = value.asUtc().copyWith(
         year: 1970,
         month: 1,
         day: 1,
-        microsecond: 0,
       );
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expected = expected.copyWith(microsecond: 0);
+  }
 
   await _testCustomType<DateTime>(
     db,
@@ -455,19 +667,26 @@ Future<void> _testTime(TestsDatabase db, DateTime value) async {
     ),
     customT: ElectricTypes.time,
     expected: expected,
+    alternativeInputs: [
+      value.asLocal(),
+      value.asUtc(),
+    ],
   );
 }
 
 Future<void> _testTimeTZ(TestsDatabase db, DateTime value) async {
-  // Day and microseconds removed
-  final expected = value
+  // Day removed
+  DateTime expected = value
       .copyWith(
         year: 1970,
         month: 1,
         day: 1,
-        microsecond: 0,
       )
       .toUtc();
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expected = expected.copyWith(microsecond: 0);
+  }
 
   await _testCustomType<DateTime>(
     db,
@@ -478,6 +697,10 @@ Future<void> _testTimeTZ(TestsDatabase db, DateTime value) async {
     ),
     customT: ElectricTypes.timeTZ,
     expected: expected,
+    alternativeInputs: [
+      value.toLocal(),
+      value.toUtc(),
+    ],
   );
 }
 
@@ -486,10 +709,11 @@ Future<void> _testTimestamp(
   DateTime value, {
   DateTime? expected,
 }) async {
-  final DateTime effectiveExpected = expected ??
-      value
-          .asUtc() //
-          .copyWith(microsecond: 0);
+  DateTime expectedDate = expected ?? value;
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expectedDate = expectedDate.copyWith(microsecond: 0);
+  }
 
   await _testCustomType<DateTime>(
     db,
@@ -499,16 +723,20 @@ Future<void> _testTimestamp(
       timestamp: Value(v),
     ),
     customT: ElectricTypes.timestamp,
-    expected: effectiveExpected,
+    expected: expectedDate,
+    alternativeInputs: [
+      value.asLocal(),
+      value.asUtc(),
+    ],
   );
 }
 
 Future<void> _testTimestampTZ(TestsDatabase db, DateTime value) async {
-  final expected = value
-      .copyWith(
-        microsecond: 0,
-      )
-      .toUtc();
+  DateTime expected = value.toUtc();
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expected = expected.copyWith(microsecond: 0);
+  }
 
   await _testCustomType<DateTime>(
     db,
@@ -519,6 +747,10 @@ Future<void> _testTimestampTZ(TestsDatabase db, DateTime value) async {
     ),
     customT: ElectricTypes.timestampTZ,
     expected: expected,
+    alternativeInputs: [
+      value.toLocal(),
+      value.toUtc(),
+    ],
   );
 }
 
@@ -633,8 +865,18 @@ Future<void> _testJson(TestsDatabase db, Object value) async {
     insertCol: (c, v) => c.copyWith(
       json: Value(v),
     ),
-    customT: ElectricTypes.json,
+    customT: ElectricTypes.jsonb,
   );
+
+  // await _testCustomType(
+  //   db,
+  //   value: value,
+  //   column: db.dataTypes.json,
+  //   insertCol: (c, v) => c.copyWith(
+  //     json: Value(v),
+  //   ),
+  //   customT: ElectricTypes.json,
+  // );
 }
 
 Future<void> _testBytea(TestsDatabase db, Uint8List value) async {
@@ -670,6 +912,7 @@ Future<void> _testCustomType<DartT extends Object>(
   required DataTypesCompanion Function(DataTypesCompanion, DartT value)
       insertCol,
   DartT? expected,
+  List<DartT>? alternativeInputs,
 }) async {
   final driftValue = await _insertAndFetchFromDataTypes(
     db,
@@ -677,6 +920,7 @@ Future<void> _testCustomType<DartT extends Object>(
     column: column,
     insertCol: insertCol,
     customT: customT,
+    alternativeInputs: alternativeInputs,
   );
 
   _expectCorrectValue(
@@ -700,34 +944,6 @@ void _expectCorrectValue<DartT extends Object>(
   } else {
     expect(columnDriftValue, expected ?? value);
   }
-
-  // Quick sanity check for postgres: it should map to a TypedValue that our
-  // wrappers would interpret correctly.
-  if (customT != null) {
-    final context = GenerationContext.fromDb(TestsDatabase.inMemoryPostgres());
-    final mappedValue = customT.mapToSqlParameter(context, value);
-    expect(mappedValue, isA<pg.TypedValue>());
-
-    final typedValue = mappedValue as pg.TypedValue;
-    final Object sqlValue;
-    if (typedValue.type == pg.Type.unspecified) {
-      final enumStr = typedValue.value! as String;
-      sqlValue = _getUndecodedBytesForString(enumStr);
-    } else {
-      sqlValue = typedValue.value!;
-    }
-
-    final deserialized = customT.read(
-      context.typeMapping,
-      sqlValue,
-    );
-
-    if (value is double && value.isNaN) {
-      expect(deserialized, isNaN);
-    } else {
-      expect(deserialized, value);
-    }
-  }
 }
 
 Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
@@ -737,6 +953,7 @@ Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
   required DataTypesCompanion Function(DataTypesCompanion, DartT value)
       insertCol,
   required DialectAwareSqlType<DartT>? customT,
+  List<DartT>? alternativeInputs,
 }) async {
   final baseCompanion = DataTypesCompanion.insert(
     id: 97,
@@ -746,16 +963,29 @@ Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
 
   await db.into(db.dataTypes).insert(insertCompanion);
 
-  /* final allRows = await db.customSelect("select * from DataTypes").get();
+  /* final allRows =
+      await db.customSelect('select ${column.name} from "DataTypes"').get();
   print("All rows:");
   for (final row in allRows) {
-    print(row.data);
-  } */
-
+    print(row.data
+        .map((key, value) => MapEntry(key, '$value ${value.runtimeType}')));
+  }
+  */
   final res = await (db.select(db.dataTypes)
         ..where((tbl) => column.equalsExp(Constant(value, customT))))
       .getSingle();
   expect(res.id, 97);
+
+  // Search by alternative inputs that should yield the same row result
+  // i.e. DateTimes in Local and UTC
+  if (alternativeInputs != null) {
+    for (final altValue in alternativeInputs) {
+      final altRes = await (db.select(db.dataTypes)
+            ..where((tbl) => column.equalsExp(Constant(altValue, customT))))
+          .getSingle();
+      expect(altRes.id, 97);
+    }
+  }
 
   final columns = res.toColumns(false);
   final columnDriftValue = (columns[column.name]! as Variable<DartT>).value!;
@@ -783,8 +1013,7 @@ Future<DartT> _insertAndFetchFromExtra<DartT extends Object>(
     print(row.data);
   } */
 
-  final res = await (db.select(db.extra)
-        ..where((tbl) => column.equalsExp(Constant(value, customT))))
+  final res = await (db.select(db.extra)..where((tbl) => column.equals(value)))
       .getSingle();
   expect(res.id, 77);
 
@@ -815,15 +1044,5 @@ Future<void> _testCustomTypeExtra<DartT extends Object>(
     value: value,
     customT: customT,
     expected: expected,
-  );
-}
-
-pg.UndecodedBytes _getUndecodedBytesForString(String str) {
-  const Encoding encoding = Utf8Codec();
-  return pg.UndecodedBytes(
-    typeOid: 12345,
-    isBinary: true,
-    bytes: Uint8List.fromList(encoding.encode(str)),
-    encoding: encoding,
   );
 }

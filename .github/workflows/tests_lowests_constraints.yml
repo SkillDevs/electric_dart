@@ -27,6 +27,11 @@ jobs:
       - name: Downgrade deps
         run: melos deps_downgrade
 
+      # pre-pull the image so `usePostgresDocker` does not delay which may causes 
+      # tests to timeout
+      - name: pull latest postgres image
+        run: docker pull postgres:latest
+
       - name: Run tests
         run: melos test:all
 
