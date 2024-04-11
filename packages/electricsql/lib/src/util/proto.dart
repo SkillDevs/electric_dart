@@ -293,18 +293,18 @@ String msgToString(Object message) {
   } else if (message is SatInStartReplicationReq) {
     final schemaVersion =
         message.hasSchemaVersion() ? ' schema: ${message.schemaVersion},' : '';
-    return '#SatInStartReplicationReq{lsn: ${base64.encode(message.lsn)},$schemaVersion subscriptions: [${message.subscriptionIds}]}';
+    return '#SatInStartReplicationReq{lsn: ${base64.encode(message.lsn)},$schemaVersion subscriptions: ${message.subscriptionIds}}';
   } else if (message is SatInStopReplicationReq) {
     return '#SatInStopReplicationReq{}';
   } else if (message is SatInStopReplicationResp) {
     return '#SatInStopReplicationResp{}';
   } else if (message is SatOpLog) {
-    return '#SatOpLog{ops: [${message.ops.map(opToString).join(', ')}]}';
+    return '#SatOpLog{ops: ${message.ops.map(opToString).join(', ')}}';
   } else if (message is SatRelation) {
     final cols = message.columns
         .map((x) => '${x.name}: ${x.type}${x.primaryKey ? ' PK' : ''}')
         .join(', ');
-    return '#SatRelation{for: ${message.schemaName}.${message.tableName}, as: ${message.relationId}, cols: [$cols]}';
+    return '#SatRelation{for: ${message.schemaName}.${message.tableName}, as: ${message.relationId}, cols: $cols}';
   } else if (message is SatSubsReq) {
     return '#SatSubsReq{id: ${message.subscriptionId}, shapes: ${message.shapeRequests.map((r) => r.writeToJson()).toList()}}';
   } else if (message is SatSubsResp) {
@@ -312,7 +312,7 @@ String msgToString(Object message) {
       final shapeErrors = message.err.shapeRequestError.map(
         (x) => '${x.requestId}: ${x.code.name} (${x.message})',
       );
-      return '#SatSubsResp{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: [$shapeErrors]}';
+      return '#SatSubsResp{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: $shapeErrors}';
     } else {
       return '#SatSubsResp{id: ${message.subscriptionId}}';
     }
@@ -321,7 +321,7 @@ String msgToString(Object message) {
       (x) => '${x.requestId}: ${x.code.name} (${x.message})',
     );
     final code = message.code.name;
-    return '#SatSubsDataError{id: ${message.subscriptionId}, code: $code, msg: "${message.message}", errors: [$shapeErrors]}';
+    return '#SatSubsDataError{id: ${message.subscriptionId}, code: $code, msg: "${message.message}", errors: $shapeErrors}';
   } else if (message is SatSubsDataBegin) {
     return '#SatSubsDataBegin{id: ${message.subscriptionId}, lsn: ${base64.encode(message.lsn)}}';
   } else if (message is SatSubsDataEnd) {
