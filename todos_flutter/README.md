@@ -85,14 +85,6 @@ You can run additional Flutter apps to test how they sync automatically. For exa
 
 You can optionally tweak the `electrify` function in `lib/electric.dart` to change the Electric configuration, such as changing the Electric service URL or disable the logs.
 
-## Extra information about the migrations
-
-To create a new migration with dbmate:
-```sh
-dbmate -d migrations new <migration_name>
-```
-
-Every time the schema changes in Postgres, we need to update the client bundling the required migrations. You can do that with the `generate` command as shown before.
 
 ### 6. Run a backend
 
@@ -117,3 +109,14 @@ right away thanks to Electric:
 ```sh
 curl -X POST --data 'My todo entry' http://localhost:8080
 ```
+
+
+
+## Extra information about the migrations
+
+To create a new migration with dbmate:
+```sh
+dbmate -d migrations new <migration_name>
+```
+
+Every time the schema changes in Postgres, we need to update the client bundling the required migrations. You can do that with the `generate` command as shown before.
