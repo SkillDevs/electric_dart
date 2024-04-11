@@ -2,7 +2,7 @@ name: electricsql_cli
 description: CLI to interact with the ElectricSQL service. Offers a similar tool
   set as the NPM electric_sql package.
 repository: https://github.com/SkillDevs/electric_dart
-version: 0.5.5
+version: 0.6.0
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -13,7 +13,7 @@ dependencies:
   code_builder: ^4.8.0
   dart_style: ^2.3.2
   dotenv: ^4.2.0
-  electricsql: ^0.5.0
+  electricsql: ^0.6.0
   equatable: ^2.0.5
   http: ^1.1.0
   mason_logger: ^0.2.5

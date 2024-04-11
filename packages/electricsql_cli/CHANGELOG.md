@@ -1,6 +1,7 @@
-## Next
+## 0.6.0
 
 * The drift schema generator now generates the relations between tables in a special field named `$relations` in the drift table.
+* Code based on official Typescript client [v0.10.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.0).
 
 ## 0.5.5
 
