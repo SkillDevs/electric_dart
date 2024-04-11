@@ -12,6 +12,7 @@ class ConnectivityStateController with ChangeNotifier {
   ConnectivityState get connectivityState => _connectivityState;
 
   void Function()? _unsubscribe;
+  bool _disposed = false;
 
   ConnectivityStateController(this.electric);
 
@@ -20,9 +21,9 @@ class ConnectivityStateController with ChangeNotifier {
 
     _unsubscribe = createConnectivityStateSubscribeFunction(electric.notifier)(
       (ConnectivityState newState) {
-        Future(() {
-          _setConnectivityState(getValidConnectivityState(newState));
-        });
+        Future.microtask(
+          () => _setConnectivityState(getValidConnectivityState(newState)),
+        );
       },
     );
 
@@ -31,6 +32,7 @@ class ConnectivityStateController with ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     if (_unsubscribe != null) {
       _unsubscribe?.call();
       _unsubscribe = null;
@@ -41,6 +43,9 @@ class ConnectivityStateController with ChangeNotifier {
   void _setConnectivityState(ConnectivityState state) {
     if (state == _connectivityState) return;
     _connectivityState = state;
-    notifyListeners();
+
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
 }

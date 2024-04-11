@@ -136,7 +136,7 @@ class DriftElectricClient<DB extends GeneratedDatabase>
       // by Electric itself in "notifier.subscribeToDataChanges"
       if (tableNames.isNotEmpty) {
         logger.info(
-          'Drift tables have been updated $updatedTables. Notifying Electric.',
+          'Notifying Electric about tables changed in the client. Changed tables: $tableNames',
         );
         notifier.potentiallyChanged();
       }
