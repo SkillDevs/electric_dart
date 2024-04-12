@@ -1363,12 +1363,14 @@ class $DataTypesTable extends DataTypes
       type: ElectricTypes.timestampTZ, requiredDuringInsert: false);
   static const VerificationMeta _bool$Meta = const VerificationMeta('bool\$');
   @override
-  late final GeneratedColumn<bool> bool$ = GeneratedColumn<bool>(
-      'bool', aliasedName, true,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("bool" IN (0, 1))'));
+  late final GeneratedColumn<bool> bool$ =
+      GeneratedColumn<bool>('bool', aliasedName, true,
+          type: DriftSqlType.bool,
+          requiredDuringInsert: false,
+          defaultConstraints: GeneratedColumn.constraintsDependsOnDialect({
+            SqlDialect.sqlite: 'CHECK ("bool" IN (0, 1))',
+            SqlDialect.postgres: '',
+          }));
   static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
   @override
   late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
