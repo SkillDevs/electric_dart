@@ -392,7 +392,7 @@ class ReplicatedRowTransformer<RowType> {
   });
 }
 
-typedef ErrorCallback = EventCallbackCall<SatelliteException>;
+typedef ErrorCallback = EventCallbackCall<(SatelliteException, StackTrace)>;
 typedef RelationCallback = EventCallbackCall<Relation>;
 typedef AdditionalDataCallback = Future<void> Function(AdditionalData);
 typedef TransactionCallback = Future<void> Function(ServerTransaction);
@@ -420,20 +420,44 @@ enum ReplicationStatus {
 class AuthResponse {
   final String? serverId;
   final Object? error;
+  final StackTrace? stackTrace;
 
-  AuthResponse(this.serverId, this.error);
+  AuthResponse(this.serverId)
+      : error = null,
+        stackTrace = null;
+
+  AuthResponse.withError(
+    Object this.error,
+    StackTrace this.stackTrace,
+  ) : serverId = null;
 }
 
 class StartReplicationResponse {
   final SatelliteException? error;
+  final StackTrace? stackTrace;
 
-  StartReplicationResponse({this.error});
+  StartReplicationResponse()
+      : error = null,
+        stackTrace = null;
+
+  StartReplicationResponse.withError(
+    SatelliteException this.error,
+    StackTrace this.stackTrace,
+  );
 }
 
 class StopReplicationResponse {
   final SatelliteException? error;
+  final StackTrace? stackTrace;
 
-  StopReplicationResponse({this.error});
+  StopReplicationResponse()
+      : error = null,
+        stackTrace = null;
+
+  StopReplicationResponse.withError(
+    SatelliteException this.error,
+    StackTrace this.stackTrace,
+  );
 }
 
 class TransactionEvent {

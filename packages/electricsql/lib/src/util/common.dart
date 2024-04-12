@@ -177,11 +177,13 @@ class Waiter {
     _completer.complete();
   }
 
-  void completeError(Object error) {
+  void completeError(Object error, [StackTrace? stackTrace]) {
     if (_completer.isCompleted) return;
 
     _finished = true;
-    _waiting ? _completer.completeError(error) : _completer.complete();
+    _waiting
+        ? _completer.completeError(error, stackTrace)
+        : _completer.complete();
   }
 
   bool get finished => _finished;

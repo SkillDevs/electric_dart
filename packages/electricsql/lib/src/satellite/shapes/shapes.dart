@@ -71,7 +71,7 @@ List<QualifiedTablename> getAllTablesForShape(
   String schema = 'main',
 }) {
   final allTables = _doGetAllTablesForShape(shape, schema: schema);
-  
+
   // Remove duplicates
   final Set<QualifiedTablename> tablesSet = {};
   final List<QualifiedTablename> nonRepeated = [];

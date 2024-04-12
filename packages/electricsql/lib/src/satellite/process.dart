@@ -634,7 +634,12 @@ This means there is a notifier subscription leak.`''');
   }
 
   // handles async client errors: can be a socket error or a server error message
-  Future<void> _handleClientError(SatelliteException satelliteError) async {
+  Future<void> _handleClientError(
+    (SatelliteException satelliteError, StackTrace stackTrace) errorInfo,
+  ) async {
+    final satelliteError = errorInfo.$1;
+    final stackTrace = errorInfo.$2;
+
     if (initializing != null && !initializing!.finished) {
       if (satelliteError.code == SatelliteErrorCode.socketError) {
         logger.warning(
@@ -652,7 +657,7 @@ This means there is a notifier subscription leak.`''');
       }
 
       // throw unhandled error
-      throw satelliteError;
+      Error.throwWithStackTrace(satelliteError, stackTrace);
     }
 
     logger.warning(
@@ -765,19 +770,25 @@ This means there is a notifier subscription leak.`''');
           return connectRetryHandler(e, retryAttempt);
         },
       );
-    } catch (e) {
+    } catch (e, st) {
       // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      final Object error;
+      final StackTrace stackTrace;
 
-      final error = !connectRetryHandler(e, 0)
-          ? e
-          : SatelliteException(
-              SatelliteErrorCode.connectionFailedAfterRetry,
-              'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
-            );
+      if (!connectRetryHandler(e, 0)) {
+        error = e;
+        stackTrace = st;
+      } else {
+        error = SatelliteException(
+          SatelliteErrorCode.connectionFailedAfterRetry,
+          'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e\n$st',
+        );
+        stackTrace = StackTrace.current;
+      }
 
       disconnect(error is SatelliteException ? error : null);
-      initializing?.completeError(error);
+      initializing?.completeError(error, stackTrace);
     }
 
     return fut;
@@ -831,7 +842,7 @@ This means there is a notifier subscription leak.`''');
     );
     final authResp = await client.authenticate(authState);
     if (authResp.error != null) {
-      throw authResp.error!;
+      Error.throwWithStackTrace(authResp.error!, authResp.stackTrace!);
     }
     setAuthState(authState);
   }
@@ -870,7 +881,8 @@ This means there is a notifier subscription leak.`''');
       final observedTransactionData =
           await getMeta<String>('seenAdditionalData');
 
-      final StartReplicationResponse(:error) = await client.startReplication(
+      final StartReplicationResponse(:error, :stackTrace) =
+          await client.startReplication(
         _lsn,
         schemaVersion,
         subscriptionIds.isNotEmpty ? subscriptionIds : null,
@@ -881,7 +893,7 @@ This means there is a notifier subscription leak.`''');
             .toList(),
       );
       if (error != null) {
-        throw error;
+        Error.throwWithStackTrace(error, stackTrace!);
       }
     } catch (error) {
       logger.warning("Couldn't start replication: $error");

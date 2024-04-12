@@ -222,7 +222,8 @@ void main() {
 
     // subscribe to errors on the client using subscribeToError
     bool hasAsserted = false;
-    client.subscribeToError((error) {
+    client.subscribeToError((errorInfo) {
+      final error = errorInfo.$1;
       // check that the subscribed listener is called with the right reason
       expect(error.code, SatelliteErrorCode.authExpired);
       hasAsserted = true;
@@ -246,7 +247,8 @@ void main() {
 
     bool hasAsserted = false;
     // subscribe to errors on the client using subscribeToError
-    client.subscribeToError((error) {
+    client.subscribeToError((errorInfo) {
+      final error = errorInfo.$1;
       // check that the subscribed listener is called with the right reason
       expect(error.code, SatelliteErrorCode.socketError);
       hasAsserted = true;
@@ -1841,7 +1843,8 @@ void main() {
     server.nextRpcResponse('stopReplication', [stop]);
 
     final completer = Completer<void>();
-    client.subscribeToError((error) {
+    client.subscribeToError((errorInfo) {
+      final error = errorInfo.$1;
       expect(error.message, 'Exception: Inbound transform error');
       expect(error.code, SatelliteErrorCode.replicationTransformError);
       completer.complete();

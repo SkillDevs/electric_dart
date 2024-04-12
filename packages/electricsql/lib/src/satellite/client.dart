@@ -62,7 +62,7 @@ abstract interface class SafeEventEmitter {
   );
   void Function() onSubscriptionError(SubscriptionErrorCallback callback);
 
-  void enqueueEmitError(SatelliteException error);
+  void enqueueEmitError(SatelliteException error, StackTrace stackTrace);
   void enqueueEmitSubscriptionDelivered(SubscriptionData data);
   void enqueueEmitSubscriptionError(SubscriptionErrorData error);
   void enqueueEmitRelation(Relation relation);
@@ -237,9 +237,9 @@ class SatelliteClient implements Client {
     final socket = socketFactory.create(kProtocolVsn);
     this.socket = socket;
 
-    void onceError(Object error) {
+    void onceError(Object error, StackTrace st) {
       disconnect();
-      completer.completeError(error);
+      completer.completeError(error, st);
     }
 
     void onceConnect() {
@@ -252,14 +252,14 @@ class SatelliteClient implements Client {
       socket.removeErrorListener(onceError);
       socketHandler = (Uint8List message) => handleIncoming(message);
       socket.onMessage(socketHandler!);
-      socket.onError((error) {
+      socket.onError((error, st) {
         if (_emitter.listenerCount('error') == 0) {
           disconnect();
           logger.error(
             'socket error but no listener is attached: $error',
           );
         }
-        _emitter.enqueueEmitError(error);
+        _emitter.enqueueEmitError(error, st);
       });
       socket.onClose((reason) {
         disconnect();
@@ -268,6 +268,7 @@ class SatelliteClient implements Client {
         }
         _emitter.enqueueEmitError(
           SatelliteException(reason.code, 'socket closed'),
+          StackTrace.current,
         );
       });
 
@@ -356,11 +357,11 @@ class SatelliteClient implements Client {
 
       final handler = getIncomingHandlerForMessage(messageInfo.msgType);
       handler(message);
-    } catch (error) {
+    } catch (error, st) {
       if (error is SatelliteException) {
         // subscription errors are emitted through specific event
         if (!subscriptionError.contains(error.code)) {
-          _emitter.enqueueEmitError(error);
+          _emitter.enqueueEmitError(error, st);
         }
       } else {
         // This is an unexpected runtime error
@@ -543,7 +544,9 @@ class SatelliteClient implements Client {
       throw StateError('Unexpected message $message');
     }
 
-    return AuthResponse(serverId, error);
+    return (error != null)
+        ? AuthResponse.withError(error, StackTrace.current)
+        : AuthResponse(serverId);
   }
 
   /// Server may issue RPC requests to the client, and we're handling them here.
@@ -580,8 +583,9 @@ class SatelliteClient implements Client {
     if (inbound.isReplicating == ReplicationStatus.starting) {
       if (resp.hasErr()) {
         inbound.isReplicating = ReplicationStatus.stopped;
-        return StartReplicationResponse(
-          error: startReplicationErrorToSatelliteError(resp.err),
+        return StartReplicationResponse.withError(
+          startReplicationErrorToSatelliteError(resp.err),
+          StackTrace.current,
         );
       } else {
         inbound.isReplicating = ReplicationStatus.active;
@@ -589,11 +593,12 @@ class SatelliteClient implements Client {
             resp.hasUnackedWindowSize() ? resp.unackedWindowSize : 30;
       }
     } else {
-      return StartReplicationResponse(
-        error: SatelliteException(
+      return StartReplicationResponse.withError(
+        SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'start' response",
         ),
+        StackTrace.current,
       );
     }
     return StartReplicationResponse();
@@ -623,6 +628,7 @@ class SatelliteClient implements Client {
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${outbound.isReplicating} handling 'start' request",
         ),
+        StackTrace.current,
       );
       return SatErrorResp(
         errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED,
@@ -801,6 +807,7 @@ class SatelliteClient implements Client {
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'stop' request",
         ),
+        StackTrace.current,
       );
 
       return SatErrorResp(
@@ -814,11 +821,12 @@ class SatelliteClient implements Client {
       inbound.isReplicating = ReplicationStatus.stopped;
       return StopReplicationResponse();
     } else {
-      return StopReplicationResponse(
-        error: SatelliteException(
+      return StopReplicationResponse.withError(
+        SatelliteException(
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'stop' response",
         ),
+        StackTrace.current,
       );
     }
   }
@@ -830,6 +838,7 @@ class SatelliteClient implements Client {
           SatelliteErrorCode.unexpectedState,
           "unexpected state ${inbound.isReplicating} handling 'relation' message",
         ),
+        StackTrace.current,
       );
       return;
     }
@@ -875,6 +884,7 @@ class SatelliteClient implements Client {
   void handleErrorResp(SatErrorResp error) {
     _emitter.enqueueEmitError(
       serverErrorToSatelliteError(error),
+      StackTrace.current,
     );
   }
 
@@ -1460,8 +1470,8 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
   SatelliteClientEventEmitter();
 
   @override
-  void enqueueEmitError(SatelliteException error) {
-    return _enqueueEmit('error', error);
+  void enqueueEmitError(SatelliteException error, StackTrace stackTrace) {
+    return _enqueueEmit('error', (error, stackTrace));
   }
 
   @override

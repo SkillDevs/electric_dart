@@ -319,7 +319,10 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   }
 
   void emitSocketClosedError(SocketCloseReason ev) {
-    enqueueEmit('error', SatelliteException(ev.code, 'socket closed'));
+    enqueueEmit(
+      'error',
+      (SatelliteException(ev.code, 'socket closed'), StackTrace.current),
+    );
   }
 
   @override
@@ -371,10 +374,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   Future<AuthResponse> authenticate(
     AuthState _authState,
   ) async {
-    return AuthResponse(
-      null,
-      null,
-    );
+    return AuthResponse(null);
   }
 
   @override
@@ -399,20 +399,22 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     timeouts.add(t);
 
     if (lsn != null && bytesToNumber(lsn) == kMockBehindWindowLsn) {
-      return StartReplicationResponse(
-        error: SatelliteException(
+      return StartReplicationResponse.withError(
+        SatelliteException(
           SatelliteErrorCode.behindWindow,
           'MOCK BEHIND_WINDOW_LSN ERROR',
         ),
+        StackTrace.current,
       );
     }
 
     if (lsn != null && bytesToNumber(lsn) == kMockInternalError) {
-      return StartReplicationResponse(
-        error: SatelliteException(
+      return StartReplicationResponse.withError(
+        SatelliteException(
           SatelliteErrorCode.internal,
           'MOCK INTERNAL_ERROR',
         ),
+        StackTrace.current,
       );
     }
 

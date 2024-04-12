@@ -23,13 +23,15 @@ abstract class Socket {
   Socket closeAndRemoveListeners();
 
   void onMessage(void Function(Data data) cb);
-  void onError(void Function(SatelliteException error) cb);
+  void onError(void Function(SatelliteException error, StackTrace st) cb);
   void onClose(void Function(SocketCloseReason reason) cb);
 
   void onceConnect(void Function() cb);
-  void onceError(void Function(SatelliteException error) cb);
+  void onceError(void Function(SatelliteException error, StackTrace st) cb);
 
-  void removeErrorListener(void Function(SatelliteException error) cb);
+  void removeErrorListener(
+    void Function(SatelliteException error, StackTrace st) cb,
+  );
 }
 
 class ConnectionOptions {
@@ -57,8 +59,10 @@ abstract class WebSocketBase implements Socket {
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
   List<void Function()> _onceConnectCallbacks = [];
-  List<void Function(SatelliteException error)> _errorCallbacks = [];
-  List<void Function(SatelliteException error)> _onceErrorCallbacks = [];
+  List<void Function(SatelliteException error, StackTrace st)> _errorCallbacks =
+      [];
+  List<void Function(SatelliteException error, StackTrace st)>
+      _onceErrorCallbacks = [];
 
   void Function(CloseEvent)? _closeListener;
   void Function(Data data)? _messageListener;
@@ -66,17 +70,20 @@ abstract class WebSocketBase implements Socket {
   WebSocketBase(this.protocolVsn);
 
   // event doesn't provide much
-  void _notifyErrorAndCloseSocket([SatelliteException? error]) {
+  void _notifyErrorAndCloseSocket({
+    SatelliteException? error,
+    required StackTrace stackTrace,
+  }) {
     final effectiveError = error ??
         SatelliteException(SatelliteErrorCode.socketError, 'socket error');
     for (final callback in _errorCallbacks) {
-      callback(effectiveError);
+      callback(effectiveError, stackTrace);
     }
 
     while (_onceErrorCallbacks.isNotEmpty) {
       final callback = _onceErrorCallbacks.removeLast();
 
-      callback(effectiveError);
+      callback(effectiveError, stackTrace);
     }
 
     _socketClose();
@@ -110,10 +117,11 @@ abstract class WebSocketBase implements Socket {
       await _channel!.ready;
     } catch (e) {
       _notifyErrorAndCloseSocket(
-        SatelliteException(
+        error: SatelliteException(
           SatelliteErrorCode.socketError,
           'failed to stablish a socket connection',
         ),
+        stackTrace: StackTrace.current,
       );
       return;
     }
@@ -131,16 +139,17 @@ abstract class WebSocketBase implements Socket {
           _messageListener?.call(bytes);
         } catch (e) {
           _notifyErrorAndCloseSocket(
-            SatelliteException(
+            error: SatelliteException(
               SatelliteErrorCode.internal,
               'error parsing processing socket data',
             ),
+            stackTrace: StackTrace.current,
           );
         }
       },
       cancelOnError: true,
       onError: (Object e) {
-        _notifyErrorAndCloseSocket();
+        _notifyErrorAndCloseSocket(stackTrace: StackTrace.current);
       },
       onDone: () {
         _socketClose();
@@ -177,7 +186,7 @@ abstract class WebSocketBase implements Socket {
   }
 
   @override
-  void onError(void Function(SatelliteException error) cb) {
+  void onError(void Function(SatelliteException error, StackTrace st) cb) {
     _errorCallbacks.add(cb);
   }
 
@@ -207,12 +216,16 @@ abstract class WebSocketBase implements Socket {
   }
 
   @override
-  void onceError(void Function(SatelliteException error) cb) {
+  void onceError(
+    void Function(SatelliteException error, StackTrace stackTrace) cb,
+  ) {
     _onceErrorCallbacks.add(cb);
   }
 
   @override
-  void removeErrorListener(void Function(SatelliteException error) cb) {
+  void removeErrorListener(
+    void Function(SatelliteException error, StackTrace st) cb,
+  ) {
     _errorCallbacks.remove(cb);
     _onceErrorCallbacks.remove(cb);
   }
