@@ -12,6 +12,7 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/registry.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
+import 'package:electricsql/src/satellite/shapes/shapes.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/common.dart';
@@ -213,34 +214,39 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     final Map<String, String> shapeReqToUuid = {};
 
     for (final shape in shapes) {
-      final Shape(:tablename) = shape.definition;
-      if (tablename == 'failure' || tablename == 'Items') {
-        return Future.value(
-          SubscribeResponse(
-            subscriptionId: subscriptionId,
-            error: SatelliteException(SatelliteErrorCode.tableNotFound, null),
-          ),
-        );
-      }
-      if (tablename == 'another' || tablename == 'User') {
-        return Future(() {
-          sendErrorAfterTimeout(subscriptionId, 1);
-          return SubscribeResponse(
-            subscriptionId: subscriptionId,
-            error: null,
-          );
-        });
-      } else {
-        shapeReqToUuid[shape.requestId] = genUUID();
-        final List<DataRecord> records = relationData[tablename] ?? [];
+      final tables = getAllTablesForShape(shape.definition, schema: 'main');
 
-        for (final record in records) {
-          final dataChange = InitialDataChange(
-            relation: relations[tablename]!,
-            record: record,
-            tags: [generateTag('remote', DateTime.now())],
+      for (final qualTable in tables) {
+        final tablename = qualTable.tablename;
+
+        if (tablename == 'failure' || tablename == 'Items') {
+          return Future.value(
+            SubscribeResponse(
+              subscriptionId: subscriptionId,
+              error: SatelliteException(SatelliteErrorCode.tableNotFound, null),
+            ),
           );
-          data.add(dataChange);
+        }
+        if (tablename == 'another' || tablename == 'User') {
+          return Future(() {
+            sendErrorAfterTimeout(subscriptionId, 1);
+            return SubscribeResponse(
+              subscriptionId: subscriptionId,
+              error: null,
+            );
+          });
+        } else {
+          shapeReqToUuid[shape.requestId] = genUUID();
+          final List<DataRecord> records = relationData[tablename] ?? [];
+
+          for (final record in records) {
+            final dataChange = InitialDataChange(
+              relation: relations[tablename]!,
+              record: record,
+              tags: [generateTag('remote', DateTime.now())],
+            );
+            data.add(dataChange);
+          }
         }
       }
     }
@@ -490,7 +496,11 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
       final satError = subsDataErrorToSatelliteError(satSubsError);
       enqueueEmit(
         kSubscriptionError,
-        SubscriptionErrorData(subscriptionId: subscriptionId, error: satError),
+        SubscriptionErrorData(
+          subscriptionId: subscriptionId,
+          error: satError,
+          stackTrace: StackTrace.current,
+        ),
       );
     });
   }

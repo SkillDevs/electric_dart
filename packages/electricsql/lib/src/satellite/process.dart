@@ -21,6 +21,7 @@ import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/src/util/exceptions.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/relations.dart';
@@ -231,29 +232,25 @@ This means there is a notifier subscription leak.`''');
   Future<void> garbageCollectShapeHandler(
     List<ShapeDefinition> shapeDefs,
   ) async {
-    final stmts = <Statement>[];
-    final tablenames = <String>[];
-    // reverts to off on commit/abort
-    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
-    shapeDefs.expand((ShapeDefinition def) => [def.definition]).map(
-      (Shape select) {
-        tablenames.add('main.${select.tablename}');
-        // We need "fully qualified" table names in the next calls
-        return 'main.${select.tablename}';
-      },
-    ).fold(stmts, (List<Statement> stmts, String tablename) {
-      stmts.addAll([
-        Statement(
-          'DELETE FROM $tablename',
-        ),
-      ]);
-      return stmts;
-      // does not delete shadow rows but we can do that
-    });
+    final allTables = shapeDefs
+        .map((ShapeDefinition def) => def.definition)
+        .expand((x) => getAllTablesForShape(x));
+    final tables = allTables.toSet().toList();
+
+    // TODO: table and schema warrant escaping here too, but they aren't in the triggers table.
+    final tablenames = tables.map((x) => x.toString()).toList();
+
+    final deleteStmts = tables.map(
+      (x) => Statement(
+        'DELETE FROM $x',
+      ),
+    );
 
     final stmtsWithTriggers = [
+      // reverts to off on commit/abort
+      Statement('PRAGMA defer_foreign_keys = ON'),
       ..._disableTriggers(tablenames),
-      ...stmts,
+      ...deleteStmts,
       ..._enableTriggers(tablenames),
     ];
 
@@ -552,7 +549,7 @@ This means there is a notifier subscription leak.`''');
         notificationChanges,
         ChangeOrigin.initial,
       );
-    } catch (e) {
+    } catch (e, st) {
       unawaited(
         _handleSubscriptionError(
           SubscriptionErrorData(
@@ -561,6 +558,7 @@ This means there is a notifier subscription leak.`''');
               'Error applying subscription data: $e',
             ),
             subscriptionId: null,
+            stackTrace: st,
           ),
         ),
       );
@@ -602,10 +600,25 @@ This means there is a notifier subscription leak.`''');
   ) async {
     final subscriptionId = errorData.subscriptionId;
     final satelliteError = errorData.error;
+    final satelliteStackTrace = errorData.stackTrace;
+    Object? resettingError;
+    StackTrace? resettingStackTrace;
 
     logger.error('encountered a subscription error: ${satelliteError.message}');
 
-    await _resetClientState();
+    try {
+      await _resetClientState();
+    } catch (error, st) {
+      // If we encounter an error here, we want to float it to the client so that the bug is visible
+      // instead of just a broken state.
+      resettingError = NestedException(
+        error,
+        reasonContext: 'Encountered when handling a subscription error',
+        innerException: satelliteError,
+        innerStackTrace: satelliteStackTrace,
+      );
+      resettingStackTrace = st;
+    }
 
     // Call the `onFailure` callback for this subscription
     if (subscriptionId != null) {
@@ -613,7 +626,10 @@ This means there is a notifier subscription leak.`''');
 
       // GC the notifiers for this subscription ID
       subscriptionNotifiers.remove(subscriptionId);
-      completer.completeError(satelliteError);
+      completer.completeError(
+        resettingError ?? satelliteError,
+        resettingStackTrace ?? satelliteStackTrace,
+      );
     }
   }
 

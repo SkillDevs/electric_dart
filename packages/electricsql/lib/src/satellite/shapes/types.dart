@@ -17,10 +17,12 @@ typedef SubscriptionErrorCallback = void Function(SubscriptionErrorData error);
 class SubscriptionErrorData {
   final SubscriptionId? subscriptionId;
   final SatelliteException error;
+  final StackTrace stackTrace;
 
   SubscriptionErrorData({
     required this.subscriptionId,
     required this.error,
+    required this.stackTrace,
   });
 }
 

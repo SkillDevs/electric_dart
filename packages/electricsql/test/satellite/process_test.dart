@@ -1950,18 +1950,21 @@ void main() {
   test('a shape delivery that triggers garbage collection', () async {
     await runMigrations();
 
-    const tablename = 'parent';
-    final qualified = const QualifiedTablename('main', tablename).toString();
-
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
-    client.setRelationData(tablename, parentRecord);
+    client.setRelationData('parent', parentRecord);
+    client.setRelationData('child', childRecord);
     client.setRelationData('another', {});
 
     final conn = await startSatellite(satellite, authConfig, token);
     await conn.connectionFuture;
 
-    final shapeDef1 = Shape(tablename: 'parent');
+    final shapeDef1 = Shape(
+      tablename: 'parent',
+      include: [
+        Rel(foreignKey: ['parent'], select: Shape(tablename: 'child')),
+      ],
+    );
     final shapeDef2 = Shape(tablename: 'another');
 
     satellite.relations = kTestRelations;
@@ -1969,6 +1972,10 @@ void main() {
     final ShapeSubscription(synced: synced1) =
         await satellite.subscribe([shapeDef1]);
     await synced1;
+    final row = await adapter.query(Statement('SELECT id FROM main.parent'));
+    expect(row.length, 1);
+    final row1 = await adapter.query(Statement('SELECT id FROM main.child'));
+    expect(row1.length, 1);
     final ShapeSubscription(synced: synced) =
         await satellite.subscribe([shapeDef2]);
 
@@ -1976,18 +1983,22 @@ void main() {
       await synced;
       fail('Expected a subscription error');
     } catch (expected) {
+      expect(expected, isA<SatelliteException>());
+
       try {
         final row = await adapter.query(
-          Statement(
-            'SELECT id FROM $qualified',
-          ),
+          Statement('SELECT id FROM main.parent'),
         );
         expect(row.length, 0);
+        final row1 = await adapter.query(
+          Statement('SELECT id FROM main.child'),
+        );
+        expect(row1.length, 0);
 
         final shadowRows = await adapter.query(
           Statement('SELECT tags FROM _electric_shadow'),
         );
-        expect(shadowRows.length, 1);
+        expect(shadowRows.length, 2);
 
         final subsMeta = await satellite.getMeta<String>('subscriptions');
         final subsObj = json.decode(subsMeta) as Map<String, Object?>;
