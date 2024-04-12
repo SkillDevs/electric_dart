@@ -1102,7 +1102,6 @@ This means there is a notifier subscription leak.`''');
     List<OplogEntry> results,
     ChangeOrigin origin,
   ) async {
-    logger.info('notify changes');
     final ChangeAccumulator acc = {};
 
     // Would it be quicker to do this using a second SQL query that
