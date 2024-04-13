@@ -1,5 +1,3 @@
-// ignore_for_file: depend_on_referenced_packages
-
 // Based on https://github.com/isoos/postgresql-dart/blob/ff761f678f4483f7d910ca5fa534da127dc55cea/test/docker.dart
 
 import 'dart:async';
