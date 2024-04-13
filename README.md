@@ -161,7 +161,8 @@ final Stream<List<Todo>> todosStream = db.select(db.todos).watch();
 // Watch query using raw SQL
 final Stream<List<QueryRow>> rawTodosStream = db.customSelect(
     'SELECT * FROM todos',
-    // This is important so that Drift knows when to run this query again if the table changes
+    // This is important so that Drift knows when to run this query again
+    // if the table changes
     readsFrom: {db.todos},
 ).watch();
 ```
@@ -200,19 +201,21 @@ await db.into(db.todos).insert(
 );
 
 // Or raw SQL
-// WARNING: Even though this is possible, it's not recommended to use raw SQL to insert/update
-// data as you would be bypassing certain formats that Electric expects for some special data types
-// like UUIDs, timestamps, int4, etc...
+// WARNING: Even though this is possible, it's not recommended to use raw SQL to
+// insert/update data as you would be bypassing certain formats that Electric
+// expects for some special data types like UUIDs, timestamps, int4, etc...
 //
-// It's perfectly safe to use raw SQL for SELECT queries though, you would only need to tell
-// drift what tables are being used in the query so that Stream queries work correctly
+// It's perfectly safe to use raw SQL for SELECT queries though, you would only
+// need to tell drift what tables are being used in the query so that Stream queries
+// work correctly
 //
-// If you really need a raw INSERT/UPDATE you can encode the parameters using the `TypeConverters` class.
+// If you really need a raw INSERT/UPDATE you can encode the parameters using the
+// `TypeConverters` class.
 // Like: `TypeConverters.timestampTZ.encode(DateTime.now())`
 await db.customInsert(
     'INSERT INTO todos (title, created_at) VALUES (?, ?)',
     variables: [
-        Variable('My todo'), 
+        Variable('My todo'),
         Variable(TypeConverters.timestampTZ.encode(DateTime.now())),
     ],
     updates: {db.todos}, // This will notify stream queries to rebuild the widget
