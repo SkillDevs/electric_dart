@@ -6,7 +6,7 @@ void main() {
     final image =
         getConfigValue<String>('ELECTRIC_IMAGE', {'image': 'electric:test'});
     final writeToPgMode = getConfigValue<String>('ELECTRIC_WRITE_TO_PG_MODE', {
-      'write-to-pg-mode': 'test',
+      'writeToPgMode': 'test',
     });
 
     expect(image, 'electric:test');

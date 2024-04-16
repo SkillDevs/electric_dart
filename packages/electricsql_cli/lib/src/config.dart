@@ -109,7 +109,7 @@ T? getOptionalConfigValue<T>(
     final strippedName = name.startsWith('ELECTRIC_')
         ? name.substring('ELECTRIC_'.length)
         : name;
-    final optName = strippedName.toLowerCase().paramCase;
+    final optName = strippedName.toLowerCase().camelCase;
 
     if (options[optName] != null) {
       return options[optName]! as T;
