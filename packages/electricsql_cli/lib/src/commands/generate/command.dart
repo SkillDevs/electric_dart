@@ -267,9 +267,9 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
       }
     }
     logger.info('Service URL: ${opts.config.read<String>('SERVICE')}');
-    logger.info('Proxy URL: ${stripPasswordFromUrl(
-      buildProxyUrlForIntrospection(opts.config),
-    )}');
+    logger.info(
+      'Proxy URL: ${stripPasswordFromUrl(opts.config.read<String>('PROXY'))}',
+    );
 
     // Generate the client
     await _runGeneratorInner(opts);

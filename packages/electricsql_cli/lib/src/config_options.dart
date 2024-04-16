@@ -126,7 +126,11 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'DATABASE_NAME': ConfigOption<String>(
     doc: 'Name of the database to connect to.',
-    inferVal: (options) => inferDbUrlPart('dbName', options: options),
+    inferVal: (options) => inferDbUrlPart(
+      'dbName',
+      options: options,
+      defaultValue: inferProxyUrlPart('dbName', options: options),
+    ),
     defaultValueFun: (_) => getAppName() ?? 'electric',
     groups: ['database', 'client', 'proxy'],
   ),

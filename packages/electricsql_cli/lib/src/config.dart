@@ -106,7 +106,11 @@ T? getOptionalConfigValue<T>(
 
   // First check if the option was passed as a command line argument
   if (options != null) {
-    final optName = name.toLowerCase().paramCase;
+    final strippedName = name.startsWith('ELECTRIC_')
+        ? name.substring('ELECTRIC_'.length)
+        : name;
+    final optName = strippedName.toLowerCase().paramCase;
+
     if (options[optName] != null) {
       return options[optName]! as T;
     } else if (options[name] != null) {

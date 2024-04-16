@@ -70,4 +70,35 @@ void main() {
       false,
     );
   });
+
+  test('assert authentication mode is insecure by default', () {
+    expect(configOptions['AUTH_MODE']!.getDefaultValue({})!(), 'insecure');
+  });
+
+  test('assert database name is correctly inferred', () {
+    // infer from db url
+    expect(
+      configOptions['DATABASE_NAME']!.inferVal!({
+        'databaseUrl': 'postgres://db_user:db_password@db_host:123/db_name',
+      }),
+      'db_name',
+    );
+
+    // infer from proxy url if db url missing
+    expect(
+      configOptions['DATABASE_NAME']!.inferVal!({
+        'proxy': 'postgres://db_user:db_password@db_host:123/db_name',
+      }),
+      'db_name',
+    );
+
+    // prefer db over proxy for name
+    expect(
+      configOptions['DATABASE_NAME']!.inferVal!({
+        'databaseUrl': 'postgres://db_user:db_password@db_host:123/db_name',
+        'proxy': 'postgres://db_user:db_password@db_host:123/proxy_db_name',
+      }),
+      'db_name',
+    );
+  });
 }
