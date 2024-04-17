@@ -2,12 +2,14 @@ import 'package:electricsql/src/notifiers/event.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
+import 'package:events_emitter/emitters/event_emitter.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('subscribe to potential data changes', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final notifications = <PotentialChangeNotification>[];
 
@@ -19,9 +21,10 @@ void main() {
   });
 
   test('potential data change subscriptions are scoped by dbName(s)', () {
-    final source = EventNotifier(dbName: 'foo.db');
-    final t1 = EventNotifier(dbName: 'foo.db');
-    final t2 = EventNotifier(dbName: 'bar.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t1 = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t2 = EventNotifier(dbName: 'bar.db', eventEmitter: eventEmitter);
 
     final notifications = <Notification>[];
 
@@ -39,8 +42,9 @@ void main() {
   });
 
   test('subscribe to actual data changes', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final notifications = <Notification>[];
 
@@ -58,9 +62,10 @@ void main() {
   });
 
   test('actual data change subscriptions are scoped by dbName', () {
-    final source = EventNotifier(dbName: 'foo.db');
-    final t1 = EventNotifier(dbName: 'foo.db');
-    final t2 = EventNotifier(dbName: 'bar.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t1 = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t2 = EventNotifier(dbName: 'bar.db', eventEmitter: eventEmitter);
 
     final notifications = <Notification>[];
 
@@ -89,8 +94,9 @@ void main() {
   });
 
   test('subscribe to connectivity change events is scoped by dbName', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final notifications = <ConnectivityStateChangeNotification>[];
 
@@ -112,8 +118,9 @@ void main() {
   });
 
   test('no more connectivity events after unsubscribe', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final List<ConnectivityStateChangeNotification> notifications = [];
 
