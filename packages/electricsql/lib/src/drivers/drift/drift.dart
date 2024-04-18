@@ -53,11 +53,19 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
     implements BaseElectricClient {
   DB get db;
 
+  /// Creates a Shape subscription. A shape is a set of related data that's synced
+  /// onto the local device.
+  /// https://electric-sql.com/docs/usage/data-access/shapes
   Future<ShapeSubscription> syncTable<T extends Table>(
     T table, {
     SyncIncludeBuilder<T>? include,
     SyncWhereBuilder<T>? where,
   });
+
+  /// Same as [syncTable] but you would be providing table names, and foreign key
+  /// relationships manually. This is more low-level and should be avoided if
+  /// possible.
+  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput);
 
   /// Puts transforms in place such that any data being replicated
   /// to or from this table is first handled appropriately while
@@ -204,9 +212,13 @@ class DriftElectricClient<DB extends GeneratedDatabase>
 
     // print("SHAPE ${shape.toMap()}");
 
-    return _baseClient
-        // ignore: invalid_use_of_protected_member
-        .syncShapeInternal(shape);
+    return _baseClient.syncShapeInternal(shape);
+  }
+
+  @override
+  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput) async {
+    final shape = computeShape(syncInput);
+    return _baseClient.syncShapeInternal(shape);
   }
 
   @override

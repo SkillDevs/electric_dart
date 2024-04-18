@@ -1,3 +1,8 @@
+## Next
+
+* Add a escape hatch method `syncTableRaw` to allow creating a shape subscription manually, without the `drift` API. Using `syncTable` is still recommended.
+
+
 ## 0.6.0
 
 * Code based on official Typescript client [v0.10.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.0) and [v0.10.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.1).
