@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:electricsql_cli/src/config.dart';
@@ -281,16 +282,20 @@ _ColumnsAndRelations _extractFromModel(
 
     // Handle relations
     if (isArrayType || driftType == null) {
-      if (field.attributes.any((a) => a.type == '@relation')) {
+      final relationAttr = field.attributes
+          .firstWhereOrNull((element) => element.type == '@relation');
+
+      if (relationAttr != null &&
+          relationAttr.args.any((arg) => arg.startsWith('fields:'))) {
         // Outgoing relation
-        final relationAttr = field.attributes
-            .firstWhere((element) => element.type == '@relation');
         relations.add(
           _extractOutgoindRelation(model, field, nonNullableType, relationAttr),
         );
       } else {
         // Incoming relation
-        relations.add(_extractIncomingRelation(model, field, nonNullableType));
+        relations.add(
+          _extractIncomingRelation(model, field, nonNullableType, relationAttr),
+        );
       }
 
       continue;
@@ -365,10 +370,17 @@ DriftRelationInfo _extractOutgoindRelation(
   final List<String> referencesInRel =
       _extractFromList(_getPrismaRelationValue(relationAttr, 'references'));
 
-  assert(
-    fieldsInRel.length == 1 && referencesInRel.length == 1,
-    'Composite FKs are not supported yet',
-  );
+  if (fieldsInRel.length != 1 || referencesInRel.length != 1) {
+    throw Exception(
+      'Composite FKs are not supported yet. Model: ${model.name} - Field: $fieldName',
+    );
+  }
+
+  final String relationName = _extractExplicitRelationName(relationAttr) ??
+      _buildRelationName(
+        originModel: model.name,
+        relatedModel: relatedModel,
+      );
 
   final fromField = fieldsInRel.first;
   final toField = referencesInRel.first;
@@ -379,10 +391,7 @@ DriftRelationInfo _extractOutgoindRelation(
     relatedModel: relatedModel,
     fromField: fromField,
     toField: toField,
-    relationName: _buildRelationName(
-      originModel: model.name,
-      relatedModel: relatedModel,
-    ),
+    relationName: relationName,
   );
 }
 
@@ -390,10 +399,19 @@ DriftRelationInfo _extractIncomingRelation(
   Model model,
   Field field,
   String nonNullableType,
+  Attribute? relationAttr,
 ) {
   final fieldName = field.field;
   final fieldNameDart = ensureValidDartIdentifier(fieldName.camelCase);
   final relatedModel = nonNullableType;
+
+  final String relationName = (relationAttr != null
+          ? _extractExplicitRelationName(relationAttr)
+          : null) ??
+      _buildRelationName(
+        originModel: relatedModel,
+        relatedModel: model.name,
+      );
 
   return DriftRelationInfo(
     relationField: fieldName,
@@ -401,10 +419,7 @@ DriftRelationInfo _extractIncomingRelation(
     relatedModel: relatedModel,
     fromField: '',
     toField: '',
-    relationName: _buildRelationName(
-      originModel: relatedModel,
-      relatedModel: model.name,
-    ),
+    relationName: relationName,
   );
 }
 
@@ -413,6 +428,21 @@ String _buildRelationName({
   required String relatedModel,
 }) {
   return '${originModel.pascalCase}To${relatedModel.pascalCase}';
+}
+
+String? _extractExplicitRelationName(Attribute relationAttr) {
+  final args = relationAttr.args;
+
+  final nameArg = args.firstOrNull;
+  if (nameArg == null) {
+    return null;
+  }
+
+  try {
+    return extractStringLiteral(nameArg);
+  } catch (e) {
+    return null;
+  }
 }
 
 String _getPrismaRelationValue(Attribute relationAttr, String name) {

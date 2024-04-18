@@ -1,3 +1,8 @@
+## Next
+
+* Fix schema generation when it contains self-referenced foreign keys
+
+
 ## 0.6.0
 
 * The drift schema generator now generates the relations between tables in a special field named `$relations` in the drift table.

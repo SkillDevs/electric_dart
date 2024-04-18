@@ -19,6 +19,7 @@ const kElectrifiedTables = [
   User,
   Post,
   Profile,
+  Message,
 ];
 
 class Project extends Table with ElectricTableMixin {
@@ -254,6 +255,22 @@ class Profile extends Table with ElectricTableMixin {
   $ProfileTableRelations get $relations => const $ProfileTableRelations();
 }
 
+class Message extends Table with ElectricTableMixin {
+  TextColumn get id => text().named('id')();
+
+  @override
+  String? get tableName => 'message';
+
+  @override
+  Set<Column<Object>>? get primaryKey => {id};
+
+  @override
+  bool get withoutRowId => true;
+
+  @override
+  $MessageTableRelations get $relations => const $MessageTableRelations();
+}
+
 // ------------------------------ ENUMS ------------------------------
 
 /// Dart enum for Postgres enum "color"
@@ -410,4 +427,26 @@ class $ProfileTableRelations implements TableRelations {
 
   @override
   List<TableRelation<Table>> get $relationsList => [user];
+}
+
+class $MessageTableRelations implements TableRelations {
+  const $MessageTableRelations();
+
+  TableRelation<Message> get message => const TableRelation<Message>(
+        fromField: 'parent_id',
+        toField: 'id',
+        relationName: 'messageTomessage',
+      );
+
+  TableRelation<Message> get otherMessage => const TableRelation<Message>(
+        fromField: '',
+        toField: '',
+        relationName: 'messageTomessage',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [
+        message,
+        otherMessage,
+      ];
 }

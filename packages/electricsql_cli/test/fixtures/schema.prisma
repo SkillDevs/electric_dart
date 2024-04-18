@@ -118,3 +118,10 @@ model Profile {
   userId Int    @unique
   user   User?  @relation(fields: [userId], references: [id])
 }
+
+// Table with a foreign key to itself
+model message {
+  id             String     @id
+  message        message?   @relation("messageTomessage", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_message_message_parent_id")
+  other_message  message[]  @relation("messageTomessage")
+}
