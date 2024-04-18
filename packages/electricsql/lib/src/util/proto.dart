@@ -299,7 +299,7 @@ String msgToString(Object message) {
   } else if (message is SatInStopReplicationResp) {
     return '#SatInStopReplicationResp{}';
   } else if (message is SatOpLog) {
-    return '#SatOpLog{ops: ${message.ops.map(opToString).join(', ')}}';
+    return '#SatOpLog{ops: [${message.ops.map(opToString).join(', ')}]}';
   } else if (message is SatRelation) {
     final cols = message.columns
         .map((x) => '${x.name}: ${x.type}${x.primaryKey ? ' PK' : ''}')

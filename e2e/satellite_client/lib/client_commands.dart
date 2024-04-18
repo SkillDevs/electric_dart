@@ -61,7 +61,7 @@ Future<MyDriftElectricClient> electrifyDb(
 }
 
 // reconnects with Electric, e.g. after expiration of the JWT
-Future<void> reconnect(ElectricClient electric, Duration exp) async {
+Future<void> reconnect(ElectricClient electric, Duration? exp) async {
   final token = await mockSecureAuthToken(exp: exp);
   await electric.connect(token);
 }
@@ -99,19 +99,28 @@ void setSubscribers(DriftElectricClient db) {
   });
 }
 
-Future<void> syncTable(MyDriftElectricClient electric, String table) async {
-  if (table == 'other_items') {
-    final ShapeSubscription(:synced) =
-        await electric.syncTable(electric.db.otherItems);
+Future<void> syncItemsTable(
+    MyDriftElectricClient electric, String shapeFilter) async {
+  final subs = await electric.syncTable(
+    electric.db.items,
+    where: (_) => CustomExpression<bool>(shapeFilter),
+  );
+  return await subs.synced;
+}
 
-    return await synced;
-  } else {
-    final satellite = globalRegistry.satellites[dbName]!;
-    final ShapeSubscription(:synced) = await satellite.subscribe(
-      [Shape(tablename: table)],
-    );
-    return await synced;
-  }
+Future<void> syncOtherItemsTable(
+    MyDriftElectricClient electric, String shapeFilter) async {
+  final subs = await electric.syncTable(
+    electric.db.otherItems,
+    where: (_) => CustomExpression<bool>(shapeFilter),
+  );
+  return await subs.synced;
+}
+
+Future<void> syncTable(String table) async {
+  final satellite = globalRegistry.satellites[dbName]!;
+  final subs = await satellite.subscribe([Shape(tablename: table)]);
+  return await subs.synced;
 }
 
 Future<void> lowLevelSubscribe(
@@ -522,14 +531,6 @@ Future<Rows> getOtherItems(MyDriftElectricClient electric) async {
 
 Future<void> insertOtherItem(
     MyDriftElectricClient electric, List<String> keys) async {
-  await electric.db.customInsert(
-    "INSERT INTO items(id, content) VALUES (?,?);",
-    variables: [
-      Variable.withString("test_id_1"),
-      Variable.withString(""),
-    ],
-  );
-
   await electric.db.transaction(() async {
     for (final key in keys) {
       await electric.db.customInsert(
@@ -581,6 +582,16 @@ void connect(MyDriftElectricClient db) {
 
 void disconnect(MyDriftElectricClient db) {
   db.disconnect();
+}
+
+Future<void> custom0325SyncItems(MyDriftElectricClient electric) async {
+  final subs = await electric.syncTable(
+    electric.db.items,
+    where: (items) => items.content.like('items-_-'),
+    include: (items) => [SyncInputRelation.from(items.$relations.otherItems)],
+  );
+
+  await subs.synced;
 }
 
 /////////////////////////////////

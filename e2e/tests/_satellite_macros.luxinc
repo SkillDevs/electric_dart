@@ -24,6 +24,15 @@
     [invoke connect_to_electric $electric $port $migrations $connectToElectric]
 [endmacro]
 
+[macro client_disconnect]
+    !disconnect db
+    ??$node
+[endmacro]
+
+[macro client_reconnect]
+    !reconnect db ''
+[endmacro]
+
 [macro setup_client satellite_number electric port]
     [invoke setup_client_with_migrations $satellite_number $electric $port "[]" "true"]
 [endmacro]
@@ -177,13 +186,13 @@
     ??$node
 [endmacro]
 
-[macro node_await_insert_extended keys]
-    !insert_extended_item db ${keys}
+[macro node_await_insert_extended obj]
+    !insert_extended_item db ${obj}
     ??$node
 [endmacro]
 
-[macro node_await_insert_extended_into table keys]
-    !insert_extended_into db '${table}' ${keys}
+[macro node_await_insert_extended_into table obj]
+    !insert_extended_into db '${table}' ${obj}
     ??$node
 [endmacro]
 
@@ -201,8 +210,16 @@
     ??$node
 [endmacro]
 
+[macro node_sync_items filter]
+    !sync_items_table db "${filter}"
+[endmacro]
+
+[macro node_sync_other_items filter]
+    !sync_other_items_table db "${filter}"
+[endmacro]
+
 [macro node_sync_table table]
-    !sync_table db "${table}"
+    !sync_table "${table}"
 [endmacro]
 
 # Makes both satellites and PG write rows

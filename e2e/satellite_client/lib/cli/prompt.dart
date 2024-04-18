@@ -68,8 +68,20 @@ Future<void> start() async {
           command,
           electrifyDb,
         );
-      } else if (name == "sync_table") {
+      } else if (name == "sync_items_table") {
         await processCommand2Params<MyDriftElectricClient, String, void>(
+          state,
+          command,
+          syncItemsTable,
+        );
+      } else if (name == "sync_other_items_table") {
+        await processCommand2Params<MyDriftElectricClient, String, void>(
+          state,
+          command,
+          syncOtherItemsTable,
+        );
+      } else if (name == "sync_table") {
+        await processCommand1Param<String, void>(
           state,
           command,
           syncTable,
@@ -348,6 +360,28 @@ Future<void> start() async {
           state,
           command,
           disconnect,
+        );
+      } else if (name == "reconnect") {
+        await processCommand2Params<MyDriftElectricClient, String, void>(
+          state,
+          command,
+          (electric, expRaw) async {
+            Duration? exp;
+            if (expRaw.isNotEmpty) {
+              if (!expRaw.endsWith('h')) {
+                throw Exception('Invalid duration $expRaw');
+              }
+              final hoursString = expRaw.substring(0, expRaw.length - 1);
+              exp = Duration(hours: int.parse(hoursString));
+            }
+            return await reconnect(electric, exp);
+          },
+        );
+      } else if (name == "custom_03_25_sync_items") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          custom0325SyncItems,
         );
       } else {
         throw Exception("Unknown command: $name");
