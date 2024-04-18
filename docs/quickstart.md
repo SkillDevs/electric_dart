@@ -23,9 +23,7 @@ dev_dependencies:
   build_runner: ... # to build the drift code
 ```
 
-You alternatively can install `electricsql_flutter` instead, which includes a few utilities which are Flutter specific.
-
-Add the `electricsql_cli` dependency as a dev dependency. This tool can be used to automatically generate a [drift](https://pub.dev/packages/drift) schema based on your Postgres schema.
+The `electricsql_cli` package is installed as a dev dependency. This tool can be used to automatically generate a [drift](https://pub.dev/packages/drift) schema based on your Postgres schema, as well as other utilities, like running the Electric service and Postgres database locally.
 
 
 ### 2. Configure the backend locally
@@ -36,7 +34,7 @@ The `electricsql_cli` will provide mostly all you need to run a Postgres databas
 dart run electricsql_cli <command> [--help]
 ```
 
-One thing you need to provide yourself is the migrations that define the schema of the Postgres database, as well as a way to apply them incrementally.
+One thing you need to provide yourself are the migrations that define the schema of the Postgres database, as well as a way to apply them incrementally.
 An easy to use tool to do this is [`dbmate`](https://github.com/amacneil/dbmate), but there are many others.
 
 To get started with `dbmate` you can copy the `tool/apply-migrations.sh` script from the `todos_flutter` example in the repository.
