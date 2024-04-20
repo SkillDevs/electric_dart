@@ -619,22 +619,17 @@ void typeTests(TestsDatabase Function() getDb, {bool isPostgres = false}) {
     });
   });
 
-  group(
-    'bytea',
-    // TODO(dart): Wait for https://github.com/simolus3/drift/pull/2943
-    skip: isPostgres,
-    () {
-      test('regular', () async {
-        final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-        await _testBytea(db, bytes);
-      });
+  group('bytea', () {
+    test('regular', () async {
+      final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+      await _testBytea(db, bytes);
+    });
 
-      test('empty', () async {
-        final bytes = Uint8List.fromList([]);
-        await _testBytea(db, bytes);
-      });
-    },
-  );
+    test('empty', () async {
+      final bytes = Uint8List.fromList([]);
+      await _testBytea(db, bytes);
+    });
+  });
 }
 
 Future<void> _testDate(
