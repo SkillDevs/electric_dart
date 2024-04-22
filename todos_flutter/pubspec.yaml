@@ -11,7 +11,7 @@ environment:
 dependencies:
   animated_emoji: ^3.0.0
   cupertino_icons: ^1.0.2
-  drift: 2.15.0 # Pinned version because we bundle drift_worker.js, which is different depending on the version
+  drift: 2.17.0 # Pinned version because we bundle drift_worker.js, which is different depending on the version
   electricsql:
     path: ../packages/electricsql
   electricsql_flutter:
@@ -21,20 +21,27 @@ dependencies:
   flutter_hooks: ^0.20.1
   flutter_svg: ^2.0.7
   hooks_riverpod: ^2.3.10
-  intl: ^0.18.1
+  intl: ^0.19.0
   logging: ^1.2.0
   material_design_icons_flutter: ^7.0.7296
   material_symbols_icons: ^4.2668.0
   path: ^1.8.2
   path_provider: ^2.1.1
-  sqlite3: ^2.2.0
+  sqlite3: ^2.4.2
   # Pinned, because the web requires an extra file per version
   # https://github.com/simolus3/sqlite3.dart/releases?q=sqlite3_flutter_libs&expanded=true
-  sqlite3_flutter_libs: 0.5.19+1
+  sqlite3_flutter_libs: 0.5.20
+
+  # THese are only used for the backend example, they are not needed to use Electric
+  # in Flutter apps.
+  postgres: ^3.0.8
+  drift_postgres: ^1.1.0
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
 
 dev_dependencies:
   build_runner: ^2.4.4
-  drift_dev: 2.15.0
+  drift_dev: 2.17.0
   electricsql_cli:
     path: ../packages/electricsql_cli
   file: ^7.0.0 # Lowest version supported

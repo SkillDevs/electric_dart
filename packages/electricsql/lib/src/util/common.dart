@@ -1,14 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:rate_limiter/rate_limiter.dart' as rt;
-
-import 'package:uuid/uuid.dart' as uuid_lib;
-
-const _uuidGen = uuid_lib.Uuid();
-
-String uuid() {
-  return _uuidGen.v4();
-}
 
 final kDefaultLogPos = numberToBytes(0);
 
@@ -52,8 +45,8 @@ class TypeEncoder {
 }
 
 class TypeDecoder {
-  static String text(List<int> bytes) {
-    return bytesToString(bytes);
+  static String text(List<int> bytes, {bool? allowMalformed}) {
+    return bytesToString(bytes, allowMalformed: allowMalformed);
   }
 
   static int boolean(List<int> bytes) {
@@ -104,8 +97,8 @@ int bytesToNumber(List<int> bytes) {
   return n;
 }
 
-String bytesToString(List<int> bytes) {
-  return utf8.decode(bytes);
+String bytesToString(List<int> bytes, {bool? allowMalformed}) {
+  return utf8.decode(bytes, allowMalformed: allowMalformed);
 }
 
 /// Converts a PG string of type `timetz` to its equivalent SQLite string.
@@ -129,6 +122,34 @@ Object bytesToFloat(List<int> bytes) {
   } else {
     return num.parse(text);
   }
+}
+
+/// Converts an arbitrary blob (or bytestring) into a hex encoded string, which
+/// is also the `bytea` PG string.
+/// @param bytes - the blob to encode
+/// @returns the blob as a hex encoded string
+String blobToHexString(List<int> bytes) {
+  final StringBuffer hexString = StringBuffer();
+  for (final byte in bytes) {
+    hexString.write(byte.toRadixString(16).padLeft(2, '0'));
+  }
+  return hexString.toString();
+}
+
+/// Converts a hex encoded string into a `Uint8Array` blob.
+/// @param bytes - the blob to encode
+/// @returns the blob as a hex encoded string
+List<int> hexStringToBlob(String hexString) {
+  if (hexString.length % 2 != 0) {
+    hexString = '0$hexString';
+  }
+
+  final byteArray = Uint8List(hexString.length ~/ 2);
+  for (int i = 0; i < hexString.length; i += 2) {
+    final byte = int.parse(hexString.substring(i, i + 2), radix: 16);
+    byteArray[i ~/ 2] = byte;
+  }
+  return byteArray;
 }
 
 /// Converts a SQLite string representing a `timetz` value to a PG string.
@@ -156,11 +177,13 @@ class Waiter {
     _completer.complete();
   }
 
-  void completeError(Object error) {
+  void completeError(Object error, [StackTrace? stackTrace]) {
     if (_completer.isCompleted) return;
 
     _finished = true;
-    _waiting ? _completer.completeError(error) : _completer.complete();
+    _waiting
+        ? _completer.completeError(error, stackTrace)
+        : _completer.complete();
   }
 
   bool get finished => _finished;

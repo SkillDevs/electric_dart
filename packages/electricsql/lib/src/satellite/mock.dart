@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
-import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
+import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
@@ -12,12 +12,13 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/registry.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
+import 'package:electricsql/src/satellite/shapes/shapes.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
-import 'package:electricsql/src/util/async_event_emitter.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/proto.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
 
 typedef DataRecord = Record;
@@ -37,6 +38,8 @@ class MockSatelliteProcess implements Satellite {
   final SocketFactory socketFactory;
   final SatelliteOpts opts;
 
+  String? token;
+
   @override
   ConnectivityState? connectivityState;
 
@@ -51,7 +54,7 @@ class MockSatelliteProcess implements Satellite {
 
   @override
   Future<ShapeSubscription> subscribe(
-    List<ClientShapeDefinition> shapeDefinitions,
+    List<Shape> shapeDefinitions,
   ) async {
     return ShapeSubscription(synced: Future.value());
   }
@@ -62,18 +65,51 @@ class MockSatelliteProcess implements Satellite {
   }
 
   @override
-  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+  Future<void> start(AuthConfig? authConfig) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
-
-    return ConnectionWrapper(
-      connectionFuture: Future.value(),
-    );
   }
+
+  @override
+  void setToken(String token) {
+    this.token = token;
+  }
+
+  @override
+  bool hasToken() {
+    return token != null;
+  }
+
+  Future<void> connect() async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
+
+  @override
+  Future<void> connectWithBackoff() async {
+    await connect();
+  }
+
+  @override
+  void disconnect(SatelliteException? error) {}
+
+  @override
+  void clientDisconnect() {}
+
+  @override
+  Future<void> authenticate(String token) async {}
 
   @override
   Future<void> stop({bool? shutdown}) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
+
+  @override
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  ) {}
+
+  @override
+  void clearReplicationTransform(QualifiedTablename tableName) {}
 }
 
 @visibleForTesting
@@ -112,7 +148,7 @@ class MockRegistry extends BaseRegistry {
       socketFactory: socketFactory,
       opts: effectiveOpts,
     );
-    await satellite.start(config.auth);
+    await satellite.start(const AuthConfig());
 
     return satellite;
   }
@@ -125,6 +161,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   List<int>? inboundAck = kDefaultLogPos;
 
   List<int> outboundSent = kDefaultLogPos;
+  List<DataTransaction> outboundTransactionsEnqueued = [];
 
   // to clear any pending timeouts
   List<Timer> timeouts = [];
@@ -132,10 +169,17 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   RelationsCache relations = {};
   void Function(Relation relation)? relationsCb;
   TransactionCallback? transactionsCb;
+  AdditionalDataCallback? additionalDataCb;
 
   Map<String, List<DataRecord>> relationData = {};
 
   bool deliverFirst = false;
+
+  Duration? _startReplicationDelay;
+
+  void setStartReplicationDelay(Duration? delay) {
+    _startReplicationDelay = delay;
+  }
 
   void setRelations(RelationsCache relations) {
     this.relations = relations;
@@ -170,7 +214,11 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     final Map<String, String> shapeReqToUuid = {};
 
     for (final shape in shapes) {
-      for (final ShapeSelect(:tablename) in shape.definition.selects) {
+      final tables = getAllTablesForShape(shape.definition, schema: 'main');
+
+      for (final qualTable in tables) {
+        final tablename = qualTable.tablename;
+
         if (tablename == 'failure' || tablename == 'Items') {
           return Future.value(
             SubscribeResponse(
@@ -188,7 +236,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
             );
           });
         } else {
-          shapeReqToUuid[shape.requestId] = uuid();
+          shapeReqToUuid[shape.requestId] = genUUID();
           final List<DataRecord> records = relationData[tablename] ?? [];
 
           for (final record in records) {
@@ -253,15 +301,16 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     final removeErrorListener = _on(kSubscriptionError, errorCallback);
 
     return SubscriptionEventListeners(
-      removeSuccessListener: removeSuccessListener,
-      removeErrorListener: removeErrorListener,
+      removeListeners: () {
+        removeSuccessListener();
+        removeErrorListener();
+      },
     );
   }
 
   @override
   void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners) {
-    listeners.removeSuccessListener();
-    listeners.removeErrorListener();
+    listeners.removeListeners();
   }
 
   @override
@@ -269,9 +318,23 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     return _on('error', callback);
   }
 
+  void emitSocketClosedError(SocketCloseReason ev) {
+    enqueueEmit(
+      'error',
+      (SatelliteException(ev.code, 'socket closed'), StackTrace.current),
+    );
+  }
+
   @override
   bool isConnected() {
     return !disconnected;
+  }
+
+  @override
+  ReplicationStatus getOutboundReplicationStatus() {
+    return isConnected() && replicating
+        ? ReplicationStatus.active
+        : ReplicationStatus.stopped;
   }
 
   @override
@@ -311,10 +374,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   Future<AuthResponse> authenticate(
     AuthState _authState,
   ) async {
-    return AuthResponse(
-      null,
-      null,
-    );
+    return AuthResponse(null);
   }
 
   @override
@@ -322,8 +382,13 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
+    List<Int64>? observedTransactionData,
     //_resume?: boolean | undefined
-  ) {
+  ) async {
+    if (_startReplicationDelay != null) {
+      await Future<void>.delayed(_startReplicationDelay!);
+    }
+
     replicating = true;
     inboundAck = lsn;
 
@@ -334,24 +399,22 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     timeouts.add(t);
 
     if (lsn != null && bytesToNumber(lsn) == kMockBehindWindowLsn) {
-      return Future.value(
-        StartReplicationResponse(
-          error: SatelliteException(
-            SatelliteErrorCode.behindWindow,
-            'MOCK BEHIND_WINDOW_LSN ERROR',
-          ),
+      return StartReplicationResponse.withError(
+        SatelliteException(
+          SatelliteErrorCode.behindWindow,
+          'MOCK BEHIND_WINDOW_LSN ERROR',
         ),
+        StackTrace.current,
       );
     }
 
     if (lsn != null && bytesToNumber(lsn) == kMockInternalError) {
-      return Future.value(
-        StartReplicationResponse(
-          error: SatelliteException(
-            SatelliteErrorCode.internal,
-            'MOCK INTERNAL_ERROR',
-          ),
+      return StartReplicationResponse.withError(
+        SatelliteException(
+          SatelliteErrorCode.internal,
+          'MOCK INTERNAL_ERROR',
         ),
+        StackTrace.current,
       );
     }
 
@@ -377,7 +440,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
 
   @override
   void Function() subscribeToTransactions(
-    Future<void> Function(Transaction transaction) callback,
+    Future<void> Function(ServerTransaction transaction) callback,
   ) {
     transactionsCb = callback;
 
@@ -387,9 +450,26 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   }
 
   @override
+  void Function() subscribeToAdditionalData(AdditionalDataCallback callback) {
+    additionalDataCb = callback;
+
+    return () {
+      additionalDataCb = null;
+    };
+  }
+
+  @override
   void enqueueTransaction(
     DataTransaction transaction,
   ) {
+    if (!replicating) {
+      throw SatelliteException(
+        SatelliteErrorCode.replicationNotStarted,
+        'enqueuing a transaction while outbound replication has not started',
+      );
+    }
+
+    outboundTransactionsEnqueued.add(transaction);
     outboundSent = transaction.lsn;
   }
 
@@ -418,9 +498,26 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
       final satError = subsDataErrorToSatelliteError(satSubsError);
       enqueueEmit(
         kSubscriptionError,
-        SubscriptionErrorData(subscriptionId: subscriptionId, error: satError),
+        SubscriptionErrorData(
+          subscriptionId: subscriptionId,
+          error: satError,
+          stackTrace: StackTrace.current,
+        ),
       );
     });
+  }
+
+  @override
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void clearReplicationTransform(QualifiedTablename tableName) {
+    throw UnimplementedError();
   }
 
   void Function() _on<T>(

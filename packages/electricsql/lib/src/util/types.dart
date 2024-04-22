@@ -1,4 +1,5 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:async';
+
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:equatable/equatable.dart';
 import 'package:events_emitter/listener.dart';
@@ -43,6 +44,7 @@ class SatelliteException implements Exception {
 }
 
 enum SatelliteErrorCode {
+  connectionCancelledByDisconnect,
   connectionFailedAfterRetry,
   internal,
   timeout,
@@ -60,6 +62,7 @@ enum SatelliteErrorCode {
   authError,
   authFailed,
   authRequired,
+  authExpired,
 
   // server errors
   invalidRequest,
@@ -85,10 +88,27 @@ enum SatelliteErrorCode {
   referentialIntegrityViolation,
   emptyShapeDefinition,
   duplicateTableInShapeDefinition,
+  invalidWhereClauseInShapeDefinition,
+  invalidIncludeTreeInShapeDefinition,
 
   // shape data errors
   shapeDeliveryError,
   shapeSizeLimitExceeded,
+
+  // replication transform errors
+  replicationTransformError,
+}
+
+class SocketCloseReason {
+  final SatelliteErrorCode code;
+
+  SocketCloseReason._(this.code);
+
+  static final authExpired =
+      SocketCloseReason._(SatelliteErrorCode.authExpired);
+
+  static final socketError =
+      SocketCloseReason._(SatelliteErrorCode.socketError);
 }
 
 class Replication<TransactionType> {
@@ -117,6 +137,46 @@ class Replication<TransactionType> {
   }
 }
 
+enum IncompletionType { transaction, additionalData }
+
+class SeenAdditionalDataInfo {
+  final List<String> subscriptions;
+  final List<Int64> dataRefs;
+
+  SeenAdditionalDataInfo({required this.subscriptions, required this.dataRefs});
+}
+
+class InboundReplication extends Replication<ServerTransaction> {
+  Int64? lastTxId;
+  Int64? lastAckedTxId;
+  int unackedTxs;
+  int maxUnackedTxs;
+  Timer ackTimer;
+  int ackPeriod;
+  List<AdditionalData> additionalData;
+  Set<String> unseenAdditionalDataRefs;
+  IncompletionType? incomplete;
+  SeenAdditionalDataInfo seenAdditionalDataSinceLastTx;
+
+  InboundReplication({
+    required super.authenticated,
+    required super.isReplicating,
+    required super.relations,
+    required super.transactions,
+    super.lastLsn,
+    this.lastTxId,
+    this.lastAckedTxId,
+    required this.unackedTxs,
+    required this.maxUnackedTxs,
+    required this.ackTimer,
+    required this.ackPeriod,
+    required this.additionalData,
+    required this.unseenAdditionalDataRefs,
+    this.incomplete,
+    required this.seenAdditionalDataSinceLastTx,
+  });
+}
+
 class BaseTransaction<ChangeT> with EquatableMixin {
   final Int64 commitTimestamp;
   LSN lsn;
@@ -124,7 +184,7 @@ class BaseTransaction<ChangeT> with EquatableMixin {
   // This field is only set by transactions coming from Electric
   String? origin;
 
-  final List<ChangeT> changes;
+  List<ChangeT> changes;
 
   String? migrationVersion;
 
@@ -157,11 +217,40 @@ typedef Transaction = BaseTransaction<Change>;
 // i.e. the transaction does not contain migrations
 typedef DataTransaction = BaseTransaction<DataChange>;
 
+class ServerTransaction extends Transaction {
+  final Int64? id;
+  final Int64? additionalDataRef;
+
+  ServerTransaction({
+    required super.commitTimestamp,
+    required super.lsn,
+    required super.changes,
+    super.origin,
+    super.migrationVersion,
+    required this.id,
+    this.additionalDataRef,
+  });
+}
+
+class AdditionalData {
+  final Int64 ref;
+  final List<DataChange> changes;
+
+  AdditionalData({
+    required this.ref,
+    required this.changes,
+  }) : assert(
+          changes.every((element) => element.type == DataChangeType.insert),
+          'AdditionalData changes must be of type insert',
+        );
+}
+
 enum DataChangeType {
   insert,
   update,
   delete,
   compensation,
+  gone,
 }
 
 typedef Record = Map<String, Object?>;
@@ -215,6 +304,22 @@ class DataChange extends Change with EquatableMixin {
         oldRecord,
         tags,
       ];
+
+  DataChange copyWith({
+    Relation? relation,
+    DataChangeType? type,
+    Record? Function()? record,
+    Record? Function()? oldRecord,
+    List<Tag>? tags,
+  }) {
+    return DataChange(
+      relation: relation ?? this.relation,
+      type: type ?? this.type,
+      record: record?.call() ?? this.record,
+      oldRecord: oldRecord?.call() ?? this.oldRecord,
+      tags: tags ?? this.tags,
+    );
+  }
 }
 
 class Relation with EquatableMixin {
@@ -264,7 +369,7 @@ class RelationColumn with EquatableMixin {
   final String name;
   final String type;
   final bool isNullable;
-  final bool? primaryKey;
+  final int? primaryKey;
 
   RelationColumn({
     required this.name,
@@ -277,10 +382,22 @@ class RelationColumn with EquatableMixin {
   List<Object?> get props => [name, type, isNullable, primaryKey];
 }
 
-typedef ErrorCallback = EventCallbackCall<SatelliteException>;
+class ReplicatedRowTransformer<RowType> {
+  final RowType Function(RowType row) transformInbound;
+  final RowType Function(RowType row) transformOutbound;
+
+  ReplicatedRowTransformer({
+    required this.transformInbound,
+    required this.transformOutbound,
+  });
+}
+
+typedef ErrorCallback = EventCallbackCall<(SatelliteException, StackTrace)>;
 typedef RelationCallback = EventCallbackCall<Relation>;
-typedef TransactionCallback = Future<void> Function(Transaction);
+typedef AdditionalDataCallback = Future<void> Function(AdditionalData);
+typedef TransactionCallback = Future<void> Function(ServerTransaction);
 typedef IncomingTransactionCallback = EventCallbackCall<TransactionEvent>;
+typedef IncomingAdditionalDataCallback = EventCallbackCall<AdditionalDataEvent>;
 typedef OutboundStartedCallback = EventCallbackCall<void>;
 
 // class Relation {
@@ -303,31 +420,70 @@ enum ReplicationStatus {
 class AuthResponse {
   final String? serverId;
   final Object? error;
+  final StackTrace? stackTrace;
 
-  AuthResponse(this.serverId, this.error);
+  AuthResponse(this.serverId)
+      : error = null,
+        stackTrace = null;
+
+  AuthResponse.withError(
+    Object this.error,
+    StackTrace this.stackTrace,
+  ) : serverId = null;
 }
 
 class StartReplicationResponse {
   final SatelliteException? error;
+  final StackTrace? stackTrace;
 
-  StartReplicationResponse({this.error});
+  StartReplicationResponse()
+      : error = null,
+        stackTrace = null;
+
+  StartReplicationResponse.withError(
+    SatelliteException this.error,
+    StackTrace this.stackTrace,
+  );
 }
 
 class StopReplicationResponse {
   final SatelliteException? error;
+  final StackTrace? stackTrace;
 
-  StopReplicationResponse({this.error});
+  StopReplicationResponse()
+      : error = null,
+        stackTrace = null;
+
+  StopReplicationResponse.withError(
+    SatelliteException this.error,
+    StackTrace this.stackTrace,
+  );
 }
 
 class TransactionEvent {
-  final Transaction transaction;
+  final ServerTransaction transaction;
   final void Function() ackCb;
 
   TransactionEvent(this.transaction, this.ackCb);
 }
 
-enum ConnectivityState {
-  available,
+class AdditionalDataEvent {
+  final AdditionalData additionalData;
+  final void Function() ackCb;
+
+  AdditionalDataEvent(this.additionalData, this.ackCb);
+}
+
+enum ConnectivityStatus {
   connected,
   disconnected,
+}
+
+class ConnectivityState {
+  final ConnectivityStatus status;
+
+  /// reason for `disconnected` status
+  final SatelliteException? reason;
+
+  const ConnectivityState({required this.status, this.reason});
 }

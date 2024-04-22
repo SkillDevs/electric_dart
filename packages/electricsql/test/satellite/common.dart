@@ -1,4 +1,3 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnectionUser;
@@ -8,7 +7,6 @@ import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/schema.dart';
@@ -62,13 +60,13 @@ Map<String, Relation> kTestRelations = {
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'parent',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -82,19 +80,19 @@ Map<String, Relation> kTestRelations = {
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'value',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'other',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -108,7 +106,7 @@ Map<String, Relation> kTestRelations = {
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
     ],
   ),
@@ -122,25 +120,25 @@ Map<String, Relation> kTestRelations = {
         name: 'id',
         type: 'INTEGER',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'real',
         type: 'REAL',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'int8',
         type: 'INT8',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'bigint',
         type: 'BIGINT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -154,31 +152,37 @@ Map<String, Relation> kTestRelations = {
         name: 'id',
         type: 'REAL',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
       ),
       RelationColumn(
         name: 'name',
         type: 'TEXT',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'age',
         type: 'INTEGER',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'bmi',
         type: 'REAL',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
       ),
       RelationColumn(
         name: 'int8',
         type: 'INT8',
         isNullable: true,
-        primaryKey: false,
+        primaryKey: null,
+      ),
+      RelationColumn(
+        name: 'blob',
+        type: 'BYTEA',
+        isNullable: true,
+        primaryKey: null,
       ),
     ],
   ),
@@ -192,7 +196,21 @@ Map<String, Relation> kTestRelations = {
         name: 'value',
         type: 'INT8',
         isNullable: false,
-        primaryKey: true,
+        primaryKey: 1,
+      ),
+    ],
+  ),
+  'blobTable': Relation(
+    id: 6,
+    schema: 'public',
+    table: 'blobTable',
+    tableType: SatRelation_RelationType.TABLE,
+    columns: [
+      RelationColumn(
+        name: 'value',
+        type: 'BYTEA',
+        isNullable: false,
+        primaryKey: null,
       ),
     ],
   ),
@@ -213,7 +231,7 @@ Future<SatelliteTestContext> makeContext({
 
   final migrator =
       BundleMigrator(adapter: adapter, migrations: kTestMigrations);
-  final notifier = MockNotifier(dbName);
+  final notifier = MockNotifier(dbName, eventEmitter: EventEmitter());
   final client = MockSatelliteClient();
   final satellite = SatelliteProcess(
     dbName: dbName,
@@ -227,7 +245,8 @@ Future<SatelliteTestContext> makeContext({
   final tableInfo = initTableInfo();
   final timestamp = DateTime.now();
 
-  const authConfig = AuthConfig(clientId: '', token: 'test-token');
+  const authConfig = AuthConfig(clientId: '');
+  final token = insecureAuthToken({'sub': 'test-user'});
 
   return SatelliteTestContext(
     dbName: dbName,
@@ -240,6 +259,7 @@ Future<SatelliteTestContext> makeContext({
     tableInfo: tableInfo,
     timestamp: timestamp,
     authConfig: authConfig,
+    token: token,
   );
 }
 
@@ -254,9 +274,9 @@ class SatelliteTestContext {
   final TableInfo tableInfo;
   final DateTime timestamp;
   final AuthConfig authConfig;
+  final String token;
 
-  late final AuthState authState =
-      AuthState(clientId: authConfig.clientId!, token: authConfig.token);
+  late final AuthState authState = AuthState(clientId: authConfig.clientId!);
 
   SatelliteTestContext({
     required this.dbName,
@@ -269,6 +289,7 @@ class SatelliteTestContext {
     required this.tableInfo,
     required this.timestamp,
     required this.authConfig,
+    required this.token,
   });
 
   Future<void> runMigrations() async {
@@ -276,7 +297,7 @@ class SatelliteTestContext {
   }
 
   Future<void> clean() async {
-    await _clean(dbName);
+    await cleanDb(dbName);
   }
 
   Future<void> cleanAndStopSatellite() async {
@@ -284,7 +305,7 @@ class SatelliteTestContext {
   }
 }
 
-Future<ElectricClient> mockElectricClient(
+Future<ElectricClientRaw> mockElectricClient(
   DatabaseConnectionUser db,
   Registry registry, {
   required DbName dbName,
@@ -306,19 +327,21 @@ Future<ElectricClient> mockElectricClient(
     opts: options,
   );
 
-  await satellite.start(const AuthConfig(clientId: '', token: 'test-token'));
+  await satellite.start(const AuthConfig(clientId: ''));
   registry.satellites[dbName] = satellite;
 
-  // @ts-ignore Mock Electric client that does not contain the DAL
-  return ElectricClientImpl.internal(
+  // Mock Electric client that does not contain the DAL
+  final electric = ElectricClientImpl.internal(
     dbName: dbName,
     adapter: adapter,
     notifier: notifier,
     registry: registry,
     satellite: satellite,
-    shapeManager: ShapeManagerMock(),
     dbDescription: DBSchemaRaw(fields: {}, migrations: []),
   );
+
+  await electric.connect(insecureAuthToken({'sub': 'test-token'}));
+  return electric;
 }
 
 Future<void> cleanAndStopSatelliteRaw({
@@ -326,10 +349,10 @@ Future<void> cleanAndStopSatelliteRaw({
   required SatelliteProcess satellite,
 }) async {
   await satellite.stop();
-  await _clean(dbName);
+  await cleanDb(dbName);
 }
 
-Future<void> _clean(DbName dbName) async {
+Future<void> cleanDb(DbName dbName) async {
   await removeFile(dbName);
   await removeFile('$dbName-journal');
 }
@@ -338,7 +361,7 @@ void migrateDb(Database db, Table table) {
   final tableName = table.tableName;
   // Create the table in the database
   final createTableSQL =
-      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER)';
+      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER, blob BLOB)';
   db.execute(createTableSQL);
 
   // Apply the initial migration on the database
@@ -357,7 +380,7 @@ void migrateDb(Database db, Table table) {
 final kPersonTable = Table(
   namespace: 'main',
   tableName: 'personTable',
-  columns: ['id', 'name', 'age', 'bmi', 'int8'],
+  columns: ['id', 'name', 'age', 'bmi', 'int8', 'blob'],
   primary: ['id'],
   foreignKeys: [],
   columnTypes: {
@@ -366,5 +389,6 @@ final kPersonTable = Table(
     'age': (sqliteType: 'INTEGER', pgType: 'INTEGER'),
     'bmi': (sqliteType: 'REAL', pgType: 'REAL'),
     'int8': (sqliteType: 'INTEGER', pgType: 'INT8'),
+    'blob': (sqliteType: 'BLOB', pgType: 'BYTEA'),
   },
 );

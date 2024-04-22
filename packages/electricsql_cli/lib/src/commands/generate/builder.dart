@@ -5,9 +5,11 @@ import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/enums.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/relations.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
+import 'package:electricsql_cli/src/drift_gen_util.dart';
 import 'package:path/path.dart' as path;
 
 Future<void> buildMigrations(
@@ -156,6 +158,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
   final List<Class> tableClasses = _getTableClasses(driftSchemaInfo);
 
   final List<Enum> electricEnums = getElectricEnumDeclarations(driftSchemaInfo);
+  final List<Class> relationClasses = getRelationClasses(driftSchemaInfo);
 
   return _buildLibCode(
     (b) => b
@@ -169,6 +172,11 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
             ...electricEnums,
             getElectricEnumCodecsClass(driftSchemaInfo),
             getElectricEnumTypesClass(driftSchemaInfo),
+          ],
+          if (relationClasses.isNotEmpty) ...[
+            // Relations
+            Code('\n// ${'-' * 30} RELATIONS ${'-' * 30}\n\n'),
+            ...relationClasses,
           ],
         ],
       ),
@@ -186,7 +194,6 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
     final List<Method> methods = [];
 
     final Method? primaryKeyGetter = _getPrimaryKeyGetter(tableInfo);
-    final Method? tableNameGetter = _getTableNameGetter(tableInfo);
 
     methods.addAll(
       [
@@ -202,25 +209,42 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
             ),
           ),
 
-        if (tableNameGetter != null) tableNameGetter,
+        _getTableNameGetter(tableInfo),
         if (primaryKeyGetter != null) primaryKeyGetter,
         _getWithoutRowIdGetter(),
+        if (tableInfo.relations.isNotEmpty) _getRelationsGetter(tableInfo),
       ],
     );
 
-    final dataclassAnotation = _getDataClassAnnotation(
-      driftSchemaInfo,
-      tableGenOpts,
-    );
+    final List<Expression> annotations = [];
+    if (tableGenOpts != null) {
+      annotations.addAll(tableGenOpts.annotations);
+
+      // ignore: deprecated_member_use_from_same_package
+      if (tableGenOpts.dataClassName != null) {
+        // ignore: deprecated_member_use_from_same_package
+        final dataClassNameInfo = tableGenOpts.dataClassName!;
+        annotations.add(
+          dataClassNameAnnotation(
+            dataClassNameInfo.name,
+            extending: dataClassNameInfo.extending,
+          ),
+        );
+      }
+    }
 
     final tableClass = Class(
       (b) => b
         ..extend = tableRef
         ..name = tableInfo.dartClassName
         ..methods.addAll(methods)
-        ..annotations.addAll([
-          if (dataclassAnotation != null) dataclassAnotation,
-        ]),
+        ..annotations.addAll(annotations)
+        ..mixins.addAll(
+          [
+            if (tableInfo.relations.isNotEmpty)
+              refer(kElectricTableMixin, kElectricSqlImport),
+          ],
+        ),
     );
     tableClasses.add(tableClass);
   }
@@ -263,11 +287,10 @@ Method _getColumnFieldGetter(
 ) {
   var columnBuilderExpr = _getInitialColumnBuilder(schemaInfo, columnInfo);
 
-  if (columnInfo.columnName != columnInfo.dartName) {
-    columnBuilderExpr = columnBuilderExpr
-        .property('named')
-        .call([literal(columnInfo.columnName)]);
-  }
+  // Column name in SQL
+  columnBuilderExpr = columnBuilderExpr
+      .property('named')
+      .call([literal(columnInfo.columnName)]);
 
   if (columnInfo.isNullable) {
     columnBuilderExpr = columnBuilderExpr.property('nullable').call([]);
@@ -286,6 +309,7 @@ Method _getColumnFieldGetter(
       ..name = columnInfo.dartName
       ..type = MethodType.getter
       ..returns = _getOutColumnTypeFromColumnInfo(schemaInfo, columnInfo)
+      ..annotations.addAll(genOpts?.annotations ?? [])
       ..body = columnExpr.code,
   );
 }
@@ -303,11 +327,21 @@ Method _getWithoutRowIdGetter() {
   );
 }
 
-Method? _getTableNameGetter(DriftTableInfo tableInfo) {
-  if (tableInfo.dartClassName == tableInfo.tableName) {
-    return null;
-  }
+Method _getRelationsGetter(DriftTableInfo tableInfo) {
+  final tableRelationsRef = refer(getRelationsClassName(tableInfo));
+  return Method(
+    (b) => b
+      ..name = '\$relations'
+      ..returns = tableRelationsRef
+      ..type = MethodType.getter
+      ..annotations.add(
+        const CodeExpression(Code('override')),
+      )
+      ..body = tableRelationsRef.constInstance([]).code,
+  );
+}
 
+Method _getTableNameGetter(DriftTableInfo tableInfo) {
   return Method(
     (b) => b
       ..name = 'tableName'
@@ -364,6 +398,8 @@ Expression _getInitialColumnBuilder(
       return _customElectricTypeExpr('jsonb');
     case DriftElectricColumnType.bigint:
       return refer('int64', kDriftImport).call([]);
+    case DriftElectricColumnType.blob:
+      return refer('blob', kDriftImport).call([]);
   }
 }
 
@@ -405,25 +441,7 @@ Reference _getOutColumnTypeFromColumnInfo(
       return refer('Column<Object>', kDriftImport);
     case DriftElectricColumnType.bigint:
       return refer('Int64Column', kDriftImport);
+    case DriftElectricColumnType.blob:
+      return refer('BlobColumn', kDriftImport);
   }
-}
-
-Expression? _getDataClassAnnotation(
-  DriftSchemaInfo driftSchemaInfo,
-  DriftTableGenOpts? tableGenOpts,
-) {
-  final DataClassNameInfo? customDataClassInfo = tableGenOpts?.dataClassName;
-
-  Expression? dataclassAnotation;
-  if (customDataClassInfo != null) {
-    // @DataClassName("SampleName", extending: BaseModel)
-    final String dataClassName = customDataClassInfo.name;
-    final Reference? extendingRef = customDataClassInfo.extending;
-    dataclassAnotation = refer('DataClassName', kDriftImport).call([
-      literal(dataClassName),
-    ], {
-      if (extendingRef != null) 'extending': extendingRef,
-    });
-  }
-  return dataclassAnotation;
 }

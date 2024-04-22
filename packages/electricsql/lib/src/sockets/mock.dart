@@ -26,10 +26,10 @@ class MockSocket extends EventEmitter implements Socket {
   }
 
   @override
-  void onClose(void Function() cb) {}
+  void onClose(void Function(SocketCloseReason reason) cb) {}
 
   @override
-  void onError(void Function(SatelliteException error) cb) {}
+  void onError(void Function(SatelliteException error, StackTrace st) cb) {}
 
   @override
   void onMessage(void Function(Data data) cb) {}
@@ -38,8 +38,10 @@ class MockSocket extends EventEmitter implements Socket {
   void onceConnect(void Function() cb) {}
 
   @override
-  void onceError(void Function(SatelliteException error) cb) {}
+  void onceError(void Function(SatelliteException error, StackTrace st) cb) {}
 
   @override
-  void removeErrorListener(void Function(SatelliteException error) cb) {}
+  void removeErrorListener(
+    void Function(SatelliteException error, StackTrace st) cb,
+  ) {}
 }

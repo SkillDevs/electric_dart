@@ -1,4 +1,5 @@
 import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:electricsql/src/util/tablename.dart';
 
 /// Manages the state of satellite shape subscriptions
 abstract class SubscriptionsManager {
@@ -29,18 +30,18 @@ abstract class SubscriptionsManager {
   /// Check if a subscription with exactly the same shape requests has already been issued
   /// @param shapes Shapes for a potential request
   DuplicatingSubRes? getDuplicatingSubscription(
-    List<ClientShapeDefinition> shapes,
+    List<Shape> shapes,
   );
 
-  /// Deletes the subscription from the manager.
-  /// @param subId the identifier of the subscription
-  Future<void> unsubscribe(String subId);
+  /// Deletes the subscription(s) from the manager.
+  /// @param An array of subscription identifiers for the subscription
+  Future<List<SubscriptionId>> unsubscribe(List<SubscriptionId> subIds);
 
   /// Deletes all subscriptions from the manager. Useful to
   /// reset the state of the manager.
   /// Returns the subscription identifiers of all subscriptions
   /// that were deleted.
-  Future<List<String>> unsubscribeAll();
+  Future<List<SubscriptionId>> unsubscribeAll();
 
   /// Converts the state of the manager to a string format that
   /// can be used to persist it
@@ -62,4 +63,35 @@ class DuplicatingSubFulfilled extends DuplicatingSubRes {
   final String fulfilled;
 
   DuplicatingSubFulfilled(this.fulfilled);
+}
+
+/// List all tables covered by a given shape
+List<QualifiedTablename> getAllTablesForShape(
+  Shape shape, {
+  String schema = 'main',
+}) {
+  final allTables = _doGetAllTablesForShape(shape, schema: schema);
+
+  // Remove duplicates
+  final Set<QualifiedTablename> tablesSet = {};
+  final List<QualifiedTablename> nonRepeated = [];
+
+  for (final table in allTables) {
+    if (tablesSet.add(table)) {
+      nonRepeated.add(table);
+    }
+  }
+  return nonRepeated;
+}
+
+List<QualifiedTablename> _doGetAllTablesForShape(
+  Shape shape, {
+  String schema = 'main',
+}) {
+  final includes = shape.include
+          ?.expand((x) => _doGetAllTablesForShape(x.select, schema: schema))
+          .toList() ??
+      [];
+  includes.add(QualifiedTablename(schema, shape.tablename));
+  return includes;
 }

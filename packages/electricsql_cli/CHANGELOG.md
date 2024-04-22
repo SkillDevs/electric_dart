@@ -1,3 +1,38 @@
+## Next
+
+* Fix schema generation when it contains self-referenced foreign keys
+
+
+## 0.6.0
+
+* The drift schema generator now generates the relations between tables in a special field named `$relations` in the drift table.
+* Code based on official Typescript client [v0.10.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.0) and [v0.10.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.1).
+
+## 0.5.5
+
+* The Prisma CLI installed through Docker is now based on the non-Alpine Node Docker image. The Alpine version is incompatible with the M1 architecture. Thanks @opsb for the fix. [#12](https://github.com/SkillDevs/electric_dart/pull/12)  
+
+## 0.5.4
+
+* Code based on official Typescript client [v0.9.5](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.5) and [v0.9.6](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.6).
+* Check that at least Docker v23 is installed before running the CLI commands.
+
+
+## 0.5.3
+
+* Code based on official Typescript client [v0.9.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.3) and [v0.9.4](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.4)
+
+
+## 0.5.2
+
+* Code based on official Typescript client [v0.9.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.2)
+
+
+## 0.5.1
+
+* Code based on official Typescript client [v0.9.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.1)
+
+
 ## 0.5.0
 
 * Code based on official Typescript client [v0.9.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.0)

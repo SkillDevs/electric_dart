@@ -2,6 +2,7 @@ name: electric
 
 packages:
   - packages/*
+  - e2e/satellite_client
   - todos_flutter
 
 scripts:

@@ -12,11 +12,7 @@ import 'drift/database.dart';
 late TestsDatabase db;
 
 Future<void> main() async {
-  final config = ElectricConfig(
-    auth: const AuthConfig(
-      token: 'test-token',
-    ),
-  );
+  final config = ElectricConfig();
 
   db = TestsDatabase.memory();
 
@@ -31,7 +27,7 @@ Future<void> main() async {
   );
   final notifier = electricClient.notifier;
   final adapter = electricClient.adapter;
-  await electricClient.syncTables(['Items']); // sync the Items table
+  await electricClient.syncTable(db.items); // sync the Items table
 
   Future<int> runAndCheckNotifications(Future<void> Function() f) async {
     int notifications = 0;

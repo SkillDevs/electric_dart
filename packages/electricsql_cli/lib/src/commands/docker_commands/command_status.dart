@@ -2,8 +2,9 @@ import 'dart:async';
 
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/docker_utils.dart';
+import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
-import 'package:mason_logger/mason_logger.dart';
 
 class DockerStatusCommand extends Command<int> {
   DockerStatusCommand({
@@ -22,11 +23,13 @@ class DockerStatusCommand extends Command<int> {
 
   @override
   FutureOr<int>? run() async {
-    return await runStatusCommand();
+    final config = getConfig();
+    return await runStatusCommand(config: config);
   }
 }
 
-Future<int> runStatusCommand() async {
-  final p = await dockerCompose('ps', []);
+Future<int> runStatusCommand({required Config config}) async {
+  final containerName = config.read<String>('CONTAINER_NAME');
+  final p = await dockerCompose('ps', [], containerName: containerName);
   return await waitForProcess(p);
 }

@@ -1,11 +1,13 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
+import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
+import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:meta/meta.dart';
 
-abstract interface class ElectricClient {
+abstract interface class BaseElectricClient {
   // ElectricNamespace methods
   String get dbName;
   DatabaseAdapter get adapter;
@@ -20,23 +22,56 @@ abstract interface class ElectricClient {
   void potentiallyChanged();
 
   Future<void> close();
+  void disconnect();
 
   // ElectricClient methods
 
   Satellite get satellite;
 
-  Future<ShapeSubscription> syncTables(List<String> tables);
+  Future<void> connect([String? token]);
 }
 
-class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
+abstract interface class ElectricClientRaw implements BaseElectricClient {
+  Future<ShapeSubscription> sync(SyncInputRaw sync);
+
+  @protected
+  Future<ShapeSubscription> syncShapeInternal(Shape shape);
+}
+
+class ElectricClientImpl extends ElectricNamespace
+    implements ElectricClientRaw {
   @override
   final Satellite satellite;
 
   @protected
-  final IShapeManager shapeManager;
+  late final IShapeManager shapeManager;
+
+  @protected
+  late final IReplicationTransformManager replicationTransformManager;
 
   @override
   final DBSchema dbDescription;
+
+  /// Connects to the Electric sync service.
+  /// This method is idempotent, it is safe to call it multiple times.
+  /// @param token - The JWT token to use to connect to the Electric sync service.
+  ///                This token is required on first connection but can be left out when reconnecting
+  ///                in which case the last seen token is reused.
+  @override
+  Future<void> connect([String? token]) async {
+    if (token == null && !satellite.hasToken()) {
+      throw Exception('A token is required the first time you connect.');
+    }
+    if (token != null) {
+      satellite.setToken(token);
+    }
+    await satellite.connectWithBackoff();
+  }
+
+  @override
+  void disconnect() {
+    satellite.disconnect(null);
+  }
 
   factory ElectricClientImpl.create({
     required String dbName,
@@ -46,14 +81,11 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
     required Satellite satellite,
     required Registry registry,
   }) {
-    final shapeManager = ShapeManager(satellite);
-
     return ElectricClientImpl.internal(
       dbName: dbName,
       adapter: adapter,
       notifier: notifier,
       satellite: satellite,
-      shapeManager: shapeManager,
       dbDescription: dbDescription,
       registry: registry,
     );
@@ -66,12 +98,20 @@ class ElectricClientImpl extends ElectricNamespace implements ElectricClient {
     required super.notifier,
     required super.registry,
     required this.satellite,
-    required this.shapeManager,
     required this.dbDescription,
-  }) : super();
+  }) : super() {
+    shapeManager = ShapeManager(satellite);
+    replicationTransformManager = ReplicationTransformManager(satellite);
+  }
 
   @override
-  Future<ShapeSubscription> syncTables(List<String> tables) async {
-    return shapeManager.sync(Shape(tables: tables));
+  Future<ShapeSubscription> sync(SyncInputRaw syncInput) async {
+    final shape = computeShape(syncInput);
+    return syncShapeInternal(shape);
+  }
+
+  @override
+  Future<ShapeSubscription> syncShapeInternal(Shape shape) {
+    return shapeManager.sync(shape);
   }
 }

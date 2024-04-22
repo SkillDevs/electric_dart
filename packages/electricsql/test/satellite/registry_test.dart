@@ -1,4 +1,3 @@
-import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
@@ -22,9 +21,7 @@ final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
 
 final HydratedConfig config = hydrateConfig(
-  ElectricConfig(
-    auth: const AuthConfig(clientId: null, token: 'test-token'),
-  ),
+  ElectricConfig(),
 );
 
 void main() {

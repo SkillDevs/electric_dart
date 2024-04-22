@@ -24,13 +24,7 @@ void main() {
     };
 
     // the shape
-    final definition = ClientShapeDefinition(
-      selects: [
-        ShapeSelect(
-          tablename: tablename,
-        ),
-      ],
-    );
+    final definition = Shape(tablename: tablename);
 
     final shapeRequest = ShapeRequest(
       requestId: requestId,
@@ -76,7 +70,7 @@ void main() {
     manager.subscriptionDelivered(subscriptionData);
 
     // not active after unsubscribe
-    manager.unsubscribe(subscriptionId);
+    manager.unsubscribe([subscriptionId]);
     expect(manager.shapesForActiveSubscription(subscriptionId), null);
 
     // able to subscribe again after unsubscribe

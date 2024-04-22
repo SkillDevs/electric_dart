@@ -4,7 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
+import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
@@ -66,6 +66,8 @@ void main() {
 
     final satellite = context.satellite;
     await satellite.start(context.authConfig);
+    satellite.setToken(context.token);
+    await satellite.connectWithBackoff();
     clientId = satellite.authState!.clientId; // store clientId in the context
     await populateDB(context);
     txDate = await satellite.performSnapshot();
@@ -734,25 +736,25 @@ final addColumnRelation = Relation(
       name: 'id',
       type: 'INTEGER',
       isNullable: false,
-      primaryKey: true,
+      primaryKey: 1,
     ),
     RelationColumn(
       name: 'value',
       type: 'TEXT',
       isNullable: true,
-      primaryKey: false,
+      primaryKey: null,
     ),
     RelationColumn(
       name: 'other',
       type: 'INTEGER',
       isNullable: true,
-      primaryKey: false,
+      primaryKey: null,
     ),
     RelationColumn(
       name: 'baz',
       type: 'TEXT',
       isNullable: true,
-      primaryKey: false,
+      primaryKey: null,
     ),
   ],
 );
@@ -766,19 +768,19 @@ final newTableRelation = Relation(
       name: 'id',
       type: 'TEXT',
       isNullable: false,
-      primaryKey: true,
+      primaryKey: 1,
     ),
     RelationColumn(
       name: 'foo',
       type: 'INTEGER',
       isNullable: true,
-      primaryKey: false,
+      primaryKey: null,
     ),
     RelationColumn(
       name: 'bar',
       type: 'TEXT',
       isNullable: true,
-      primaryKey: false,
+      primaryKey: null,
     ),
   ],
 );

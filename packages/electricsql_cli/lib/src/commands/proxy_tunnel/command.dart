@@ -5,8 +5,8 @@ import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/exit_signals.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
-import 'package:mason_logger/mason_logger.dart';
 import 'package:web_socket_channel/io.dart';
 
 const String defaultElectricServiceWSUrl = 'ws://localhost:5133';
@@ -45,12 +45,20 @@ class ProxyTunnelCommand extends Command<int> {
     // port
     final int finalLocalPort = parsePort(localPortParam);
 
-    await runProxyTunnelCommand(
-      serviceUrl: config.read<String>('SERVICE'),
-      localPort: finalLocalPort,
-      logger: _logger,
-    );
-    return ExitCode.success.code;
+    try {
+      final serviceUrl = _mapHttpToWebSocketInUrl(
+        config.read<String>('SERVICE'),
+      );
+      await runProxyTunnelCommand(
+        serviceUrl: serviceUrl,
+        localPort: finalLocalPort,
+        logger: _logger,
+      );
+      return 0;
+    } catch (error) {
+      _logger.err(error.toString());
+      exit(1);
+    }
   }
 }
 
@@ -69,11 +77,6 @@ Future<void> runProxyTunnelCommand({
   );
 
   // Cleanup the service URL
-  if (serviceUrl.startsWith('https://')) {
-    serviceUrl = serviceUrl.replaceFirst('https://', 'wss://');
-  } else if (serviceUrl.startsWith('http://')) {
-    serviceUrl = serviceUrl.replaceFirst('http://', 'ws://');
-  }
   serviceUrl = removeTrailingSlash(serviceUrl);
 
   logger.info('ElectricSQL Postgres Proxy Tunnel listening on port $localPort');
@@ -122,4 +125,23 @@ Future<void> runProxyTunnelCommand({
   }
 
   await disposeExitSignals();
+}
+
+String _mapHttpToWebSocketInUrl(String url) {
+  final parsed = Uri.parse(url);
+
+  String? newProtocol;
+  if (parsed.scheme == 'https') {
+    newProtocol = 'wss';
+  } else if (parsed.scheme == 'http') {
+    newProtocol = 'ws';
+  } else if (parsed.scheme == 'ws' || parsed.scheme == 'wss') {
+    // Do nothing
+  } else {
+    throw Exception('Invalid URL scheme ${parsed.scheme} in ELECTRIC_SERVICE');
+  }
+
+  if (newProtocol == null) return url;
+
+  return parsed.replace(scheme: newProtocol).toString();
 }

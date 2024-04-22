@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/env.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
-import 'package:mason_logger/mason_logger.dart';
 
 class CommandWithConfigCommand extends Command<int> {
   CommandWithConfigCommand({

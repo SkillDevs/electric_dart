@@ -2,6 +2,7 @@ import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
 import 'package:electricsql_cli/src/env.dart';
+import 'package:electricsql_cli/src/util.dart';
 import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 
@@ -79,6 +80,9 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
         ..info('')
         ..info(e.usage);
       return ExitCode.usage.code;
+    } on ConfigException catch (e) {
+      _logger.err('ERROR: $e');
+      return ExitCode.config.code;
     }
   }
 

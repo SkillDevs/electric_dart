@@ -35,11 +35,22 @@ class DriftTableGenOpts {
 
   /// Customize the way the Drift data class is generated
   /// Returning null means use the default
+  @Deprecated(
+    'Use `annotations` + the `dataClassNameAnnotation` utility function instead',
+  )
   final DataClassNameInfo? dataClassName;
+
+  /// Annotations for the drift table schema. Mainly for the `DataClassName` and `UseRowClass` drift annotations.
+  /// You can use the following utility functions to generate them: `dataClassNameAnnotation` and `useRowClassAnnotation`.
+  final List<Expression> annotations;
 
   DriftTableGenOpts({
     this.driftTableName,
+    @Deprecated(
+      'Use `annotations` + the `dataClassNameAnnotation` utility function instead',
+    )
     this.dataClassName,
+    this.annotations = const [],
   });
 }
 
@@ -67,9 +78,14 @@ class DriftColumnGenOpts {
   /// ```
   final ColumnBuilderModifier? columnBuilderModifier;
 
+  /// Annotations for the drift column field. Mainly for the `JsonKey` annotation.
+  /// You can use the following utility functions to generate it: `jsonKeyAnnotation`.
+  final List<Expression> annotations;
+
   DriftColumnGenOpts({
     this.driftColumnName,
     this.columnBuilderModifier,
+    this.annotations = const [],
   });
 }
 

@@ -2,12 +2,14 @@ import 'package:electricsql/src/notifiers/event.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
+import 'package:events_emitter/emitters/event_emitter.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('subscribe to potential data changes', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final notifications = <PotentialChangeNotification>[];
 
@@ -19,9 +21,10 @@ void main() {
   });
 
   test('potential data change subscriptions are scoped by dbName(s)', () {
-    final source = EventNotifier(dbName: 'foo.db');
-    final t1 = EventNotifier(dbName: 'foo.db');
-    final t2 = EventNotifier(dbName: 'bar.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t1 = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t2 = EventNotifier(dbName: 'bar.db', eventEmitter: eventEmitter);
 
     final notifications = <Notification>[];
 
@@ -39,8 +42,9 @@ void main() {
   });
 
   test('subscribe to actual data changes', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final notifications = <Notification>[];
 
@@ -51,15 +55,17 @@ void main() {
     source.actuallyChanged(
       'test.db',
       [Change(qualifiedTablename: qualifiedTablename, rowids: null)],
+      ChangeOrigin.local,
     );
 
     expect(notifications.length, 1);
   });
 
   test('actual data change subscriptions are scoped by dbName', () {
-    final source = EventNotifier(dbName: 'foo.db');
-    final t1 = EventNotifier(dbName: 'foo.db');
-    final t2 = EventNotifier(dbName: 'bar.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t1 = EventNotifier(dbName: 'foo.db', eventEmitter: eventEmitter);
+    final t2 = EventNotifier(dbName: 'bar.db', eventEmitter: eventEmitter);
 
     final notifications = <Notification>[];
 
@@ -69,47 +75,52 @@ void main() {
     const qualifiedTablename = QualifiedTablename('main', 'Items');
     final changes = [Change(qualifiedTablename: qualifiedTablename)];
 
-    source.actuallyChanged('foo.db', changes);
+    source.actuallyChanged('foo.db', changes, ChangeOrigin.local);
     expect(notifications.length, 1);
 
-    source.actuallyChanged('lala.db', changes);
+    source.actuallyChanged('lala.db', changes, ChangeOrigin.local);
     expect(notifications.length, 1);
 
-    source.actuallyChanged('bar.db', changes);
+    source.actuallyChanged('bar.db', changes, ChangeOrigin.local);
     expect(notifications.length, 1);
 
     source.attach('bar.db', 'bar.db');
-    source.actuallyChanged('bar.db', changes);
+    source.actuallyChanged('bar.db', changes, ChangeOrigin.local);
     expect(notifications.length, 2);
 
     t2.attach('foo.db', 'foo.db');
-    source.actuallyChanged('foo.db', changes);
+    source.actuallyChanged('foo.db', changes, ChangeOrigin.local);
     expect(notifications.length, 4);
   });
 
   test('subscribe to connectivity change events is scoped by dbName', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final notifications = <ConnectivityStateChangeNotification>[];
 
     target.subscribeToConnectivityStateChanges((x) => notifications.add(x));
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     expect(notifications.length, 1);
 
     source.connectivityStateChanged(
       'non-existing-db',
-      ConnectivityState.connected,
+      const ConnectivityState(status: ConnectivityStatus.connected),
     );
 
     expect(notifications.length, 1);
   });
 
   test('no more connectivity events after unsubscribe', () {
-    final source = EventNotifier(dbName: 'test.db');
-    final target = EventNotifier(dbName: 'test.db');
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
 
     final List<ConnectivityStateChangeNotification> notifications = [];
 
@@ -117,12 +128,31 @@ void main() {
       notifications.add(x);
     });
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     unsubscribe();
 
-    source.connectivityStateChanged('test.db', ConnectivityState.connected);
+    source.connectivityStateChanged(
+      'test.db',
+      const ConnectivityState(status: ConnectivityStatus.connected),
+    );
 
     expect(notifications.length, 1);
+  });
+
+  test('empty changes should not emit', () {
+    final source = EventNotifier(dbName: 'foo.db');
+
+    final List<ChangeNotification> notifications = [];
+
+    source.subscribeToDataChanges((x) {
+      notifications.add(x);
+    });
+
+    source.actuallyChanged('foo.db', [], ChangeOrigin.local);
+    expect(notifications.length, 0);
   });
 }

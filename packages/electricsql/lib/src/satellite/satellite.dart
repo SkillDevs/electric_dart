@@ -1,13 +1,14 @@
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
-import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
+import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
+import 'package:fixnum/fixnum.dart';
 
 export 'package:electricsql/src/satellite/process.dart' show ShapeSubscription;
 
@@ -31,14 +32,6 @@ abstract class Registry {
   Future<void> stopAll();
 }
 
-class ConnectionWrapper {
-  final Future<void> connectionFuture;
-
-  ConnectionWrapper({
-    required this.connectionFuture,
-  });
-}
-
 abstract class Satellite {
   DbName get dbName;
   DatabaseAdapter get adapter;
@@ -47,12 +40,24 @@ abstract class Satellite {
 
   ConnectivityState? connectivityState;
 
-  Future<ConnectionWrapper> start(AuthConfig authConfig);
+  Future<void> start(AuthConfig? authConfig);
   Future<void> stop({bool? shutdown});
+  void setToken(String token);
+  bool hasToken();
+  Future<void> connectWithBackoff();
+  void disconnect(SatelliteException? error);
+  void clientDisconnect();
+  Future<void> authenticate(String token);
   Future<ShapeSubscription> subscribe(
-    List<ClientShapeDefinition> shapeDefinitions,
+    List<Shape> shapeDefinitions,
   );
   Future<void> unsubscribe(String shapeUuid);
+
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  );
+  void clearReplicationTransform(QualifiedTablename tableName);
 }
 
 abstract class Client {
@@ -63,14 +68,17 @@ abstract class Client {
     AuthState authState,
   );
   bool isConnected();
+  ReplicationStatus getOutboundReplicationStatus();
   Future<StartReplicationResponse> startReplication(
     LSN? lsn,
     String? schemaVersion,
     List<String>? subscriptionIds,
+    List<Int64> observedTransactionData,
   );
   Future<StopReplicationResponse> stopReplication();
   void Function() subscribeToRelations(RelationCallback callback);
   void Function() subscribeToTransactions(TransactionCallback callback);
+  void Function() subscribeToAdditionalData(AdditionalDataCallback callback);
   void enqueueTransaction(
     DataTransaction transaction,
   );
@@ -91,14 +99,18 @@ abstract class Client {
     SubscriptionErrorCallback errorCallback,
   );
   void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners);
+
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  );
+  void clearReplicationTransform(QualifiedTablename tableName);
 }
 
 class SubscriptionEventListeners {
-  final void Function() removeSuccessListener;
-  final void Function() removeErrorListener;
+  final void Function() removeListeners;
 
   SubscriptionEventListeners({
-    required this.removeSuccessListener,
-    required this.removeErrorListener,
+    required this.removeListeners,
   });
 }

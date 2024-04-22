@@ -7,19 +7,14 @@
     [local sql=
         """
         CREATE TABLE public.items (
-            id TEXT PRIMARY KEY,
+            id UUID PRIMARY KEY,
             content TEXT NOT NULL
         );
-        CREATE TABLE public.other_items (
-            id TEXT PRIMARY KEY,
-            content TEXT NOT NULL,
-            item_id TEXT REFERENCES public.items(id)
-        );
         ALTER TABLE public.items ENABLE ELECTRIC;
-        ALTER TABLE public.other_items ENABLE ELECTRIC;
         """]
-    [invoke migrate_pg 11111 $sql]
+    [invoke migrate_pg 001 $sql]
 
+    [invoke migrate_other_items_table 002]
 
 [newshell user_1_ws1]
     -$fail_pattern
@@ -71,7 +66,7 @@
     ??record: %{"content" => nil, "id" => "00000000-0000-0000-0000-000000000000"}
 
     # Wait for the roundtrip of the insert back to Electric
-    ?component=CachedWal.EtsBacked \[debug\] Saving transaction \d+ at \d+/[\dA-F]+ with changes \
+    ?component=CachedWal.EtsBacked origin=postgres_1 \[debug\] Saving transaction \d+ at \d+/[\dA-F]+ with changes \
       \[%Electric.Replication.Changes.NewRecord\{\
           relation: \{"public", "items"\}, \
           record: %\{"content" => "test_content", "id" => "00000000-0000-0000-0000-000000000000"\}

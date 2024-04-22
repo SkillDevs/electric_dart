@@ -206,7 +206,11 @@ class SubscriptionsDataCache extends EventEmitter {
     final error = SatelliteException(code, msg);
     emit(
       kSubscriptionError,
-      SubscriptionErrorData(subscriptionId: null, error: error),
+      SubscriptionErrorData(
+        subscriptionId: null,
+        error: error,
+        stackTrace: StackTrace.current,
+      ),
     );
 
     throw error;
@@ -240,7 +244,11 @@ class SubscriptionsDataCache extends EventEmitter {
 
     emit(
       kSubscriptionError,
-      SubscriptionErrorData(subscriptionId: null, error: error),
+      SubscriptionErrorData(
+        subscriptionId: msg.subscriptionId,
+        error: error,
+        stackTrace: StackTrace.current,
+      ),
     );
     throw error;
   }

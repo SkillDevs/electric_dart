@@ -14,11 +14,6 @@ class EventNames {
   static const connectivityStateChange = 'network:connectivity:changed';
 }
 
-// Global singleton that all event notifiers use by default. Emitting an event
-// on this object will notify all subscribers in the same thread. Cross thread
-// notifications use the `./bridge` notifiers.
-final globalEmitter = EventEmitter();
-
 class EventNotifier implements Notifier {
   @override
   final DbName dbName;
@@ -34,7 +29,7 @@ class EventNotifier implements Notifier {
       byName: {},
     );
 
-    events = eventEmitter ?? globalEmitter;
+    events = eventEmitter ?? EventEmitter();
   }
 
   @override
@@ -102,13 +97,24 @@ class EventNotifier implements Notifier {
   }
 
   @override
-  void actuallyChanged(DbName dbName, List<Change> changes) {
-    logger.info('actually changed notifier');
-    if (!_hasDbName(dbName)) {
+  void actuallyChanged(
+    DbName dbName,
+    List<Change> changes,
+    ChangeOrigin origin,
+  ) {
+    if (!_hasDbName(dbName) || changes.isEmpty) {
       return;
     }
 
-    _emitActualChange(dbName, changes);
+    final tables = Set<String>.of(
+      changes.map((e) => e.qualifiedTablename.tablename),
+    ).toList();
+
+    logger.info(
+      'notifying client of database changes. Changed tables: $tables. Origin: ${origin.name}',
+    );
+
+    _emitActualChange(dbName, changes, origin);
   }
 
   @override
@@ -205,10 +211,15 @@ class EventNotifier implements Notifier {
     return notification;
   }
 
-  ChangeNotification _emitActualChange(DbName dbName, List<Change> changes) {
+  ChangeNotification _emitActualChange(
+    DbName dbName,
+    List<Change> changes,
+    ChangeOrigin origin,
+  ) {
     final notification = ChangeNotification(
       dbName: dbName,
       changes: changes,
+      origin: origin,
     );
 
     emit(EventNames.actualDataChange, notification);

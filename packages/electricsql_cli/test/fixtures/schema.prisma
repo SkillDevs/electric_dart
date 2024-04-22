@@ -42,6 +42,7 @@ model datatypes {
   c_timestamptz DateTime @db.Timestamptz(6)
   c_json        Json     @db.Json
   c_jsonb       Json     @db.JsonB
+  c_bytea       Bytes
 }
 
 model weirdnames {
@@ -56,6 +57,12 @@ model GenOpts {
   id Int
   value String
   timestamp   DateTime @db.Timestamptz(6)
+}
+
+model TableWithCustomRowClass {
+  id    Int
+  value String
+  d     Float    @db.Real 
 }
 
 
@@ -87,4 +94,34 @@ enum integer {
 enum snake_case_enum {
   v1
   v2
+}
+
+model User {
+  id      Int      @id
+  name    String?
+  posts   Post[]
+  profile Profile?
+}
+
+model Post {
+  id        Int    @id
+  title     String @unique
+  contents  String
+  nbr       Int?
+  authorId  Int
+  author    User?  @relation(fields: [authorId], references: [id])
+}
+
+model Profile {
+  id     Int    @id
+  bio    String
+  userId Int    @unique
+  user   User?  @relation(fields: [userId], references: [id])
+}
+
+// Table with a foreign key to itself
+model message {
+  id             String     @id
+  message        message?   @relation("messageTomessage", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_message_message_parent_id")
+  other_message  message[]  @relation("messageTomessage")
 }

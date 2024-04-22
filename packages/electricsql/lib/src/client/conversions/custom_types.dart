@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/client/conversions/postgres/mapping.dart'
+    as pg_mapping;
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/converters/type_converters.dart';
 
@@ -21,7 +23,7 @@ class ElectricTypes {
 }
 
 class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
-    implements CustomSqlType<DartT> {
+    implements DialectAwareSqlType<DartT> {
   final Codec<DartT, SQLType> codec;
   final String typeName;
 
@@ -31,7 +33,7 @@ class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
   });
 
   @override
-  String mapToSqlLiteral(DartT dartValue) {
+  String mapToSqlLiteral(GenerationContext context, DartT dartValue) {
     final encoded = codec.encode(dartValue);
     if (encoded is String) {
       return "'$encoded'";
@@ -40,12 +42,12 @@ class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
   }
 
   @override
-  Object mapToSqlParameter(DartT dartValue) {
+  Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
     return codec.encode(dartValue);
   }
 
   @override
-  DartT read(Object fromSql) {
+  DartT read(SqlTypes types, Object fromSql) {
     return codec.decode(fromSql as SQLType);
   }
 
@@ -62,6 +64,62 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
     required super.typeName,
     required this.pgType,
   });
+
+  @override
+  Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
+    if (context.dialect == SqlDialect.postgres) {
+      return pg_mapping.mapToSql(pgType, dartValue);
+    } else {
+      return super.mapToSqlParameter(context, dartValue);
+    }
+  }
+
+  @override
+  String mapToSqlLiteral(GenerationContext context, DartT dartValue) {
+    if (context.dialect == SqlDialect.postgres) {
+      return pg_mapping.mapToSqlLiteral(pgType, dartValue, typeName, codec);
+    } else {
+      return super.mapToSqlLiteral(context, dartValue);
+    }
+  }
+
+  @override
+  DartT read(SqlTypes types, Object fromSql) {
+    if (types.dialect == SqlDialect.postgres) {
+      return pg_mapping.mapToUser(pgType, fromSql, codec) as DartT;
+    } else {
+      return super.read(types, fromSql);
+    }
+  }
+}
+
+class CustomElectricTypeEnum<DartT extends Object>
+    extends CustomElectricTypeGeneric<DartT, String> {
+  const CustomElectricTypeEnum({
+    required super.codec,
+    required super.typeName,
+  });
+
+  @override
+  Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
+    if (context.dialect == SqlDialect.postgres) {
+      // Enums are treated as null pgtype
+      const PgType? pgType = null;
+      final String enumStr = codec.encode(dartValue);
+      return pg_mapping.mapToSql(pgType, enumStr);
+    } else {
+      return super.mapToSqlParameter(context, dartValue);
+    }
+  }
+
+  @override
+  DartT read(SqlTypes types, Object fromSql) {
+    if (types.dialect == SqlDialect.postgres) {
+      return pg_mapping.mapToUser(null, fromSql, codec) as DartT;
+    } else {
+      return super.read(types, fromSql);
+    }
+  }
 }
 
 class TimestampType extends CustomElectricType<DateTime, String> {
@@ -154,8 +212,12 @@ class Float4Type extends CustomElectricType<double, Object> {
         );
 
   @override
-  String mapToSqlLiteral(double dartValue) {
-    return _doubleToSqlLiteral(codec, dartValue);
+  String mapToSqlLiteral(GenerationContext context, double dartValue) {
+    if (context.dialect == SqlDialect.sqlite) {
+      return _doubleToSqliteLiteral(codec, dartValue);
+    } else {
+      return super.mapToSqlLiteral(context, dartValue);
+    }
   }
 }
 
@@ -168,8 +230,12 @@ class Float8Type extends CustomElectricType<double, Object> {
         );
 
   @override
-  String mapToSqlLiteral(double dartValue) {
-    return _doubleToSqlLiteral(codec, dartValue);
+  String mapToSqlLiteral(GenerationContext context, double dartValue) {
+    if (context.dialect == SqlDialect.sqlite) {
+      return _doubleToSqliteLiteral(codec, dartValue);
+    } else {
+      return super.mapToSqlLiteral(context, dartValue);
+    }
   }
 }
 
@@ -191,7 +257,10 @@ class JsonBType extends CustomElectricType<Object, String> {
         );
 }
 
-String _doubleToSqlLiteral(Codec<double, Object> codec, double dartValue) {
+String _doubleToSqliteLiteral(
+  Codec<double, Object> codec,
+  double dartValue,
+) {
   final encoded = codec.encode(dartValue);
 
   if (encoded is double && encoded.isInfinite) {

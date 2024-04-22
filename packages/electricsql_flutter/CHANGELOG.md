@@ -1,3 +1,18 @@
+## 0.6.0
+
+* Code based on official Typescript client [v0.10.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.0) and [v0.10.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.1).
+
+
+## 0.5.2
+
+* Code based on official Typescript client [v0.9.5](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.5) and [v0.9.6](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.6).
+
+
+## 0.5.1
+
+* The `ConnectivityStateController` now only provides the current state of the connectivity. To connect or disconnect, you can now use the `connect` and `disconnect` methods directly on the `ElectricClient` instance.
+
+
 ## 0.5.0
 
 * Support `electricsql` Dart v0.5.0

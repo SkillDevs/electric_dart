@@ -24,17 +24,26 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
     switch (sqlTableName) {
       case 'todo':
         return DriftTableGenOpts(
-          // This creates: class Todos extends Table {
+          // This creates: `class Todos extends Table {`
           driftTableName: 'Todos',
 
-          // This generates @DataClassName('TodoClass') for the Drift table definition
-          dataClassName: DataClassNameInfo(
-            'TodoClass',
-            // If you need to use the 'extending' parameter of the @DataClassName Drift
-            // annotation you can provide it here. For example:
-            // extending:
-            //     refer('BaseModel', 'package:todos_electrified/base_model.dart'),
-          ),
+          annotations: [
+            // This generates @DataClassName('TodoClass') for the Drift table definition
+            dataClassNameAnnotation(
+              'TodoClass',
+              // If you need to use the 'extending' parameter of the @DataClassName Drift
+              // annotation you can provide it here. For example:
+              // extending:
+              //     refer('BaseModel', 'package:todos_electrified/base_model.dart'),
+            ),
+
+            // Alternatively
+
+            // If you need @UseRowClass from Drift, you can use the following:
+            useRowClassAnnotation(
+              refer('MyTodoRowClass', 'package:app/<dart_file_path>.dart'),
+            ),
+          ],
         );
     }
     return null;
@@ -47,6 +56,11 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
         return DriftColumnGenOpts(
           // This generates   TextColumn get myTextCol => text().named('text')();
           driftColumnName: 'myTextCol',
+          annotations: [
+            // This generates @JsonKey('my_text') in the Drift column definition
+            // which changes the key in the toJson/fromJson methods from drift
+            jsonKeyAnnotation('my_text'),
+          ],
         );
       }
 

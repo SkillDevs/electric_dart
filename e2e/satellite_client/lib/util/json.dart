@@ -6,7 +6,7 @@ String electricConfigToJson(ElectricConfig config) {
   final map = {
     "url": config.url,
     "logger": _loggerToMap(config.logger),
-    "auth": _authToMap(config.auth),
+    "auth": config.auth == null ? null : _authToMap(config.auth!),
   };
 
   return json.encode(map);
@@ -22,7 +22,7 @@ Map<String, Object?> _loggerToMap(LoggerConfig? logger) {
 
 Map<String, Object?> _authToMap(AuthConfig auth) {
   return {
-    "token": auth.token,
+    "clientId": auth.clientId,
   };
 }
 

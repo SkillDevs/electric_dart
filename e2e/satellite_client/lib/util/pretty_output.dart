@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 String valueToPrettyStr(Object? value) {
   if (value is Map<String, Object?>) {
     return mapToPrettyStr(value);
@@ -84,6 +86,8 @@ Object? _getDistinctiveValue(Object? value) {
   } else if (value is BigInt) {
     // To match JS bigint output
     return "${value}n";
+  } else if (value is Uint8List) {
+    return "Uint8List(${value.length}) ${listToPrettyStr(value, withNewLine: false)}";
   } else {
     return value;
   }

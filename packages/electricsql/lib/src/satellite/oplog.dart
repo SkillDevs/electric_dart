@@ -21,11 +21,13 @@ enum OpType {
   insert,
   update,
   compensation,
+  gone,
 }
 
 enum ChangesOpType {
   delete,
   upsert,
+  gone,
 }
 
 class OplogEntryChanges {
@@ -90,16 +92,18 @@ class OplogEntry with EquatableMixin {
       ];
 }
 
-OpType changeTypeToOpType(DataChangeType opTypeStr) {
-  switch (opTypeStr) {
+OpType changeTypeToOpType(DataChangeType opType) {
+  switch (opType) {
     case DataChangeType.insert:
       return OpType.insert;
     case DataChangeType.update:
       return OpType.update;
     case DataChangeType.delete:
       return OpType.delete;
-    case DataChangeType.compensation:
-      return OpType.compensation;
+    case DataChangeType.gone:
+      return OpType.gone;
+    default:
+      throw Exception('Unexpected opType: $opType');
   }
 }
 
@@ -111,6 +115,8 @@ DataChangeType opTypeToChangeType(OpType opType) {
       return DataChangeType.insert;
     case OpType.update:
       return DataChangeType.update;
+    case OpType.gone:
+      return DataChangeType.gone;
     case OpType.compensation:
       return DataChangeType.compensation;
   }
@@ -130,8 +136,7 @@ OpType opTypeStrToOpType(String str) {
       return OpType.compensation;
   }
 
-  assert(false, 'OpType $str not handled');
-  return OpType.insert;
+  throw Exception('Unknown opType: $str');
 }
 
 List<OplogEntry> fromTransaction(
@@ -144,7 +149,7 @@ List<OplogEntry> fromTransaction(
       Map.fromEntries(
         relations[t.relation.table]!
             .columns
-            .where((c) => c.primaryKey ?? false)
+            .where((c) => c.primaryKey != null && c.primaryKey != 0)
             .map((col) => MapEntry(col.name, columnValues[col.name]!)),
       ),
     );
@@ -305,6 +310,7 @@ PendingChanges remoteOperationsToTableChanges(
 
 /// Serialises a row that is represented by a record.
 /// `NaN`, `+Inf`, and `-Inf` are transformed to their string equivalent.
+/// Bytestrings are encoded as hex strings
 /// @param record The row to serialise.
 String serialiseRow(Row row) {
   final convertedToSpec = row.map((key, value) {
@@ -318,6 +324,10 @@ String serialiseRow(Row row) {
       return MapEntry(key, value.toString());
     }
 
+    if (value is List<int>) {
+      return MapEntry(key, blobToHexString(value));
+    }
+
     return MapEntry(key, value);
   });
 
@@ -327,6 +337,7 @@ String serialiseRow(Row row) {
 /// Deserialises a row back into a record.
 /// `"NaN"`, `"+Inf"`, and `"-Inf"` are transformed back into their numeric equivalent
 /// if the column type is a float.
+/// Hex encoded bytestrings are transformed back to `Uint8Array` instances
 /// @param str The row to deserialise.
 /// @param rel The relation for the table to which this row belongs.
 Row deserialiseRow(String str, Relation rel) {
@@ -355,6 +366,9 @@ Row deserialiseRow(String str, Relation rel) {
 
     if (columnType == 'INT8' || columnType == 'BIGINT') {
       return MapEntry(key, BigInt.parse(value.toString()));
+    }
+    if ((columnType == 'BYTEA' || columnType == 'BLOB') && value is String) {
+      return MapEntry(key, hexStringToBlob(value));
     }
 
     return MapEntry(key, value);
@@ -462,9 +476,7 @@ ShadowEntryChanges remoteEntryToChanges(
     tablename: entry.tablename,
     primaryKeyCols:
         deserialiseRow(entry.primaryKey, relation).cast<String, Object>(),
-    optype: entry.optype == OpType.delete
-        ? ChangesOpType.delete
-        : ChangesOpType.upsert,
+    optype: optypeToShadow(entry.optype),
     changes: {},
     // if it is a delete, then `newRow` is empty so the full row is the old row
     fullRow: entry.optype == OpType.delete ? oldRow : newRow,
@@ -480,6 +492,20 @@ ShadowEntryChanges remoteEntryToChanges(
   }
 
   return result;
+}
+
+ChangesOpType optypeToShadow(OpType optype) {
+  switch (optype) {
+    case OpType.delete:
+      return ChangesOpType.delete;
+    case OpType.gone:
+      return ChangesOpType.gone;
+    case OpType.insert:
+    case OpType.update:
+      return ChangesOpType.upsert;
+    default:
+      throw Exception('Unexpected optype: $optype');
+  }
 }
 
 class ShadowEntryChanges with EquatableMixin {
@@ -514,6 +540,7 @@ class ShadowEntryChanges with EquatableMixin {
 /// @param primaryKeyObj object representing all columns of a primary key
 /// @returns a stringified JSON with stable sorting on column names
 String primaryKeyToStr(Map<String, Object> primaryKeyObj) {
+  // TODO: it probably makes more sense to sort the PK object by actual PK order
   final keys = primaryKeyObj.keys.toList()..sort();
 
   final sortedObj = <String, Object>{};

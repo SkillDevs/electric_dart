@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:electricsql/src/auth/auth.dart';
-import 'package:electricsql/src/electric/adapter.dart' hide Transaction;
+import 'package:electricsql/src/auth/secure.dart';
+import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
@@ -21,11 +22,14 @@ import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/src/util/exceptions.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
+import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
+import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
 import 'package:retry/retry.dart' as retry_lib;
 import 'package:synchronized/synchronized.dart';
@@ -95,7 +99,7 @@ class SatelliteProcess implements Satellite {
 
   RelationsCache relations = {};
 
-  final List<ClientShapeDefinition> previousShapeSubscriptions = [];
+  final List<Shape> previousShapeSubscriptions = [];
   late SubscriptionsManager subscriptions;
   final Map<String, Completer<void>> subscriptionNotifiers = {};
   late String Function() subscriptionIdGenerator;
@@ -127,11 +131,11 @@ class SatelliteProcess implements Satellite {
       garbageCollectShapeHandler,
     );
     throttledSnapshot = Throttle(
-      _mutexSnapshot,
+      mutexSnapshot,
       opts.minSnapshotWindow,
     );
 
-    subscriptionIdGenerator = () => uuid();
+    subscriptionIdGenerator = () => genUUID();
     shapeRequestIdGenerator = subscriptionIdGenerator;
 
     connectRetryHandler = defaultConnectRetryHandler;
@@ -140,7 +144,8 @@ class SatelliteProcess implements Satellite {
   }
 
   /// Perform a snapshot while taking out a mutex to avoid concurrent calls.
-  Future<DateTime> _mutexSnapshot() async {
+  @visibleForTesting
+  Future<DateTime> mutexSnapshot() async {
     return _snapshotLock.synchronized(() {
       return performSnapshot();
     });
@@ -152,7 +157,7 @@ class SatelliteProcess implements Satellite {
   }
 
   @override
-  Future<ConnectionWrapper> start(AuthConfig authConfig) async {
+  Future<void> start(AuthConfig? authConfig) async {
     if (opts.debug) {
       await _logSQLiteVersion();
     }
@@ -164,11 +169,11 @@ class SatelliteProcess implements Satellite {
       throw Exception('Invalid database schema.');
     }
 
-    final configClientId = authConfig.clientId;
+    final configClientId = authConfig?.clientId;
     final clientId = configClientId != null && configClientId != ''
         ? configClientId
         : await _getClientId();
-    await setAuthState(AuthState(clientId: clientId, token: authConfig.token));
+    setAuthState(AuthState(clientId: clientId));
 
     final notifierSubscriptions = {
       '_authStateSubscription': _unsubscribeFromAuthState,
@@ -186,18 +191,6 @@ This means there is a notifier subscription leak.`''');
     // Monitor auth state changes.
     _unsubscribeFromAuthState =
         notifier.subscribeToAuthStateChanges(_updateAuthState);
-
-    // Monitor connectivity state changes.
-    _unsubscribeFromConnectivityChanges =
-        notifier.subscribeToConnectivityStateChanges(
-      (ConnectivityStateChangeNotification notification) async {
-        // Wait for the next event loop to ensure that other listeners get a
-        // chance to handle the change before actually handling it internally in the process
-        await Future<void>.delayed(Duration.zero);
-
-        await handleConnectivityStateChange(notification.connectivityState);
-      },
-    );
 
     // Request a snapshot whenever the data in our database potentially changes.
     _unsubscribeFromPotentialDataChanges =
@@ -228,11 +221,6 @@ This means there is a notifier subscription leak.`''');
     if (subscriptionsState.isNotEmpty) {
       subscriptions.setState(subscriptionsState);
     }
-
-    final connectionFuture = connectWithBackoff();
-    return ConnectionWrapper(
-      connectionFuture: connectionFuture,
-    );
   }
 
   Future<void> _logSQLiteVersion() async {
@@ -242,7 +230,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   @visibleForTesting
-  Future<void> setAuthState(AuthState newAuthState) async {
+  void setAuthState(AuthState newAuthState) {
     authState = newAuthState;
   }
 
@@ -250,29 +238,25 @@ This means there is a notifier subscription leak.`''');
   Future<void> garbageCollectShapeHandler(
     List<ShapeDefinition> shapeDefs,
   ) async {
-    final stmts = <Statement>[];
-    final tablenames = <String>[];
-    // reverts to off on commit/abort
-    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
-    shapeDefs.expand((ShapeDefinition def) => def.definition.selects).map(
-      (ShapeSelect select) {
-        tablenames.add('main.${select.tablename}');
-        // We need "fully qualified" table names in the next calls
-        return 'main.${select.tablename}';
-      },
-    ).fold(stmts, (List<Statement> stmts, String tablename) {
-      stmts.addAll([
-        Statement(
-          'DELETE FROM $tablename',
-        ),
-      ]);
-      return stmts;
-      // does not delete shadow rows but we can do that
-    });
+    final allTables = shapeDefs
+        .map((ShapeDefinition def) => def.definition)
+        .expand((x) => getAllTablesForShape(x));
+    final tables = allTables.toSet().toList();
+
+    // TODO: table and schema warrant escaping here too, but they aren't in the triggers table.
+    final tablenames = tables.map((x) => x.toString()).toList();
+
+    final deleteStmts = tables.map(
+      (x) => Statement(
+        'DELETE FROM $x',
+      ),
+    );
 
     final stmtsWithTriggers = [
+      // reverts to off on commit/abort
+      Statement('PRAGMA defer_foreign_keys = ON'),
       ..._disableTriggers(tablenames),
-      ...stmts,
+      ...deleteStmts,
       ..._enableTriggers(tablenames),
     ];
 
@@ -283,6 +267,7 @@ This means there is a notifier subscription leak.`''');
     client.subscribeToError(_handleClientError);
     client.subscribeToRelations(updateRelations);
     client.subscribeToTransactions(applyTransaction);
+    client.subscribeToAdditionalData(_applyAdditionalData);
     client.subscribeToOutboundStarted((_) => throttledSnapshot());
 
     client.subscribeToSubscriptionEvents(
@@ -293,8 +278,16 @@ This means there is a notifier subscription leak.`''');
 
   @override
   Future<void> stop({bool? shutdown}) async {
+    await _stop(shutdown: shutdown);
+  }
+
+  Future<void> _stop({bool? shutdown}) async {
     // Stop snapshotting and polling for changes.
     throttledSnapshot.cancel();
+
+    // Ensure that no snapshot is left running in the background
+    // by acquiring the mutex and releasing it immediately.
+    await _snapshotLock.synchronized(() => null);
 
     if (_pollingInterval != null) {
       _pollingInterval!.cancel();
@@ -316,7 +309,7 @@ This means there is a notifier subscription leak.`''');
       _unsubscribeFromPotentialDataChanges = null;
     }
 
-    _disconnect();
+    disconnect(null);
 
     if (shutdown == true) {
       client.shutdown();
@@ -325,7 +318,7 @@ This means there is a notifier subscription leak.`''');
 
   @override
   Future<ShapeSubscription> subscribe(
-    List<ClientShapeDefinition> shapeDefinitions,
+    List<Shape> shapeDefinitions,
   ) async {
     // Await for client to be ready before doing anything else
     await initializing?.waitOn();
@@ -434,8 +427,9 @@ This means there is a notifier subscription leak.`''');
   // subscriptions for entire tables.
   Future<void> _applySubscriptionData(
     List<InitialDataChange> changes,
-    LSN lsn,
-  ) async {
+    LSN lsn, {
+    List<Statement> additionalStatements = const [],
+  }) async {
     final stmts = <Statement>[];
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
 
@@ -446,27 +440,34 @@ This means there is a notifier subscription leak.`''');
     //
     // [1]: https://medium.com/@JasonWyatt/squeezing-performance-from-sqlite-insertions-971aff98eef2
 
-    final groupedChanges =
-        <String, ({List<String> columns, List<Record> records})>{};
+    final groupedChanges = <String,
+        ({
+      Relation relation,
+      List<InitialDataChange> dataChanges,
+      QualifiedTablename tableName,
+    })>{};
 
     final allArgsForShadowInsert = <Record>[];
 
     // Group all changes by table name to be able to insert them all together
     for (final op in changes) {
       final tableName = QualifiedTablename('main', op.relation.table);
-      if (groupedChanges.containsKey(tableName.toString())) {
-        groupedChanges[tableName.toString()]?.records.add(op.record);
+      final tableNameString = tableName.toString();
+      if (groupedChanges.containsKey(tableNameString)) {
+        final changeGroup = groupedChanges[tableNameString]!;
+        changeGroup.dataChanges.add(op);
       } else {
-        groupedChanges[tableName.toString()] = (
-          columns: op.relation.columns.map((x) => x.name).toList(),
-          records: [op.record]
+        groupedChanges[tableNameString] = (
+          relation: op.relation,
+          dataChanges: [op],
+          tableName: tableName,
         );
       }
 
       // Since we're already iterating changes, we can also prepare data for shadow table
       final primaryKeyCols =
           op.relation.columns.fold(<String, Object>{}, (agg, col) {
-        if (col.primaryKey != null && col.primaryKey!) {
+        if (col.primaryKey != null && col.primaryKey != 0) {
           agg[col.name] = op.record[col.name]!;
         }
         return agg;
@@ -486,13 +487,16 @@ This means there is a notifier subscription leak.`''');
     // For each table, do a batched insert
     for (final entry in groupedChanges.entries) {
       final table = entry.key;
-      final (:columns, :records) = entry.value;
-      final sqlBase = "INSERT INTO $table (${columns.join(', ')}) VALUES ";
+      final (:relation, :dataChanges, tableName: _) = entry.value;
+      final records = dataChanges.map((change) => change.record).toList();
+      final columnNames = relation.columns.map((col) => col.name).toList();
+      final sqlBase =
+          "INSERT OR IGNORE INTO $table (${columnNames.join(', ')}) VALUES ";
 
       stmts.addAll([
         ...prepareInsertBatchedStatements(
           sqlBase,
-          columns,
+          columnNames,
           records,
           maxSqlParameters,
         ),
@@ -517,6 +521,7 @@ This means there is a notifier subscription leak.`''');
     // Then update subscription state and LSN
     stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
     stmts.add(updateLsnStmt(lsn));
+    stmts.addAll(additionalStatements);
 
     try {
       await adapter.runInTransaction(stmts);
@@ -524,16 +529,37 @@ This means there is a notifier subscription leak.`''');
       // We're explicitly not specifying rowids in these changes for now,
       // because nobody uses them and we don't have the machinery to to a
       // `RETURNING` clause in the middle of `runInTransaction`.
-      final notificationChanges = changes
-          .map(
-            (x) => Change(
-              qualifiedTablename: QualifiedTablename('main', x.relation.table),
-              rowids: [],
-            ),
-          )
-          .toList();
-      notifier.actuallyChanged(dbName, notificationChanges);
-    } catch (e) {
+      final notificationChanges = <Change>[];
+      for (final entry in groupedChanges.entries) {
+        final (:relation, :dataChanges, :tableName) = entry.value;
+
+        final primaryKeyColNames = relation.columns
+            .where((col) => col.primaryKey != null)
+            .map((col) => col.name)
+            .toList();
+        notificationChanges.add(
+          Change(
+            qualifiedTablename: tableName,
+            rowids: [],
+            recordChanges: dataChanges.map((change) {
+              return RecordChange(
+                primaryKey: Map.fromEntries(
+                  primaryKeyColNames.map((colName) {
+                    return MapEntry(colName, change.record[colName]);
+                  }),
+                ),
+                type: RecordChangeType.initial,
+              );
+            }).toList(),
+          ),
+        );
+      }
+      notifier.actuallyChanged(
+        dbName,
+        notificationChanges,
+        ChangeOrigin.initial,
+      );
+    } catch (e, st) {
       unawaited(
         _handleSubscriptionError(
           SubscriptionErrorData(
@@ -542,6 +568,7 @@ This means there is a notifier subscription leak.`''');
               'Error applying subscription data: $e',
             ),
             subscriptionId: null,
+            stackTrace: st,
           ),
         ),
       );
@@ -552,11 +579,11 @@ This means there is a notifier subscription leak.`''');
     bool keepSubscribedShapes = false,
   }) async {
     logger.warning('resetting client state');
-    _disconnect();
+    disconnect(null);
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
 
     if (keepSubscribedShapes) {
-      final List<ClientShapeDefinition> shapeDefs = subscriptionIds
+      final List<Shape> shapeDefs = subscriptionIds
           .map((subId) => subscriptions.shapesForActiveSubscription(subId))
           .whereNotNull()
           .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
@@ -583,10 +610,25 @@ This means there is a notifier subscription leak.`''');
   ) async {
     final subscriptionId = errorData.subscriptionId;
     final satelliteError = errorData.error;
+    final satelliteStackTrace = errorData.stackTrace;
+    Object? resettingError;
+    StackTrace? resettingStackTrace;
 
     logger.error('encountered a subscription error: ${satelliteError.message}');
 
-    await _resetClientState();
+    try {
+      await _resetClientState();
+    } catch (error, st) {
+      // If we encounter an error here, we want to float it to the client so that the bug is visible
+      // instead of just a broken state.
+      resettingError = NestedException(
+        error,
+        reasonContext: 'Encountered when handling a subscription error',
+        innerException: satelliteError,
+        innerStackTrace: satelliteStackTrace,
+      );
+      resettingStackTrace = st;
+    }
 
     // Call the `onFailure` callback for this subscription
     if (subscriptionId != null) {
@@ -594,12 +636,20 @@ This means there is a notifier subscription leak.`''');
 
       // GC the notifiers for this subscription ID
       subscriptionNotifiers.remove(subscriptionId);
-      completer.completeError(satelliteError);
+      completer.completeError(
+        resettingError ?? satelliteError,
+        resettingStackTrace ?? satelliteStackTrace,
+      );
     }
   }
 
-  // handles async client erros: can be a socket error or a server error message
-  Future<void> _handleClientError(SatelliteException satelliteError) async {
+  // handles async client errors: can be a socket error or a server error message
+  Future<void> _handleClientError(
+    (SatelliteException satelliteError, StackTrace stackTrace) errorInfo,
+  ) async {
+    final satelliteError = errorInfo.$1;
+    final stackTrace = errorInfo.$2;
+
     if (initializing != null && !initializing!.finished) {
       if (satelliteError.code == SatelliteErrorCode.socketError) {
         logger.warning(
@@ -617,7 +667,7 @@ This means there is a notifier subscription leak.`''');
       }
 
       // throw unhandled error
-      throw satelliteError;
+      Error.throwWithStackTrace(satelliteError, stackTrace);
     }
 
     logger.warning(
@@ -627,8 +677,18 @@ This means there is a notifier subscription leak.`''');
     unawaited(_handleOrThrowClientError(satelliteError));
   }
 
-  Future<void> _handleOrThrowClientError(SatelliteException error) {
-    _disconnect();
+  Future<void> _handleOrThrowClientError(SatelliteException error) async {
+    if (error.code == SatelliteErrorCode.authExpired) {
+      logger.warning('Connection closed by Electric because the JWT expired.');
+      return disconnect(
+        SatelliteException(
+          error.code,
+          'Connection closed by Electric because the JWT expired.',
+        ),
+      );
+    }
+
+    disconnect(error);
 
     if (isThrowable(error)) {
       throw error;
@@ -641,47 +701,66 @@ This means there is a notifier subscription leak.`''');
     return connectWithBackoff();
   }
 
-  @visibleForTesting
-  Future<void> handleConnectivityStateChange(
-    ConnectivityState status,
-  ) async {
-    logger.debug('Connectivity state changed: $status');
-
-    switch (status) {
-      case ConnectivityState.available:
-        {
-          logger.warning('checking network availability and reconnecting');
-          return connectWithBackoff();
-        }
-      case ConnectivityState.disconnected:
-        {
-          client.disconnect();
-          return;
-        }
-      case ConnectivityState.connected:
-        {
-          return;
-        }
-      default:
-        {
-          throw Exception('unexpected connectivity state: $status');
-        }
+  /// Sets the JWT token.
+  /// @param token The JWT token.
+  @override
+  void setToken(String token) {
+    final newUserId = decodeUserIdFromToken(token);
+    final String? userId = authState?.userId;
+    if (userId != null && newUserId != userId) {
+      // We must check that the new token is still using the same user ID.
+      // We can't accept a re-connection that changes the user ID because the Satellite process is statefull.
+      // To change user ID the user must re-electrify the database.
+      throw ArgumentError(
+        "Can't change user ID when reconnecting. Previously connected with user ID '$userId' but trying to reconnect with user ID '$newUserId'",
+      );
     }
+    setAuthState(
+      authState!.copyWith(
+        userId: () => newUserId,
+        token: () => token,
+      ),
+    );
   }
 
-  @visibleForTesting
+  /// @returns True if a JWT token has been set previously. False otherwise.
+  @override
+  bool hasToken() {
+    return authState?.token != null;
+  }
+
+  @override
   Future<void> connectWithBackoff() async {
+    if (client.isConnected()) {
+      // we're already connected
+      return;
+    }
+
+    if (initializing != null && !initializing!.finished) {
+      // we're already trying to connect to Electric
+      // return the promise that resolves when the connection is established
+      return initializing!.waitOn();
+    }
+
     final _initializing = initializing;
     if (_initializing == null || _initializing.finished) {
       initializing = Waiter();
     }
 
+    final fut = initializing!.waitOn();
+
+    // This is so that the future is not treated as unhandled
+    fut.ignore();
+
     Future<void> _attemptBody() async {
+      if (initializing?.finished == true) {
+        return fut;
+      }
       await _connect();
       await _startReplication();
       _subscribePreviousShapeRequests();
 
-      _notifyConnectivityState(ConnectivityState.connected);
+      _notifyConnectivityState(ConnectivityStatus.connected, null);
       initializing?.complete();
     }
 
@@ -701,21 +780,28 @@ This means there is a notifier subscription leak.`''');
           return connectRetryHandler(e, retryAttempt);
         },
       );
-    } catch (e) {
+    } catch (e, st) {
       // We're very sure that no calls are going to modify `this.initializing` before this promise resolves
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      final Object error;
+      final StackTrace stackTrace;
 
-      final error = !connectRetryHandler(e, 0)
-          ? e
-          : SatelliteException(
-              SatelliteErrorCode.connectionFailedAfterRetry,
-              'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e',
-            );
+      if (!connectRetryHandler(e, 0)) {
+        error = e;
+        stackTrace = st;
+      } else {
+        error = SatelliteException(
+          SatelliteErrorCode.connectionFailedAfterRetry,
+          'Failed to connect to server after exhausting retry policy. Last error thrown by server: $e\n$st',
+        );
+        stackTrace = StackTrace.current;
+      }
 
-      _disconnect();
-      initializing?.completeError(error);
-      throw error;
+      disconnect(error is SatelliteException ? error : null);
+      initializing?.completeError(error, stackTrace);
     }
+
+    return fut;
   }
 
   void _subscribePreviousShapeRequests() {
@@ -741,18 +827,15 @@ This means there is a notifier subscription leak.`''');
     logger.info('connecting to electric server');
 
     final _authState = authState;
-    if (_authState == null) {
+    if (_authState == null || _authState.token == null) {
       throw Exception('trying to connect before authentication');
     }
 
     try {
-      setCurrentUser(_authState);
+      final token = _authState.token!;
+      setCurrentUser(token: token);
       await client.connect();
-      final authResp = await client.authenticate(_authState);
-
-      if (authResp.error != null) {
-        throw authResp.error!;
-      }
+      await authenticate(token);
     } catch (error) {
       logger.debug(
         'server returned an error while establishing connection: $error',
@@ -761,9 +844,42 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  void _disconnect() {
+  /// Authenticates with the Electric sync service using the provided token.
+  /// @returns A promise that resolves to void if authentication succeeded. Otherwise, rejects with the reason for the error.
+  @override
+  Future<void> authenticate(String token) async {
+    final authState = AuthState(
+      clientId: this.authState!.clientId,
+      token: token,
+    );
+    final authResp = await client.authenticate(authState);
+    if (authResp.error != null) {
+      Error.throwWithStackTrace(authResp.error!, authResp.stackTrace!);
+    }
+    setAuthState(authState);
+  }
+
+  void cancelConnectionWaiter(SatelliteException error) {
+    if (initializing != null && !initializing!.finished) {
+      initializing?.completeError(error);
+    }
+  }
+
+  @override
+  void disconnect(SatelliteException? error) {
     client.disconnect();
-    _notifyConnectivityState(ConnectivityState.disconnected);
+    _notifyConnectivityState(ConnectivityStatus.disconnected, error);
+  }
+
+  /// A disconnection issued by the client.
+  @override
+  void clientDisconnect() {
+    final error = SatelliteException(
+      SatelliteErrorCode.connectionCancelledByDisconnect,
+      "Connection cancelled by 'disconnect'",
+    );
+    disconnect(error);
+    cancelConnectionWaiter(error);
   }
 
   Future<void> _startReplication() async {
@@ -774,14 +890,22 @@ This means there is a notifier subscription leak.`''');
       // such that we can resume and inform Electric
       // about fulfilled subscriptions
       final subscriptionIds = subscriptions.getFulfilledSubscriptions();
+      final observedTransactionData =
+          await getMeta<String>('seenAdditionalData');
 
-      final StartReplicationResponse(:error) = await client.startReplication(
+      final StartReplicationResponse(:error, :stackTrace) =
+          await client.startReplication(
         _lsn,
         schemaVersion,
         subscriptionIds.isNotEmpty ? subscriptionIds : null,
+        observedTransactionData
+            .split(',')
+            .where((x) => x != '')
+            .map((x) => Int64.parseInt(x))
+            .toList(),
       );
       if (error != null) {
-        throw error;
+        Error.throwWithStackTrace(error, stackTrace!);
       }
     } catch (error) {
       logger.warning("Couldn't start replication: $error");
@@ -807,9 +931,15 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  void _notifyConnectivityState(ConnectivityState connectivityState) {
-    this.connectivityState = connectivityState;
-    notifier.connectivityStateChanged(dbName, this.connectivityState!);
+  void _notifyConnectivityState(
+    ConnectivityStatus connectivityStatus,
+    SatelliteException? error,
+  ) {
+    connectivityState = ConnectivityState(
+      status: connectivityStatus,
+      reason: error,
+    );
+    notifier.connectivityStateChanged(dbName, connectivityState!);
   }
 
   Future<bool> _verifyTableStructure() async {
@@ -890,24 +1020,25 @@ This means there is a notifier subscription leak.`''');
         [timestamp.toISOStringUTC()],
       );
 
-      // For each first oplog entry per element, set `clearTags` array to previous tags from the shadow table
+      // We're adding new tag to the shadow tags for this row
       final q2 = Statement(
         '''
       UPDATE $oplog
-      SET clearTags = updates.tags
-      FROM (
-        SELECT shadow.tags as tags, min(op.rowid) as op_rowid
-        FROM $shadow AS shadow
-        JOIN $oplog as op
-          ON op.namespace = shadow.namespace
-            AND op.tablename = shadow.tablename
-            AND op.primaryKey = shadow.primaryKey
-        WHERE op.timestamp = ?
-        GROUP BY op.namespace, op.tablename, op.primaryKey
-      ) AS updates
-      WHERE updates.op_rowid = $oplog.rowid
+      SET clearTags =
+          CASE WHEN shadow.tags = '[]' OR shadow.tags = ''
+               THEN '["' || ? || '"]'
+               ELSE '["' || ? || '",' || substring(shadow.tags, 2)
+          END
+      FROM $shadow AS shadow
+      WHERE $oplog.namespace = shadow.namespace
+          AND $oplog.tablename = shadow.tablename
+          AND $oplog.primaryKey = shadow.primaryKey AND $oplog.timestamp = ?
     ''',
-        [timestamp.toISOStringUTC()],
+        [
+          newTag,
+          newTag,
+          timestamp.toISOStringUTC(),
+        ],
       );
 
       // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
@@ -970,10 +1101,10 @@ This means there is a notifier subscription leak.`''');
       });
 
       if (oplogEntries.isNotEmpty) {
-        unawaited(_notifyChanges(oplogEntries));
+        unawaited(_notifyChanges(oplogEntries, ChangeOrigin.local));
       }
 
-      if (client.isConnected()) {
+      if (client.getOutboundReplicationStatus() == ReplicationStatus.active) {
         final enqueued = client.getLastSentLsn();
         final enqueuedLogPos = bytesToNumber(enqueued);
 
@@ -991,8 +1122,10 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  Future<void> _notifyChanges(List<OplogEntry> results) async {
-    logger.info('notify changes');
+  Future<void> _notifyChanges(
+    List<OplogEntry> results,
+    ChangeOrigin origin,
+  ) async {
     final ChangeAccumulator acc = {};
 
     // Would it be quicker to do this using a second SQL query that
@@ -1005,12 +1138,25 @@ This means there is a notifier subscription leak.`''');
         final Change change = acc[key]!;
 
         change.rowids ??= [];
+        change.recordChanges ??= [];
 
         change.rowids!.add(entry.rowid);
+        change.recordChanges!.add(
+          RecordChange(
+            primaryKey: json.decode(entry.primaryKey) as Map<String, Object?>,
+            type: recordChangeTypeFromOpType(entry.optype),
+          ),
+        );
       } else {
         acc[key] = Change(
           qualifiedTablename: qt,
           rowids: [entry.rowid],
+          recordChanges: [
+            RecordChange(
+              primaryKey: json.decode(entry.primaryKey) as Map<String, Object?>,
+              type: recordChangeTypeFromOpType(entry.optype),
+            ),
+          ],
         );
       }
 
@@ -1019,14 +1165,13 @@ This means there is a notifier subscription leak.`''');
     // final changes = Object.values(results.reduce(reduceFn, acc))
 
     final changes = results.fold(acc, reduceFn).values.toList();
-    notifier.actuallyChanged(dbName, changes);
+    notifier.actuallyChanged(dbName, changes, origin);
   }
 
   Future<void> _replicateSnapshotChanges(
     List<OplogEntry> results,
   ) async {
-    // TODO: Don't try replicating when outbound is inactive
-    if (!client.isConnected()) {
+    if (client.getOutboundReplicationStatus() != ReplicationStatus.active) {
       return;
     }
 
@@ -1072,6 +1217,7 @@ This means there is a notifier subscription leak.`''');
           tags: encodeTags(entryChanges.tags),
         );
         switch (entryChanges.optype) {
+          case ChangesOpType.gone:
           case ChangesOpType.delete:
             stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
             stmts.add(_deleteShadowTagsStatement(shadowEntry));
@@ -1201,6 +1347,7 @@ This means there is a notifier subscription leak.`''');
     stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
     // update lsn.
     stmts.add(updateLsnStmt(lsn));
+    stmts.add(_resetSeenAdditionalDataStmt());
 
     Future<void> processDML(List<DataChange> changes) async {
       final tx = DataTransaction(
@@ -1216,7 +1363,7 @@ This means there is a notifier subscription leak.`''');
       if (firstDMLChunk) {
         logger.info('apply incoming changes for LSN: ${base64.encode(lsn)}');
         // assign timestamp to pending operations before apply
-        await _mutexSnapshot();
+        await mutexSnapshot();
         firstDMLChunk = false;
       }
 
@@ -1308,7 +1455,28 @@ This means there is a notifier subscription leak.`''');
       await adapter.runInTransaction(allStatements);
     }
 
-    await _notifyChanges(opLogEntries);
+    await _notifyChanges(opLogEntries, ChangeOrigin.remote);
+  }
+
+  Future<void> _applyAdditionalData(AdditionalData data) {
+    // Server sends additional data on move-ins and tries to send only data
+    // the client has never seen from its perspective. Because of this, we're writing this
+    // data directly, like subscription data
+    return _applySubscriptionData(
+      data.changes
+          .map(
+            (e) => InitialDataChange(
+              relation: e.relation,
+              record: e.record!,
+              tags: e.tags,
+            ),
+          )
+          .toList(),
+      _lsn!,
+      additionalStatements: [
+        _addSeenAdditionalDataStmt(data.ref.toString()),
+      ],
+    );
   }
 
   Future<void> maybeGarbageCollect(
@@ -1354,6 +1522,22 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
+  Statement _addSeenAdditionalDataStmt(String ref) {
+    final meta = opts.metaTable.toString();
+
+    final sql = '''
+      INSERT INTO $meta (key, value) VALUES ('seenAdditionalData', ?)
+        ON CONFLICT (key) DO
+          UPDATE SET value = value || ',' || excluded.value
+    ''';
+    final args = <Object?>[ref];
+    return Statement(sql, args);
+  }
+
+  Statement _resetSeenAdditionalDataStmt() {
+    return _setMetaStatement('seenAdditionalData', '');
+  }
+
   Statement _setMetaStatement(String key, Object? value) {
     final meta = opts.metaTable.toString();
 
@@ -1390,7 +1574,7 @@ This means there is a notifier subscription leak.`''');
     String clientId = await getMeta<Uuid>(clientIdKey);
 
     if (clientId.isEmpty) {
-      clientId = uuid();
+      clientId = genUUID();
       await setMeta(clientIdKey, clientId);
     }
     return clientId;
@@ -1426,11 +1610,7 @@ This means there is a notifier subscription leak.`''');
   /// @returns statement to be executed to save the new LSN value in the database
   Statement updateLsnStmt(LSN lsn) {
     _lsn = lsn;
-    final lsnBase64 = base64.encode(lsn);
-    return Statement(
-      'UPDATE ${opts.metaTable.tablename} set value = ? WHERE key = ?',
-      [lsnBase64, 'lsn'],
-    );
+    return _setMetaStatement('lsn', base64.encode(lsn));
   }
 
   Future<void> checkMaxSqlParameters() async {
@@ -1449,10 +1629,22 @@ This means there is a notifier subscription leak.`''');
       maxSqlParameters = 999;
     }
   }
+
+  @override
+  void setReplicationTransform(
+    QualifiedTablename tableName,
+    ReplicatedRowTransformer<Record> transform,
+  ) {
+    client.setReplicationTransform(tableName, transform);
+  }
+
+  @override
+  void clearReplicationTransform(QualifiedTablename tableName) {
+    client.clearReplicationTransform(tableName);
+  }
 }
 
-void setCurrentUser(AuthState authState) {
-  final token = authState.token;
+void setCurrentUser({required String token}) {
   final a = JWT.tryDecode(token);
   if (a == null) {
     logger.warning('Warning not a valid JWT token');

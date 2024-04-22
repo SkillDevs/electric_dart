@@ -2,15 +2,20 @@ import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/satellite.dart';
+import 'package:electricsql/src/client/model/client.dart';
+import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/transform.dart';
+import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/util.dart';
 import 'package:meta/meta.dart';
 
-Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
+Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   required String dbName,
   required DB db,
   required List<Migration> migrations,
@@ -40,17 +45,59 @@ Future<DriftElectricClient<DB>> electrify<DB extends DatabaseConnectionUser>({
     ),
   );
 
-  final driftClient = DriftElectricClient(namespace, db);
+  final driftClient = DriftElectricClient(namespace as ElectricClientImpl, db);
   driftClient.init();
 
   return driftClient;
 }
 
-class DriftElectricClient<DB extends DatabaseConnectionUser>
-    implements ElectricClient {
+abstract interface class ElectricClient<DB extends GeneratedDatabase>
+    implements BaseElectricClient {
+  DB get db;
+
+  /// Creates a Shape subscription. A shape is a set of related data that's synced
+  /// onto the local device.
+  /// https://electric-sql.com/docs/usage/data-access/shapes
+  Future<ShapeSubscription> syncTable<T extends Table>(
+    T table, {
+    SyncIncludeBuilder<T>? include,
+    SyncWhereBuilder<T>? where,
+  });
+
+  /// Same as [syncTable] but you would be providing table names, and foreign key
+  /// relationships manually. This is more low-level and should be avoided if
+  /// possible.
+  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput);
+
+  /// Puts transforms in place such that any data being replicated
+  /// to or from this table is first handled appropriately while
+  /// retaining type consistency.
+  ///
+  /// Can be used to encrypt sensitive fields before they are
+  /// replicated outside of their secure local source.
+  ///
+  /// NOTE: usage is discouraged, but ensure transforms are
+  /// set before replication is initiated using [syncTable]
+  /// to avoid partially transformed tables.
+  void setTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table, {
+    required Insertable<D> Function(D row) transformInbound,
+    required Insertable<D> Function(D row) transformOutbound,
+    Insertable<D> Function(D)? toInsertable,
+  });
+
+  /// Clears any replication transforms set using [setReplicationTransform]
+  void clearTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table,
+  );
+}
+
+class DriftElectricClient<DB extends GeneratedDatabase>
+    implements ElectricClient<DB> {
+  @override
   final DB db;
 
-  final ElectricClient _baseClient;
+  final ElectricClientImpl _baseClient;
 
   void Function()? _disposeHook;
 
@@ -79,17 +126,30 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
           return tableName;
         }).toSet();
 
-        final tableUpdates = tablesChanged.map((e) => TableUpdate(e)).toSet();
-        logger.info('Notifying table changes to drift: $tablesChanged');
-        db.notifyUpdates(tableUpdates);
+        final Set<_TableUpdateFromElectric> tableUpdates =
+            tablesChanged.map((e) => _TableUpdateFromElectric(e)).toSet();
+
+        if (tableUpdates.isNotEmpty) {
+          // Notify drift
+          db.notifyUpdates(tableUpdates);
+        }
       },
     );
 
     final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
-      logger.info(
-        'Drift tables have been updated $updatedTables. Notifying Electric.',
-      );
-      notifier.potentiallyChanged();
+      final tableNames = updatedTables
+          .where((update) => update is! _TableUpdateFromElectric)
+          .map((update) => update.table)
+          .toSet();
+
+      // Only notify Electric for the tables that were not triggered
+      // by Electric itself in "notifier.subscribeToDataChanges"
+      if (tableNames.isNotEmpty) {
+        logger.info(
+          'Notifying Electric about tables changed in the client. Changed tables: $tableNames',
+        );
+        notifier.potentiallyChanged();
+      }
     });
 
     return () {
@@ -122,7 +182,7 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  Satellite get satellite => throw UnimplementedError();
+  Satellite get satellite => _baseClient.satellite;
 
   @override
   void setIsConnected(ConnectivityState connectivityState) {
@@ -130,7 +190,114 @@ class DriftElectricClient<DB extends DatabaseConnectionUser>
   }
 
   @override
-  Future<ShapeSubscription> syncTables(List<String> tables) {
-    return _baseClient.syncTables(tables);
+  Future<void> connect([String? token]) {
+    return _baseClient.connect(token);
   }
+
+  @override
+  void disconnect() {
+    return _baseClient.disconnect();
+  }
+
+  @override
+  Future<ShapeSubscription> syncTable<T extends Table>(
+    T table, {
+    SyncIncludeBuilder<T>? include,
+    SyncWhereBuilder<T>? where,
+  }) {
+    final shape = computeShapeForDrift<T>(
+      db,
+      table,
+      include: include,
+      where: where,
+    );
+
+    // print("SHAPE ${shape.toMap()}");
+
+    return _baseClient.syncShapeInternal(shape);
+  }
+
+  @override
+  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput) async {
+    final shape = computeShape(syncInput);
+    return _baseClient.syncShapeInternal(shape);
+  }
+
+  @override
+  void setTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table, {
+    required Insertable<D> Function(D row) transformInbound,
+    required Insertable<D> Function(D row) transformOutbound,
+    Insertable<D> Function(D)? toInsertable,
+  }) {
+    // forbid transforming relation keys to avoid breaking
+    // referential integrity
+    final relations = getTableRelations(table.asDslTable)?.$relationsList ?? [];
+    final immutableFields = relations.map((r) => r.fromField).toList();
+
+    final QualifiedTablename qualifiedTableName = _getQualifiedTableName(table);
+
+    // ignore: invalid_use_of_protected_member
+    _baseClient.replicationTransformManager.setTableTransform(
+      qualifiedTableName,
+      ReplicatedRowTransformer(
+        transformInbound: (Record record) {
+          final dataClass = table.map(record) as D;
+          final insertable = transformTableRecord<TableDsl, D, Record>(
+            table,
+            dataClass,
+            transformInbound,
+            immutableFields,
+            toInsertable: toInsertable,
+          );
+          return insertable
+              .toColumns(false)
+              .map((key, val) => MapEntry(key, expressionToValue(val)));
+        },
+        transformOutbound: (Record record) {
+          final dataClass = table.map(record) as D;
+          final insertable = transformTableRecord<TableDsl, D, Record>(
+            table,
+            dataClass,
+            transformOutbound,
+            immutableFields,
+            toInsertable: toInsertable,
+          );
+          return insertable
+              .toColumns(false)
+              .map((key, val) => MapEntry(key, expressionToValue(val)));
+        },
+      ),
+    );
+  }
+
+  Object? expressionToValue(Expression<Object?> expression) {
+    if (expression is Variable) {
+      return expression.value;
+    } else if (expression is Constant) {
+      return expression.value;
+    } else {
+      throw ArgumentError('Unsupported expression type: $expression');
+    }
+  }
+
+  @override
+  void clearTableReplicationTransform<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table,
+  ) {
+    final qualifiedTableName = _getQualifiedTableName(table);
+    // ignore: invalid_use_of_protected_member
+    _baseClient.replicationTransformManager
+        .clearTableTransform(qualifiedTableName);
+  }
+
+  QualifiedTablename _getQualifiedTableName<TableDsl extends Table, D>(
+    TableInfo<TableDsl, D> table,
+  ) {
+    return QualifiedTablename('main', table.actualTableName);
+  }
+}
+
+class _TableUpdateFromElectric extends TableUpdate {
+  _TableUpdateFromElectric(super.table);
 }

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:electricsql_cli/src/assets.dart';
+import 'package:electricsql_cli/src/commands/docker_commands/precheck.dart';
+import 'package:electricsql_cli/src/util.dart';
 import 'package:path/path.dart' as path;
 
 Future<Process> dockerCompose(
@@ -9,15 +11,20 @@ Future<Process> dockerCompose(
   String? containerName,
   Map<String, String> env = const {},
 }) async {
+  await _assertValidDocker();
+
   final assetsDir = await getElectricCLIAssetsDir();
   final composeFile = File(path.join(assetsDir.path, 'docker/compose.yaml'));
+  final composeFileWithPostgres =
+      File(path.join(assetsDir.path, 'docker/compose-with-postgres.yaml'));
 
+  final withPostgres = env['COMPOSE_PROFILES'] == 'with-postgres';
   final args = <String>[
     'compose',
     '--ansi',
     'always',
     '-f',
-    composeFile.absolute.path,
+    (withPostgres ? composeFileWithPostgres : composeFile).absolute.path,
     command,
     ...userArgs,
   ];
@@ -34,4 +41,13 @@ Future<Process> dockerCompose(
   );
 
   return proc;
+}
+
+Future<void> _assertValidDocker() async {
+  // Check that a valid Docker is installed
+  final res = await checkValidDockerVersion();
+
+  if (res.errorReason != null) {
+    throw ConfigException(res.errorReason!);
+  }
 }

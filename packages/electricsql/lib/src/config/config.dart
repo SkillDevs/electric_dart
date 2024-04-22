@@ -3,7 +3,9 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 
 class ElectricConfig {
-  final AuthConfig auth;
+  /// Optional authentication configuration.
+  /// If not provided, a client ID is generated.
+  final AuthConfig? auth;
 
   /// Optional URL string to connect to the Electric sync service.
   ///
@@ -32,7 +34,7 @@ class ElectricConfig {
   final ConnectionBackoffOptions? connectionBackoffOptions;
 
   ElectricConfig({
-    required this.auth,
+    this.auth,
     this.url,
     this.logger,
     this.timeout,
@@ -67,10 +69,7 @@ class ReplicationConfig {
 }
 
 HydratedConfig hydrateConfig(ElectricConfig config) {
-  final auth = config.auth;
-  if (auth.token.isEmpty) {
-    throw Exception('Invalid configuration. Missing authentication token.');
-  }
+  final auth = config.auth ?? const AuthConfig();
 
   //final debug = config.debug ?? false;
 

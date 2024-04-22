@@ -1,3 +1,33 @@
+## Next
+
+* Add a escape hatch method `syncTableRaw` to allow creating a shape subscription manually, without the `drift` API. Using `syncTable` is still recommended.
+
+
+## 0.6.0
+
+* Code based on official Typescript client [v0.10.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.0) and [v0.10.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.10.1).
+* **BREAKING**: Compatible with the Electric service v0.10.0+
+* **BREAKING**: The `syncTables` function has been removed in favor of the new [Shapes](https://electric-sql.com/docs/usage/data-access/shapes) feature and the function `syncTable`, which can be customized with `WHERE` clauses or to include other related tables. More information in the README.
+* **BREAKING**: DateTimes obtained for the Postgres types TIME, TIMESTAMP and DATE are now always in UTC. These types don't store timezone information, so for consistency they are in UTC when reading. For example, if you insert "2023-01-15 08:30" (local), "2023-01-15 08:30+00" (UTC) or "2023-01-15 08:30-05" (with offset); timezone is stripped and all of them will be read as "2023-01-15 08:30" (UTC). 
+* **BREAKING**: Now the `ElectricClient` class has a generic type with the type of the drift database (`ElectricClient<AppDatabase>`), to improve type safety and integration.
+* Improved type mapping between a Postgres database and the drift Electric client in a Dart backend.
+
+## 0.5.3
+
+* Code based on official Typescript client [v0.9.5](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.5) and [v0.9.6](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.6).
+
+
+## 0.5.2
+
+* Code based on official Typescript client [v0.9.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.3) and [v0.9.4](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.4)
+* The drift schema now supports postgres, allowing reuse in a Dart backend. A simple backend example is provided in the todos demo. Thanks to @simolus3 for the [contribution](https://github.com/SkillDevs/electric_dart/pull/8).
+
+
+## 0.5.1
+
+* Code based on official Typescript client [v0.9.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.2)
+
+
 ## 0.5.0
 
 * Code based on official Typescript client [v0.9.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.9.0)

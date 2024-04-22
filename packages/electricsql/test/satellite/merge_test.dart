@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/merge.dart';
@@ -97,7 +98,7 @@ void main() {
 
     // Insert a row in the table
     final insertRowSQL =
-        "INSERT INTO ${kPersonTable.tableName} (id, name, age, bmi, int8) VALUES (9e999, 'John Doe', 30, 25.5, 7)";
+        "INSERT INTO ${kPersonTable.tableName} (id, name, age, bmi, int8, blob) VALUES (9e999, 'John Doe', 30, 25.5, 7, x'0001ff')";
     db.execute(insertRowSQL);
 
     // Fetch the oplog entry for the inserted row
@@ -124,6 +125,7 @@ void main() {
           record: {
             // fields must be ordered alphabetically to match the behavior of the triggers
             'age': 30,
+            'blob': Uint8List.fromList([0, 1, 255]),
             'bmi': 8e888,
             'id': 9e999,
             'int8': '224', // Big ints are serialized as strings in the oplog
@@ -154,6 +156,7 @@ void main() {
       'id': 9e999,
       'name': 'John Doe',
       'age': 30,
+      'blob': Uint8List.fromList([0, 1, 255]),
       'bmi': double.infinity,
       'int8': BigInt.parse('224'),
     });

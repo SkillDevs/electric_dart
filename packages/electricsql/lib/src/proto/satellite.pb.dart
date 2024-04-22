@@ -611,6 +611,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     $core.Iterable<SatInStartReplicationReq_Option>? options,
     $core.Iterable<$core.String>? subscriptionIds,
     $core.String? schemaVersion,
+    $core.Iterable<$fixnum.Int64>? observedTransactionData,
   }) {
     final $result = create();
     if (lsn != null) {
@@ -624,6 +625,9 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     }
     if (schemaVersion != null) {
       $result.schemaVersion = schemaVersion;
+    }
+    if (observedTransactionData != null) {
+      $result.observedTransactionData.addAll(observedTransactionData);
     }
     return $result;
   }
@@ -649,6 +653,8 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
         defaultEnumValue: SatInStartReplicationReq_Option.NONE)
     ..pPS(4, _omitFieldNames ? '' : 'subscriptionIds')
     ..aOS(5, _omitFieldNames ? '' : 'schemaVersion')
+    ..p<$fixnum.Int64>(6, _omitFieldNames ? '' : 'observedTransactionData',
+        $pb.PbFieldType.KU6)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -708,6 +714,12 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
   $core.bool hasSchemaVersion() => $_has(3);
   @$pb.TagNumber(5)
   void clearSchemaVersion() => clearField(5);
+
+  /// *
+  ///  List of transaction IDs for which the client
+  ///  observed additional data before disconnect
+  @$pb.TagNumber(6)
+  $core.List<$fixnum.Int64> get observedTransactionData => $_getList(4);
 }
 
 /// Error returned by the Producer when replication fails to start
@@ -808,10 +820,14 @@ class SatInStartReplicationResp_ReplicationError extends $pb.GeneratedMessage {
 class SatInStartReplicationResp extends $pb.GeneratedMessage {
   factory SatInStartReplicationResp({
     SatInStartReplicationResp_ReplicationError? err,
+    $core.int? unackedWindowSize,
   }) {
     final $result = create();
     if (err != null) {
       $result.err = err;
+    }
+    if (unackedWindowSize != null) {
+      $result.unackedWindowSize = unackedWindowSize;
     }
     return $result;
   }
@@ -831,6 +847,8 @@ class SatInStartReplicationResp extends $pb.GeneratedMessage {
     ..aOM<SatInStartReplicationResp_ReplicationError>(
         1, _omitFieldNames ? '' : 'err',
         subBuilder: SatInStartReplicationResp_ReplicationError.create)
+    ..a<$core.int>(
+        2, _omitFieldNames ? '' : 'unackedWindowSize', $pb.PbFieldType.OU3)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -872,6 +890,19 @@ class SatInStartReplicationResp extends $pb.GeneratedMessage {
   void clearErr() => clearField(1);
   @$pb.TagNumber(1)
   SatInStartReplicationResp_ReplicationError ensureErr() => $_ensure(0);
+
+  /// * How many unacked transactions the producer is willing to send
+  @$pb.TagNumber(2)
+  $core.int get unackedWindowSize => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set unackedWindowSize($core.int v) {
+    $_setUnsignedInt32(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasUnackedWindowSize() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUnackedWindowSize() => clearField(2);
 }
 
 /// (Consumer) Request to stop replication
@@ -1261,6 +1292,137 @@ class SatOpLog extends $pb.GeneratedMessage {
   $core.List<SatTransOp> get ops => $_getList(0);
 }
 
+/// *
+///  Acknowledgement message that the transaction with given LSN has been incorporated by the client.
+///  Sent by the consumer and used by the producer to regulate garbage collection & backpressure.
+///  Clients that don't send it after a certain number of transactions will be considered non-responsive
+///  and the producer may choose to pause sending further information to such a client.
+///
+///  It's also important the the producer may deny connection requests from clients who try to connect with
+///  LSN number less than the most recently acknowledged one, as the acknowledgement may have caused a
+///  cleanup of information for this client before this point in time.
+class SatOpLogAck extends $pb.GeneratedMessage {
+  factory SatOpLogAck({
+    $fixnum.Int64? ackTimestamp,
+    $core.List<$core.int>? lsn,
+    $fixnum.Int64? transactionId,
+    $core.Iterable<$core.String>? subscriptionIds,
+    $core.Iterable<$fixnum.Int64>? additionalDataSourceIds,
+  }) {
+    final $result = create();
+    if (ackTimestamp != null) {
+      $result.ackTimestamp = ackTimestamp;
+    }
+    if (lsn != null) {
+      $result.lsn = lsn;
+    }
+    if (transactionId != null) {
+      $result.transactionId = transactionId;
+    }
+    if (subscriptionIds != null) {
+      $result.subscriptionIds.addAll(subscriptionIds);
+    }
+    if (additionalDataSourceIds != null) {
+      $result.additionalDataSourceIds.addAll(additionalDataSourceIds);
+    }
+    return $result;
+  }
+  SatOpLogAck._() : super();
+  factory SatOpLogAck.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpLogAck.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatOpLogAck',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..a<$fixnum.Int64>(
+        1, _omitFieldNames ? '' : 'ackTimestamp', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'lsn', $pb.PbFieldType.OY)
+    ..a<$fixnum.Int64>(
+        3, _omitFieldNames ? '' : 'transactionId', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..pPS(4, _omitFieldNames ? '' : 'subscriptionIds')
+    ..p<$fixnum.Int64>(5, _omitFieldNames ? '' : 'additionalDataSourceIds',
+        $pb.PbFieldType.KU6)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpLogAck clone() => SatOpLogAck()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpLogAck copyWith(void Function(SatOpLogAck) updates) =>
+      super.copyWith((message) => updates(message as SatOpLogAck))
+          as SatOpLogAck;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatOpLogAck create() => SatOpLogAck._();
+  SatOpLogAck createEmptyInstance() => create();
+  static $pb.PbList<SatOpLogAck> createRepeated() => $pb.PbList<SatOpLogAck>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpLogAck getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpLogAck>(create);
+  static SatOpLogAck? _defaultInstance;
+
+  /// * Timestamp on the sending side
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get ackTimestamp => $_getI64(0);
+  @$pb.TagNumber(1)
+  set ackTimestamp($fixnum.Int64 v) {
+    $_setInt64(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasAckTimestamp() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAckTimestamp() => clearField(1);
+
+  /// * LSN of the most recent incorporated transaction
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get lsn => $_getN(1);
+  @$pb.TagNumber(2)
+  set lsn($core.List<$core.int> v) {
+    $_setBytes(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasLsn() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLsn() => clearField(2);
+
+  /// * Transaction ID of the most recent incorporated transaction
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get transactionId => $_getI64(2);
+  @$pb.TagNumber(3)
+  set transactionId($fixnum.Int64 v) {
+    $_setInt64(2, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasTransactionId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTransactionId() => clearField(3);
+
+  /// * Subscription IDs for data that was received immediately after this transaction
+  @$pb.TagNumber(4)
+  $core.List<$core.String> get subscriptionIds => $_getList(3);
+
+  /// * Transaction IDs for which additional data was received immediately after this transaction
+  @$pb.TagNumber(5)
+  $core.List<$fixnum.Int64> get additionalDataSourceIds => $_getList(4);
+}
+
 enum SatTransOp_Op {
   begin,
   commit,
@@ -1269,6 +1431,9 @@ enum SatTransOp_Op {
   delete,
   migrate,
   compensation,
+  gone,
+  additionalBegin,
+  additionalCommit,
   notSet
 }
 
@@ -1283,6 +1448,9 @@ class SatTransOp extends $pb.GeneratedMessage {
     SatOpDelete? delete,
     SatOpMigrate? migrate,
     SatOpCompensation? compensation,
+    SatOpGone? gone,
+    SatOpAdditionalBegin? additionalBegin,
+    SatOpAdditionalCommit? additionalCommit,
   }) {
     final $result = create();
     if (begin != null) {
@@ -1306,6 +1474,15 @@ class SatTransOp extends $pb.GeneratedMessage {
     if (compensation != null) {
       $result.compensation = compensation;
     }
+    if (gone != null) {
+      $result.gone = gone;
+    }
+    if (additionalBegin != null) {
+      $result.additionalBegin = additionalBegin;
+    }
+    if (additionalCommit != null) {
+      $result.additionalCommit = additionalCommit;
+    }
     return $result;
   }
   SatTransOp._() : super();
@@ -1324,6 +1501,9 @@ class SatTransOp extends $pb.GeneratedMessage {
     5: SatTransOp_Op.delete,
     6: SatTransOp_Op.migrate,
     7: SatTransOp_Op.compensation,
+    8: SatTransOp_Op.gone,
+    9: SatTransOp_Op.additionalBegin,
+    10: SatTransOp_Op.additionalCommit,
     0: SatTransOp_Op.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
@@ -1331,7 +1511,7 @@ class SatTransOp extends $pb.GeneratedMessage {
       package:
           const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
       createEmptyInstance: create)
-    ..oo(0, [1, 2, 3, 4, 5, 6, 7])
+    ..oo(0, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     ..aOM<SatOpBegin>(1, _omitFieldNames ? '' : 'begin',
         subBuilder: SatOpBegin.create)
     ..aOM<SatOpCommit>(2, _omitFieldNames ? '' : 'commit',
@@ -1346,6 +1526,12 @@ class SatTransOp extends $pb.GeneratedMessage {
         subBuilder: SatOpMigrate.create)
     ..aOM<SatOpCompensation>(7, _omitFieldNames ? '' : 'compensation',
         subBuilder: SatOpCompensation.create)
+    ..aOM<SatOpGone>(8, _omitFieldNames ? '' : 'gone',
+        subBuilder: SatOpGone.create)
+    ..aOM<SatOpAdditionalBegin>(9, _omitFieldNames ? '' : 'additionalBegin',
+        subBuilder: SatOpAdditionalBegin.create)
+    ..aOM<SatOpAdditionalCommit>(10, _omitFieldNames ? '' : 'additionalCommit',
+        subBuilder: SatOpAdditionalCommit.create)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1469,6 +1655,48 @@ class SatTransOp extends $pb.GeneratedMessage {
   void clearCompensation() => clearField(7);
   @$pb.TagNumber(7)
   SatOpCompensation ensureCompensation() => $_ensure(6);
+
+  @$pb.TagNumber(8)
+  SatOpGone get gone => $_getN(7);
+  @$pb.TagNumber(8)
+  set gone(SatOpGone v) {
+    setField(8, v);
+  }
+
+  @$pb.TagNumber(8)
+  $core.bool hasGone() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearGone() => clearField(8);
+  @$pb.TagNumber(8)
+  SatOpGone ensureGone() => $_ensure(7);
+
+  @$pb.TagNumber(9)
+  SatOpAdditionalBegin get additionalBegin => $_getN(8);
+  @$pb.TagNumber(9)
+  set additionalBegin(SatOpAdditionalBegin v) {
+    setField(9, v);
+  }
+
+  @$pb.TagNumber(9)
+  $core.bool hasAdditionalBegin() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearAdditionalBegin() => clearField(9);
+  @$pb.TagNumber(9)
+  SatOpAdditionalBegin ensureAdditionalBegin() => $_ensure(8);
+
+  @$pb.TagNumber(10)
+  SatOpAdditionalCommit get additionalCommit => $_getN(9);
+  @$pb.TagNumber(10)
+  set additionalCommit(SatOpAdditionalCommit v) {
+    setField(10, v);
+  }
+
+  @$pb.TagNumber(10)
+  $core.bool hasAdditionalCommit() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearAdditionalCommit() => clearField(10);
+  @$pb.TagNumber(10)
+  SatOpAdditionalCommit ensureAdditionalCommit() => $_ensure(9);
 }
 
 /// (Producer) Replication message that indicates transaction boundaries
@@ -1476,17 +1704,15 @@ class SatTransOp extends $pb.GeneratedMessage {
 class SatOpBegin extends $pb.GeneratedMessage {
   factory SatOpBegin({
     $fixnum.Int64? commitTimestamp,
-    $core.String? transId,
     $core.List<$core.int>? lsn,
     $core.String? origin,
     $core.bool? isMigration,
+    $fixnum.Int64? additionalDataRef,
+    $fixnum.Int64? transactionId,
   }) {
     final $result = create();
     if (commitTimestamp != null) {
       $result.commitTimestamp = commitTimestamp;
-    }
-    if (transId != null) {
-      $result.transId = transId;
     }
     if (lsn != null) {
       $result.lsn = lsn;
@@ -1496,6 +1722,12 @@ class SatOpBegin extends $pb.GeneratedMessage {
     }
     if (isMigration != null) {
       $result.isMigration = isMigration;
+    }
+    if (additionalDataRef != null) {
+      $result.additionalDataRef = additionalDataRef;
+    }
+    if (transactionId != null) {
+      $result.transactionId = transactionId;
     }
     return $result;
   }
@@ -1515,11 +1747,16 @@ class SatOpBegin extends $pb.GeneratedMessage {
     ..a<$fixnum.Int64>(
         1, _omitFieldNames ? '' : 'commitTimestamp', $pb.PbFieldType.OU6,
         defaultOrMaker: $fixnum.Int64.ZERO)
-    ..aOS(2, _omitFieldNames ? '' : 'transId')
     ..a<$core.List<$core.int>>(
         3, _omitFieldNames ? '' : 'lsn', $pb.PbFieldType.OY)
     ..aOS(4, _omitFieldNames ? '' : 'origin')
     ..aOB(5, _omitFieldNames ? '' : 'isMigration')
+    ..a<$fixnum.Int64>(
+        6, _omitFieldNames ? '' : 'additionalDataRef', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        7, _omitFieldNames ? '' : 'transactionId', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1555,29 +1792,17 @@ class SatOpBegin extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearCommitTimestamp() => clearField(1);
 
-  @$pb.TagNumber(2)
-  $core.String get transId => $_getSZ(1);
-  @$pb.TagNumber(2)
-  set transId($core.String v) {
-    $_setString(1, v);
-  }
-
-  @$pb.TagNumber(2)
-  $core.bool hasTransId() => $_has(1);
-  @$pb.TagNumber(2)
-  void clearTransId() => clearField(2);
-
   /// Lsn position that points to first data segment of transaction in the
   /// WAL
   @$pb.TagNumber(3)
-  $core.List<$core.int> get lsn => $_getN(2);
+  $core.List<$core.int> get lsn => $_getN(1);
   @$pb.TagNumber(3)
   set lsn($core.List<$core.int> v) {
-    $_setBytes(2, v);
+    $_setBytes(1, v);
   }
 
   @$pb.TagNumber(3)
-  $core.bool hasLsn() => $_has(2);
+  $core.bool hasLsn() => $_has(1);
   @$pb.TagNumber(3)
   void clearLsn() => clearField(3);
 
@@ -1586,29 +1811,125 @@ class SatOpBegin extends $pb.GeneratedMessage {
   /// Electric this field can be used to deduce if the incoming transaction
   /// originated on this Satellite instance or not.
   @$pb.TagNumber(4)
-  $core.String get origin => $_getSZ(3);
+  $core.String get origin => $_getSZ(2);
   @$pb.TagNumber(4)
   set origin($core.String v) {
-    $_setString(3, v);
+    $_setString(2, v);
   }
 
   @$pb.TagNumber(4)
-  $core.bool hasOrigin() => $_has(3);
+  $core.bool hasOrigin() => $_has(2);
   @$pb.TagNumber(4)
   void clearOrigin() => clearField(4);
 
   /// does this transaction contain ddl statements?
   @$pb.TagNumber(5)
-  $core.bool get isMigration => $_getBF(4);
+  $core.bool get isMigration => $_getBF(3);
   @$pb.TagNumber(5)
   set isMigration($core.bool v) {
-    $_setBool(4, v);
+    $_setBool(3, v);
   }
 
   @$pb.TagNumber(5)
-  $core.bool hasIsMigration() => $_has(4);
+  $core.bool hasIsMigration() => $_has(3);
   @$pb.TagNumber(5)
   void clearIsMigration() => clearField(5);
+
+  /// *
+  ///  If not 0, a transient reference for additional data pseudo-transaction
+  ///  that will be sent at a later point in the stream. It may be shared by multiple transactions
+  ///  sent by the server at the same time, because this additional data will be queried at the same
+  ///  time. Duplicated on SatOpCommit.
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get additionalDataRef => $_getI64(4);
+  @$pb.TagNumber(6)
+  set additionalDataRef($fixnum.Int64 v) {
+    $_setInt64(4, v);
+  }
+
+  @$pb.TagNumber(6)
+  $core.bool hasAdditionalDataRef() => $_has(4);
+  @$pb.TagNumber(6)
+  void clearAdditionalDataRef() => clearField(6);
+
+  /// * Unique transaction ID, sent only by the server. No guarantees of monotonicity.
+  @$pb.TagNumber(7)
+  $fixnum.Int64 get transactionId => $_getI64(5);
+  @$pb.TagNumber(7)
+  set transactionId($fixnum.Int64 v) {
+    $_setInt64(5, v);
+  }
+
+  @$pb.TagNumber(7)
+  $core.bool hasTransactionId() => $_has(5);
+  @$pb.TagNumber(7)
+  void clearTransactionId() => clearField(7);
+}
+
+/// (Producer) Replication message that indicates a transaction boundary for additional data that existed on the server
+/// but the client can now see
+class SatOpAdditionalBegin extends $pb.GeneratedMessage {
+  factory SatOpAdditionalBegin({
+    $fixnum.Int64? ref,
+  }) {
+    final $result = create();
+    if (ref != null) {
+      $result.ref = ref;
+    }
+    return $result;
+  }
+  SatOpAdditionalBegin._() : super();
+  factory SatOpAdditionalBegin.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpAdditionalBegin.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatOpAdditionalBegin',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..a<$fixnum.Int64>(1, _omitFieldNames ? '' : 'ref', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpAdditionalBegin clone() =>
+      SatOpAdditionalBegin()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpAdditionalBegin copyWith(void Function(SatOpAdditionalBegin) updates) =>
+      super.copyWith((message) => updates(message as SatOpAdditionalBegin))
+          as SatOpAdditionalBegin;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatOpAdditionalBegin create() => SatOpAdditionalBegin._();
+  SatOpAdditionalBegin createEmptyInstance() => create();
+  static $pb.PbList<SatOpAdditionalBegin> createRepeated() =>
+      $pb.PbList<SatOpAdditionalBegin>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpAdditionalBegin getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpAdditionalBegin>(create);
+  static SatOpAdditionalBegin? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get ref => $_getI64(0);
+  @$pb.TagNumber(1)
+  set ref($fixnum.Int64 v) {
+    $_setInt64(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => clearField(1);
 }
 
 /// (Producer) Replication message that indicates transaction boundaries
@@ -1616,18 +1937,22 @@ class SatOpBegin extends $pb.GeneratedMessage {
 class SatOpCommit extends $pb.GeneratedMessage {
   factory SatOpCommit({
     $fixnum.Int64? commitTimestamp,
-    $core.String? transId,
     $core.List<$core.int>? lsn,
+    $fixnum.Int64? additionalDataRef,
+    $fixnum.Int64? transactionId,
   }) {
     final $result = create();
     if (commitTimestamp != null) {
       $result.commitTimestamp = commitTimestamp;
     }
-    if (transId != null) {
-      $result.transId = transId;
-    }
     if (lsn != null) {
       $result.lsn = lsn;
+    }
+    if (additionalDataRef != null) {
+      $result.additionalDataRef = additionalDataRef;
+    }
+    if (transactionId != null) {
+      $result.transactionId = transactionId;
     }
     return $result;
   }
@@ -1647,9 +1972,14 @@ class SatOpCommit extends $pb.GeneratedMessage {
     ..a<$fixnum.Int64>(
         1, _omitFieldNames ? '' : 'commitTimestamp', $pb.PbFieldType.OU6,
         defaultOrMaker: $fixnum.Int64.ZERO)
-    ..aOS(2, _omitFieldNames ? '' : 'transId')
     ..a<$core.List<$core.int>>(
         3, _omitFieldNames ? '' : 'lsn', $pb.PbFieldType.OY)
+    ..a<$fixnum.Int64>(
+        4, _omitFieldNames ? '' : 'additionalDataRef', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        5, _omitFieldNames ? '' : 'transactionId', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1686,29 +2016,111 @@ class SatOpCommit extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearCommitTimestamp() => clearField(1);
 
-  @$pb.TagNumber(2)
-  $core.String get transId => $_getSZ(1);
-  @$pb.TagNumber(2)
-  set transId($core.String v) {
-    $_setString(1, v);
-  }
-
-  @$pb.TagNumber(2)
-  $core.bool hasTransId() => $_has(1);
-  @$pb.TagNumber(2)
-  void clearTransId() => clearField(2);
-
   @$pb.TagNumber(3)
-  $core.List<$core.int> get lsn => $_getN(2);
+  $core.List<$core.int> get lsn => $_getN(1);
   @$pb.TagNumber(3)
   set lsn($core.List<$core.int> v) {
-    $_setBytes(2, v);
+    $_setBytes(1, v);
   }
 
   @$pb.TagNumber(3)
-  $core.bool hasLsn() => $_has(2);
+  $core.bool hasLsn() => $_has(1);
   @$pb.TagNumber(3)
   void clearLsn() => clearField(3);
+
+  /// * If not 0, a transient reference for additional data pseudo-transaction
+  /// that will be sent at a later point in the stream. It may be shared by multiple transactions
+  /// sent by the server at the same time, because this additional data will be queried at the same
+  /// time. Duplicated on SatOpBegin.
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get additionalDataRef => $_getI64(2);
+  @$pb.TagNumber(4)
+  set additionalDataRef($fixnum.Int64 v) {
+    $_setInt64(2, v);
+  }
+
+  @$pb.TagNumber(4)
+  $core.bool hasAdditionalDataRef() => $_has(2);
+  @$pb.TagNumber(4)
+  void clearAdditionalDataRef() => clearField(4);
+
+  /// * Unique transaction ID, sent only by the server. No guarantees of monotonicity.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get transactionId => $_getI64(3);
+  @$pb.TagNumber(5)
+  set transactionId($fixnum.Int64 v) {
+    $_setInt64(3, v);
+  }
+
+  @$pb.TagNumber(5)
+  $core.bool hasTransactionId() => $_has(3);
+  @$pb.TagNumber(5)
+  void clearTransactionId() => clearField(5);
+}
+
+class SatOpAdditionalCommit extends $pb.GeneratedMessage {
+  factory SatOpAdditionalCommit({
+    $fixnum.Int64? ref,
+  }) {
+    final $result = create();
+    if (ref != null) {
+      $result.ref = ref;
+    }
+    return $result;
+  }
+  SatOpAdditionalCommit._() : super();
+  factory SatOpAdditionalCommit.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpAdditionalCommit.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatOpAdditionalCommit',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..a<$fixnum.Int64>(1, _omitFieldNames ? '' : 'ref', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpAdditionalCommit clone() =>
+      SatOpAdditionalCommit()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpAdditionalCommit copyWith(
+          void Function(SatOpAdditionalCommit) updates) =>
+      super.copyWith((message) => updates(message as SatOpAdditionalCommit))
+          as SatOpAdditionalCommit;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatOpAdditionalCommit create() => SatOpAdditionalCommit._();
+  SatOpAdditionalCommit createEmptyInstance() => create();
+  static $pb.PbList<SatOpAdditionalCommit> createRepeated() =>
+      $pb.PbList<SatOpAdditionalCommit>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpAdditionalCommit getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpAdditionalCommit>(create);
+  static SatOpAdditionalCommit? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get ref => $_getI64(0);
+  @$pb.TagNumber(1)
+  set ref($fixnum.Int64 v) {
+    $_setInt64(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => clearField(1);
 }
 
 /// (Producer) Data manipulation message, that only should be part of the
@@ -2096,6 +2508,86 @@ class SatOpCompensation extends $pb.GeneratedMessage {
   /// dependency information
   @$pb.TagNumber(4)
   $core.List<$core.String> get tags => $_getList(2);
+}
+
+class SatOpGone extends $pb.GeneratedMessage {
+  factory SatOpGone({
+    $core.int? relationId,
+    SatOpRow? pkData,
+  }) {
+    final $result = create();
+    if (relationId != null) {
+      $result.relationId = relationId;
+    }
+    if (pkData != null) {
+      $result.pkData = pkData;
+    }
+    return $result;
+  }
+  SatOpGone._() : super();
+  factory SatOpGone.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpGone.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatOpGone',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..a<$core.int>(1, _omitFieldNames ? '' : 'relationId', $pb.PbFieldType.OU3)
+    ..aOM<SatOpRow>(2, _omitFieldNames ? '' : 'pkData',
+        subBuilder: SatOpRow.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpGone clone() => SatOpGone()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpGone copyWith(void Function(SatOpGone) updates) =>
+      super.copyWith((message) => updates(message as SatOpGone)) as SatOpGone;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatOpGone create() => SatOpGone._();
+  SatOpGone createEmptyInstance() => create();
+  static $pb.PbList<SatOpGone> createRepeated() => $pb.PbList<SatOpGone>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpGone getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SatOpGone>(create);
+  static SatOpGone? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get relationId => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set relationId($core.int v) {
+    $_setUnsignedInt32(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasRelationId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRelationId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  SatOpRow get pkData => $_getN(1);
+  @$pb.TagNumber(2)
+  set pkData(SatOpRow v) {
+    setField(2, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasPkData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPkData() => clearField(2);
+  @$pb.TagNumber(2)
+  SatOpRow ensurePkData() => $_ensure(1);
 }
 
 /// Message that corresponds to the single row.
@@ -3266,14 +3758,96 @@ class SatShapeReq extends $pb.GeneratedMessage {
   SatShapeDef ensureShapeDefinition() => $_ensure(1);
 }
 
+class SatShapeDef_Relation extends $pb.GeneratedMessage {
+  factory SatShapeDef_Relation({
+    $core.Iterable<$core.String>? foreignKey,
+    SatShapeDef_Select? select,
+  }) {
+    final $result = create();
+    if (foreignKey != null) {
+      $result.foreignKey.addAll(foreignKey);
+    }
+    if (select != null) {
+      $result.select = select;
+    }
+    return $result;
+  }
+  SatShapeDef_Relation._() : super();
+  factory SatShapeDef_Relation.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatShapeDef_Relation.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatShapeDef.Relation',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..pPS(1, _omitFieldNames ? '' : 'foreignKey')
+    ..aOM<SatShapeDef_Select>(2, _omitFieldNames ? '' : 'select',
+        subBuilder: SatShapeDef_Select.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatShapeDef_Relation clone() =>
+      SatShapeDef_Relation()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatShapeDef_Relation copyWith(void Function(SatShapeDef_Relation) updates) =>
+      super.copyWith((message) => updates(message as SatShapeDef_Relation))
+          as SatShapeDef_Relation;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDef_Relation create() => SatShapeDef_Relation._();
+  SatShapeDef_Relation createEmptyInstance() => create();
+  static $pb.PbList<SatShapeDef_Relation> createRepeated() =>
+      $pb.PbList<SatShapeDef_Relation>();
+  @$core.pragma('dart2js:noInline')
+  static SatShapeDef_Relation getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatShapeDef_Relation>(create);
+  static SatShapeDef_Relation? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.String> get foreignKey => $_getList(0);
+
+  @$pb.TagNumber(2)
+  SatShapeDef_Select get select => $_getN(1);
+  @$pb.TagNumber(2)
+  set select(SatShapeDef_Select v) {
+    setField(2, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasSelect() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSelect() => clearField(2);
+  @$pb.TagNumber(2)
+  SatShapeDef_Select ensureSelect() => $_ensure(1);
+}
+
 /// Select structure
 class SatShapeDef_Select extends $pb.GeneratedMessage {
   factory SatShapeDef_Select({
     $core.String? tablename,
+    $core.String? where,
+    $core.Iterable<SatShapeDef_Relation>? include,
   }) {
     final $result = create();
     if (tablename != null) {
       $result.tablename = tablename;
+    }
+    if (where != null) {
+      $result.where = where;
+    }
+    if (include != null) {
+      $result.include.addAll(include);
     }
     return $result;
   }
@@ -3291,6 +3865,10 @@ class SatShapeDef_Select extends $pb.GeneratedMessage {
           const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
       createEmptyInstance: create)
     ..aOS(1, _omitFieldNames ? '' : 'tablename')
+    ..aOS(2, _omitFieldNames ? '' : 'where')
+    ..pc<SatShapeDef_Relation>(
+        3, _omitFieldNames ? '' : 'include', $pb.PbFieldType.PM,
+        subBuilder: SatShapeDef_Relation.create)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -3328,6 +3906,21 @@ class SatShapeDef_Select extends $pb.GeneratedMessage {
   $core.bool hasTablename() => $_has(0);
   @$pb.TagNumber(1)
   void clearTablename() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get where => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set where($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasWhere() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearWhere() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.List<SatShapeDef_Relation> get include => $_getList(2);
 }
 
 /// Top-level structure of a shape definition

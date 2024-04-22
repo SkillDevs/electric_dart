@@ -8,9 +8,11 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 export 'stub.dart'
     if (dart.library.io) 'io.dart'
-    if (dart.library.html) 'html.dart';
+    if (dart.library.js_interop) 'web.dart';
 
 typedef Data = Uint8List;
+
+const kAuthExpiredCloseEvent = 'JWT-expired';
 
 /// Returns the protocol version string as the server expects. i.e: 'electric.0.6'
 const kProtocolVsn = 'electric.$kElectricProtocolVersion';
@@ -21,13 +23,15 @@ abstract class Socket {
   Socket closeAndRemoveListeners();
 
   void onMessage(void Function(Data data) cb);
-  void onError(void Function(SatelliteException error) cb);
-  void onClose(void Function() cb);
+  void onError(void Function(SatelliteException error, StackTrace st) cb);
+  void onClose(void Function(SocketCloseReason reason) cb);
 
   void onceConnect(void Function() cb);
-  void onceError(void Function(SatelliteException error) cb);
+  void onceError(void Function(SatelliteException error, StackTrace st) cb);
 
-  void removeErrorListener(void Function(SatelliteException error) cb);
+  void removeErrorListener(
+    void Function(SatelliteException error, StackTrace st) cb,
+  );
 }
 
 class ConnectionOptions {
@@ -40,6 +44,13 @@ abstract class SocketFactory {
   Socket create(String protocolVsn);
 }
 
+class CloseEvent {
+  final int code;
+  final String reason;
+
+  CloseEvent({required this.code, required this.reason});
+}
+
 /// Socket implementation that uses web_socket_channel
 /// io and html both derive from the main logic here
 abstract class WebSocketBase implements Socket {
@@ -48,26 +59,31 @@ abstract class WebSocketBase implements Socket {
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
   List<void Function()> _onceConnectCallbacks = [];
-  List<void Function(SatelliteException error)> _errorCallbacks = [];
-  List<void Function(SatelliteException error)> _onceErrorCallbacks = [];
+  List<void Function(SatelliteException error, StackTrace st)> _errorCallbacks =
+      [];
+  List<void Function(SatelliteException error, StackTrace st)>
+      _onceErrorCallbacks = [];
 
-  void Function()? _closeListener;
+  void Function(CloseEvent)? _closeListener;
   void Function(Data data)? _messageListener;
 
   WebSocketBase(this.protocolVsn);
 
   // event doesn't provide much
-  void _notifyErrorAndCloseSocket([SatelliteException? error]) {
+  void _notifyErrorAndCloseSocket({
+    SatelliteException? error,
+    required StackTrace stackTrace,
+  }) {
     final effectiveError = error ??
         SatelliteException(SatelliteErrorCode.socketError, 'socket error');
     for (final callback in _errorCallbacks) {
-      callback(effectiveError);
+      callback(effectiveError, stackTrace);
     }
 
     while (_onceErrorCallbacks.isNotEmpty) {
       final callback = _onceErrorCallbacks.removeLast();
 
-      callback(effectiveError);
+      callback(effectiveError, stackTrace);
     }
 
     _socketClose();
@@ -101,10 +117,11 @@ abstract class WebSocketBase implements Socket {
       await _channel!.ready;
     } catch (e) {
       _notifyErrorAndCloseSocket(
-        SatelliteException(
+        error: SatelliteException(
           SatelliteErrorCode.socketError,
           'failed to stablish a socket connection',
         ),
+        stackTrace: StackTrace.current,
       );
       return;
     }
@@ -122,16 +139,17 @@ abstract class WebSocketBase implements Socket {
           _messageListener?.call(bytes);
         } catch (e) {
           _notifyErrorAndCloseSocket(
-            SatelliteException(
+            error: SatelliteException(
               SatelliteErrorCode.internal,
               'error parsing processing socket data',
             ),
+            stackTrace: StackTrace.current,
           );
         }
       },
       cancelOnError: true,
       onError: (Object e) {
-        _notifyErrorAndCloseSocket();
+        _notifyErrorAndCloseSocket(stackTrace: StackTrace.current);
       },
       onDone: () {
         _socketClose();
@@ -168,19 +186,28 @@ abstract class WebSocketBase implements Socket {
   }
 
   @override
-  void onError(void Function(SatelliteException error) cb) {
+  void onError(void Function(SatelliteException error, StackTrace st) cb) {
     _errorCallbacks.add(cb);
   }
 
   @override
-  void onClose(void Function() cb) {
+  void onClose(void Function(SocketCloseReason reason) cb) {
     if (_closeListener != null) {
       throw SatelliteException(
         SatelliteErrorCode.internal,
         'socket does not support multiple close listeners',
       );
     }
-    _closeListener = cb;
+
+    // ignore: prefer_function_declarations_over_variables
+    final callback = (CloseEvent ev) {
+      final reason = ev.reason == kAuthExpiredCloseEvent
+          ? SocketCloseReason.authExpired
+          : SocketCloseReason.socketError;
+      cb(reason);
+    };
+
+    _closeListener = callback;
   }
 
   @override
@@ -189,12 +216,16 @@ abstract class WebSocketBase implements Socket {
   }
 
   @override
-  void onceError(void Function(SatelliteException error) cb) {
+  void onceError(
+    void Function(SatelliteException error, StackTrace stackTrace) cb,
+  ) {
     _onceErrorCallbacks.add(cb);
   }
 
   @override
-  void removeErrorListener(void Function(SatelliteException error) cb) {
+  void removeErrorListener(
+    void Function(SatelliteException error, StackTrace st) cb,
+  ) {
     _errorCallbacks.remove(cb);
     _onceErrorCallbacks.remove(cb);
   }
@@ -205,9 +236,23 @@ abstract class WebSocketBase implements Socket {
     }
     _subscriptions = [];
 
-    _channel?.sink.close();
+    final channelToClose = _channel;
 
-    _closeListener?.call();
+    if (channelToClose != null) {
+      final closeFuture = channelToClose.sink.close();
+      if (_closeListener != null) {
+        final listener = _closeListener!;
+        closeFuture.then((_) {
+          listener.call(
+            CloseEvent(
+              code: channelToClose.closeCode!,
+              reason: channelToClose.closeReason!,
+            ),
+          );
+        });
+      }
+    }
+
     _closeListener = null;
 
     _onceConnectCallbacks = [];

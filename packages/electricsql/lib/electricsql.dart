@@ -5,12 +5,11 @@ library electricsql;
 export 'src/auth/index.dart';
 
 // ElectricClient
+export 'src/client/input/sync_input.dart';
 export 'src/client/model/index.dart';
 
 // Config
 export 'src/config/config.dart' show ElectricConfig, HydratedConfig;
-
-export 'src/electric/adapter.dart' show DatabaseAdapter;
 
 // Electric
 export 'src/electric/index.dart';
@@ -24,6 +23,6 @@ export 'src/util/converters/index.dart';
 export 'src/util/debug/index.dart';
 
 // Utils that we embed in the main library
-export 'src/util/index.dart' show ConnectivityState;
+export 'src/util/index.dart' show ConnectivityState, ConnectivityStatus;
 
 export 'src/version.dart' show kElectricProtocolVersion;

@@ -1,4 +1,5 @@
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:equatable/equatable.dart';
@@ -9,31 +10,78 @@ class AuthStateNotification extends Notification {
   AuthStateNotification({required this.authState});
 }
 
+enum RecordChangeType {
+  insert,
+  update,
+  delete,
+  compensation,
+  gone,
+  initial,
+}
+
+RecordChangeType recordChangeTypeFromOpType(OpType opType) {
+  return switch (opType) {
+    OpType.insert => RecordChangeType.insert,
+    OpType.update => RecordChangeType.update,
+    OpType.delete => RecordChangeType.delete,
+    OpType.gone => RecordChangeType.gone,
+    OpType.compensation => RecordChangeType.compensation,
+  };
+}
+
+class RecordChange with EquatableMixin {
+  final Record primaryKey;
+  final RecordChangeType type;
+
+  RecordChange({required this.primaryKey, required this.type});
+
+  @override
+  List<Object?> get props => [primaryKey, type];
+
+  Map<String, Object?> toMap() {
+    return {
+      'primaryKey': primaryKey,
+      'type': type.name.toUpperCase(),
+    };
+  }
+}
+
 class Change with EquatableMixin {
   final QualifiedTablename qualifiedTablename;
+  // rowid of each oplog entry for the changes - availiable only for local changes
   List<RowId>? rowids;
+  List<RecordChange>? recordChanges;
 
   Change({
     required this.qualifiedTablename,
     this.rowids,
+    this.recordChanges,
   });
 
   @override
-  List<Object?> get props => [qualifiedTablename, rowids];
+  List<Object?> get props => [qualifiedTablename, rowids, recordChanges];
 
   Map<String, Object?> toMap() {
     return {
       'qualifiedTablename': qualifiedTablename.toString(),
       'rowids': rowids,
+      'recordChanges': recordChanges?.map((c) => c.toMap()).toList(),
     };
   }
 }
 
+enum ChangeOrigin { local, remote, initial }
+
 class ChangeNotification extends Notification {
   final DbName dbName;
   final List<Change> changes;
+  final ChangeOrigin origin;
 
-  ChangeNotification({required this.dbName, required this.changes});
+  ChangeNotification({
+    required this.dbName,
+    required this.changes,
+    required this.origin,
+  });
 
   Map<String, Object?> toMap() {
     return {
@@ -116,7 +164,11 @@ abstract class Notifier {
   // When Satellite detects actual data changes in the oplog for a given
   // database, it replicates it and calls  `actuallyChanged` with the list
   // of changes.
-  void actuallyChanged(DbName dbName, List<Change> changes);
+  void actuallyChanged(
+    DbName dbName,
+    List<Change> changes,
+    ChangeOrigin origin,
+  );
 
   // Reactive hooks then subscribe to "data has actually changed" notifications,
   // using the info to trigger re-queries, if the changes affect databases and
@@ -125,12 +177,10 @@ abstract class Notifier {
   UnsubscribeFunction subscribeToDataChanges(ChangeCallback callback);
 
   // Notification for network connectivity state changes.
-  // A connectivity change s can be triggered manually,
-  // or automatically in consequence of internal client events.
-  // 'available': network is, or has become, available
+  // A connectivity change is automatically triggered in consequence of internal client events.
   // 'connected': connection to Electric established
-  // 'disconnected': Electric is unreachable, or network is unavailable
-  // 'error': disconnected with an error (TODO: add error info)
+  // 'disconnected': Electric is unreachable, or network is unavailable.
+  //                 A reason for the disconnection can be provided.
   void connectivityStateChanged(String dbName, ConnectivityState state);
   UnsubscribeFunction subscribeToConnectivityStateChanges(
     ConnectivityStateChangeCallback callback,

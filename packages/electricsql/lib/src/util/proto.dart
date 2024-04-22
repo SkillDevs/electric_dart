@@ -23,7 +23,8 @@ enum SatMsgType {
   shapeDataBegin(code: 17),
   shapeDataEnd(code: 18),
   rpcRequest(code: 21),
-  rpcResponse(code: 22);
+  rpcResponse(code: 22),
+  opLogAck(code: 23);
 
   const SatMsgType({
     required this.code,
@@ -60,6 +61,8 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
       return SatRpcRequest.fromBuffer(data);
     case SatMsgType.rpcResponse:
       return SatRpcResponse.fromBuffer(data);
+    case SatMsgType.opLogAck:
+      return SatOpLogAck.fromBuffer(data);
   }
 }
 
@@ -84,6 +87,8 @@ SatMsgType? getTypeFromSatObject(Object object) {
     return SatMsgType.rpcRequest;
   } else if (object is SatRpcResponse) {
     return SatMsgType.rpcResponse;
+  } else if (object is SatOpLogAck) {
+    return SatMsgType.opLogAck;
   }
 
   return null;
@@ -158,6 +163,10 @@ const Map<SatSubsResp_SatSubsError_ShapeReqError_Code, SatelliteErrorCode>
   SatSubsResp_SatSubsError_ShapeReqError_Code
           .DUPLICATE_TABLE_IN_SHAPE_DEFINITION:
       SatelliteErrorCode.duplicateTableInShapeDefinition,
+  SatSubsResp_SatSubsError_ShapeReqError_Code.INVALID_WHERE_CLAUSE:
+      SatelliteErrorCode.invalidWhereClauseInShapeDefinition,
+  SatSubsResp_SatSubsError_ShapeReqError_Code.INVALID_INCLUDE_TREE:
+      SatelliteErrorCode.invalidIncludeTreeInShapeDefinition,
 };
 
 const Map<SatSubsDataError_Code, SatelliteErrorCode> subsDataErrorToSatError = {
@@ -260,16 +269,12 @@ List<SatShapeReq> shapeRequestToSatShapeReq(List<ShapeRequest> shapeRequests) {
   final shapeReqs = <SatShapeReq>[];
   for (final sr in shapeRequests) {
     final requestId = sr.requestId;
-    final selects = sr.definition.selects.map(
-      (s) => SatShapeDef_Select(
-        tablename: s.tablename,
-      ),
-    );
-    final shapeDefinition = SatShapeDef(selects: selects);
 
     final req = SatShapeReq(
       requestId: requestId,
-      shapeDefinition: shapeDefinition,
+      shapeDefinition: SatShapeDef(
+        selects: [sr.definition.toProto()],
+      ),
     );
     shapeReqs.add(req);
   }
@@ -288,7 +293,7 @@ String msgToString(Object message) {
   } else if (message is SatInStartReplicationReq) {
     final schemaVersion =
         message.hasSchemaVersion() ? ' schema: ${message.schemaVersion},' : '';
-    return '#SatInStartReplicationReq{lsn: ${base64.encode(message.lsn)},$schemaVersion subscriptions: [${message.subscriptionIds}]}';
+    return '#SatInStartReplicationReq{lsn: ${base64.encode(message.lsn)},$schemaVersion subscriptions: ${message.subscriptionIds}}';
   } else if (message is SatInStopReplicationReq) {
     return '#SatInStopReplicationReq{}';
   } else if (message is SatInStopReplicationResp) {
@@ -299,7 +304,7 @@ String msgToString(Object message) {
     final cols = message.columns
         .map((x) => '${x.name}: ${x.type}${x.primaryKey ? ' PK' : ''}')
         .join(', ');
-    return '#SatRelation{for: ${message.schemaName}.${message.tableName}, as: ${message.relationId}, cols: [$cols]}';
+    return '#SatRelation{for: ${message.schemaName}.${message.tableName}, as: ${message.relationId}, cols: $cols}';
   } else if (message is SatSubsReq) {
     return '#SatSubsReq{id: ${message.subscriptionId}, shapes: ${message.shapeRequests.map((r) => r.writeToJson()).toList()}}';
   } else if (message is SatSubsResp) {
@@ -307,7 +312,7 @@ String msgToString(Object message) {
       final shapeErrors = message.err.shapeRequestError.map(
         (x) => '${x.requestId}: ${x.code.name} (${x.message})',
       );
-      return '#SatSubsResp{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: [$shapeErrors]}';
+      return '#SatSubsResp{id: ${message.subscriptionId}, err: ${message.err.code.name} (${message.err.message}), shapes: $shapeErrors}';
     } else {
       return '#SatSubsResp{id: ${message.subscriptionId}}';
     }
@@ -316,7 +321,7 @@ String msgToString(Object message) {
       (x) => '${x.requestId}: ${x.code.name} (${x.message})',
     );
     final code = message.code.name;
-    return '#SatSubsDataError{id: ${message.subscriptionId}, code: $code, msg: "${message.message}", errors: [$shapeErrors]}';
+    return '#SatSubsDataError{id: ${message.subscriptionId}, code: $code, msg: "${message.message}", errors: $shapeErrors}';
   } else if (message is SatSubsDataBegin) {
     return '#SatSubsDataBegin{id: ${message.subscriptionId}, lsn: ${base64.encode(message.lsn)}}';
   } else if (message is SatSubsDataEnd) {
@@ -333,6 +338,8 @@ String msgToString(Object message) {
     return '#SatRpcRequest{method: ${message.method}, requestId: ${message.requestId}}';
   } else if (message is SatRpcResponse) {
     return '#SatRpcResponse{method: ${message.method}, requestId: ${message.requestId}${message.hasError() ? ', error: ${msgToString(message.error)}' : ''}}';
+  } else if (message is SatOpLogAck) {
+    return '#SatOpLogAck{lsn: ${base64.encode(message.lsn)}, txid: ${message.transactionId}}';
   }
 
   assert(false, "Can't convert ${message.runtimeType} to string");
@@ -345,16 +352,28 @@ String opToString(SatTransOp op) {
   }
   if (op.hasCommit()) return '#Commit{lsn: ${base64.encode(op.commit.lsn)}}';
   if (op.hasInsert()) {
-    return '#Insert{for: ${op.insert.relationId}, tags: [${op.insert.tags}], new: [${op.insert.hasRowData() ? rowToString(op.insert.rowData) : ''}]}';
+    return '#Insert{for: ${op.insert.relationId}, tags: ${op.insert.tags}, new: [${op.insert.hasRowData() ? rowToString(op.insert.rowData) : ''}]}';
   }
   if (op.hasUpdate()) {
-    return '#Update{for: ${op.update.relationId}, tags: [${op.update.tags}], new: [${op.update.hasRowData() ? rowToString(op.update.rowData) : ''}], old: data: [${op.update.hasOldRowData() ? rowToString(op.update.oldRowData) : ''}]}';
+    return '#Update{for: ${op.update.relationId}, tags: ${op.update.tags}, new: [${op.update.hasRowData() ? rowToString(op.update.rowData) : ''}], old: data: [${op.update.hasOldRowData() ? rowToString(op.update.oldRowData) : ''}]}';
   }
   if (op.hasDelete()) {
-    return '#Delete{for: ${op.delete.relationId}, tags: [${op.delete.tags}], old: [${op.delete.hasOldRowData() ? rowToString(op.delete.oldRowData) : ''}]}';
+    return '#Delete{for: ${op.delete.relationId}, tags: ${op.delete.tags}, old: [${op.delete.hasOldRowData() ? rowToString(op.delete.oldRowData) : ''}]}';
+  }
+  if (op.hasCompensation()) {
+    return '#Compensation{for: ${op.compensation.relationId}, pk: ${rowToString(op.compensation.pkData)}, tags: ${op.compensation.tags}}';
+  }
+  if (op.hasGone()) {
+    return '#Gone{for: ${op.gone.relationId}, pk: ${rowToString(op.gone.pkData)}}';
   }
   if (op.hasMigrate()) {
     return '#Migrate{vsn: ${op.migrate.version}, for: ${op.migrate.table.name}, stmts: [${op.migrate.stmts.map((x) => x.sql.replaceAll('\n', '\\n')).join('; ')}]}';
+  }
+  if (op.hasAdditionalBegin()) {
+    return '#AdditionalBegin{ref: ${op.additionalBegin.ref}}';
+  }
+  if (op.hasAdditionalCommit()) {
+    return '#AdditionalCommit{ref: ${op.additionalCommit.ref}}';
   }
   return '';
 }
@@ -363,7 +382,7 @@ String rowToString(SatOpRow row) {
   return row.values
       .mapIndexed(
         (i, x) => getMaskBit(row.nullsBitmask, i) == 0
-            ? json.encode(TypeDecoder.text(x))
+            ? json.encode(TypeDecoder.text(x, allowMalformed: true))
             : '∅',
       )
       .join(', ');

@@ -1,21 +1,22 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/prisma_schema_parser.dart';
 import 'package:electricsql_cli/src/util.dart';
-import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart';
 import 'package:recase/recase.dart';
 
 // Version of Prisma supported by the Electric Proxy
-const String _kPrismaVersion = '5.2.0';
+const String _kPrismaVersion = '4.8.1';
 const int _kNodeVersion = 20;
 
 const _kPrismaCLIDockerfile = '''
-FROM node:$_kNodeVersion-alpine
+FROM node:$_kNodeVersion
 
 RUN npm install -g prisma@$_kPrismaVersion
 
@@ -26,7 +27,7 @@ ENTRYPOINT ["prisma"]
 
 /// Creates a fresh Prisma schema in the provided folder.
 /// The Prisma schema is initialised with a generator and a datasource.
-Future<File> createPrismaSchema(
+Future<File> createIntrospectionSchema(
   Directory folder, {
   required Config config,
 }) async {
@@ -36,14 +37,10 @@ Future<File> createPrismaSchema(
 
   final proxyUrl = buildProxyUrlForIntrospection(config);
 
-  // RelationMode = "prisma" is used so that "array like" foreign key relations
-  // are not created in the prisma schema
-
   final schema = '''
 datasource db {
   provider = "postgresql"
   url      = "$proxyUrl"
-  relationMode = "prisma"
 }
 ''';
 
@@ -173,15 +170,19 @@ DriftSchemaInfo extractInfoFromPrismaSchema(
 
     final className = tableGenOpts?.driftTableName ?? modelName.pascalCase;
 
+    final colsAndRels = _extractFromModel(
+      e,
+      e.fields,
+      genOpts: genOpts,
+      driftEnums: driftEnums,
+    );
+
     return DriftTableInfo(
+      prismaModelName: modelName,
       tableName: tableName,
       dartClassName: className,
-      columns: _prismaFieldsToColumns(
-        e,
-        e.fields,
-        genOpts: genOpts,
-        driftEnums: driftEnums,
-      ).toList(),
+      columns: colsAndRels.columns,
+      relations: colsAndRels.relations,
     );
   }).toList();
 
@@ -202,7 +203,7 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
 
       final pgNameCamel = pgName.camelCase;
 
-      final String enumFieldName = _ensureValidDartIdentifier(pgNameCamel);
+      final String enumFieldName = ensureValidDartIdentifier(pgNameCamel);
 
       // Prisma could reuse the name of the field for different enum values
       final fieldFreqs = <String, int>{};
@@ -223,7 +224,7 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
         if (fieldFreqs[origField]! > 1) {
           field = '$field\$${usedNTimes + 1}';
         }
-        final dartVal = _ensureValidDartIdentifier(field.camelCase);
+        final dartVal = ensureValidDartIdentifier(field.camelCase);
 
         usedDartValuesFreqs[origField] = usedNTimes + 1;
         return (dartVal: dartVal, pgVal: pgValue);
@@ -243,32 +244,69 @@ Map<String, DriftEnum> _buildDriftEnums(List<EnumPrisma> enums) {
   );
 }
 
-Iterable<DriftColumn> _prismaFieldsToColumns(
+class _ColumnsAndRelations {
+  final List<DriftColumn> columns;
+  final List<DriftRelationInfo> relations;
+
+  _ColumnsAndRelations(this.columns, this.relations);
+}
+
+_ColumnsAndRelations _extractFromModel(
   Model model,
   List<Field> fields, {
   required ElectricDriftGenOpts? genOpts,
   required Map<String, DriftEnum> driftEnums,
-}) sync* {
+}) {
   final primaryKeyFields = _getPrimaryKeysFromModel(model);
 
+  final List<DriftColumn> columns = [];
+  final List<DriftRelationInfo> relations = [];
+
   for (final field in fields) {
-    if (field.type.endsWith('[]')) {
-      // No array types
-      continue;
-    }
-
-    if (field.attributes.any((a) => a.type == '@relation')) {
-      // No relations
-      continue;
-    }
-
     final fieldName = field.field;
+
+    final prismaType = field.type;
+
+    final isArrayType = prismaType.endsWith('[]');
+
+    final nonNullableType = _getNonNullableType(
+      isArrayType ? field.type.substring(0, field.type.length - 2) : prismaType,
+    );
+
+    final driftType = _convertPrismaTypeToDrift(
+      nonNullableType,
+      field.attributes,
+      driftEnums,
+      genOpts,
+    );
+
+    // Handle relations
+    if (isArrayType || driftType == null) {
+      final relationAttr = field.attributes
+          .firstWhereOrNull((element) => element.type == '@relation');
+
+      if (relationAttr != null &&
+          relationAttr.args.any((arg) => arg.startsWith('fields:'))) {
+        // Outgoing relation
+        relations.add(
+          _extractOutgoindRelation(model, field, nonNullableType, relationAttr),
+        );
+      } else {
+        // Incoming relation
+        relations.add(
+          _extractIncomingRelation(model, field, nonNullableType, relationAttr),
+        );
+      }
+
+      continue;
+    }
+
     String columnName = fieldName;
 
-    // if (columnName == 'electric_user_id') {
-    //   // Don't include "electric_user_id" special column in the client schema
-    //   continue;
-    // }
+    if (columnName == 'electric_user_id') {
+      // Don't include "electric_user_id" special column in the client schema
+      continue;
+    }
 
     final mapAttr = field.attributes
         .where(
@@ -287,43 +325,141 @@ Iterable<DriftColumn> _prismaFieldsToColumns(
     // First check if the column has a custom name
     dartName = columnGenOpts?.driftColumnName;
 
-    dartName ??= _ensureValidDartIdentifier(
+    dartName ??= ensureValidDartIdentifier(
       fieldName.camelCase,
       isReservedWord: _isInvalidDartIdentifierForDriftTable,
     );
 
     final bool isPrimaryKey = primaryKeyFields.contains(fieldName);
 
-    final prismaType = field.type;
-    final nonNullableType = prismaType.endsWith('?')
-        ? prismaType.substring(0, prismaType.length - 1)
-        : prismaType;
-
-    final driftType = _convertPrismaTypeToDrift(
-      nonNullableType,
-      field.attributes,
-      driftEnums,
-      genOpts,
-    );
     String? enumPgType;
     if (driftType == DriftElectricColumnType.enumT) {
       final DriftEnum driftEnum = driftEnums[nonNullableType]!;
       enumPgType = driftEnum.pgName;
     }
 
-    yield DriftColumn(
-      columnName: columnName,
-      dartName: dartName,
-      type: driftType,
-      isNullable: field.type.endsWith('?'),
-      isPrimaryKey: isPrimaryKey,
-      // If the type is an enum, hold the enum name in postgres
-      enumPgType: enumPgType,
+    columns.add(
+      DriftColumn(
+        prismaFieldName: fieldName,
+        columnName: columnName,
+        dartName: dartName,
+        type: driftType,
+        isNullable: field.type.endsWith('?'),
+        isPrimaryKey: isPrimaryKey,
+        // If the type is an enum, hold the enum name in postgres
+        enumPgType: enumPgType,
+      ),
     );
+  }
+
+  return _ColumnsAndRelations(columns, relations);
+}
+
+DriftRelationInfo _extractOutgoindRelation(
+  Model model,
+  Field field,
+  String nonNullableType,
+  Attribute relationAttr,
+) {
+  final fieldName = field.field;
+  final fieldNameDart = ensureValidDartIdentifier(fieldName.camelCase);
+  final relatedModel = nonNullableType;
+
+  final List<String> fieldsInRel =
+      _extractFromList(_getPrismaRelationValue(relationAttr, 'fields'));
+  final List<String> referencesInRel =
+      _extractFromList(_getPrismaRelationValue(relationAttr, 'references'));
+
+  if (fieldsInRel.length != 1 || referencesInRel.length != 1) {
+    throw Exception(
+      'Composite FKs are not supported yet. Model: ${model.name} - Field: $fieldName',
+    );
+  }
+
+  final String relationName = _extractExplicitRelationName(relationAttr) ??
+      _buildRelationName(
+        originModel: model.name,
+        relatedModel: relatedModel,
+      );
+
+  final fromField = fieldsInRel.first;
+  final toField = referencesInRel.first;
+
+  return DriftRelationInfo(
+    relationField: fieldName,
+    relationFieldDartName: fieldNameDart,
+    relatedModel: relatedModel,
+    fromField: fromField,
+    toField: toField,
+    relationName: relationName,
+  );
+}
+
+DriftRelationInfo _extractIncomingRelation(
+  Model model,
+  Field field,
+  String nonNullableType,
+  Attribute? relationAttr,
+) {
+  final fieldName = field.field;
+  final fieldNameDart = ensureValidDartIdentifier(fieldName.camelCase);
+  final relatedModel = nonNullableType;
+
+  final String relationName = (relationAttr != null
+          ? _extractExplicitRelationName(relationAttr)
+          : null) ??
+      _buildRelationName(
+        originModel: relatedModel,
+        relatedModel: model.name,
+      );
+
+  return DriftRelationInfo(
+    relationField: fieldName,
+    relationFieldDartName: fieldNameDart,
+    relatedModel: relatedModel,
+    fromField: '',
+    toField: '',
+    relationName: relationName,
+  );
+}
+
+String _buildRelationName({
+  required String originModel,
+  required String relatedModel,
+}) {
+  return '${originModel.pascalCase}To${relatedModel.pascalCase}';
+}
+
+String? _extractExplicitRelationName(Attribute relationAttr) {
+  final args = relationAttr.args;
+
+  final nameArg = args.firstOrNull;
+  if (nameArg == null) {
+    return null;
+  }
+
+  try {
+    return extractStringLiteral(nameArg);
+  } catch (e) {
+    return null;
   }
 }
 
-DriftElectricColumnType _convertPrismaTypeToDrift(
+String _getPrismaRelationValue(Attribute relationAttr, String name) {
+  final key = '$name:';
+  final String value =
+      relationAttr.args.firstWhere((arg) => arg.startsWith(key));
+  return value.substring(key.length).trim();
+}
+
+String _getNonNullableType(String prismaType) {
+  final nonNullableType = prismaType.endsWith('?')
+      ? prismaType.substring(0, prismaType.length - 1)
+      : prismaType;
+  return nonNullableType;
+}
+
+DriftElectricColumnType? _convertPrismaTypeToDrift(
   String nonNullableType,
   List<Attribute> attrs,
   Map<String, DriftEnum> driftEnums,
@@ -396,8 +532,10 @@ DriftElectricColumnType _convertPrismaTypeToDrift(
         return DriftElectricColumnType.bigint;
       }
       return DriftElectricColumnType.int8;
+    case 'Bytes':
+      return DriftElectricColumnType.blob;
     default:
-      throw Exception('Unknown Prisma type: $nonNullableType');
+      return null;
   }
 }
 
@@ -419,16 +557,27 @@ Set<String> _getPrimaryKeysFromModel(Model m) {
     'Expected @@id to have arguments in the form of [field1, field2, ...]',
   );
 
-  final compositeFields = modelIdAttrArgs
-      .substring(1, modelIdAttrArgs.length - 1)
-      .split(',')
-      .map((s) => s.trim())
-      .toSet();
+  final compositeFields = _extractFromList(modelIdAttrArgs);
 
-  return compositeFields.toSet()..addAll(idFieldsSet);
+  return <String>{
+    ...compositeFields,
+    ...idFieldsSet,
+  };
 }
 
-String _ensureValidDartIdentifier(
+List<String> _extractFromList(String rawListStr) {
+  assert(
+    rawListStr.startsWith('[') && rawListStr.endsWith(']'),
+    'Expected value to be a list in the form of a String',
+  );
+  return rawListStr
+      .substring(1, rawListStr.length - 1)
+      .split(',')
+      .map((s) => s.trim())
+      .toList();
+}
+
+String ensureValidDartIdentifier(
   String name, {
   bool Function(String)? isReservedWord,
   String suffix = '\$',
@@ -456,6 +605,9 @@ bool _isInvalidDartIdentifier(String name) {
     'null',
     'true',
     'false',
+    'class',
+    'mixin',
+    'enum',
   ].contains(name);
 }
 

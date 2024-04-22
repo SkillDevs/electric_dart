@@ -8,7 +8,7 @@ MAKE_COMMAND=test_client_only
 for i in $(seq 1 $ATTEMPTS); do
     echo "Attempt $i"
 
-    if [ $i -eq 1 ]; then
+    if [ "$i" -eq 1 ]; then
         make $MAKE_COMMAND
     else
         TEST="--rerun=fail" make test_only_custom

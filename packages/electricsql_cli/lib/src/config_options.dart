@@ -57,7 +57,8 @@ final configOptions = <String, ConfigOption<Object>>{
     valueTypeName: 'hostname',
     doc: 'Hostname the Electric service is running on.',
     groups: ['client', 'proxy'],
-    defaultValueFun: (_) => defaultServiceUrlPart('host', 'localhost'),
+    inferVal: (options) => inferServiceUrlPart('host', options: options),
+    defaultValue: 'localhost',
   ),
   'PG_PROXY_HOST': ConfigOption<String>(
     valueTypeName: 'hostname',
@@ -67,6 +68,7 @@ final configOptions = <String, ConfigOption<Object>>{
         ' '
         'If using the proxy-tunnel, this should be the hostname of the tunnel.',
     groups: ['client', 'proxy'],
+    inferVal: (options) => inferProxyUrlPart('host', options: options),
     defaultValueFun: (options) => getConfigValue('SERVICE_HOST', options),
   ),
 
@@ -100,56 +102,87 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'DATABASE_HOST': ConfigOption<String>(
     doc: 'Hostname of the database server.',
-    defaultValueFun: (_) => defaultDbUrlPart('host', 'localhost'),
+    inferVal: (options) => inferDbUrlPart('host', options: options),
+    defaultValue: 'localhost',
     groups: ['database'],
   ),
   'DATABASE_PORT': ConfigOption<int>(
     doc: 'Port number of the database server.',
-    defaultValueFun: (_) => defaultDbUrlPart('port', 5432),
+    inferVal: (options) => inferDbUrlPart('port'),
+    defaultValue: 5432,
     groups: ['database'],
   ),
   'DATABASE_USER': ConfigOption<String>(
     doc: 'Username to connect to the database with.',
-    defaultValueFun: (_) => defaultDbUrlPart('user', 'postgres'),
+    inferVal: (options) => inferDbUrlPart('user', options: options),
+    defaultValue: 'postgres',
     groups: ['database'],
   ),
   'DATABASE_PASSWORD': ConfigOption<String>(
     doc: 'Password to connect to the database with.',
-    defaultValueFun: (_) => defaultDbUrlPart('password', 'db_password'),
+    inferVal: (options) => inferDbUrlPart('password', options: options),
+    defaultValue: 'db_password',
     groups: ['database'],
   ),
   'DATABASE_NAME': ConfigOption<String>(
     doc: 'Name of the database to connect to.',
-    defaultValueFun: (_) =>
-        defaultDbUrlPart('dbName', getAppName() ?? 'electric'),
+    inferVal: (options) => inferDbUrlPart(
+      'dbName',
+      options: options,
+      defaultValue: inferProxyUrlPart('dbName', options: options),
+    ),
+    defaultValueFun: (_) => getAppName() ?? 'electric',
     groups: ['database', 'client', 'proxy'],
   ),
 
   // *** Electric options ***
   'DATABASE_REQUIRE_SSL': ConfigOption<bool>(
+    // NOTE(msfstef): differs from Electric's 'true' default to reduce
+    // friction to getting set up with electric
     defaultValue: false,
     doc: 'Require SSL for the connection to the database.',
     groups: ['electric'],
   ),
   'DATABASE_USE_IPV6': ConfigOption<bool>(
-    defaultValue: false,
+    defaultValue: true,
     doc:
-        'Set if your database is only accessible over IPv6. This is the case with '
-        'Fly Postgres, for example.',
+        'Set to false to stop Electric from trying to connect to the database over IPv6. '
+        'By default, it will try to resolve the hostname from DATABASE_URL to an '
+        'IPv6 address, falling back to IPv4 in case that fails.',
     groups: ['electric'],
   ),
   'ELECTRIC_USE_IPV6': ConfigOption<bool>(
-    defaultValue: false,
+    defaultValue: true,
+    doc: 'Set to false to force Electric to only listen on IPv4 interfaces.'
+        '\n'
+        'By default, Electric will accept inbound connections over both IPv6 and IPv4 '
+        'when running on Linux. On Windows and some BSD systems inbound connections '
+        'over IPv4 will not be accepted unless this option is disabled.',
+    groups: ['electric'],
+  ),
+  'ELECTRIC_WRITE_TO_PG_MODE': ConfigOption<String>(
+    defaultValue: 'logical_replication',
+    valueTypeName: 'logical_replication | direct_writes',
     doc:
-        'Make Electric listen on :: instead of 0.0.0.0. On Linux this allows inbound '
-        'connections over both IPv6 and IPv4. On Windows and some BSD systems inbound '
-        'connections will only be accepted over IPv6 when this setting is enabled.',
+        'In logical_replication mode, Electric provides a logical replication publisher '
+        'service over TCP that speaks the Logical Streaming Replication Protocol. '
+        'Postgres connects to Electric and establishes a subscription to this. '
+        'Writes are then streamed in and applied using logical replication.'
+        '\n'
+        'In direct_writes mode, Electric writes data to Postgres using a standard '
+        'interactive client connection. This avoids the need for Postgres to be '
+        'able to connect to Electric and reduces the permissions required for the '
+        'database user that Electric connects to Postgres as.'
+        '\n'
+        'CAUTION: The mode you choose affects your networking config and '
+        'database user permissions.',
     groups: ['electric'],
   ),
   'LOGICAL_PUBLISHER_HOST': ConfigOption<String>(
     valueTypeName: 'url',
     doc:
-        'Host of this electric instance for the reverse connection from Postgres.',
+        'Host of this electric instance for the reverse connection from Postgres. '
+        'Required if ELECTRIC_WRITE_TO_PG_MODE is set to logical_replication.',
     groups: ['electric'],
   ),
   'LOGICAL_PUBLISHER_PORT': ConfigOption<int>(
@@ -159,7 +192,8 @@ final configOptions = <String, ConfigOption<Object>>{
     groups: ['electric'],
   ),
   'HTTP_PORT': ConfigOption<int>(
-    defaultValueFun: (_) => defaultServiceUrlPart('port', 5133),
+    inferVal: (options) => inferServiceUrlPart('port', options: options),
+    defaultValue: 5133,
     valueTypeName: 'port',
     doc:
         'Port for HTTP connections. Includes client websocket connections on /ws, and '
@@ -167,18 +201,26 @@ final configOptions = <String, ConfigOption<Object>>{
     groups: ['electric', 'client'],
   ),
   'PG_PROXY_PORT': ConfigOption<String>(
+    inferVal: (options) {
+      final inferred = inferProxyUrlPart<int>('port', options: options);
+      // ignore: prefer_null_aware_operators
+      return inferred == null ? null : inferred.toString();
+    },
     defaultValue: '65432',
     valueTypeName: 'port',
     doc: 'Port number for connections to the Postgres migration proxy.',
     groups: ['electric', 'client', 'proxy'],
   ),
   'PG_PROXY_PASSWORD': ConfigOption<String>(
+    inferVal: (options) => inferProxyUrlPart('password', options: options),
     defaultValue: 'proxy_password',
     valueTypeName: 'password',
     doc:
         'Password to use when connecting to the Postgres proxy via psql or any other Postgres client.',
     groups: ['electric', 'client', 'proxy'],
   ),
+  // NOTE(msfstef): differs from Electric's 'secure' default to reduce
+  // friction to getting set up with electric
   'AUTH_MODE': ConfigOption<String>(
     defaultValue: 'insecure',
     valueTypeName: 'secure | insecure',

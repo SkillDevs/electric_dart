@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:electricsql/drivers/drift.dart';
+import 'package:electricsql/satellite.dart';
 import 'package:satellite_dart_client/client_commands.dart';
 import 'package:satellite_dart_client/cli/reader.dart';
 import 'package:satellite_dart_client/cli/tokens.dart';
@@ -61,17 +62,37 @@ Future<void> start() async {
           (value) => value,
         );
       } else if (name == "electrify_db") {
-        await processCommand4Params<ClientDatabase, String, int, List<dynamic>,
-            DriftElectricClient>(
+        await processCommand5Params<ClientDatabase, String, int, List<dynamic>,
+            bool, MyDriftElectricClient>(
           state,
           command,
           electrifyDb,
         );
+      } else if (name == "sync_items_table") {
+        await processCommand2Params<MyDriftElectricClient, String, void>(
+          state,
+          command,
+          syncItemsTable,
+        );
+      } else if (name == "sync_other_items_table") {
+        await processCommand2Params<MyDriftElectricClient, String, void>(
+          state,
+          command,
+          syncOtherItemsTable,
+        );
       } else if (name == "sync_table") {
-        await processCommand2Params<DriftElectricClient, String, void>(
+        await processCommand1Param<String, void>(
           state,
           command,
           syncTable,
+        );
+      } else if (name == "low_level_subscribe") {
+        await processCommand2Params<MyDriftElectricClient, Map<String, Object?>,
+            void>(
+          state,
+          command,
+          (electric, shapeJson) =>
+              lowLevelSubscribe(electric, Shape.fromMap(shapeJson)),
         );
       } else if (name == "get_tables") {
         await processCommand1Param<DriftElectricClient, Rows>(
@@ -90,6 +111,15 @@ Future<void> start() async {
           state,
           command,
           getRows,
+        );
+      } else if (name == "print_num_rows") {
+        await processCommand2Params<DriftElectricClient, String, String>(
+          state,
+          command,
+          (electric, table) async {
+            final rows = await getRows(electric, table);
+            return 'There are ${rows.rows.length} rows in table $table';
+          },
         );
       } else if (name == "get_timestamps") {
         await processCommand1Param<MyDriftElectricClient, void>(
@@ -227,6 +257,17 @@ Future<void> start() async {
           command,
           getEnum,
         );
+      } else if (name == "get_blob") {
+        await processCommand2Params<MyDriftElectricClient, String, SingleRow>(
+            state, command, getBlob);
+      } else if (name == "write_blob") {
+        await processCommand3Params<MyDriftElectricClient, String,
+            List<dynamic>?, SingleRow>(
+          state,
+          command,
+          (electric, id, byteList) =>
+              writeBlob(electric, id, byteList?.cast<int>()),
+        );
       } else if (name == "get_items") {
         await processCommand1Param<MyDriftElectricClient, Rows>(
           state,
@@ -238,6 +279,12 @@ Future<void> start() async {
           state,
           command,
           getItemIds,
+        );
+      } else if (name == "exists_item_with_content") {
+        await processCommand2Params<MyDriftElectricClient, String, bool>(
+          state,
+          command,
+          existsItemWithContent,
         );
       } else if (name == "get_item_columns") {
         await processCommand3Params<MyDriftElectricClient, String, String,
@@ -284,6 +331,12 @@ Future<void> start() async {
           command,
           (electric, keys) => insertOtherItem(electric, keys.cast<String>()),
         );
+      } else if (name == "set_item_replication_transform") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          setItemReplicatonTransform,
+        );
       } else if (name == "stop") {
         await processCommand1Param<MyDriftElectricClient, void>(
           state,
@@ -296,11 +349,39 @@ Future<void> start() async {
           command,
           rawStatement,
         );
-      } else if (name == "change_connectivity") {
+      } else if (name == "connect") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          connect,
+        );
+      } else if (name == "disconnect") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          disconnect,
+        );
+      } else if (name == "reconnect") {
         await processCommand2Params<MyDriftElectricClient, String, void>(
           state,
           command,
-          changeConnectivity,
+          (electric, expRaw) async {
+            Duration? exp;
+            if (expRaw.isNotEmpty) {
+              if (!expRaw.endsWith('h')) {
+                throw Exception('Invalid duration $expRaw');
+              }
+              final hoursString = expRaw.substring(0, expRaw.length - 1);
+              exp = Duration(hours: int.parse(hoursString));
+            }
+            return await reconnect(electric, exp);
+          },
+        );
+      } else if (name == "custom_03_25_sync_items") {
+        await processCommand1Param<MyDriftElectricClient, void>(
+          state,
+          command,
+          custom0325SyncItems,
         );
       } else {
         throw Exception("Unknown command: $name");

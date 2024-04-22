@@ -10,7 +10,7 @@ test_only:
 	${LUX} --junit tests
 
 test_client_only:
-	${LUX} --junit tests/03*
+	${LUX} --junit tests/03*.lux
 
 test_only_custom:
 	${LUX} --junit ${TEST}

@@ -16,12 +16,7 @@ LUX_PATH=${E2E_ROOT}lux/bin/lux
 LUX=${LUX_PATH} --multiplier ${TIMEOUT_MULTIPLIER}
 
 DOCKER_REGISTRY  = europe-docker.pkg.dev/vaxine/vaxine-io
-DOCKER_REGISTRY2 = europe-docker.pkg.dev/vaxine/ci
-export BUILDER_IMAGE=${DOCKER_REGISTRY2}/electric-builder:latest
 
-export ELIXIR_VERSION=1.15.4
-export OTP_VERSION=25.3.2.4
-export DEBIAN_VERSION=bullseye-20230612-slim
 # using a realistic password for the proxy to prevent accidentally working tests 
 # with some default "password"
 export PG_PROXY_PASSWORD?=49_G1JYY0BXWldjnA2EFxhWl
@@ -80,8 +75,7 @@ log_dev_env:
 	docker compose -f ${DOCKER_COMPOSE_FILE} logs --no-color --follow pg_1
 
 start_electric_%:
-	docker compose -f ${DOCKER_COMPOSE_FILE} up --no-color --no-log-prefix -d electric_$*
-	docker compose -f ${DOCKER_COMPOSE_FILE} logs --no-color --follow electric_$*
+	docker compose -f ${DOCKER_COMPOSE_FILE} up --no-color --no-log-prefix electric_$*
 
 stop_electric_%:
 	docker compose -f ${DOCKER_COMPOSE_FILE} stop electric_$*

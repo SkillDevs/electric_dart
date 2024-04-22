@@ -1,3 +1,4 @@
+import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:equatable/equatable.dart';
 
@@ -5,17 +6,23 @@ const kSubscriptionDelivered = 'subscription_delivered';
 const kSubscriptionError = 'subscription_error';
 
 typedef SubscriptionId = String;
+typedef TableName = String;
+typedef ColumnName = String;
 
-typedef SubscriptionDeliveredCallback = void Function(SubscriptionData data);
+typedef SubscriptionDeliveredCallback = Future<void> Function(
+  SubscriptionData data,
+);
 typedef SubscriptionErrorCallback = void Function(SubscriptionErrorData error);
 
 class SubscriptionErrorData {
   final SubscriptionId? subscriptionId;
   final SatelliteException error;
+  final StackTrace stackTrace;
 
   SubscriptionErrorData({
     required this.subscriptionId,
     required this.error,
+    required this.stackTrace,
   });
 }
 
@@ -34,35 +41,78 @@ class UnsubscribeResponse with EquatableMixin {
   List<Object?> get props => [];
 }
 
-class ClientShapeDefinition with EquatableMixin {
-  final List<ShapeSelect> selects;
+class Shape with EquatableMixin {
+  final TableName tablename;
+  final List<Rel>? include;
+  final String? where;
 
-  ClientShapeDefinition({
-    required this.selects,
-  });
-
-  @override
-  List<Object?> get props => [selects];
+  Shape({required this.tablename, this.include, this.where});
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'selects': selects.map((x) => x.toMap()).toList(),
+    return {
+      'tablename': tablename,
+      if (where != null) 'where': where,
+      if (include != null) 'include': include?.map((e) => e.toMap()).toList(),
     };
   }
 
-  factory ClientShapeDefinition.fromMap(Map<String, dynamic> map) {
-    return ClientShapeDefinition(
-      selects: List<ShapeSelect>.from(
-        (map['selects'] as List<dynamic>).map<ShapeSelect>(
-          (x) => ShapeSelect.fromMap(x as Map<String, dynamic>),
-        ),
-      ),
+  factory Shape.fromMap(Map<String, dynamic> map) {
+    return Shape(
+      tablename: map['tablename']! as TableName,
+      where: map['where'] as String?,
+      include: (map['include'] as List<dynamic>?)
+          ?.map<Rel>(
+            (x) => Rel.fromMap(x as Map<String, dynamic>),
+          )
+          .toList(),
+    );
+  }
+
+  @override
+  List<Object?> get props => [tablename, include, where];
+
+  SatShapeDef_Select toProto() {
+    return SatShapeDef_Select(
+      tablename: tablename,
+      where: where,
+      include: include
+          ?.map(
+            (e) => SatShapeDef_Relation(
+              foreignKey: e.foreignKey,
+              select: e.select.toProto(),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class Rel with EquatableMixin {
+  final List<ColumnName> foreignKey; // allows composite FKs
+  final Shape select;
+
+  Rel({required this.foreignKey, required this.select});
+
+  @override
+  List<Object?> get props => [foreignKey, select];
+
+  Map<String, dynamic> toMap() {
+    return {
+      'foreignKey': foreignKey,
+      'select': select.toMap(),
+    };
+  }
+
+  factory Rel.fromMap(Map<String, dynamic> map) {
+    return Rel(
+      foreignKey: List<ColumnName>.from(map['foreignKey'] as List<dynamic>),
+      select: Shape.fromMap(map['select'] as Map<String, dynamic>),
     );
   }
 }
 
 sealed class ShapeRequestOrDefinition with EquatableMixin {
-  final ClientShapeDefinition definition;
+  final Shape definition;
 
   ShapeRequestOrDefinition({
     required this.definition,
@@ -105,32 +155,9 @@ class ShapeDefinition extends ShapeRequestOrDefinition {
   factory ShapeDefinition.fromMap(Map<String, dynamic> map) {
     return ShapeDefinition(
       uuid: map['uuid'] as String,
-      definition: ClientShapeDefinition.fromMap(
+      definition: Shape.fromMap(
         map['definition'] as Map<String, dynamic>,
       ),
-    );
-  }
-}
-
-class ShapeSelect with EquatableMixin {
-  final String tablename;
-
-  ShapeSelect({
-    required this.tablename,
-  });
-
-  @override
-  List<Object?> get props => [tablename];
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'tablename': tablename,
-    };
-  }
-
-  factory ShapeSelect.fromMap(Map<String, dynamic> map) {
-    return ShapeSelect(
-      tablename: map['tablename'] as String,
     );
   }
 }

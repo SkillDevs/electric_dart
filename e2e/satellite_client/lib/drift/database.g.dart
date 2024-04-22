@@ -158,10 +158,11 @@ class Item extends DataClass implements Insertable<Item> {
           Variable<String>(contentTextNullDefault);
     }
     if (!nullToAbsent || intvalueNull != null) {
-      map['intvalue_null'] = Variable<int>(intvalueNull);
+      map['intvalue_null'] = Variable<int>(intvalueNull, ElectricTypes.int4);
     }
     if (!nullToAbsent || intvalueNullDefault != null) {
-      map['intvalue_null_default'] = Variable<int>(intvalueNullDefault);
+      map['intvalue_null_default'] =
+          Variable<int>(intvalueNullDefault, ElectricTypes.int4);
     }
     return map;
   }
@@ -667,8 +668,9 @@ class Timestamp extends DataClass implements Insertable<Timestamp> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['created_at'] = Variable<DateTime>(createdAt, ElectricTypes.timestamp);
+    map['updated_at'] =
+        Variable<DateTime>(updatedAt, ElectricTypes.timestampTZ);
     return map;
   }
 
@@ -877,8 +879,8 @@ class Datetime extends DataClass implements Insertable<Datetime> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['d'] = Variable<DateTime>(d);
-    map['t'] = Variable<DateTime>(t);
+    map['d'] = Variable<DateTime>(d, ElectricTypes.date);
+    map['t'] = Variable<DateTime>(t, ElectricTypes.time);
     return map;
   }
 
@@ -1226,7 +1228,7 @@ class Uuid extends DataClass implements Insertable<Uuid> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
+    map['id'] = Variable<String>(id, ElectricTypes.uuid);
     return map;
   }
 
@@ -1400,10 +1402,10 @@ class Int extends DataClass implements Insertable<Int> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || i2 != null) {
-      map['i2'] = Variable<int>(i2);
+      map['i2'] = Variable<int>(i2, ElectricTypes.int2);
     }
     if (!nullToAbsent || i4 != null) {
-      map['i4'] = Variable<int>(i4);
+      map['i4'] = Variable<int>(i4, ElectricTypes.int4);
     }
     if (!nullToAbsent || i8 != null) {
       map['i8'] = Variable<BigInt>(i8);
@@ -1629,10 +1631,10 @@ class Float extends DataClass implements Insertable<Float> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || f4 != null) {
-      map['f4'] = Variable<double>(f4);
+      map['f4'] = Variable<double>(f4, ElectricTypes.float4);
     }
     if (!nullToAbsent || f8 != null) {
-      map['f8'] = Variable<double>(f8);
+      map['f8'] = Variable<double>(f8, ElectricTypes.float8);
     }
     return map;
   }
@@ -1836,10 +1838,10 @@ class Json extends DataClass implements Insertable<Json> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || js != null) {
-      map['js'] = Variable<Object>(js);
+      map['js'] = Variable<Object>(js, ElectricTypes.json);
     }
     if (!nullToAbsent || jsb != null) {
-      map['jsb'] = Variable<Object>(jsb);
+      map['jsb'] = Variable<Object>(jsb, ElectricTypes.jsonb);
     }
     return map;
   }
@@ -1983,7 +1985,7 @@ class $EnumsTable extends Enums with TableInfo<$EnumsTable, Enum> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'enums';
+  static const String $name = 'Enums';
   @override
   VerificationContext validateIntegrity(Insertable<Enum> instance,
       {bool isInserting = false}) {
@@ -2031,7 +2033,7 @@ class Enum extends DataClass implements Insertable<Enum> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     if (!nullToAbsent || c != null) {
-      map['c'] = Variable<DbColor>(c);
+      map['c'] = Variable<DbColor>(c, ElectricEnumTypes.color);
     }
     return map;
   }
@@ -2131,6 +2133,180 @@ class EnumsCompanion extends UpdateCompanion<Enum> {
   }
 }
 
+class $BlobsTable extends Blobs with TableInfo<$BlobsTable, Blob> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BlobsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _blob$Meta = const VerificationMeta('blob\$');
+  @override
+  late final GeneratedColumn<Uint8List> blob$ = GeneratedColumn<Uint8List>(
+      'blob', aliasedName, true,
+      type: DriftSqlType.blob, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [id, blob$];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'blobs';
+  @override
+  VerificationContext validateIntegrity(Insertable<Blob> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('blob')) {
+      context.handle(
+          _blob$Meta, blob$.isAcceptableOrUnknown(data['blob']!, _blob$Meta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Blob map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Blob(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      blob$: attachedDatabase.typeMapping
+          .read(DriftSqlType.blob, data['${effectivePrefix}blob']),
+    );
+  }
+
+  @override
+  $BlobsTable createAlias(String alias) {
+    return $BlobsTable(attachedDatabase, alias);
+  }
+
+  @override
+  bool get withoutRowId => true;
+}
+
+class Blob extends DataClass implements Insertable<Blob> {
+  final String id;
+  final Uint8List? blob$;
+  const Blob({required this.id, this.blob$});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || blob$ != null) {
+      map['blob'] = Variable<Uint8List>(blob$);
+    }
+    return map;
+  }
+
+  BlobsCompanion toCompanion(bool nullToAbsent) {
+    return BlobsCompanion(
+      id: Value(id),
+      blob$:
+          blob$ == null && nullToAbsent ? const Value.absent() : Value(blob$),
+    );
+  }
+
+  factory Blob.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Blob(
+      id: serializer.fromJson<String>(json['id']),
+      blob$: serializer.fromJson<Uint8List?>(json['blob\$']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'blob\$': serializer.toJson<Uint8List?>(blob$),
+    };
+  }
+
+  Blob copyWith({String? id, Value<Uint8List?> blob$ = const Value.absent()}) =>
+      Blob(
+        id: id ?? this.id,
+        blob$: blob$.present ? blob$.value : this.blob$,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Blob(')
+          ..write('id: $id, ')
+          ..write('blob\$: ${blob$}')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, $driftBlobEquality.hash(blob$));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Blob &&
+          other.id == this.id &&
+          $driftBlobEquality.equals(other.blob$, this.blob$));
+}
+
+class BlobsCompanion extends UpdateCompanion<Blob> {
+  final Value<String> id;
+  final Value<Uint8List?> blob$;
+  const BlobsCompanion({
+    this.id = const Value.absent(),
+    this.blob$ = const Value.absent(),
+  });
+  BlobsCompanion.insert({
+    required String id,
+    this.blob$ = const Value.absent(),
+  }) : id = Value(id);
+  static Insertable<Blob> custom({
+    Expression<String>? id,
+    Expression<Uint8List>? blob$,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (blob$ != null) 'blob': blob$,
+    });
+  }
+
+  BlobsCompanion copyWith({Value<String>? id, Value<Uint8List?>? blob$}) {
+    return BlobsCompanion(
+      id: id ?? this.id,
+      blob$: blob$ ?? this.blob$,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (blob$.present) {
+      map['blob'] = Variable<Uint8List>(blob$.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlobsCompanion(')
+          ..write('id: $id, ')
+          ..write('blob\$: ${blob$}')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$ClientDatabase extends GeneratedDatabase {
   _$ClientDatabase(QueryExecutor e) : super(e);
   late final $ItemsTable items = $ItemsTable(this);
@@ -2143,6 +2319,7 @@ abstract class _$ClientDatabase extends GeneratedDatabase {
   late final $FloatsTable floats = $FloatsTable(this);
   late final $JsonsTable jsons = $JsonsTable(this);
   late final $EnumsTable enums = $EnumsTable(this);
+  late final $BlobsTable blobs = $BlobsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2157,6 +2334,7 @@ abstract class _$ClientDatabase extends GeneratedDatabase {
         ints,
         floats,
         jsons,
-        enums
+        enums,
+        blobs
       ];
 }

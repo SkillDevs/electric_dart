@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
-import 'package:mason_logger/mason_logger.dart';
 
 class ShowConfigCommand extends Command<int> {
   ShowConfigCommand({

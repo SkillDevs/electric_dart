@@ -7,15 +7,16 @@ import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/configure/command_with_config.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/command_start.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/command_stop.dart';
+import 'package:electricsql_cli/src/commands/docker_commands/precheck.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/env.dart';
 import 'package:electricsql_cli/src/get_port.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util.dart';
 import 'package:http/http.dart' as http;
-import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
 
 const String defaultMigrationsFileName = 'migrations.dart';
@@ -58,7 +59,10 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
       )
       ..addFlag(
         'debug',
-        help: 'Optional flag to enable debug mode',
+        help: '''
+Optional flag to enable debug mode
+
+When enabled, the temporary migration files used to generate the client will be retained for inspection.''',
         defaultsTo: false,
         negatable: false,
       );
@@ -97,7 +101,7 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
       logger: _logger,
       driftSchemaGenOpts: _cliDriftGenOpts,
     );
-    return ExitCode.success.code;
+    return 0;
   }
 }
 
@@ -128,15 +132,15 @@ Future<void> runElectricCodeGeneration({
 
   final finalOutFolder = config.read<String>('CLIENT_PATH');
 
-  final valid = await _prechecks(
+  final String? checkErrorReason = await _prechecks(
     // If we run the migrations a temporary docker will be run, so no need to
     // check the input
     service: withMigrations != null ? null : finalService,
     outFolder: finalOutFolder,
     logger: finalLogger,
   );
-  if (!valid) {
-    throw ConfigException();
+  if (checkErrorReason != null) {
+    throw ConfigException(checkErrorReason);
   }
 
   final genCommandOpts = _GeneratorOpts(
@@ -150,42 +154,35 @@ Future<void> runElectricCodeGeneration({
   await _runGenerator(genCommandOpts);
 }
 
-Future<bool> _prechecks({
+Future<String?> _prechecks({
   required String? service,
   required String outFolder,
   required Logger logger,
 }) async {
   if (!(await _isDartProject())) {
-    logger.err('ERROR: This command must be run inside a Dart project');
-    return false;
+    return 'This command must be run inside a Dart project';
   }
 
   // Service might be null if the CLI creates a temporary docker with the service
   // to run the migrations
   if (service != null && !(await _isElectricServiceReachable(service))) {
-    logger.err('ERROR: Could not reach Electric service at $service');
-    return false;
+    return 'Could not reach Electric service at $service';
   }
 
   if (File(outFolder).existsSync() && FileSystemEntity.isFileSync(outFolder)) {
-    logger.err('ERROR: The output path $outFolder is a file');
-    return false;
+    return 'The output path $outFolder is a file';
   }
 
-  // Check that Docker is installed
-  final dockerRes = await Process.run('docker', ['--version']);
-  if (dockerRes.exitCode != 0) {
-    logger.err('ERROR: Could not run docker command');
-    logger.err(
-      'Docker is required in order to introspect the Postgres database with the Prisma CLI',
-    );
-    logger.err('Exit code: ${dockerRes.exitCode}');
-    logger.err('Stderr: ${dockerRes.stderr}');
-    logger.err('Stdout: ${dockerRes.stdout}');
-    return false;
+  // Check that a valid Docker is installed
+  final validDockerRes = await checkValidDockerVersion(
+    installReason:
+        'Docker is required in order to introspect the Postgres database with the Prisma CLI',
+  );
+  if (validDockerRes.errorReason != null) {
+    return validDockerRes.errorReason;
   }
 
-  return true;
+  return null;
 }
 
 Future<bool> _isDartProject() async {
@@ -263,13 +260,16 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
       logger.info('');
 
       if (migrateExitCode != 0) {
-        throw Exception(
-          'Migrations command exited with non-zero exit code: $migrateExitCode. Check the output above.',
+        logger.err(
+          'Failed to run migrations, --with-migrations command exited with error. Exit code: $migrateExitCode',
         );
+        exit(1);
       }
     }
     logger.info('Service URL: ${opts.config.read<String>('SERVICE')}');
-    logger.info('Proxy URL: ${buildProxyUrlForIntrospection(opts.config)}');
+    logger.info(
+      'Proxy URL: ${stripPasswordFromUrl(opts.config.read<String>('PROXY'))}',
+    );
 
     // Generate the client
     await _runGeneratorInner(opts);
@@ -295,6 +295,7 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
   // Create a unique temporary folder in which to save
   // intermediate files without risking collisions
   final tmpDir = await currentDir.createTemp('.electric_migrations_tmp_');
+  // ignore: unused_local_variable
   bool generationFailed = false;
 
   try {
@@ -318,7 +319,8 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       completeMsg: 'Prisma CLI installed',
     );
 
-    final prismaSchema = await createPrismaSchema(tmpDir, config: config);
+    final prismaSchema =
+        await createIntrospectionSchema(tmpDir, config: config);
 
     // Introspect the created DB to update the Prisma schema
     await wrapWithProgress(
@@ -328,20 +330,14 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       completeMsg: 'Database introspected',
     );
 
-    final prismaSchemaContent = prismaSchema.readAsStringSync();
-
     // print(prismaSchemaContent);
 
     final outFolder = config.read<String>('CLIENT_PATH');
 
-    final schemaInfo = extractInfoFromPrismaSchema(
-      prismaSchemaContent,
-      genOpts: opts.driftSchemaGenOpts,
-    );
-    final driftSchemaFile = resolveDriftSchemaFile(outFolder);
+    // Generate the Electric client from the given introspected schema
     await wrapWithProgress(
       logger,
-      () => buildDriftSchemaDartFile(schemaInfo, driftSchemaFile),
+      () => _generateClient(prismaSchema, outFolder, opts),
       progressMsg: 'Generating Drift DB schema',
       completeMsg: 'Drift DB schema generated',
     );
@@ -358,12 +354,26 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
     logger.err('generate command failed: $e');
     rethrow;
   } finally {
-    // Delete our temporary directory unless
-    // generation failed in debug mode
-    if (!generationFailed || !opts.debug) {
+    if (!opts.debug) {
       await tmpDir.delete(recursive: true);
     }
   }
+}
+
+Future<void> _generateClient(
+  File prismaSchema,
+  String outFolder,
+  _GeneratorOpts opts,
+) async {
+  final prismaSchemaContent = await prismaSchema.readAsString();
+
+  final schemaInfo = extractInfoFromPrismaSchema(
+    prismaSchemaContent,
+    genOpts: opts.driftSchemaGenOpts,
+  );
+  final driftSchemaFile = resolveDriftSchemaFile(outFolder);
+
+  await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
 }
 
 File resolveMigrationsFile(String outFolder) {
@@ -444,3 +454,19 @@ Future<Map<String, Object?>> withMigrationsConfig(String containerName) async {
 }
 
 final _random = Random();
+
+String stripPasswordFromUrl(String url) {
+  final parsed = Uri.parse(url);
+  String? newUserInfo;
+  if (parsed.userInfo.isNotEmpty) {
+    final splitted = parsed.userInfo.split(':');
+    if (splitted.length > 1) {
+      newUserInfo = '${splitted[0]}:********';
+    }
+  }
+  if (newUserInfo == null) {
+    return url;
+  } else {
+    return parsed.replace(userInfo: newUserInfo).toString();
+  }
+}

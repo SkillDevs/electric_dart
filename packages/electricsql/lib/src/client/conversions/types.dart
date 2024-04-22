@@ -14,6 +14,7 @@ enum PgType {
   uuid('UUID'),
   json('JSON'),
   jsonb('JSONB'),
+  bytea('BYTEA'),
   // DATES
   timestamp('TIMESTAMP'),
   timestampTz('TIMESTAMPTZ'),

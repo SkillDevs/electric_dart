@@ -1,5 +1,6 @@
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/auth/decode.dart';
 
 export 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart' show JWTAlgorithm;
 
@@ -40,6 +41,7 @@ Future<String> secureAuthToken({
 }
 
 Future<String> mockSecureAuthToken({
+  Duration? exp,
   String? iss,
   String? key,
 }) {
@@ -50,5 +52,43 @@ Future<String> mockSecureAuthToken({
     claims: {'sub': 'test-user'},
     iss: mockIss,
     key: mockKey,
+    exp: exp,
   );
+}
+
+DecodedJWT decodeToken(String token) {
+  final payload = jwtDecode(token);
+  if (payload['sub'] == null && payload['user_id'] == null) {
+    throw ArgumentError('Token does not contain a sub or user_id claim');
+  }
+
+  return DecodedJWT(
+    payload,
+    sub: payload['sub'] as String?,
+    userId: payload['user_id'] as String?,
+  );
+}
+
+/// Retrieves the user ID encoded in the JWT token
+/// @param token the encoded JWT token
+/// @returns {Uuid} the user ID found in the `sub` or `user_id` claim
+String decodeUserIdFromToken(String token) {
+  final decoded = decodeToken(token);
+
+  // `sub` is the standard claim, but `user_id` is also used in the Electric service
+  // We first check for sub, and if it's not present, we use user_id
+  return decoded.sub ?? decoded.userId!;
+}
+
+class DecodedJWT {
+  final Map<String, Object?> jwtPayload;
+
+  final String? sub;
+  final String? userId;
+
+  DecodedJWT(
+    this.jwtPayload, {
+    required this.sub,
+    required this.userId,
+  });
 }

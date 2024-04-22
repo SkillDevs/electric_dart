@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:electricsql/src/electric/adapter.dart' as adp;
+import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/types.dart';
 
-class DriftAdapter implements adp.DatabaseAdapter {
+class DriftAdapter implements DatabaseAdapter {
   final DatabaseConnectionUser db;
 
   DriftAdapter(this.db);
@@ -48,7 +48,7 @@ class DriftAdapter implements adp.DatabaseAdapter {
 
   @override
   Future<T> transaction<T>(
-    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+    void Function(DbTransaction tx, void Function(T res) setResult) f,
   ) async {
     final completer = Completer<T>();
 
@@ -64,7 +64,7 @@ class DriftAdapter implements adp.DatabaseAdapter {
   }
 }
 
-class Transaction implements adp.Transaction {
+class Transaction implements DbTransaction {
   final DriftAdapter adapter;
   final void Function(Object reason) signalFailure;
 
@@ -73,7 +73,7 @@ class Transaction implements adp.Transaction {
   @override
   void query(
     Statement statement,
-    void Function(adp.Transaction tx, List<Row> res) successCallback, [
+    void Function(DbTransaction tx, List<Row> res) successCallback, [
     void Function(Object error)? errorCallback,
   ]) {
     adapter.db
@@ -96,7 +96,7 @@ class Transaction implements adp.Transaction {
   @override
   void run(
     Statement statement,
-    void Function(adp.Transaction tx, RunResult result)? successCallback, [
+    void Function(DbTransaction tx, RunResult result)? successCallback, [
     void Function(Object error)? errorCallback,
   ]) {
     adapter.db

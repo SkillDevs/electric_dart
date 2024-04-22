@@ -4,20 +4,21 @@
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
+import 'package:electricsql/electricsql.dart';
 
 const kElectrifiedTables = [
   Todo,
   Todolist,
 ];
 
-class Todo extends Table {
-  TextColumn get id => text()();
+class Todo extends Table with ElectricTableMixin {
+  TextColumn get id => text().named('id')();
 
-  TextColumn get listid => text().nullable()();
+  TextColumn get listid => text().named('listid').nullable()();
 
   TextColumn get text$ => text().named('text').nullable()();
 
-  BoolColumn get completed => boolean()();
+  BoolColumn get completed => boolean().named('completed')();
 
   Column<DateTime> get editedAt =>
       customType(ElectricTypes.timestampTZ).named('edited_at')();
@@ -30,14 +31,17 @@ class Todo extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  @override
+  $TodoTableRelations get $relations => const $TodoTableRelations();
 }
 
-class Todolist extends Table {
-  TextColumn get id => text()();
+class Todolist extends Table with ElectricTableMixin {
+  TextColumn get id => text().named('id')();
 
-  TextColumn get filter => text().nullable()();
+  TextColumn get filter => text().named('filter').nullable()();
 
-  TextColumn get editing => text().nullable()();
+  TextColumn get editing => text().named('editing').nullable()();
 
   @override
   String? get tableName => 'todolist';
@@ -47,4 +51,35 @@ class Todolist extends Table {
 
   @override
   bool get withoutRowId => true;
+
+  @override
+  $TodolistTableRelations get $relations => const $TodolistTableRelations();
+}
+
+// ------------------------------ RELATIONS ------------------------------
+
+class $TodoTableRelations implements TableRelations {
+  const $TodoTableRelations();
+
+  TableRelation<Todolist> get todolist => const TableRelation<Todolist>(
+        fromField: 'listid',
+        toField: 'id',
+        relationName: 'TodoToTodolist',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [todolist];
+}
+
+class $TodolistTableRelations implements TableRelations {
+  const $TodolistTableRelations();
+
+  TableRelation<Todo> get todo => const TableRelation<Todo>(
+        fromField: '',
+        toField: '',
+        relationName: 'TodoToTodolist',
+      );
+
+  @override
+  List<TableRelation<Table>> get $relationsList => [todo];
 }

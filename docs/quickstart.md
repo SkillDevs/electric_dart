@@ -12,20 +12,18 @@ Add the required dependencies into your project.
 ```yaml
 dependencies:
   electricsql: <version>
-  drift: ^2.14.0 # or greater
+  drift: ^2.17.0 # or greater
 
   # Optionally include if you want to use the Flutter utilities
   electricsql_flutter: <version>
 
 dev_dependencies:
   electricsql_cli: <version>
-  drift_dev: ^2.14.0 # or greater
+  drift_dev: ^2.17.0 # or greater
   build_runner: ... # to build the drift code
 ```
 
-You alternatively can install `electricsql_flutter` instead, which includes a few utilities which are Flutter specific.
-
-Add the `electricsql_cli` dependency as a dev dependency. This tool can be used to automatically generate a [drift](https://pub.dev/packages/drift) schema based on your Postgres schema.
+The `electricsql_cli` package is installed as a dev dependency. This tool can be used to automatically generate a [drift](https://pub.dev/packages/drift) schema based on your Postgres schema, as well as other utilities, like running the Electric service and Postgres database locally.
 
 
 ### 2. Configure the backend locally
@@ -36,7 +34,7 @@ The `electricsql_cli` will provide mostly all you need to run a Postgres databas
 dart run electricsql_cli <command> [--help]
 ```
 
-One thing you need to provide yourself is the migrations that define the schema of the Postgres database, as well as a way to apply them incrementally.
+One thing you need to provide yourself are the migrations that define the schema of the Postgres database, as well as a way to apply them incrementally.
 An easy to use tool to do this is [`dbmate`](https://github.com/amacneil/dbmate), but there are many others.
 
 To get started with `dbmate` you can copy the `tool/apply-migrations.sh` script from the `todos_flutter` example in the repository.
@@ -48,7 +46,7 @@ The script will automatically apply the migrations under the folder `db/migratio
 > More info: https://electric-sql.com/docs/usage/data-modelling/migrations
 
 Most important commands from `electricsql_cli` to get you started:
-1. `start`: Starts the Electric service and optional the Postgres database with the option `--with-postgres`.
+1. `start`: Starts the Electric service and optionally the Postgres database with the option `--with-postgres`.
 2. `stop`: Stops the service. Optionally you can remove all the Electric and Postgres data, in case you want to start from scratch using the option `--remove`.
 3. `generate`: Generates the `drift` schema and the Electric migrations based on the Postgres schema. More info below.
 
@@ -149,27 +147,35 @@ final electric = await electrify<AppDatabase>(
         // Make sure it's not localhost if running on an emulator/usb connected device,
         // but the IP of your machine (192.168.x.x when hosting it yourself)
         url: 'http://<ip>:5133',
-        auth: AuthConfig(
-            // https://electric-sql.com/docs/usage/auth
-            // You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
-            token: '<your JWT>',
-        ),
         // logger: LoggerConfig(
         //     level: Level.debug, // in production you can use Logger.off
         // ),
         //
     ),
 );
+
+// https://electric-sql.com/docs/usage/auth
+// You can use the functions `insecureAuthToken` or `secureAuthToken` to generate one
+final String jwtAuthToken = '<your JWT>';
+
+// Connect to the Electric service
+await electric.connect(jwtAuthToken);
 ```
 
 ### 5. Define the Shapes to sync
 
-Sync data into the local database. This only needs to be called once.
+Sync data into the local database. With this you can sync, tables, related tables, and even filtered tables by a WHERE expression.
+You can find more information regarding Shapes in the README.md of `electric_dart`.
 
 ```dart
-final shape = await electric.syncTables([
-    'todos',
-])
+// This would be the Drift database
+AppDatabase db;
+
+// Resolves once the shape subscription is confirmed by the server.
+final shape = await electric.syncTable(db.todos);
+
+// Resolves once the initial data load for the shape is complete.
+await shape.synced
 ```
 
 More info: https://electric-sql.com/docs/usage/data-access/shapes
@@ -178,13 +184,16 @@ More info: https://electric-sql.com/docs/usage/data-access/shapes
 ### 6. Use the drift database normally
 
 Everything should be working now. You can use the `drift` database normally.
-Inserting, updating or deleting via the drift APIs should automatically sync the data in the Postgres database.
+Inserting, updating or deleting via the drift APIs should automatically sync the data to the Postgres database and to other devices.
 
 You can see some examples of writes and reads in the main [README](https://github.com/SkillDevs/electric_dart/blob/master/README.md).
 
 > [!NOTE]  
-> If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
+> EMULATORS AND MOBILE DEVICES: If you are running the app on an emulator/usb connected device, make sure you are providing the URL parameter to the Electric config with a non localhost IP. It should be the IP of your machine in your local network when hosting it yourself. For instance: `url: 'http://192.168.x.x:5133'`.
 
+
+> [!NOTE]  
+> WEB APPS: If you are running the app on web, in order for the browser to store the local database for your app make sure you are running the app in a non Guest/Incognito window and that you are using always the same port. You can do that with: `flutter run -d web-server --web-port=8081`
 
 ### 7. (Optional) Configure how the Drift code for Electric is generated
 

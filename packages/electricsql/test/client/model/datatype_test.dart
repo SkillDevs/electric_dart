@@ -1,802 +1,1055 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
+import 'package:electricsql/src/util/converters/helpers.dart';
+import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
+import '../../util/pg_docker.dart';
 import '../drift/client_test_util.dart';
 import '../drift/database.dart';
+import '../drift/generated/electric/drift_schema.dart';
 
-void main() async {
-  final db = TestsDatabase.memory();
+Future<void> main() async {
+  group('SQLite', () {
+    late TestsDatabase db;
 
-  await electrifyTestDatabase(db);
+    setUpAll(() async {
+      db = TestsDatabase.memory();
+      addTearDown(() => db.close());
+
+      await electrifyTestDatabase(db);
+    });
+
+    typeTests(() => db);
+  });
+
+  withPostgresServer('postgres', (server) {
+    late TestsDatabase db;
+
+    setUpAll(() async {
+      final endpoint = await server.endpoint();
+      db = TestsDatabase.postgres(endpoint);
+      addTearDown(() => db.close());
+
+      await db.customSelect('SELECT 1').getSingle();
+    });
+
+    typeTests(() => db, isPostgres: true);
+  });
+}
+
+@isTestGroup
+void typeTests(TestsDatabase Function() getDb, {bool isPostgres = false}) {
+  late TestsDatabase db;
 
   setUp(() async {
+    db = getDb();
     await initClientTestsDb(db);
   });
 
-  /*
- * The tests below check that advanced data types
- * can be written into the DB, thereby, testing that
- * JS objects can be transformed to SQLite compatible values on writes
- * and then be converted back to JS objects on reads.
- */
-
-  test('support date type', () async {
-    const date = '2023-08-07';
-    final d = DateTime.parse('$date 23:28:35.421');
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            date: Value(d),
-          ),
+  group('date', () {
+    group('local', () {
+      test('regular', () async {
+        await _testDate(
+          db,
+          DateTime.parse('2023-08-07 18:28:35.421'),
+          expected: DateTime.utc(2023, 8, 7),
         );
+      });
 
-    expect(res.date, DateTime.parse(date));
+      test('edge 1', () async {
+        // 2000-01-15 00:05:00
+        await _testDate(
+          db,
+          DateTime(2000, 1, 15, 0, 5),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
 
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+      test('edge 2', () async {
+        // 2000-01-15 23:55:00
+        await _testDate(
+          db,
+          DateTime(2000, 1, 15, 23, 55),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
+    });
 
-    expect(fetchRes?.date, DateTime.parse(date));
+    group('utc', () {
+      test('regular', () async {
+        // 2023-08-07 18:28:35.421956+00
+        await _testDate(
+          db,
+          DateTime.utc(2023, 8, 7, 18, 28, 35, 421, 956),
+          expected: DateTime.utc(2023, 8, 7),
+        );
+      });
+
+      test('edge 1', () async {
+        // 2000-01-15 00:05:00
+        await _testDate(
+          db,
+          DateTime.utc(2000, 1, 15, 0, 5),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
+
+      test('edge 2', () async {
+        // 2000-01-15 23:55:00
+        await _testDate(
+          db,
+          DateTime.utc(2000, 1, 15, 23, 55),
+          expected: DateTime.utc(2000, 1, 15),
+        );
+      });
+    });
+
+    test('min', () async {
+      await _testDate(db, DateTime.utc(1));
+    });
+
+    test('max', () async {
+      await _testDate(db, DateTime.utc(9999, 12, 31));
+    });
   });
 
-  test('support time type', () async {
-    final date = DateTime.parse('2023-08-07 18:28:35.421');
+  group('time', () {
+    test('now', () async {
+      final now = DateTime.now();
+      await _testTime(db, now);
+    });
 
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            time: Value(date),
-          ),
-        );
+    test('utc', () async {
+      final now = DateTime.now().toUtc();
+      await _testTime(db, now);
+    });
 
-    expect(res.time, DateTime.parse('1970-01-01 18:28:35.421'));
+    test('regular', () async {
+      final date = DateTime.parse('2023-08-07 18:28:35.421');
+      await _testTime(db, date);
+    });
 
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+    test('min', () async {
+      await _testTime(db, DateTime(1));
+    });
 
-    expect(fetchRes?.time, DateTime.parse('1970-01-01 18:28:35.421'));
+    test('max', () async {
+      await _testTime(db, DateTime(9999, 12, 31, 23, 59, 59, 999, 999));
+    });
   });
 
-  test('support timetz type', () async {
-    // Check that we store the time without taking into account timezones
-    // such that upon reading we get the same time even if we are in a different time zone
-    // test with 2 different time zones such that they cannot both coincide with the machine's timezone.
-    final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
-    final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
+  // The postgres library does not support the timetz type as it's not
+  // recommended to use it.
+  // https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_timetz
+  if (!isPostgres) {
+    group(
+      'timetz',
+      () {
+        test('regular 1', () async {
+          final date = DateTime.parse('2023-08-07 18:28:35.421+03');
+          await _testTimeTZ(db, date);
+        });
 
-    final res1 = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timetz: Value(date1),
-          ),
-        );
+        test('regular 2', () async {
+          final date = DateTime.parse('2023-08-07 18:28:35.421+02');
+          await _testTimeTZ(db, date);
+        });
 
-    final res2 = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            timetz: Value(date2),
-          ),
-        );
+        test('insert and query', () async {
+          // Check that we store the time without taking into account timezones
+          // such that upon reading we get the same time even if we are in a different time zone
+          // test with 2 different time zones such that they cannot both coincide with the machine's timezone.
+          final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
+          final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
 
-    expect(res1.timetz, DateTime.parse('1970-01-01 18:28:35.421+02'));
-    expect(res2.timetz, DateTime.parse('1970-01-01 18:28:35.421+03'));
+          final res1 = await db.into(db.dataTypes).insertReturning(
+                DataTypesCompanion.insert(
+                  id: 1,
+                  timetz: Value(date1),
+                ),
+              );
 
-    final fetchRes1 = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+          final res2 = await db.into(db.dataTypes).insertReturning(
+                DataTypesCompanion.insert(
+                  id: 2,
+                  timetz: Value(date2),
+                ),
+              );
 
-    final fetchRes2 = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(2)))
-        .getSingleOrNull();
+          final expectedDate1 = DateTime.parse('1970-01-01 18:28:35.421+02');
 
-    expect(fetchRes1?.timetz, DateTime.parse('1970-01-01 18:28:35.421+02'));
-    expect(fetchRes2?.timetz, DateTime.parse('1970-01-01 18:28:35.421+03'));
-  });
+          expect(res1.timetz, expectedDate1);
+          expect(res2.timetz, DateTime.parse('1970-01-01 18:28:35.421+03'));
 
-  test('support timestamp type', () async {
-    final date = DateTime.parse('2023-08-07 18:28:35.421');
-    expect(date.isUtc, isFalse);
+          final fetchRes1 = await (db.select(db.dataTypes)
+                ..where((t) => t.id.equals(1)))
+              .getSingleOrNull();
 
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timestamp: Value(date),
-          ),
-        );
+          final fetchRes2 = await (db.select(db.dataTypes)
+                ..where((t) => t.id.equals(2)))
+              .getSingleOrNull();
 
-    expect(res.timestamp, DateTime.parse('2023-08-07 18:28:35.421'));
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-
-    expect(fetchRes?.timestamp, DateTime.parse('2023-08-07 18:28:35.421'));
-  });
-
-  test('support timestamp type - input date utc', () async {
-    // 2023-08-07 18:28:35.421 UTC
-    final dateUTC = DateTime.utc(2023, 8, 7, 18, 28, 35, 421);
-    expect(dateUTC.isUtc, isTrue);
-
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timestamp: Value(dateUTC),
-          ),
-        );
-
-    final expectedLocalDate = dateUTC.toLocal();
-
-    expect(res.timestamp, expectedLocalDate);
-    expect(res.timestamp!.isUtc, isFalse);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-
-    expect(fetchRes?.timestamp, expectedLocalDate);
-  });
-
-  test('support timestamptz type', () async {
-    // Check that we store the timestamp without taking into account timezones
-    // such that upon reading we get the same timestamp even if we are in a different time zone
-    // test with 2 different time zones such that they cannot both coincide with the machine's timezone.
-    final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
-    final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
-
-    final res1 = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timestamptz: Value(date1),
-          ),
-        );
-
-    final res2 = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            timestamptz: Value(date2),
-          ),
-        );
-
-    expect(res1.timestamptz, date1);
-    expect(res2.timestamptz, date2);
-
-    expect(res1.timestamptz!.isUtc, isTrue);
-    expect(res2.timestamptz!.isUtc, isTrue);
-
-    final fetchRes1 = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-
-    final fetchRes2 = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(2)))
-        .getSingleOrNull();
-
-    expect(fetchRes1?.timestamptz, date1);
-    expect(fetchRes2?.timestamptz, date2);
-  });
-
-  test('support timestamptz type - local date', () async {
-    final dateLocal = DateTime.parse('2023-08-07 18:28:35.421');
-    expect(dateLocal.isUtc, isFalse);
-    final dateUtc = dateLocal.toUtc();
-
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timestamptz: Value(dateLocal),
-          ),
-        );
-
-    expect(res.timestamptz, dateUtc);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-
-    expect(fetchRes?.timestamptz, dateUtc);
-  });
-
-  test('support null value for timestamptz type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            timestamptz: const Value(null),
-          ),
-        );
-
-    expect(res.id, 1);
-    expect(res.timestamptz, null);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-
-    expect(fetchRes.id, 1);
-    expect(fetchRes.timestamptz, null);
-  });
-
-  test('support boolean type', () async {
-    // Check that we can store booleans
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            boolCol: const Value(true),
-          ),
-        );
-
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            boolCol: const Value(false),
-          ),
-        );
-
-    final rows = await db.select(db.dataTypes).get();
-
-    expect(rows.any((r) => r.id == 1 && r.boolCol == true), isTrue);
-    expect(rows.any((r) => r.id == 2 && r.boolCol == false), isTrue);
-  });
-
-  test('support null value for boolean type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            boolCol: const Value(null),
-          ),
-        );
-
-    expect(res.id, 1);
-    expect(res.boolCol, null);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.boolCol, null);
-  });
-
-  test('support uuid type', () async {
-    const uuid = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            uuid: const Value(uuid),
-          ),
-        );
-
-    expect(res.id, 1);
-    expect(res.uuid, uuid);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.uuid, uuid);
-
-    // Check that it rejects invalid uuids
-    await expectLater(
-      () async => db.into(db.dataTypes).insertReturning(
-            DataTypesCompanion.insert(
-              id: const Value(1),
-              uuid: const Value('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a111'),
-            ),
-          ),
-      throwsA(
-        isA<FormatException>().having(
-          (p0) => p0.message,
-          'message',
-          'The provided UUID is invalid.',
-        ),
-      ),
+          expect(
+            fetchRes1?.timetz,
+            DateTime.parse('1970-01-01 18:28:35.421+02'),
+          );
+          expect(
+            fetchRes2?.timetz,
+            DateTime.parse('1970-01-01 18:28:35.421+03'),
+          );
+        });
+      },
     );
+  }
+
+  group('timestamp', () {
+    test('local', () async {
+      await _testTimestamp(
+        db,
+        DateTime.parse('2023-08-07 18:28:35.421956'),
+        expected: DateTime.utc(2023, 8, 7, 18, 28, 35, 421, 956),
+      );
+    });
+
+    test('utc', () async {
+      await _testTimestamp(
+        db,
+        // 2023-08-07 18:28:35.421956+00
+        DateTime.utc(2023, 8, 7, 18, 28, 35, 421, 956),
+      );
+    });
+
+    test('min', () async {
+      await _testTimestamp(db, DateTime.utc(1));
+    });
+
+    test('max', () async {
+      await _testTimestamp(
+        db,
+        DateTime.utc(9999, 12, 31, 23, 59, 59, 999, 999),
+      );
+    });
   });
 
-  test('support null value for uuid type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            uuid: const Value(null),
-          ),
-        );
+  group('timestamptz', () {
+    test('now', () async {
+      final now = DateTime.now();
+      await _testTimestampTZ(db, now);
+    });
 
-    expect(res.id, 1);
-    expect(res.uuid, null);
+    test('regular 1', () async {
+      final date = DateTime.parse('2023-08-07 18:28:35.421+03');
+      await _testTimestampTZ(db, date);
+    });
 
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.uuid, null);
+    test('regular 2', () async {
+      final date = DateTime.parse('2023-08-07 18:28:35.421+02');
+      await _testTimestampTZ(db, date);
+    });
+
+    test('regular 3', () async {
+      final date = DateTime.parse('2023-08-07 18:28:35');
+      await _testTimestampTZ(db, date);
+    });
+
+    test('insert and query', () async {
+      // Check that we store the timestamp without taking into account timezones
+      // such that upon reading we get the same timestamp even if we are in a different time zone
+      // test with 2 different time zones such that they cannot both coincide with the machine's timezone.
+      final date1 = DateTime.parse('2023-08-07 18:28:35.421+02');
+      final date2 = DateTime.parse('2023-08-07 18:28:35.421+03');
+
+      final res1 = await db.into(db.dataTypes).insertReturning(
+            DataTypesCompanion.insert(
+              id: 1,
+              timestamptz: Value(date1),
+            ),
+          );
+
+      final res2 = await db.into(db.dataTypes).insertReturning(
+            DataTypesCompanion.insert(
+              id: 2,
+              timestamptz: Value(date2),
+            ),
+          );
+
+      expect(res1.timestamptz, date1);
+      expect(res2.timestamptz, date2);
+
+      expect(res1.timestamptz!.isUtc, isTrue);
+      expect(res2.timestamptz!.isUtc, isTrue);
+
+      final fetchRes1 = await (db.select(db.dataTypes)
+            ..where((t) => t.id.equals(1)))
+          .getSingleOrNull();
+
+      final fetchRes2 = await (db.select(db.dataTypes)
+            ..where((t) => t.id.equals(2)))
+          .getSingleOrNull();
+
+      expect(fetchRes1?.timestamptz, date1);
+      expect(fetchRes2?.timestamptz, date2);
+    });
   });
 
-  test('support int2 type', () async {
-    const validInt1 = 32767;
-    const invalidInt1 = 32768;
+  group('bool', () {
+    test('true', () async {
+      await _testBool(db, true);
+    });
 
-    const validInt2 = -32768;
-    const invalidInt2 = -32769;
+    test('false', () async {
+      await _testBool(db, false);
+    });
+  });
 
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            int2: const Value(validInt1),
-          ),
-        );
+  group('uuid', () {
+    test('regular', () async {
+      await _testUUID(db, '123e4567-e89b-12d3-a456-426655440000');
+    });
 
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            int2: const Value(validInt2),
-          ),
-        );
+    test('empty', () async {
+      await _testUUID(db, '00000000-0000-0000-0000-000000000000');
+    });
 
-    // Check that it rejects invalid integers
-    const invalidInts = [invalidInt1, invalidInt2];
-    int id = 3;
-    for (final invalidInt in invalidInts) {
+    test('invalid', () async {
+      // Check that it rejects invalid uuids
       await expectLater(
-        () async => db.into(db.dataTypes).insertReturning(
-              DataTypesCompanion.insert(
-                id: Value(id++),
-                int2: Value(invalidInt),
-              ),
-            ),
+        () async => _testUUID(db, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a111'),
         throwsA(
-          isA<RangeError>().having(
-            (p0) => p0.toString(),
-            'error',
-            contains(
-              'Invalid value: Not in inclusive range -32768..32767: $invalidInt',
-            ),
+          isA<FormatException>().having(
+            (p0) => p0.message,
+            'message',
+            'The provided UUID is invalid.',
           ),
         ),
       );
-    }
+    });
   });
 
-  test('support null values for int2 type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            int2: const Value(null),
-          ),
-        );
+  group('int2', () {
+    test('regular', () async {
+      await _testInt2(db, 2);
+    });
 
-    expect(res.id, 1);
-    expect(res.int2, null);
+    test('0', () async {
+      await _testInt2(db, 0);
+    });
 
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.int2, null);
-  });
+    test('max', () async {
+      await _testInt2(db, 32767);
+    });
 
-  test('support int4 type', () async {
-    const validInt1 = 2147483647;
-    const invalidInt1 = 2147483648;
+    test('min', () async {
+      await _testInt2(db, -32768);
+    });
 
-    const validInt2 = -2147483648;
-    const invalidInt2 = -2147483649;
+    test('invalid', () async {
+      // Check that it rejects invalid integers
+      const invalidInt1 = 32768;
+      const invalidInt2 = -32769;
 
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            int4: const Value(validInt1),
-          ),
-        );
-
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            int4: const Value(validInt2),
-          ),
-        );
-
-    // Check that it rejects invalid integers
-    const invalidInts = [invalidInt1, invalidInt2];
-    int id = 3;
-    for (final invalidInt in invalidInts) {
-      await expectLater(
-        () async => db.into(db.dataTypes).insertReturning(
-              DataTypesCompanion.insert(
-                id: Value(id++),
-                int4: Value(invalidInt),
+      const invalidInts = [invalidInt1, invalidInt2];
+      for (final invalidInt in invalidInts) {
+        await expectLater(
+          () async => _testInt2(db, invalidInt),
+          throwsA(
+            isA<RangeError>().having(
+              (p0) => p0.toString(),
+              'error',
+              contains(
+                'Invalid value: Not in inclusive range -32768..32767: $invalidInt',
               ),
             ),
-        throwsA(
-          isA<RangeError>().having(
-            (p0) => p0.toString(),
-            'error',
-            contains(
-              'Invalid value: Not in inclusive range -2147483648..2147483647: $invalidInt',
-            ),
-          ),
-        ),
-      );
-    }
-  });
-
-  test('support null values for int4 type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            int4: const Value(null),
           ),
         );
-
-    expect(res.id, 1);
-    expect(res.int4, null);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.int4, null);
+      }
+    });
   });
 
-  test('support float8 type', () async {
-    const validFloat1 = 1.7976931348623157e308;
-    const validFloat2 = -1.7976931348623157e308;
+  group('int4', () {
+    test('regular', () async {
+      await _testInt4(db, 2);
+    });
 
-    const nanId = 5;
+    test('0', () async {
+      await _testInt4(db, 0);
+    });
 
-    const List<({int id, double float8})> floats = [
-      (
-        id: 1,
-        float8: validFloat1,
-      ),
-      (
-        id: 2,
-        float8: validFloat2,
-      ),
-      (
-        id: 3,
-        float8: double.infinity,
-      ),
-      (
-        id: 4,
-        float8: double.negativeInfinity,
-      ),
-      (
-        id: nanId,
-        float8: double.nan,
-      ),
-    ];
+    test('max', () async {
+      await _testInt4(db, 2147483647);
+    });
 
-    for (final floatEntry in floats) {
-      await db.into(db.dataTypes).insert(
-            DataTypesCompanion.insert(
-              id: Value(floatEntry.id),
-              float8: Value(floatEntry.float8),
-            ),
-          );
-    }
+    test('min', () async {
+      await _testInt4(db, -2147483648);
+    });
 
-    // Check that we can read the floats back
-    final fetchRes = await db.select(db.dataTypes).get();
-    final records = fetchRes.map((r) => (id: r.id, float8: r.float8)).toList();
+    test('invalid', () async {
+      // Check that it rejects invalid integers
+      const invalidInt1 = 2147483648;
+      const invalidInt2 = -2147483649;
 
-    // NaN != NaN, so we need to filter it out and check it separately
-    final recordsNoNaN = records.where((r) => r.id != nanId).toList();
-    final floatsNoNaN = floats.where((r) => r.id != nanId).toList();
-    expect(recordsNoNaN, floatsNoNaN);
-
-    // Expect NaN entry
-    final nanEntry = records.firstWhere((r) => r.id == nanId);
-    expect(nanEntry.float8!.isNaN, isTrue);
-  });
-
-  test('support null values for float8 type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            float8: const Value(null),
-          ),
-        );
-
-    expect(res.id, 1);
-    expect(res.float8, null);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.float8, null);
-  });
-
-  test('support int8 type', () async {
-    const validInt1 = 9223372036854775807;
-    const validInt2 = -9223372036854775808;
-
-    final List<({int id, int int8})> ints = [
-      (
-        id: 1,
-        int8: validInt1,
-      ),
-      (
-        id: 2,
-        int8: validInt2,
-      ),
-    ];
-
-    for (final entry in ints) {
-      await db.into(db.dataTypes).insert(
-            DataTypesCompanion.insert(
-              id: Value(entry.id),
-              int8: Value(entry.int8),
-            ),
-          );
-    }
-
-    // Check that we can read the big ints back
-    final fetchRes = await db.select(db.dataTypes).get();
-    final records = fetchRes.map((r) => (id: r.id, int8: r.int8)).toList();
-
-    expect(records, ints);
-  });
-
-  test('support null values for int8 type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            int8: const Value(null),
-          ),
-        );
-
-    expect(res.id, 1);
-    expect(res.int8, null);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.int8, null);
-  });
-
-  test('support BigInt type', () async {
-    final validBigInt1 = BigInt.parse('9223372036854775807');
-    final validBigInt2 = BigInt.parse('-9223372036854775808');
-
-    final List<({int id, BigInt int8})> bigInts = [
-      (
-        id: 1,
-        int8: validBigInt1,
-      ),
-      (
-        id: 2,
-        int8: validBigInt2,
-      ),
-    ];
-
-    for (final entry in bigInts) {
-      await db.into(db.dataTypes).insert(
-            DataTypesCompanion.insert(
-              id: Value(entry.id),
-              int8BigInt: Value(entry.int8),
-            ),
-          );
-    }
-
-    // Check that we can read the big ints back
-    final fetchRes = await db.select(db.dataTypes).get();
-    final records =
-        fetchRes.map((r) => (id: r.id, int8: r.int8BigInt)).toList();
-
-    expect(records, bigInts);
-  });
-
-  test('support null values for bigint type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            int8BigInt: const Value(null),
-          ),
-        );
-
-    expect(res.id, 1);
-    expect(res.int8BigInt, null);
-
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.int8BigInt, null);
-  });
-
-  test('throw error when value is out of range for BigInt type', () async {
-    final invalidBigInt1 = BigInt.parse('9223372036854775808');
-    final invalidBigInt2 = BigInt.parse('-9223372036854775809');
-
-    // Check that it rejects invalid int8
-    final invalidBigInts = [invalidBigInt1, invalidBigInt2];
-    int id = 1;
-    for (final invalidInt in invalidBigInts) {
-      await expectLater(
-        () async => db.into(db.dataTypes).insertReturning(
-              DataTypesCompanion.insert(
-                id: Value(id++),
-                int8BigInt: Value(invalidInt),
+      const invalidInts = [invalidInt1, invalidInt2];
+      for (final invalidInt in invalidInts) {
+        await expectLater(
+          () async => _testInt4(db, invalidInt),
+          throwsA(
+            isA<RangeError>().having(
+              (p0) => p0.toString(),
+              'error',
+              contains(
+                'Invalid value: Not in inclusive range -2147483648..2147483647: $invalidInt',
               ),
             ),
-        throwsA(
-          isA<Exception>().having(
-            (p0) => p0.toString(),
-            'error',
-            contains(
-              'BigInt value exceeds the range of 64 bits',
-            ),
           ),
-        ),
-      );
-    }
+        );
+      }
+    });
   });
 
-  test('support float4 type', () async {
-    const validFloat1 = 1.402823e36;
-    const validFloat2 = -1.402823e36;
+  group('int8', () {
+    test('regular', () async {
+      await _testInt8(db, 2);
+    });
 
-    const nanId = 5;
+    test('0', () async {
+      await _testInt8(db, 0);
+    });
 
-    const List<({int id, double float4})> floats = [
-      (
-        id: 1,
-        float4: validFloat1,
-      ),
-      (
-        id: 2,
-        float4: validFloat2,
-      ),
-      (
-        id: 3,
-        float4: double.infinity,
-      ),
-      (
-        id: 4,
-        float4: double.negativeInfinity,
-      ),
-      (
-        id: nanId,
-        float4: double.nan,
-      ),
-    ];
+    test('max', () async {
+      await _testInt8(db, 9223372036854775807);
+    });
 
-    for (final floatEntry in floats) {
-      await db.into(db.dataTypes).insert(
-            DataTypesCompanion.insert(
-              id: Value(floatEntry.id),
-              float4: Value(floatEntry.float4),
-            ),
-          );
-    }
-
-    // Check that we can read the floats back
-    final fetchRes = await db.select(db.dataTypes).get();
-    final records = fetchRes.map((r) => (id: r.id, float4: r.float4)).toList();
-
-    // NaN != NaN, so we need to filter it out and check it separately
-    final recordsNoNaN = records.where((r) => r.id != nanId).toList();
-    final floatsNoNaN = floats
-        .where((r) => r.id != nanId)
-        .map((e) => (id: e.id, float4: fround(e.float4)))
-        .toList();
-    expect(recordsNoNaN, floatsNoNaN);
-
-    // Expect NaN entry
-    final nanEntry = records.firstWhere((r) => r.id == nanId);
-    expect(nanEntry.float4!.isNaN, isTrue);
+    test('min', () async {
+      await _testInt8(db, -9223372036854775808);
+    });
   });
 
-  test('converts numbers outside float4 range', () async {
-    const tooPositive = 1.42724769270596e+45;
-    const tooNegative = -1.42724769270596e+45;
-    const tooSmallPositive = 7.006492321624085e-46;
-    const tooSmallNegative = -7.006492321624085e-46;
+  // Postgres supports int64 without using the BigInt type
+  if (!isPostgres) {
+    group(
+      'int8 bigint',
+      () {
+        test('regular', () async {
+          await _testInt8BigInt(db, BigInt.from(2));
+        });
 
-    const floats = <({int id, double float4})>[
-      (
-        id: 1,
-        float4: tooPositive,
-      ),
-      (
-        id: 2,
-        float4: tooNegative,
-      ),
-      (
-        id: 3,
-        float4: tooSmallPositive,
-      ),
-      (
-        id: 4,
-        float4: tooSmallNegative,
-      ),
-    ];
+        test('0', () async {
+          await _testInt8BigInt(db, BigInt.from(0));
+        });
 
-    for (final floatEntry in floats) {
-      await db.into(db.dataTypes).insert(
-            DataTypesCompanion.insert(
-              id: Value(floatEntry.id),
-              float4: Value(floatEntry.float4),
-            ),
-          );
-    }
+        test('max', () async {
+          await _testInt8BigInt(db, BigInt.from(9223372036854775807));
+        });
 
-    // Check that we can read the floats back
-    final fetchRes = await db.select(db.dataTypes).get();
-    final records = fetchRes.map((r) => (id: r.id, float4: r.float4)).toList();
+        test('min', () async {
+          await _testInt8BigInt(db, BigInt.from(-9223372036854775808));
+        });
 
-    expect(
-      records,
-      <({int id, double float4})>[
-        (
-          id: 1,
-          float4: double.infinity,
-        ),
-        (
-          id: 2,
-          float4: double.negativeInfinity,
-        ),
-        (
-          id: 3,
-          float4: 0,
-        ),
-        (
-          id: 4,
-          float4: 0,
-        ),
-      ],
+        test('invalid', () async {
+          final invalidBigInts = [
+            BigInt.parse('9223372036854775808'),
+            BigInt.parse('-9223372036854775809'),
+          ];
+          for (final invalidBigInt in invalidBigInts) {
+            await expectLater(
+              () async => _testInt8BigInt(db, invalidBigInt),
+              throwsA(
+                isA<Exception>().having(
+                  (p0) => p0.toString(),
+                  'error',
+                  contains(
+                    'BigInt value exceeds the range of 64 bits',
+                  ),
+                ),
+              ),
+            );
+          }
+        });
+      },
     );
+  }
+
+  group('float4', () {
+    test('regular', () async {
+      await _testFloat4(
+        db,
+        1.402823e36,
+        expected: fround(1.402823e36),
+      );
+    });
+
+    test('0', () async {
+      await _testFloat4(db, 0);
+    });
+
+    test('too positive', () async {
+      await _testFloat4(db, 1.42724769270596e+45, expected: double.infinity);
+    });
+
+    test('too negative', () async {
+      await _testFloat4(
+        db,
+        -1.42724769270596e+45,
+        expected: double.negativeInfinity,
+      );
+    });
+
+    test('too small positive', () async {
+      await _testFloat4(db, 7.006492321624085e-46, expected: 0);
+    });
+
+    test('too small negative', () async {
+      await _testFloat4(db, -7.006492321624085e-46, expected: 0);
+    });
+
+    test('infinite', () async {
+      await _testFloat4(db, double.infinity);
+    });
+
+    test('negative infinite', () async {
+      await _testFloat4(db, double.negativeInfinity);
+    });
+
+    test('NaN', () async {
+      await _testFloat4(db, double.nan);
+    });
   });
 
-  test('support JSON type', () async {
-    final json = {
-      'a': 1,
-      'b': true,
-      'c': {'d': 'nested'},
-      'e': [1, 2, 3],
-      'f': null,
-    };
+  group('float8', () {
+    test('regular', () async {
+      await _testFloat8(db, 2.5);
+    });
 
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            json: Value(json),
-          ),
-        );
+    test('0', () async {
+      await _testFloat8(db, 0);
+    });
 
-    expect(res.json, json);
+    test('max finite', () async {
+      await _testFloat8(db, double.maxFinite);
+    });
 
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.json, json);
+    test('min finite', () async {
+      await _testFloat8(db, -double.maxFinite);
+    });
 
-    // Also test that we can write the special JsonNull value
-    final res2 = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(2),
-            json: const Value(kJsonNull),
-          ),
-        );
+    test('min positive', () async {
+      await _testFloat8(db, double.minPositive);
+    });
 
-    expect(res2.json, kJsonNull);
+    test('negative min positive', () async {
+      await _testFloat8(db, -double.minPositive);
+    });
 
-    final fetchRes2 = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(2)))
-        .getSingle();
-    expect(fetchRes2.json, kJsonNull);
+    test('infinite', () async {
+      await _testFloat8(db, double.infinity);
+    });
+
+    test('negative infinite', () async {
+      await _testFloat8(db, double.negativeInfinity);
+    });
+
+    test('NaN', () async {
+      await _testFloat8(db, double.nan);
+    });
   });
 
-  test('support null values for JSON type', () async {
-    final res = await db.into(db.dataTypes).insertReturning(
-          DataTypesCompanion.insert(
-            id: const Value(1),
-            json: const Value(null),
-          ),
-        );
+  group('json', () {
+    test('int', () async {
+      await _testJson(db, 1);
+    });
 
-    expect(res.json, null);
+    test('double', () async {
+      await _testJson(db, 1.5);
+    });
 
-    final fetchRes = await (db.select(db.dataTypes)
-          ..where((t) => t.id.equals(1)))
-        .getSingle();
-    expect(fetchRes.json, null);
+    test('string', () async {
+      await _testJson(db, 'hello');
+    });
+
+    test('list', () async {
+      await _testJson(db, [1, 2, 3]);
+    });
+
+    test('map', () async {
+      await _testJson(db, {'a': 1, 'b': 2});
+    });
+    test('complex', () async {
+      await _testJson(db, {
+        'a': 1,
+        'b': true,
+        'c': {'d': 'nested'},
+        'e': [1, 2, 3],
+        'f': null,
+      });
+    });
+
+    test(
+      'null',
+      skip: isPostgres,
+      () async {
+        // final rwos = await db.customSelect('''SELECT null as c1, 'null'::jsonb as c2, '"null"'::jsonb as c3''').get();
+        // for (final row in rwos) {
+        //   print(row.data.map((key, value) => MapEntry(key, '$value ${value.runtimeType}')));
+        // }
+
+        await _testJson(db, kJsonNull);
+      },
+    );
+
+    test('true', () async {
+      await _testJson(db, true);
+    });
+
+    test('invalid', () async {
+      await expectLater(
+        () async => _testJson(db, Object()),
+        throwsA(isA<JsonUnsupportedObjectError>()),
+      );
+    });
   });
+
+  group('enum', () {
+    test('regular', () async {
+      await _testColorEnum(db, DbColor.blue);
+    });
+  });
+
+  group('bytea', () {
+    test('regular', () async {
+      final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+      await _testBytea(db, bytes);
+    });
+
+    test('empty', () async {
+      final bytes = Uint8List.fromList([]);
+      await _testBytea(db, bytes);
+    });
+  });
+}
+
+Future<void> _testDate(
+  TestsDatabase db,
+  DateTime value, {
+  DateTime? expected,
+}) async {
+  await _testCustomType<DateTime>(
+    db,
+    value: value,
+    column: db.dataTypes.date,
+    insertCol: (c, v) => c.copyWith(
+      date: Value(v),
+    ),
+    customT: ElectricTypes.date,
+    expected: expected,
+    alternativeInputs: [
+      value.asLocal(),
+      value.asUtc(),
+    ],
+  );
+}
+
+Future<void> _testTime(TestsDatabase db, DateTime value) async {
+  // Day removed
+  DateTime expected = value.asUtc().copyWith(
+        year: 1970,
+        month: 1,
+        day: 1,
+      );
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expected = expected.copyWith(microsecond: 0);
+  }
+
+  await _testCustomType<DateTime>(
+    db,
+    value: value,
+    column: db.dataTypes.time,
+    insertCol: (c, v) => c.copyWith(
+      time: Value(v),
+    ),
+    customT: ElectricTypes.time,
+    expected: expected,
+    alternativeInputs: [
+      value.asLocal(),
+      value.asUtc(),
+    ],
+  );
+}
+
+Future<void> _testTimeTZ(TestsDatabase db, DateTime value) async {
+  // Day removed
+  DateTime expected = value
+      .copyWith(
+        year: 1970,
+        month: 1,
+        day: 1,
+      )
+      .toUtc();
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expected = expected.copyWith(microsecond: 0);
+  }
+
+  await _testCustomType<DateTime>(
+    db,
+    value: value,
+    column: db.dataTypes.timetz,
+    insertCol: (c, v) => c.copyWith(
+      timetz: Value(v),
+    ),
+    customT: ElectricTypes.timeTZ,
+    expected: expected,
+    alternativeInputs: [
+      value.toLocal(),
+      value.toUtc(),
+    ],
+  );
+}
+
+Future<void> _testTimestamp(
+  TestsDatabase db,
+  DateTime value, {
+  DateTime? expected,
+}) async {
+  DateTime expectedDate = expected ?? value;
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expectedDate = expectedDate.copyWith(microsecond: 0);
+  }
+
+  await _testCustomType<DateTime>(
+    db,
+    value: value,
+    column: db.dataTypes.timestamp,
+    insertCol: (c, v) => c.copyWith(
+      timestamp: Value(v),
+    ),
+    customT: ElectricTypes.timestamp,
+    expected: expectedDate,
+    alternativeInputs: [
+      value.asLocal(),
+      value.asUtc(),
+    ],
+  );
+}
+
+Future<void> _testTimestampTZ(TestsDatabase db, DateTime value) async {
+  DateTime expected = value.toUtc();
+
+  if (db.typeMapping.dialect == SqlDialect.sqlite) {
+    expected = expected.copyWith(microsecond: 0);
+  }
+
+  await _testCustomType<DateTime>(
+    db,
+    value: value,
+    column: db.dataTypes.timestamptz,
+    insertCol: (c, v) => c.copyWith(
+      timestamptz: Value(v),
+    ),
+    customT: ElectricTypes.timestampTZ,
+    expected: expected,
+    alternativeInputs: [
+      value.toLocal(),
+      value.toUtc(),
+    ],
+  );
+}
+
+Future<void> _testBool(TestsDatabase db, bool value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.bool$,
+    insertCol: (c, v) => c.copyWith(
+      bool$: Value(v),
+    ),
+    // We can use Drift default bool type
+    customT: null,
+  );
+}
+
+Future<void> _testUUID(TestsDatabase db, String value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.uuid,
+    insertCol: (c, v) => c.copyWith(
+      uuid: Value(v),
+    ),
+    customT: ElectricTypes.uuid,
+  );
+}
+
+Future<void> _testInt2(TestsDatabase db, int value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.int2,
+    insertCol: (c, v) => c.copyWith(
+      int2: Value(v),
+    ),
+    customT: ElectricTypes.int2,
+  );
+}
+
+Future<void> _testInt4(TestsDatabase db, int value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.int4,
+    insertCol: (c, v) => c.copyWith(
+      int4: Value(v),
+    ),
+    customT: ElectricTypes.int4,
+  );
+}
+
+Future<void> _testInt8(TestsDatabase db, int value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.int8,
+    insertCol: (c, v) => c.copyWith(
+      int8: Value(v),
+    ),
+    customT: ElectricTypes.int8,
+  );
+}
+
+Future<void> _testInt8BigInt(TestsDatabase db, BigInt value) async {
+  await _testCustomTypeExtra(
+    db,
+    value: value,
+    column: db.extra.int8BigInt,
+    insertCol: (c, v) => c.copyWith(
+      int8BigInt: Value(v),
+    ),
+    // We can use Drift default BigInt type
+    customT: null,
+  );
+}
+
+Future<void> _testFloat8(TestsDatabase db, double value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.float8,
+    insertCol: (c, v) => c.copyWith(
+      float8: Value(v),
+    ),
+    customT: ElectricTypes.float8,
+  );
+}
+
+Future<void> _testFloat4(
+  TestsDatabase db,
+  double value, {
+  double? expected,
+}) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.float4,
+    insertCol: (c, v) => c.copyWith(
+      float4: Value(v),
+    ),
+    customT: ElectricTypes.float4,
+    expected: expected,
+  );
+}
+
+Future<void> _testJson(TestsDatabase db, Object value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.json,
+    insertCol: (c, v) => c.copyWith(
+      json: Value(v),
+    ),
+    customT: ElectricTypes.jsonb,
+  );
+
+  // await _testCustomType(
+  //   db,
+  //   value: value,
+  //   column: db.dataTypes.json,
+  //   insertCol: (c, v) => c.copyWith(
+  //     json: Value(v),
+  //   ),
+  //   customT: ElectricTypes.json,
+  // );
+}
+
+Future<void> _testBytea(TestsDatabase db, Uint8List value) async {
+  await _testCustomType(
+    db,
+    value: value,
+    column: db.dataTypes.bytea,
+    insertCol: (c, v) => c.copyWith(
+      bytea: Value(v),
+    ),
+    // Bytea is supported natively by drift
+    customT: null,
+  );
+}
+
+Future<void> _testColorEnum(TestsDatabase db, DbColor value) async {
+  await _testCustomType<DbColor>(
+    db,
+    value: value,
+    column: db.dataTypes.enum$,
+    insertCol: (c, v) => c.copyWith(
+      enum$: Value(v),
+    ),
+    customT: ElectricEnumTypes.color,
+  );
+}
+
+Future<void> _testCustomType<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT value,
+  required GeneratedColumn<DartT> column,
+  required DialectAwareSqlType<DartT>? customT,
+  required DataTypesCompanion Function(DataTypesCompanion, DartT value)
+      insertCol,
+  DartT? expected,
+  List<DartT>? alternativeInputs,
+}) async {
+  final driftValue = await _insertAndFetchFromDataTypes(
+    db,
+    value: value,
+    column: column,
+    insertCol: insertCol,
+    customT: customT,
+    alternativeInputs: alternativeInputs,
+  );
+
+  _expectCorrectValue(
+    db,
+    columnDriftValue: driftValue,
+    value: value,
+    customT: customT,
+    expected: expected,
+  );
+}
+
+void _expectCorrectValue<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT columnDriftValue,
+  required DartT value,
+  required DialectAwareSqlType<DartT>? customT,
+  DartT? expected,
+}) {
+  if (value is double && value.isNaN) {
+    expect(columnDriftValue, isNaN);
+  } else {
+    expect(columnDriftValue, expected ?? value);
+  }
+}
+
+Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT value,
+  required GeneratedColumn<DartT> column,
+  required DataTypesCompanion Function(DataTypesCompanion, DartT value)
+      insertCol,
+  required DialectAwareSqlType<DartT>? customT,
+  List<DartT>? alternativeInputs,
+}) async {
+  final baseCompanion = DataTypesCompanion.insert(
+    id: 97,
+  );
+
+  final insertCompanion = insertCol(baseCompanion, value);
+
+  await db.into(db.dataTypes).insert(insertCompanion);
+
+  /* final allRows =
+      await db.customSelect('select ${column.name} from "DataTypes"').get();
+  print("All rows:");
+  for (final row in allRows) {
+    print(row.data
+        .map((key, value) => MapEntry(key, '$value ${value.runtimeType}')));
+  }
+  */
+  final res = await (db.select(db.dataTypes)
+        ..where((tbl) => column.equalsExp(Constant(value, customT))))
+      .getSingle();
+  expect(res.id, 97);
+
+  // Search by alternative inputs that should yield the same row result
+  // i.e. DateTimes in Local and UTC
+  if (alternativeInputs != null) {
+    for (final altValue in alternativeInputs) {
+      final altRes = await (db.select(db.dataTypes)
+            ..where((tbl) => column.equalsExp(Constant(altValue, customT))))
+          .getSingle();
+      expect(altRes.id, 97);
+    }
+  }
+
+  final columns = res.toColumns(false);
+  final columnDriftValue = (columns[column.name]! as Variable<DartT>).value!;
+  return columnDriftValue;
+}
+
+Future<DartT> _insertAndFetchFromExtra<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT value,
+  required GeneratedColumn<DartT> column,
+  required ExtraCompanion Function(ExtraCompanion, DartT value) insertCol,
+  required DialectAwareSqlType<DartT>? customT,
+}) async {
+  final baseCompanion = ExtraCompanion.insert(
+    id: 77,
+  );
+
+  final insertCompanion = insertCol(baseCompanion, value);
+
+  await db.into(db.extra).insert(insertCompanion);
+
+  /* final allRows = await db.customSelect("select * from Extra").get();
+  print("All rows:");
+  for (final row in allRows) {
+    print(row.data);
+  } */
+
+  final res = await (db.select(db.extra)..where((tbl) => column.equals(value)))
+      .getSingle();
+  expect(res.id, 77);
+
+  final columns = res.toColumns(false);
+  final columnDriftValue = (columns[column.name]! as Variable<DartT>).value!;
+  return columnDriftValue;
+}
+
+Future<void> _testCustomTypeExtra<DartT extends Object>(
+  TestsDatabase db, {
+  required DartT value,
+  required GeneratedColumn<DartT> column,
+  required DialectAwareSqlType<DartT>? customT,
+  required ExtraCompanion Function(ExtraCompanion, DartT value) insertCol,
+  DartT? expected,
+}) async {
+  final driftValue = await _insertAndFetchFromExtra(
+    db,
+    value: value,
+    column: column,
+    insertCol: insertCol,
+    customT: customT,
+  );
+
+  _expectCorrectValue(
+    db,
+    columnDriftValue: driftValue,
+    value: value,
+    customT: customT,
+    expected: expected,
+  );
 }

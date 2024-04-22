@@ -289,11 +289,7 @@ void main() {
       db: db,
       dbName: dbName,
       dbDescription: DBSchemaRaw(fields: {}, migrations: [migration]),
-      config: ElectricConfig(
-        auth: const AuthConfig(
-          token: 'test-token',
-        ),
-      ),
+      config: ElectricConfig(),
       opts: ElectrifyOptions(socketFactory: MockSocketFactory()),
     );
 

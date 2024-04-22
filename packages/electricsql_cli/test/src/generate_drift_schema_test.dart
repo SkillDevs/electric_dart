@@ -72,10 +72,22 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
       case 'GenOpts':
         return DriftTableGenOpts(
           driftTableName: 'GenOptsDriftTable',
-          dataClassName: DataClassNameInfo(
-            'MyDataClassName',
-            extending: refer('BaseModel', 'package:myapp/base_model.dart'),
-          ),
+          annotations: [
+            dataClassNameAnnotation(
+              'MyDataClassName',
+              extending: refer('BaseModel', 'package:myapp/base_model.dart'),
+            ),
+          ],
+        );
+
+      case 'TableWithCustomRowClass':
+        return DriftTableGenOpts(
+          annotations: [
+            useRowClassAnnotation(
+              refer('MyCustomRowClass', 'package:myapp/custom_row_class.dart'),
+              constructor: 'fromDb',
+            ),
+          ],
         );
     }
     return null;
@@ -87,6 +99,9 @@ class CustomElectricDriftGenOpts extends ElectricDriftGenOpts {
       if (sqlColumnName == 'id') {
         return DriftColumnGenOpts(
           driftColumnName: 'myIdCol',
+          annotations: [
+            jsonKeyAnnotation('my_id'),
+          ],
         );
       } else if (sqlColumnName == 'timestamp') {
         return DriftColumnGenOpts(

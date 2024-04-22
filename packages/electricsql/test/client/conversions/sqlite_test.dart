@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
-import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:test/test.dart';
 
 import '../drift/client_test_util.dart';
@@ -29,7 +30,7 @@ void main() async {
     final d = DateTime.parse('${date}T23:33:04.271');
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             date: Value(d),
           ),
         );
@@ -47,7 +48,7 @@ void main() async {
     final date = DateTime.parse('2023-08-07 18:28:35.421');
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             time: Value(date),
           ),
         );
@@ -65,11 +66,11 @@ void main() async {
 
     await db.dataTypes.insertAll([
       DataTypesCompanion.insert(
-        id: const Value(1),
+        id: 1,
         timetz: Value(date1),
       ),
       DataTypesCompanion.insert(
-        id: const Value(2),
+        id: 2,
         timetz: Value(date2),
       ),
     ]);
@@ -96,7 +97,7 @@ void main() async {
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamp: Value(date),
           ),
         );
@@ -116,22 +117,12 @@ void main() async {
     final dateUTC = DateTime.utc(2023, 8, 7, 18, 28, 35, 421);
     expect(dateUTC.isUtc, isTrue);
 
-    // The local date is stored as String, without the T and Z characters
-    final localDate = dateUTC.toLocal();
-    final expectedLocalStr = DateTime.utc(
-      localDate.year,
-      localDate.month,
-      localDate.day,
-      localDate.hour,
-      localDate.minute,
-      localDate.second,
-      localDate.millisecond,
-      localDate.microsecond,
-    ).toISOStringUTC().replaceAll('T', ' ').replaceAll('Z', '');
+    // The date is stored as String, without the T and Z characters
+    const expectedLocalStr = '2023-08-07 18:28:35.421';
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             timestamp: Value(dateUTC),
           ),
         );
@@ -153,11 +144,11 @@ void main() async {
 
     await db.dataTypes.insertAll([
       DataTypesCompanion.insert(
-        id: const Value(1),
+        id: 1,
         timestamptz: Value(date1),
       ),
       DataTypesCompanion.insert(
-        id: const Value(2),
+        id: 2,
         timestamptz: Value(date2),
       ),
     ]);
@@ -181,12 +172,12 @@ void main() async {
   test('booleans are converted correctly to SQLite', () async {
     await db.dataTypes.insertAll([
       DataTypesCompanion.insert(
-        id: const Value(1),
-        boolCol: const Value(true),
+        id: 1,
+        bool$: const Value(true),
       ),
       DataTypesCompanion.insert(
-        id: const Value(2),
-        boolCol: const Value(false),
+        id: 2,
+        bool$: const Value(false),
       ),
     ]);
 
@@ -216,7 +207,7 @@ void main() async {
       final (id, f4, f8) = entry;
       await db.into(db.dataTypes).insert(
             DataTypesCompanion.insert(
-              id: Value(id),
+              id: id,
               float4: Value(f4),
               float8: Value(f8),
             ),
@@ -259,7 +250,7 @@ void main() async {
 
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             int8: const Value(int8),
           ),
         );
@@ -277,15 +268,15 @@ void main() async {
   test('BigInts are converted correctly to SQLite', () async {
     final bigInt = BigInt.parse('9223372036854775807');
 
-    await db.into(db.dataTypes).insert(
-          DataTypesCompanion.insert(
-            id: const Value(1),
+    await db.into(db.extra).insert(
+          ExtraCompanion.insert(
+            id: 1,
             int8BigInt: Value(bigInt),
           ),
         );
 
     final rawRes = await db.customSelect(
-      'SELECT id, int8_big_int FROM DataTypes WHERE id = ?',
+      'SELECT id, int8_big_int FROM Extra WHERE id = ?',
       variables: [const Variable(1)],
     ).get();
 
@@ -329,7 +320,7 @@ void main() async {
     };
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(1),
+            id: 1,
             json: Value(json),
           ),
         );
@@ -346,7 +337,7 @@ void main() async {
     // but a DB NULL that indicates absence of a value
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(2),
+            id: 2,
             json: const Value(null),
           ),
         );
@@ -361,7 +352,7 @@ void main() async {
     // Also test JSON null value
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(3),
+            id: 3,
             json: const Value(kJsonNull),
           ),
         );
@@ -376,7 +367,7 @@ void main() async {
     // also test regular values
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(4),
+            id: 4,
             json: const Value('foo'),
           ),
         );
@@ -390,7 +381,7 @@ void main() async {
     // also test arrays
     await db.into(db.dataTypes).insert(
           DataTypesCompanion.insert(
-            id: const Value(5),
+            id: 5,
             json: const Value([1, 2, 3]),
           ),
         );
@@ -400,5 +391,68 @@ void main() async {
       variables: [const Variable(5)],
     ).get();
     expect(rawRes5[0].read<String>('json'), jsonEncode([1, 2, 3]));
+  });
+
+  test('bytea is converted correctly to SQLite', () async {
+    // inserting
+    final bytea1 = Uint8List.fromList([1, 2, 3, 4]);
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: 1,
+            bytea: Value(bytea1),
+          ),
+        );
+
+    final rawRes1 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+    expect(rawRes1[0].read<Uint8List>('bytea'), bytea1);
+
+    // updating
+    final bytea2 = Uint8List.fromList([1, 2, 3, 5]);
+    await (db.update(db.dataTypes)..where((d) => d.id.equals(1))).write(
+      DataTypesCompanion(
+        bytea: Value(bytea2),
+      ),
+    );
+
+    final rawRes2 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(1)],
+    ).get();
+    expect(rawRes2[0].read<Uint8List>('bytea'), bytea2);
+
+    // inserting null
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: 2,
+            bytea: const Value(null),
+          ),
+        );
+
+    final rawRes3 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(2)],
+    ).get();
+    expect(rawRes3[0].read<Uint8List?>('bytea'), null);
+
+    // inserting large buffer
+    const sizeInBytes = 1000000;
+    final bytea3 = Uint8List(sizeInBytes);
+    final r = Random();
+    bytea3.forEachIndexed((i, _) => bytea3[i] = r.nextInt(256));
+    await db.into(db.dataTypes).insert(
+          DataTypesCompanion.insert(
+            id: 3,
+            bytea: Value(bytea3),
+          ),
+        );
+
+    final rawRes4 = await db.customSelect(
+      'SELECT bytea FROM DataTypes WHERE id = ?',
+      variables: [const Variable(3)],
+    ).get();
+    expect(rawRes4[0].read<Uint8List>('bytea'), bytea3);
   });
 }

@@ -40,8 +40,12 @@ extension DateExtension on DateTime {
   /// the current date is set as UTC date.
   /// e.g. if it is 3PM in GMT+2 then it is 1PM UTC.
   ///      This function would return a date in which it is 3PM UTC.
-  /// The output is always in local time
+  /// The output is always in UTC time
   DateTime ignoreTimeZone({Duration? mockTimezoneOffset}) {
+    if (isUtc) {
+      return this;
+    }
+
     // `v.toISOString` returns the UTC time but we want the time in this timezone
     // so we get the timezone offset and subtract it from the current time in order to
     // compensate for the timezone correction done by `toISOString`
@@ -50,7 +54,39 @@ extension DateExtension on DateTime {
     final offsetInMs = effectiveTimezoneOffset.inMilliseconds;
     return DateTime.fromMillisecondsSinceEpoch(
       millisecondsSinceEpoch + offsetInMs,
-      isUtc: false,
+      isUtc: true,
+    );
+  }
+
+  DateTime asUtc() {
+    if (isUtc) {
+      return this;
+    }
+    return DateTime.utc(
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      millisecond,
+      microsecond,
+    );
+  }
+
+  DateTime asLocal() {
+    if (!isUtc) {
+      return this;
+    }
+    return DateTime(
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      millisecond,
+      microsecond,
     );
   }
 }

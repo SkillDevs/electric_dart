@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/util.dart';
 import 'package:satellite_dart_client/drift/database.dart';
@@ -14,8 +13,9 @@ import 'package:satellite_dart_client/util/json.dart';
 import 'package:satellite_dart_client/util/pretty_output.dart';
 
 late String dbName;
+int? tokenExpirationMillis;
 
-typedef MyDriftElectricClient = DriftElectricClient<ClientDatabase>;
+typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
 Future<ClientDatabase> makeDb(String dbPath) async {
   final db = ClientDatabase(NativeDatabase(File(dbPath)));
@@ -24,11 +24,16 @@ Future<ClientDatabase> makeDb(String dbPath) async {
   return db;
 }
 
-Future<MyDriftElectricClient> electrifyDb(ClientDatabase db, String host, int port, List<dynamic> migrationsJ) async {
+Future<MyDriftElectricClient> electrifyDb(
+  ClientDatabase db,
+  String host,
+  int port,
+  List<dynamic> migrationsJ,
+  bool connectToElectric,
+) async {
   final config = ElectricConfig(
     url: "electric://$host:$port",
     logger: LoggerConfig(level: Level.debug, colored: false),
-    auth: AuthConfig(token: await mockSecureAuthToken()),
   );
   print("(in electrify_db) config: ${electricConfigToJson(config)}");
 
@@ -42,12 +47,42 @@ Future<MyDriftElectricClient> electrifyDb(ClientDatabase db, String host, int po
     tablesWithUser: {},
   );
 
-  result.notifier.subscribeToConnectivityStateChanges(
-    (ConnectivityStateChangeNotification x) =>
-        print("Connectivity state changed (${x.dbName}, ${x.connectivityState})"),
-  );
+  final Duration? exp = tokenExpirationMillis != null
+      ? Duration(milliseconds: tokenExpirationMillis!)
+      : null;
+  final token = await mockSecureAuthToken(exp: exp);
+
+  result.notifier.subscribeToConnectivityStateChanges((x) =>
+      print('Connectivity state changed: ${x.connectivityState.status.name}'));
+  if (connectToElectric) {
+    await result.connect(token); // connect to Electric
+  }
 
   return result;
+}
+
+// reconnects with Electric, e.g. after expiration of the JWT
+Future<void> reconnect(ElectricClient electric, Duration? exp) async {
+  final token = await mockSecureAuthToken(exp: exp);
+  await electric.connect(token);
+}
+
+Future<void> checkTokenExpiration(
+    ElectricClient electric, int minimalTime) async {
+  final start = DateTime.now().millisecondsSinceEpoch;
+  late void Function() unsubscribe;
+  unsubscribe = electric.notifier.subscribeToConnectivityStateChanges((x) {
+    if (x.connectivityState.status == ConnectivityStatus.disconnected &&
+        x.connectivityState.reason?.code == SatelliteErrorCode.authExpired) {
+      final delta = DateTime.now().millisecondsSinceEpoch - start;
+      if (delta >= minimalTime) {
+        print('JWT expired after $delta ms');
+      } else {
+        print('JWT expired too early, after only $delta ms');
+      }
+      unsubscribe();
+    }
+  });
 }
 
 void setSubscribers(DriftElectricClient db) {
@@ -65,20 +100,38 @@ void setSubscribers(DriftElectricClient db) {
   });
 }
 
-Future<void> syncTable(DriftElectricClient electric, String table) async {
-  if (table == 'other_items') {
-    final ShapeSubscription(:synced) = await electric.syncTables(
-      ["items", "other_items"],
-    );
+Future<void> syncItemsTable(
+    MyDriftElectricClient electric, String shapeFilter) async {
+  final subs = await electric.syncTable(
+    electric.db.items,
+    where: (_) => CustomExpression<bool>(shapeFilter),
+  );
+  return await subs.synced;
+}
 
-    return await synced;
-  } else {
-    final satellite = globalRegistry.satellites[dbName]!;
-    final ShapeSubscription(:synced) = await satellite.subscribe([
-      ClientShapeDefinition(selects: [ShapeSelect(tablename: table)])
-    ]);
-    return await synced;
-  }
+Future<void> syncOtherItemsTable(
+    MyDriftElectricClient electric, String shapeFilter) async {
+  final subs = await electric.syncTable(
+    electric.db.otherItems,
+    where: (_) => CustomExpression<bool>(shapeFilter),
+  );
+  return await subs.synced;
+}
+
+Future<void> syncTable(String table) async {
+  final satellite = globalRegistry.satellites[dbName]!;
+  final subs = await satellite.subscribe([Shape(tablename: table)]);
+  return await subs.synced;
+}
+
+Future<void> lowLevelSubscribe(
+  MyDriftElectricClient electric,
+  Shape shape,
+) async {
+  final ShapeSubscription(:synced) = await electric.satellite.subscribe(
+    [shape],
+  );
+  return await synced;
 }
 
 Future<Rows> getTables(DriftElectricClient electric) async {
@@ -194,7 +247,7 @@ Future<void> getDatetimes(MyDriftElectricClient electric) async {
   throw UnimplementedError();
 }
 
-Future<Rows> getItems(DriftElectricClient electric) async {
+Future<Rows> getItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT * FROM items;",
@@ -203,13 +256,23 @@ Future<Rows> getItems(DriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<Rows> getItemIds(DriftElectricClient electric) async {
+Future<Rows> getItemIds(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT id FROM items;",
       )
       .get();
   return _toRows(rows);
+}
+
+Future<bool> existsItemWithContent(
+    MyDriftElectricClient electric, String content) async {
+  final items = await electric.db.select(electric.db.items).get();
+  final Item? item = items.cast<Item?>().firstWhere(
+        (item) => item!.content == content,
+        orElse: () => null,
+      );
+  return item != null;
 }
 
 Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
@@ -345,8 +408,25 @@ SingleRow _enumClassToRawRow(Enum item) {
   return SingleRow(driftCols);
 }
 
+Future<SingleRow> getBlob(MyDriftElectricClient electric, String id) async {
+  final item = await (electric.db.blobs.select()..where((t) => t.id.equals(id)))
+      .getSingle();
+  return SingleRow.fromItem(item);
+}
+
+Future<SingleRow> writeBlob(
+    MyDriftElectricClient electric, String id, List<int>? blob) async {
+  final item = await electric.db.blobs.insertReturning(
+    BlobsCompanion.insert(
+      id: id,
+      blob$: Value(blob == null ? null : Uint8List.fromList(blob)),
+    ),
+  );
+  return SingleRow.fromItem(item);
+}
+
 Future<Rows> getItemColumns(
-    DriftElectricClient electric, String table, String column) async {
+    MyDriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
       .customSelect(
         "SELECT $column FROM $table;",
@@ -355,7 +435,8 @@ Future<Rows> getItemColumns(
   return _toRows(rows);
 }
 
-Future<void> insertItem(DriftElectricClient electric, List<String> keys) async {
+Future<void> insertItem(
+    MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
       await electric.db.customInsert(
@@ -370,14 +451,14 @@ Future<void> insertItem(DriftElectricClient electric, List<String> keys) async {
 }
 
 Future<void> insertExtendedItem(
-  DriftElectricClient electric,
+  MyDriftElectricClient electric,
   Map<String, Object?> values,
 ) async {
   insertExtendedInto(electric, "items", values);
 }
 
 Future<void> insertExtendedInto(
-  DriftElectricClient electric,
+  MyDriftElectricClient electric,
   String table,
   Map<String, Object?> values,
 ) async {
@@ -405,7 +486,7 @@ Future<void> insertExtendedInto(
 }
 
 Future<void> deleteItem(
-  DriftElectricClient electric,
+  MyDriftElectricClient electric,
   List<String> keys,
 ) async {
   for (final key in keys) {
@@ -416,7 +497,7 @@ Future<void> deleteItem(
   }
 }
 
-Future<Rows> getOtherItems(DriftElectricClient electric) async {
+Future<Rows> getOtherItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
         "SELECT * FROM other_items;",
@@ -425,15 +506,8 @@ Future<Rows> getOtherItems(DriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<void> insertOtherItem(DriftElectricClient electric, List<String> keys) async {
-  await electric.db.customInsert(
-    "INSERT INTO items(id, content) VALUES (?,?);",
-    variables: [
-      Variable.withString("test_id_1"),
-      Variable.withString(""),
-    ],
-  );
-
+Future<void> insertOtherItem(
+    MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
       await electric.db.customInsert(
@@ -447,24 +521,54 @@ Future<void> insertOtherItem(DriftElectricClient electric, List<String> keys) as
   });
 }
 
-Future<void> stop(DriftElectricClient db) async {
+void setItemReplicatonTransform(MyDriftElectricClient electric) {
+  electric.setTableReplicationTransform(
+    electric.db.items,
+    transformOutbound: (item) {
+      final newContent = item.content
+          .split('')
+          .map((char) => String.fromCharCode(char.codeUnitAt(0) + 1))
+          .join('');
+      return item.copyWith(content: newContent);
+    },
+    transformInbound: (item) {
+      final newContent = item.content
+          .split('')
+          .map((char) => String.fromCharCode(char.codeUnitAt(0) - 1))
+          .join('');
+      return item.copyWith(content: newContent);
+    },
+  );
+}
+
+Future<void> stop(MyDriftElectricClient db) async {
   await globalRegistry.stopAll();
 }
 
-Future<void> rawStatement(DriftElectricClient db, String statement) async {
+Future<void> rawStatement(MyDriftElectricClient db, String statement) async {
   await db.db.customStatement(statement);
 }
 
-void changeConnectivity(DriftElectricClient db, String connectivityName) {
-  final dbName = db.notifier.dbName;
-  final ConnectivityState state = switch (connectivityName) {
-    'disconnected' => ConnectivityState.disconnected,
-    'connected' => ConnectivityState.connected,
-    'available' => ConnectivityState.available,
-    _ => throw Exception('Unknown connectivity name: $connectivityName'),
-  };
+void setTokenExpirationMillis(int millis) {
+  tokenExpirationMillis = millis;
+}
 
-  db.notifier.connectivityStateChanged(dbName, state);
+void connect(MyDriftElectricClient db) {
+  db.connect();
+}
+
+void disconnect(MyDriftElectricClient db) {
+  db.disconnect();
+}
+
+Future<void> custom0325SyncItems(MyDriftElectricClient electric) async {
+  final subs = await electric.syncTable(
+    electric.db.items,
+    where: (items) => items.content.like('items-_-'),
+    include: (items) => [SyncInputRelation.from(items.$relations.otherItems)],
+  );
+
+  await subs.synced;
 }
 
 /////////////////////////////////

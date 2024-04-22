@@ -7,12 +7,15 @@ const _kFatalErrorDescription =
 const _throwErrors = {
   SatelliteErrorCode.internal,
   SatelliteErrorCode.fatalError,
+  SatelliteErrorCode.connectionCancelledByDisconnect,
+  SatelliteErrorCode.replicationTransformError,
 };
 
 const _fatalErrors = {
   SatelliteErrorCode.invalidRequest,
   SatelliteErrorCode.unknownSchemaVersion,
   SatelliteErrorCode.authRequired,
+  SatelliteErrorCode.authExpired,
 };
 
 const _outOfSyncErrors = [
