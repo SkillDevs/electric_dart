@@ -126,7 +126,7 @@ class SatelliteProcess implements Satellite {
       garbageCollectShapeHandler,
     );
     throttledSnapshot = Throttle(
-      _mutexSnapshot,
+      mutexSnapshot,
       opts.minSnapshotWindow,
     );
 
@@ -139,7 +139,8 @@ class SatelliteProcess implements Satellite {
   }
 
   /// Perform a snapshot while taking out a mutex to avoid concurrent calls.
-  Future<DateTime> _mutexSnapshot() async {
+  @visibleForTesting
+  Future<DateTime> mutexSnapshot() async {
     return _snapshotLock.synchronized(() {
       return performSnapshot();
     });
@@ -278,6 +279,10 @@ This means there is a notifier subscription leak.`''');
   Future<void> _stop({bool? shutdown}) async {
     // Stop snapshotting and polling for changes.
     throttledSnapshot.cancel();
+
+    // Ensure that no snapshot is left running in the background
+    // by acquiring the mutex and releasing it immediately.
+    await _snapshotLock.synchronized(() => null);
 
     if (_pollingInterval != null) {
       _pollingInterval!.cancel();
@@ -1351,7 +1356,7 @@ This means there is a notifier subscription leak.`''');
       if (firstDMLChunk) {
         logger.info('apply incoming changes for LSN: ${base64.encode(lsn)}');
         // assign timestamp to pending operations before apply
-        await _mutexSnapshot();
+        await mutexSnapshot();
         firstDMLChunk = false;
       }
 

@@ -2325,6 +2325,38 @@ void main() {
 
     // Doesn't throw
   });
+
+  test("don't leave a snapshot running when stopping", () async {
+    await runMigrations();
+    satellite.setAuthState(authState);
+
+    // Make the adapter slower, to interleave stopping the process and closing the db with a snapshot
+    // delay termination of _performSnapshot
+    satellite.updateDatabaseAdapter(
+      SlowDatabaseAdapter(
+        (satellite.adapter as SqliteAdapter).db,
+        delay: const Duration(milliseconds: 500),
+      ),
+    );
+
+    // Add something to the oplog
+    await adapter
+        .run(Statement("INSERT INTO parent(id, value) VALUES (1,'val1')"));
+
+    // // Perform snapshot with the mutex, to emulate a real scenario
+    final snapshotFuture = satellite.mutexSnapshot();
+    // Give some time to start the "slow" snapshot
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    // Stop the process while the snapshot is being performed
+    await satellite.stop();
+
+    // Remove/close the database connection
+    await cleanDb(dbName);
+
+    // Wait for the snapshot to finish to consider the test successful
+    await snapshotFuture;
+  });
 }
 
 class SlowDatabaseAdapter extends SqliteAdapter {
@@ -2339,6 +2371,14 @@ class SlowDatabaseAdapter extends SqliteAdapter {
   Future<RunResult> run(Statement statement) async {
     await Future<void>.delayed(delay);
     return super.run(statement);
+  }
+
+  @override
+  Future<T> transaction<T>(
+    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+  ) async {
+    await Future<void>.delayed(delay);
+    return super.transaction(f);
   }
 }
 

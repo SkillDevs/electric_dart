@@ -297,7 +297,7 @@ class SatelliteTestContext {
   }
 
   Future<void> clean() async {
-    await _clean(dbName);
+    await cleanDb(dbName);
   }
 
   Future<void> cleanAndStopSatellite() async {
@@ -349,10 +349,10 @@ Future<void> cleanAndStopSatelliteRaw({
   required SatelliteProcess satellite,
 }) async {
   await satellite.stop();
-  await _clean(dbName);
+  await cleanDb(dbName);
 }
 
-Future<void> _clean(DbName dbName) async {
+Future<void> cleanDb(DbName dbName) async {
   await removeFile(dbName);
   await removeFile('$dbName-journal');
 }
