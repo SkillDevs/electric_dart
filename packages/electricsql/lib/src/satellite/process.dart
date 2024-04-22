@@ -715,6 +715,9 @@ This means there is a notifier subscription leak.`''');
         "Can't change user ID when reconnecting. Previously connected with user ID '$userId' but trying to reconnect with user ID '$newUserId'",
       );
     }
+
+    setCurrentUser(userId: newUserId);
+
     setAuthState(
       authState!.copyWith(
         userId: () => newUserId,
@@ -832,10 +835,8 @@ This means there is a notifier subscription leak.`''');
     }
 
     try {
-      final token = _authState.token!;
-      setCurrentUser(token: token);
       await client.connect();
-      await authenticate(token);
+      await authenticate(_authState.token!);
     } catch (error) {
       logger.debug(
         'server returned an error while establishing connection: $error',
@@ -1644,23 +1645,8 @@ This means there is a notifier subscription leak.`''');
   }
 }
 
-void setCurrentUser({required String token}) {
-  final a = JWT.tryDecode(token);
-  if (a == null) {
-    logger.warning('Warning not a valid JWT token');
-    return;
-  }
-
-  if (a.payload is! Map<String, Object?>) {
-    return;
-  }
-
-  final payload = a.payload as Map<String, Object?>;
-  if (!payload.containsKey('user_id')) {
-    return;
-  }
-
-  SatelliteProcess.userId = payload['user_id']! as String;
+void setCurrentUser({required String userId}) {
+  SatelliteProcess.userId = userId;
   logger.debug('Current user = ${SatelliteProcess.userId}');
 }
 
