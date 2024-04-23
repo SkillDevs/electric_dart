@@ -2357,6 +2357,22 @@ void main() {
     // Wait for the snapshot to finish to consider the test successful
     await snapshotFuture;
   });
+
+  test("don't snapshot after closing satellite process", () async {
+    // open and then immediately close
+    // check that no snapshot is called after close
+    final conn = await startSatellite(satellite, authConfig, token);
+    await conn.connectionFuture;
+
+    await satellite.stop();
+
+    satellite.debugSetPerformSnapshot(() async {
+      fail('Snapshot was called');
+    });
+
+    // wait some time to see that mutexSnapshot is not called
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  });
 }
 
 class SlowDatabaseAdapter extends SqliteAdapter {

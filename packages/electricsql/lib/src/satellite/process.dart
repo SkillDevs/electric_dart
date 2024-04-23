@@ -146,6 +146,14 @@ class SatelliteProcess implements Satellite {
     });
   }
 
+  Future<DateTime> Function()? _debugPerformSnapshotFun;
+
+  /// Override the snapshot function for testing.
+  @visibleForTesting
+  void debugSetPerformSnapshot(Future<DateTime> Function()? fun) {
+    _debugPerformSnapshotFun = fun;
+  }
+
   @visibleForTesting
   void updateDatabaseAdapter(DatabaseAdapter newAdapter) {
     _adapter = newAdapter;
@@ -198,7 +206,7 @@ This means there is a notifier subscription leak.`''');
     );
 
     // Starting now!
-    unawaited(Future(() => throttledSnapshot()));
+    await throttledSnapshot();
 
     // Need to reload primary keys after schema migration
     relations = await getLocalRelations();
@@ -971,6 +979,10 @@ This means there is a notifier subscription leak.`''');
   // It is not safe to call concurrently. Use mutexSnapshot.
   @visibleForTesting
   Future<DateTime> performSnapshot() async {
+    if (_debugPerformSnapshotFun != null) {
+      return _debugPerformSnapshotFun!();
+    }
+
     // assert a single call at a time
     if (_performingSnapshot) {
       throw SatelliteException(
