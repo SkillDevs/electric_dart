@@ -181,10 +181,12 @@ Future<void> start() async {
           getUUID,
         );
       } else if (name == "write_int") {
-        await processCommand5Params<MyDriftElectricClient, String, int, int,
-            Object, SingleRow>(state, command, (electric, id, i2, i4, i8Raw) {
-          final BigInt i8;
-          if (i8Raw is int) {
+        await processCommand5Params<MyDriftElectricClient, String, int?, int?,
+            Object?, SingleRow>(state, command, (electric, id, i2, i4, i8Raw) {
+          final BigInt? i8;
+          if (i8Raw == null) {
+            i8 = null;
+          } else if (i8Raw is int) {
             i8 = BigInt.from(i8Raw);
           } else if (i8Raw is String) {
             i8 = BigInt.parse(i8Raw.replaceAll('n', ''));

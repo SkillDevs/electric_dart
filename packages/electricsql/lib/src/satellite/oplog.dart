@@ -343,6 +343,10 @@ Row deserialiseRow(String str, Relation rel) {
   final parsed = json.decode(str) as Map<String, Object?>;
 
   return parsed.map((key, value) {
+    if (value == null) {
+      return MapEntry(key, null);
+    }
+
     final columnType = rel.columns
         .firstWhereOrNull((c) => c.name == key)
         ?.type
