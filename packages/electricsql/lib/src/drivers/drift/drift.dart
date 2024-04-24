@@ -117,9 +117,19 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   }
 
   void Function() _hookToNotifier() {
+    // Propagate change events from Electric to Drift
     final _unsubDataChanges = notifier.subscribeToDataChanges(
       (notification) {
-        final tablesChanged = notification.changes.map((e) {
+        final origin = notification.origin;
+
+        // Skip propagating changes coming from local. We assume
+        // that the user is properly using Stream queries with drift,
+        // so no need to notify twice (one from drift itself and other right here)
+        if (origin == ChangeOrigin.local) {
+          return;
+        }
+
+        final Set<String> tablesChanged = notification.changes.map((e) {
           final tableName = e.qualifiedTablename.tablename;
           return tableName;
         }).toSet();
@@ -129,11 +139,15 @@ class DriftElectricClient<DB extends GeneratedDatabase>
 
         if (tableUpdates.isNotEmpty) {
           // Notify drift
+          logger.debug(
+            'notifying Drift of database changes: Changed tables: $tablesChanged. Origin: ${origin.name}',
+          );
           db.notifyUpdates(tableUpdates);
         }
       },
     );
 
+    // Propagate change events from Drift to Electric
     final tableUpdateSub = db.tableUpdates().listen((updatedTables) {
       final tableNames = updatedTables
           .where((update) => update is! _TableUpdateFromElectric)
@@ -143,8 +157,8 @@ class DriftElectricClient<DB extends GeneratedDatabase>
       // Only notify Electric for the tables that were not triggered
       // by Electric itself in "notifier.subscribeToDataChanges"
       if (tableNames.isNotEmpty) {
-        logger.info(
-          'Notifying Electric about tables changed in the client. Changed tables: $tableNames',
+        logger.debug(
+          'notifying Electric of database changes. Changed tables: $tableNames',
         );
         notifier.potentiallyChanged();
       }

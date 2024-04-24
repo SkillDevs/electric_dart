@@ -110,7 +110,7 @@ class EventNotifier implements Notifier {
       changes.map((e) => e.qualifiedTablename.tablename),
     ).toList();
 
-    logger.info(
+    logger.debug(
       'notifying client of database changes. Changed tables: $tables. Origin: ${origin.name}',
     );
 
