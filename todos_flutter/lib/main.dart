@@ -113,7 +113,7 @@ class MyHomePage extends HookConsumerWidget {
         electricClient.syncTable(
           db.todolist,
           include: (tl) => [
-            SyncInputRelation.from(db.todolist.$relations.todo),
+            SyncInputRelation.from(tl.$relations.todo),
           ],
         );
       }
