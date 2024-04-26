@@ -1,4 +1,4 @@
-[doc NodeJS Satellite uses compensations correctly]
+[doc NodeJS Satellite uses compensations, and column order does not matter]
 [include _shared.luxinc]
 [include _satellite_macros.luxinc]
 
@@ -9,14 +9,30 @@
 # PREPARATION: Set up dependent tables and add a row that will be referenced
 
 [shell proxy_1]
-    [invoke migrate_items_table 001]
-    [invoke migrate_other_items_table 002]
+    [local sql=
+        """
+        CREATE TABLE public.items (
+            content VARCHAR NOT NULL,
+            id UUID PRIMARY KEY,
+            content_text_null VARCHAR,
+            content_text_null_default VARCHAR,
+            intvalue_null integer,
+            intvalue_null_default integer
+        );
+        ALTER TABLE public.items ENABLE ELECTRIC;
+        CREATE TABLE public.other_items (
+            content TEXT NOT NULL,
+            id TEXT PRIMARY KEY,
+            item_id UUID REFERENCES public.items(id)
+        );
+        ALTER TABLE public.other_items ENABLE ELECTRIC;
+        """]
+    [invoke migrate_pg "001" $sql]
 
 [shell satellite_1]
     ??[rpc] recv: #SatInStartReplicationResp
     [invoke node_sync_other_items ""]
     ??[proto] recv: #SatSubsDataEnd
-    !raw_statement db "UPDATE _electric_meta SET value = 1 WHERE key = 'compensations' RETURNING *"
     ?$node
 
     [invoke node_await_insert_extended "{id: '00000000-0000-0000-0000-000000000001', content: 'hello world'}"]
@@ -34,8 +50,7 @@
 [shell satellite_1]
     # On a disconnected client, insert a dependent row
     ?$node
-    !raw_statement db "INSERT INTO other_items(id, content, item_id) VALUES('other_test_id_1', '', '00000000-0000-0000-0000-000000000001')"
-    ?$node
+    [invoke node_await_insert_extended_into "other_items" "{id: 'other_test_id_1', content: '', item_id: '00000000-0000-0000-0000-000000000001'}"]
 
 
 [shell satellite_1]
@@ -46,8 +61,8 @@
 
 [shell pg_1]
     # and expect the previously deleted row to be present
+    [invoke wait-for "SELECT id, content FROM public.items;" "00000000-0000-0000-0000-000000000001 \| hello world" 10 $psql]
     !\x
-    [invoke wait-for "SELECT content FROM public.items;" "content \| hello world" 10 $psql]
     [invoke wait-for "SELECT COUNT(*) FROM public.other_items;" "count \| 1" 10 $psql]
 
 [shell satellite_1]

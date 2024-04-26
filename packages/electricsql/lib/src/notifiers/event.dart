@@ -14,6 +14,12 @@ class EventNames {
   static const connectivityStateChange = 'network:connectivity:changed';
 }
 
+// Initialise global emitter to be shared between all
+// electric instances (unless emitter is passed in)
+// Remove warning as we don't want to limit the number
+// of subscribers
+final globalEmitter = EventEmitter();
+
 class EventNotifier implements Notifier {
   @override
   final DbName dbName;
@@ -29,7 +35,7 @@ class EventNotifier implements Notifier {
       byName: {},
     );
 
-    events = eventEmitter ?? EventEmitter();
+    events = eventEmitter ?? globalEmitter;
   }
 
   @override

@@ -96,7 +96,6 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/01.02_electrifica
 -
  [cleanup]
      [invoke teardown]
-Only in electric/tests: 01.07_postgres_dropped_columns_are_not_electrified.lux
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.03_node_satellite_sends_and_recieves_data.lux dart/tests/03.03_node_satellite_sends_and_recieves_data.lux
 --- electric/tests/03.03_node_satellite_sends_and_recieves_data.lux	2024-01-01 00:00:00.000000000 +0000
 +++ dart/tests/03.03_node_satellite_sends_and_recieves_data.lux	2024-01-01 00:00:00.000000000 +0000
@@ -194,7 +193,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.10_node_satell
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satellite_compensations_work.lux dart/tests/03.11_node_satellite_compensations_work.lux
 --- electric/tests/03.11_node_satellite_compensations_work.lux	2024-01-01 00:00:00.000000000 +0000
 +++ dart/tests/03.11_node_satellite_compensations_work.lux	2024-01-01 00:00:00.000000000 +0000
-@@ -16,21 +16,16 @@
+@@ -16,21 +16,15 @@
      ??[rpc] recv: #SatInStartReplicationResp
      [invoke node_sync_other_items ""]
      ??[proto] recv: #SatSubsDataEnd
@@ -210,7 +209,6 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satell
 -    })
 -    """
 +    [invoke node_await_insert_extended "{id: '00000000-0000-0000-0000-000000000001', content: 'hello world'}"]
-+    ?$node
      ??[proto] send: #SatOpLog
      ??[proto] recv: #SatOpLog
  
@@ -220,7 +218,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.11_node_satell
  
  [shell pg_1]
      # Concurrently, update and then delete the referenced row on the server
-@@ -40,20 +35,13 @@
+@@ -40,20 +34,13 @@
  [shell satellite_1]
      # On a disconnected client, insert a dependent row
      ?$node
@@ -597,6 +595,53 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.25_node_satell
  
      ?send: #SatSubsReq\{id: ([a-f0-9-]{36})
      [global client_2_subs_id=$1]
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux dart/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux
+--- electric/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux	2024-01-01 00:00:00.000000000 +0000
++++ dart/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux	2024-01-01 00:00:00.000000000 +0000
+@@ -35,18 +35,12 @@
+     ??[proto] recv: #SatSubsDataEnd
+     ?$node
+ 
+-    """!await db.db.items.create({
+-      data: {
+-        id: "00000000-0000-0000-0000-000000000001",
+-        content: "hello world"
+-      }
+-    })
+-    """
++    [invoke node_await_insert_extended "{id: '00000000-0000-0000-0000-000000000001', content: 'hello world'}"]
+     ??[proto] send: #SatOpLog
+     ??[proto] recv: #SatOpLog
+ 
+     # Disconnect the client
+-    !db.disconnect()
++    !disconnect db
+ 
+ [shell pg_1]
+     # Concurrently, update and then delete the referenced row on the server
+@@ -56,20 +50,12 @@
+ [shell satellite_1]
+     # On a disconnected client, insert a dependent row
+     ?$node
+-    """!await db.db.other_items.create({
+-      data: {
+-        id: "other_test_id_1",
+-        content: "",
+-        item_id: "00000000-0000-0000-0000-000000000001"
+-      }
+-    })
+-    """
+-    ?$node
++    [invoke node_await_insert_extended_into "other_items" "{id: 'other_test_id_1', content: '', item_id: '00000000-0000-0000-0000-000000000001'}"]
+ 
+ 
+ [shell satellite_1]
+     # Reconnect the client, expecting no errors to show up
+-    !db.connect()
++    !connect db
+     ??[proto] send: #SatOpLog
+     ??[proto] recv: #SatOpLog
+ 
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
 --- electric/tests/_satellite_macros.luxinc	2024-01-01 00:00:00.000000000 +0000
 +++ dart/tests/_satellite_macros.luxinc	2024-01-01 00:00:00.000000000 +0000
