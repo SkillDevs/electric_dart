@@ -15,7 +15,6 @@ dependencies:
   equatable: ^2.0.0
   events_emitter: ^0.5.2
   fixnum: ^1.0.0
-  http: ^1.0.0
   logging: ^1.0.0
   meta: ^1.0.0
   platform_info: ^4.0.2
@@ -36,6 +35,7 @@ dev_dependencies:
   drift_postgres: ^1.2.0
   fast_immutable_collections: ^10.0.0
   file: ^7.0.0 # Lowest version supported
+  http: ^1.0.0
   lint: ^2.3.0
   path: ^1.9.0
   pub_semver: ^2.1.4 # Lowest version supported
