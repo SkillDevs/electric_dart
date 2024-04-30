@@ -52,13 +52,19 @@ class DriftAdapter implements DatabaseAdapter {
   ) async {
     final completer = Completer<T>();
 
-    return db.transaction(() async {
+    return db.transaction(() {
       final tx = Transaction(this, (e) {
         completer.completeError(e);
       });
-      f(tx, (T res) {
-        completer.complete(res);
+
+      runZonedGuarded(() {
+        f(tx, (T res) {
+          completer.complete(res);
+        });
+      }, (error, stack) {
+        completer.completeError(error);
       });
+
       return completer.future;
     });
   }

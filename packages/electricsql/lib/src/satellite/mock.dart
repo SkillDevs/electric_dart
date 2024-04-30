@@ -41,7 +41,8 @@ class MockSatelliteProcess implements Satellite {
   String? token;
 
   @override
-  ConnectivityState? connectivityState;
+  late ConnectivityState? connectivityState =
+      const ConnectivityState(status: ConnectivityStatus.disconnected);
 
   MockSatelliteProcess({
     required this.dbName,
@@ -140,6 +141,10 @@ class MockRegistry extends BaseRegistry {
       effectiveOpts = effectiveOpts.copyWithOverrides(overrides);
     }
 
+    if (satellites[dbName] != null) {
+      return satellites[dbName]!;
+    }
+
     final satellite = MockSatelliteProcess(
       dbName: dbName,
       adapter: adapter,
@@ -148,8 +153,8 @@ class MockRegistry extends BaseRegistry {
       socketFactory: socketFactory,
       opts: effectiveOpts,
     );
+    satellites[dbName] = satellite;
     await satellite.start(const AuthConfig());
-
     return satellite;
   }
 }

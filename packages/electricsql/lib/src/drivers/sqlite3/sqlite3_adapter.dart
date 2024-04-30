@@ -56,23 +56,26 @@ class SqliteAdapter implements DatabaseAdapter {
     return txLock.synchronized(() async {
       db.execute('BEGIN');
 
-      final completer = Completer<T>();
+      try {
+        final txCompleter = Completer<T>();
+        final tx = Transaction(this, (e) => txCompleter.completeError(e));
 
-      final tx = Transaction(this, (e) => completer.completeError(e));
+        runZonedGuarded(() {
+          f(tx, (T res) {
+            // Commit the transaction when the user sets the result.
+            // This assumes that the user does not execute any more queries after setting the result.
+            db.execute('COMMIT');
+            txCompleter.complete(res);
+          });
+        }, (error, stack) {
+          txCompleter.completeError(error);
+        });
 
-      f(tx, (T res) {
-        // Commit the transaction when the user sets the result.
-        // This assumes that the user does not execute any more queries after setting the result.
-        try {
-          db.execute('COMMIT');
-          completer.complete(res);
-        } catch (e) {
-          db.execute('ROLLBACK');
-          completer.completeError(e);
-        }
-      });
-
-      return completer.future;
+        return await txCompleter.future;
+      } catch (e) {
+        db.execute('ROLLBACK');
+        rethrow;
+      }
     });
   }
 
@@ -101,17 +104,6 @@ class Transaction implements DbTransaction {
     this.signalFailure,
   );
 
-  void rollback(Object err, void Function(Object)? errorCallback) {
-    void invokeErrorCallbackAndSignalFailure() {
-      if (errorCallback != null) errorCallback(err);
-      signalFailure(err);
-    }
-
-    adapter._runUncoordinated(Statement('ROLLBACK')).whenComplete(() {
-      invokeErrorCallbackAndSignalFailure();
-    });
-  }
-
   void invokeCallback<T>(
     Future<T> prom,
     void Function(Transaction tx, T result)? successCallback,
@@ -120,7 +112,8 @@ class Transaction implements DbTransaction {
     prom.then((res) {
       successCallback?.call(this, res);
     }).catchError((Object err, _) {
-      rollback(err, errorCallback);
+      if (errorCallback != null) errorCallback(err);
+      signalFailure(err);
     });
   }
 
