@@ -178,7 +178,7 @@ class SubscriptionData {
 
 class InitialDataChange {
   final Relation relation;
-  final Record record;
+  final DbRecord record;
   final List<Tag> tags;
 
   InitialDataChange({

@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/rpc.dart';
@@ -18,6 +19,7 @@ import 'package:electricsql/src/util/bitmask_helpers.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/emitter_helpers.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/extension.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/proto.dart';
@@ -78,6 +80,9 @@ abstract interface class SafeEventEmitter {
 class SatelliteClient implements Client {
   final SocketFactory socketFactory;
   final SatelliteClientOpts opts;
+  late final SatInStartReplicationReq_Dialect _dialect;
+  late final TypeEncoder _encoder;
+  late final TypeDecoder _decoder;
   late final SafeEventEmitter _emitter;
 
   @visibleForTesting
@@ -91,7 +96,7 @@ class SatelliteClient implements Client {
   // can only handle a single subscription at a time
   late final SubscriptionsDataCache _subscriptionsDataCache;
 
-  final Map<String, ReplicatedRowTransformer<Record>> replicationTransforms =
+  final Map<String, ReplicatedRowTransformer<DbRecord>> replicationTransforms =
       {};
 
   void Function(Uint8List bytes)? socketHandler;
@@ -123,9 +128,21 @@ class SatelliteClient implements Client {
     required this.socketFactory,
     required this.opts,
   }) : _dbDescription = dbDescription {
+    _dialect = opts.dialect == Dialect.sqlite
+        ? SatInStartReplicationReq_Dialect.SQLITE
+        : SatInStartReplicationReq_Dialect.POSTGRES;
+    _encoder = opts.dialect == Dialect.sqlite
+        ? kSqliteTypeEncoder
+        // TODO: Implement
+        : throw UnimplementedError();
+    _decoder = opts.dialect == Dialect.sqlite
+        ? kSqliteTypeDecoder
+        // TODO: Implement
+        : throw UnimplementedError();
+
     // This cannot be lazyly instantiated in the 'late final' property, otherwise
     // it won't be properly ready to emit events at the right time
-    _subscriptionsDataCache = SubscriptionsDataCache(_dbDescription);
+    _subscriptionsDataCache = SubscriptionsDataCache(_dbDescription, _decoder);
 
     _emitter = SatelliteClientEventEmitter();
 
@@ -461,7 +478,10 @@ class SatelliteClient implements Client {
           ),
         );
       }
-      request = SatInStartReplicationReq(schemaVersion: schemaVersion);
+      request = SatInStartReplicationReq(
+        schemaVersion: schemaVersion,
+        sqlDialect: _dialect,
+      );
     } else {
       logger.info(
         'starting replication with lsn: ${base64.encode(lsn)} subscriptions: $subscriptionIds',
@@ -470,6 +490,7 @@ class SatelliteClient implements Client {
         lsn: lsn,
         subscriptionIds: subscriptionIds,
         observedTransactionData: observedTransactionData,
+        sqlDialect: _dialect,
       );
     }
 
@@ -1045,6 +1066,7 @@ class SatelliteClient implements Client {
             op.insert.getNullableRowData(),
             rel,
             _dbDescription,
+            _decoder,
           ),
           tags: op.insert.tags,
         );
@@ -1065,8 +1087,18 @@ class SatelliteClient implements Client {
         final change = DataChange(
           relation: rel,
           type: DataChangeType.update,
-          record: deserializeRow(rowData, rel, _dbDescription),
-          oldRecord: deserializeRow(oldRowData, rel, _dbDescription),
+          record: deserializeRow(
+            rowData,
+            rel,
+            _dbDescription,
+            _decoder,
+          ),
+          oldRecord: deserializeRow(
+            oldRowData,
+            rel,
+            _dbDescription,
+            _decoder,
+          ),
           tags: op.update.tags,
         );
 
@@ -1082,7 +1114,12 @@ class SatelliteClient implements Client {
         final change = DataChange(
           relation: rel,
           type: DataChangeType.delete,
-          oldRecord: deserializeRow(oldRowData, rel, _dbDescription),
+          oldRecord: deserializeRow(
+            oldRowData,
+            rel,
+            _dbDescription,
+            _decoder,
+          ),
           tags: op.delete.tags,
         );
         replication.transactions[lastTxnIdx].changes.add(change);
@@ -1095,7 +1132,12 @@ class SatelliteClient implements Client {
         final change = DataChange(
           relation: rel,
           type: DataChangeType.gone,
-          oldRecord: deserializeRow(op.gone.pkData, rel, _dbDescription),
+          oldRecord: deserializeRow(
+            op.gone.pkData,
+            rel,
+            _dbDescription,
+            _decoder,
+          ),
           tags: [],
         );
         replication.transactions[lastTxnIdx].changes.add(change);
@@ -1144,10 +1186,20 @@ class SatelliteClient implements Client {
       SatOpRow? record;
 
       if (change.oldRecord != null && change.oldRecord!.isNotEmpty) {
-        oldRecord = serializeRow(change.oldRecord!, relation, _dbDescription);
+        oldRecord = serializeRow(
+          change.oldRecord!,
+          relation,
+          _dbDescription,
+          _encoder,
+        );
       }
       if (change.record != null && change.record!.isNotEmpty) {
-        record = serializeRow(change.record!, relation, _dbDescription);
+        record = serializeRow(
+          change.record!,
+          relation,
+          _dbDescription,
+          _encoder,
+        );
       }
 
       late final SatTransOp changeOp;
@@ -1239,7 +1291,7 @@ class SatelliteClient implements Client {
   @override
   void setReplicationTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   ) {
     replicationTransforms[tableName.tablename] = transform;
   }
@@ -1307,7 +1359,12 @@ PgType? _getColumnType(
   }
 }
 
-SatOpRow serializeRow(Record rec, Relation relation, DBSchema dbDescription) {
+SatOpRow serializeRow(
+  DbRecord rec,
+  Relation relation,
+  DBSchema dbDescription,
+  TypeEncoder encoder,
+) {
   int recordNumColumn = 0;
   final recordNullBitMask =
       Uint8List(calculateNumBytes(relation.columns.length));
@@ -1317,7 +1374,7 @@ SatOpRow serializeRow(Record rec, Relation relation, DBSchema dbDescription) {
       final Object? value = rec[c.name];
       if (value != null) {
         final pgColumnType = _getColumnType(dbDescription, relation.table, c);
-        acc.add(serializeColumnData(value, pgColumnType));
+        acc.add(serializeColumnData(value, pgColumnType, encoder));
       } else {
         acc.add(serializeNullData());
         setMaskBit(recordNullBitMask, recordNumColumn);
@@ -1332,10 +1389,11 @@ SatOpRow serializeRow(Record rec, Relation relation, DBSchema dbDescription) {
   );
 }
 
-Record? deserializeRow(
+DbRecord? deserializeRow(
   SatOpRow? row,
   Relation relation,
   DBSchema dbDescription,
+  TypeDecoder decoder,
 ) {
   final _row = row;
   if (_row == null) {
@@ -1348,7 +1406,7 @@ Record? deserializeRow(
         value = null;
       } else {
         final pgColumnType = _getColumnType(dbDescription, relation.table, c);
-        value = deserializeColumnData(_row.values[i], pgColumnType);
+        value = deserializeColumnData(_row.values[i], pgColumnType, decoder);
       }
       return MapEntry(c.name, value);
     }),
@@ -1367,6 +1425,7 @@ int calculateNumBytes(int columnNum) {
 Object deserializeColumnData(
   List<int> column,
   PgType? columnType,
+  TypeDecoder decoder,
 ) {
   switch (columnType) {
     case PgType.char:
@@ -1380,39 +1439,49 @@ Object deserializeColumnData(
     case PgType.varchar:
     // enums (pgType == null) are decoded from text
     case null:
-    case PgType.json:
-    case PgType.jsonb:
-      return TypeDecoder.text(column);
+      return decoder.text(column);
     case PgType.bool:
-      return TypeDecoder.boolean(column);
+      return decoder.boolean(column);
     case PgType.int:
     case PgType.int2:
     case PgType.int4:
     case PgType.integer:
-      return num.parse(TypeDecoder.text(column));
+      return num.parse(decoder.text(column));
     case PgType.float4:
     case PgType.float8:
     case PgType.real:
-      return TypeDecoder.float(column);
+      return decoder.float(column);
     case PgType.timeTz:
-      return TypeDecoder.timetz(column);
+      return decoder.timetz(column);
+    case PgType.json:
+    case PgType.jsonb:
+      return decoder.json(column);
     case PgType.bytea:
+      // no-op
       return column;
   }
 }
 
 // All values serialized as textual representation
-List<int> serializeColumnData(Object columnValue, PgType? columnType) {
+List<int> serializeColumnData(
+  Object columnValue,
+  PgType? columnType,
+  TypeEncoder encoder,
+) {
   switch (columnType) {
     case PgType.bool:
-      return TypeEncoder.boolean(columnValue as int);
+      // the encoder accepts the number or bool
+      return encoder.boolean(columnValue);
     case PgType.timeTz:
-      return TypeEncoder.timetz(columnValue as String);
+      return encoder.timetz(columnValue as String);
     case PgType.bytea:
       return columnValue as List<int>;
+    case PgType.json:
+    case PgType.jsonb:
+      return encoder.json(columnValue);
     default:
       // Enums (pgType == null) are encoded as text
-      return TypeEncoder.text(_getDefaultStringToSerialize(columnValue));
+      return encoder.text(_getDefaultStringToSerialize(columnValue));
   }
 }
 
@@ -1435,7 +1504,7 @@ String _getDefaultStringToSerialize(Object value) {
 }
 
 List<int> serializeNullData() {
-  return TypeEncoder.text('');
+  return Uint8List(0);
 }
 
 Uint8List encodeSocketMessage(SatMsgType msgType, Object msg) {

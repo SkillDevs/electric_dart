@@ -2,6 +2,7 @@ import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:events_emitter/events_emitter.dart';
@@ -29,8 +30,10 @@ class SubscriptionsDataCache extends EventEmitter {
   RequestId? currentShapeRequestId;
   SubscriptionDataInternal? inDelivery;
   DBSchema dbDescription;
+  final TypeDecoder _decoder;
 
-  SubscriptionsDataCache(this.dbDescription);
+  SubscriptionsDataCache(this.dbDescription, TypeDecoder decoder)
+      : _decoder = decoder;
 
   bool isDelivering() {
     return inDelivery != null;
@@ -292,7 +295,7 @@ class SubscriptionsDataCache extends EventEmitter {
       );
     }
 
-    final record = deserializeRow(rowData, relation, dbDescription);
+    final record = deserializeRow(rowData, relation, dbDescription, _decoder);
 
     if (record == null) {
       internalError(

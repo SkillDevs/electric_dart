@@ -16,12 +16,13 @@ import 'package:electricsql/src/satellite/shapes/shapes.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/util.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
 
-typedef DataRecord = Record;
+typedef DataRecord = DbRecord;
 
 const kMockBehindWindowLsn = 42;
 const kMockInternalError = 27;
@@ -106,7 +107,7 @@ class MockSatelliteProcess implements Satellite {
   @override
   void setReplicationTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   ) {}
 
   @override
@@ -136,7 +137,8 @@ class MockRegistry extends BaseRegistry {
       throw Exception('Failed to start satellite process');
     }
 
-    var effectiveOpts = kSatelliteDefaults;
+    final String namespace = migrator.queryBuilder.defaultNamespace;
+    var effectiveOpts = satelliteDefaults(namespace);
     if (overrides != null) {
       effectiveOpts = effectiveOpts.copyWithOverrides(overrides);
     }
@@ -515,7 +517,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   @override
   void setReplicationTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   ) {
     throw UnimplementedError();
   }

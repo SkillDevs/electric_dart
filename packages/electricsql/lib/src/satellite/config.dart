@@ -1,3 +1,4 @@
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:meta/meta.dart';
@@ -36,22 +37,30 @@ class ConnectionBackoffOptions {
   });
 }
 
-const SatelliteOpts kSatelliteDefaults = SatelliteOpts(
-  metaTable: QualifiedTablename('main', '_electric_meta'),
-  migrationsTable: QualifiedTablename('main', '_electric_migrations'),
-  oplogTable: QualifiedTablename('main', '_electric_oplog'),
-  triggersTable: QualifiedTablename('main', '_electric_trigger_settings'),
-  shadowTable: QualifiedTablename('main', '_electric_shadow'),
-  pollingInterval: Duration(milliseconds: 2000),
-  minSnapshotWindow: Duration(milliseconds: 40),
-  clearOnBehindWindow: true,
-  connectionBackoffOptions: ConnectionBackoffOptions(
-    numOfAttempts: 50,
-    startingDelay: Duration(milliseconds: 1000),
-    maxDelay: Duration(seconds: 10000),
-    randomizationFactor: 0.25, // Taken from `retry` package defaults
-  ),
-);
+const kElectricOplogTable = '_electric_oplog';
+const kElectricMetaTable = '_electric_meta';
+const kElectricMigrationsTable = '_electric_migrations';
+const kElectricTriggerSettingsTable = '_electric_trigger_settings';
+const kElectricShadowTable = '_electric_shadow';
+
+SatelliteOpts Function(String namespace) satelliteDefaults =
+    (String namespace) => SatelliteOpts(
+          metaTable: QualifiedTablename(namespace, kElectricMetaTable),
+          migrationsTable: QualifiedTablename(namespace, kElectricMigrationsTable),
+          oplogTable: QualifiedTablename(namespace, kElectricOplogTable),
+          triggersTable:
+              QualifiedTablename(namespace, kElectricTriggerSettingsTable),
+          shadowTable: QualifiedTablename(namespace, kElectricShadowTable),
+          pollingInterval: const Duration(milliseconds: 2000),
+          minSnapshotWindow: const Duration(milliseconds: 40),
+          clearOnBehindWindow: true,
+          connectionBackoffOptions: const ConnectionBackoffOptions(
+            numOfAttempts: 50,
+            startingDelay: Duration(milliseconds: 1000),
+            maxDelay: Duration(seconds: 10000),
+            randomizationFactor: 0.25, // Taken from `retry` package defaults
+          ),
+        );
 
 const kDefaultSatellitePushPeriod = 500;
 
@@ -70,11 +79,14 @@ class SatelliteClientOpts {
 
   final int pushPeriod;
 
+  final Dialect dialect;
+
   SatelliteClientOpts({
     required this.host,
     required this.port,
     required this.ssl,
     required int timeout,
+    required this.dialect,
     this.pushPeriod = kDefaultSatellitePushPeriod,
   }) : _timeout = timeout;
 }

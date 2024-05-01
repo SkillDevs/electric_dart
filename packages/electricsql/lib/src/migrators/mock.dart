@@ -1,6 +1,10 @@
 import 'package:electricsql/src/migrators/migrators.dart';
+import 'package:electricsql/src/migrators/query_builder/builder.dart';
 
 class MockMigrator implements Migrator {
+  @override
+  QueryBuilder get queryBuilder => throw UnimplementedError();
+
   @override
   Future<int> up() async {
     return 0;

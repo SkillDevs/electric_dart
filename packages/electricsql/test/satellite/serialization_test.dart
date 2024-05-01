@@ -247,7 +247,7 @@ void main() {
     );
 
     final sqliteInferredRelations =
-        await inferRelationsFromSQLite(adapter, kSatelliteDefaults);
+        await inferRelationsFromDb(adapter, kSatelliteDefaults);
     final boolsInferredRelation = sqliteInferredRelations['bools']!;
 
     // Inferred types only support SQLite types, so the bool column is INTEGER
@@ -294,7 +294,7 @@ void main() {
     final adapter = SqliteAdapter(db);
 
     final sqliteInferredRelations =
-        await inferRelationsFromSQLite(adapter, kSatelliteDefaults);
+        await inferRelationsFromDb(adapter, kSatelliteDefaults);
 
     // Empty database
     expect(sqliteInferredRelations.length, 0);

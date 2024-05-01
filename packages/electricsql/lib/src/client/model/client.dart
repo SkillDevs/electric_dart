@@ -2,6 +2,7 @@ import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/client/model/transform.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
@@ -52,6 +53,8 @@ class ElectricClientImpl extends ElectricNamespace
   @override
   final DBSchema dbDescription;
 
+  final Dialect dialect;
+
   /// Connects to the Electric sync service.
   /// This method is idempotent, it is safe to call it multiple times.
   /// @param token - The JWT token to use to connect to the Electric sync service.
@@ -80,6 +83,7 @@ class ElectricClientImpl extends ElectricNamespace
     required Notifier notifier,
     required Satellite satellite,
     required Registry registry,
+    required Dialect dialect,
   }) {
     return ElectricClientImpl.internal(
       dbName: dbName,
@@ -88,6 +92,7 @@ class ElectricClientImpl extends ElectricNamespace
       satellite: satellite,
       dbDescription: dbDescription,
       registry: registry,
+      dialect: dialect,
     );
   }
 
@@ -99,6 +104,7 @@ class ElectricClientImpl extends ElectricNamespace
     required super.registry,
     required this.satellite,
     required this.dbDescription,
+    required this.dialect,
   }) : super() {
     shapeManager = ShapeManager(satellite);
     replicationTransformManager = ReplicationTransformManager(satellite);

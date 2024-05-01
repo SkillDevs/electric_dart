@@ -8,7 +8,7 @@ import 'package:electricsql/src/util/types.dart';
 ///
 /// @throws {@link InvalidRecordTransformationError}
 /// Thrown if record transformation changed any of the specified {@link immutableFields}
-T validateRecordTransformation<T extends Record>(
+T validateRecordTransformation<T extends DbRecord>(
   T originalRecord,
   T transformedRecord,
   List<String> immutableFields,

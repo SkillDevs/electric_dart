@@ -1,4 +1,5 @@
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 
@@ -42,15 +43,44 @@ class ElectricConfig {
   });
 }
 
+class ElectricConfigWithDialect extends ElectricConfig {
+  final Dialect? dialect; // defaults to SQLite
+
+  factory ElectricConfigWithDialect.from({
+    required ElectricConfig config, 
+    Dialect? dialect,
+  }) {
+    return ElectricConfigWithDialect._(
+      auth: config.auth,
+      url: config.url,
+      logger: config.logger,
+      timeout: config.timeout,
+      connectionBackoffOptions: config.connectionBackoffOptions,
+      dialect: dialect,
+    );
+  }
+
+  ElectricConfigWithDialect._({
+    required super.auth,
+    required super.url,
+    required super.logger,
+    required super.timeout,
+    required super.connectionBackoffOptions,
+    required this.dialect,
+  });
+}
+
 class HydratedConfig {
   final AuthConfig auth;
   final ReplicationConfig replication;
   final ConnectionBackoffOptions connectionBackoffOptions;
+  final String namespace;
 
   HydratedConfig({
     required this.auth,
     required this.replication,
     required this.connectionBackoffOptions,
+    required this.namespace,
   });
 }
 
@@ -59,37 +89,44 @@ class ReplicationConfig {
   final int port;
   final bool ssl;
   final Duration timeout;
+  final Dialect dialect;
 
   ReplicationConfig({
     required this.host,
     required this.port,
     required this.ssl,
     required this.timeout,
+    required this.dialect,
   });
 }
 
-HydratedConfig hydrateConfig(ElectricConfig config) {
+HydratedConfig hydrateConfig(ElectricConfigWithDialect config) {
   final auth = config.auth ?? const AuthConfig();
 
   //final debug = config.debug ?? false;
 
   final parsedServiceUrl = _parseServiceUrl(config.url);
 
+  final dialect = config.dialect ?? Dialect.sqlite;
+  final defaultNamespace = dialect == Dialect.postgres ? 'public' : 'main';
+
   final replication = ReplicationConfig(
     host: parsedServiceUrl.hostname,
     port: parsedServiceUrl.port,
     ssl: parsedServiceUrl.ssl,
     timeout: config.timeout ?? const Duration(milliseconds: 3000),
+    dialect: dialect,
   );
 
   final connectionBackoffOptions = config.connectionBackoffOptions ??
-      kSatelliteDefaults.connectionBackoffOptions;
+      satelliteDefaults(defaultNamespace).connectionBackoffOptions;
 
   return HydratedConfig(
     auth: auth,
     replication: replication,
     //debug: debug,
     connectionBackoffOptions: connectionBackoffOptions,
+    namespace: defaultNamespace,
   );
 }
 

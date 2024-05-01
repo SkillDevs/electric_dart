@@ -187,6 +187,7 @@ class GlobalRegistry extends BaseRegistry {
       port: config.replication.port,
       ssl: config.replication.ssl,
       timeout: config.replication.timeout.inMilliseconds,
+      dialect: config.replication.dialect,
     );
 
     final client = SatelliteClient(
@@ -195,7 +196,7 @@ class GlobalRegistry extends BaseRegistry {
       opts: satelliteClientOpts,
     );
 
-    final SatelliteOpts satelliteOpts = kSatelliteDefaults.copyWith(
+    final SatelliteOpts satelliteOpts = satelliteDefaults(config.namespace).copyWith(
       connectionBackoffOptions: config.connectionBackoffOptions,
     );
 

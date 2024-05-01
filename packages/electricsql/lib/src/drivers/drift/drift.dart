@@ -5,9 +5,11 @@ import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/transform.dart';
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
@@ -28,12 +30,23 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   final dbDescription = DBSchemaDrift(
     db: db,
     migrations: migrations,
+    // TODO: pgMigrations
+    pgMigrations: [],
   );
+
+  final Dialect dialect = switch (db.typeMapping.dialect) {
+    SqlDialect.sqlite => Dialect.sqlite,
+    SqlDialect.postgres => Dialect.sqlite,
+    _ => throw ArgumentError('Unsupported dialect: ${db.typeMapping.dialect}'),
+  };
 
   final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
     dbDescription: dbDescription,
-    config: config,
+    config: ElectricConfigWithDialect.from(
+      config: config,
+      dialect: dialect,
+    ),
     adapter: adapter,
     socketFactory: socketFactory,
     opts: ElectrifyBaseOptions(
@@ -253,9 +266,9 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     _baseClient.replicationTransformManager.setTableTransform(
       qualifiedTableName,
       ReplicatedRowTransformer(
-        transformInbound: (Record record) {
+        transformInbound: (DbRecord record) {
           final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, Record>(
+          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
             table,
             dataClass,
             transformInbound,
@@ -266,9 +279,9 @@ class DriftElectricClient<DB extends GeneratedDatabase>
               .toColumns(false)
               .map((key, val) => MapEntry(key, expressionToValue(val)));
         },
-        transformOutbound: (Record record) {
+        transformOutbound: (DbRecord record) {
           final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, Record>(
+          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
             table,
             dataClass,
             transformOutbound,

@@ -1,8 +1,10 @@
 import 'package:electricsql/drivers/sqlite3.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -25,7 +27,10 @@ Future<ElectricClientRaw> electrify({
   final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
     dbDescription: dbDescription,
-    config: config,
+    config: ElectricConfigWithDialect.from(
+      config: config,
+      dialect: Dialect.sqlite,
+    ),
     adapter: adapter,
     socketFactory: socketFactory,
     opts: ElectrifyBaseOptions(

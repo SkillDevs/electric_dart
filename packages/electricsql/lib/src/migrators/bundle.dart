@@ -1,11 +1,11 @@
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/schema.dart';
+import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/types.dart';
-
-const kElectricMigrationsTable = '_electric_migrations';
 
 const kSchemaVersionErrorMsg = '''
 Local schema doesn't match server's. Clear local state through developer tools and retry connection manually. '''
@@ -14,21 +14,29 @@ Local schema doesn't match server's. Clear local state through developer tools a
 // ignore: unnecessary_raw_strings
 final kValidVersionExp = RegExp(r'^[0-9_]+');
 
-class BundleMigrator implements Migrator {
+abstract class BundleMigratorBase implements Migrator {
   final DatabaseAdapter adapter;
   late final List<StmtMigration> migrations;
 
-  late final String tableName;
+  @override
+  final QueryBuilder queryBuilder;
 
-  BundleMigrator({
+  late final String namespace;
+
+  final String tableName = kElectricMigrationsTable;
+
+  BundleMigratorBase({
     required this.adapter,
     required List<Migration> migrations,
-    String? tableName,
+    required this.queryBuilder,
+    String? namespace,
   }) {
-    this.migrations = [...kBaseMigrations, ...migrations]
+    this.namespace = namespace ?? queryBuilder.defaultNamespace;
+
+    final List<Migration> baseMigration = buildInitialMigration(queryBuilder);
+    this.migrations = <Migration>[...baseMigration, ...migrations]
         .map((migration) => makeStmtMigration(migration))
         .toList();
-    this.tableName = tableName ?? kElectricMigrationsTable;
   }
 
   @override
@@ -48,18 +56,9 @@ class BundleMigrator implements Migrator {
   Future<bool> migrationsTableExists() async {
     // If this is the first time we're running migrations, then the
     // migrations table won't exist.
-    const tableExists = '''
-      SELECT 1 FROM sqlite_master
-        WHERE type = 'table'
-          AND name = ?
-    ''';
-    final resTables = await adapter.query(
-      Statement(
-        tableExists,
-        [tableName],
-      ),
-    );
-
+    final namespace = queryBuilder.defaultNamespace;
+    final tableExists = queryBuilder.tableExists(tableName, namespace);
+    final resTables = await adapter.query(tableExists);
     return resTables.isNotEmpty;
   }
 
@@ -69,7 +68,7 @@ class BundleMigrator implements Migrator {
     }
 
     final existingRecords = '''
-      SELECT version FROM $tableName
+      SELECT version FROM "$namespace"."$tableName"
         ORDER BY id ASC
     ''';
     final rows = await adapter.query(Statement(existingRecords));
@@ -92,7 +91,7 @@ class BundleMigrator implements Migrator {
     // The hard-coded version '0' below corresponds to the version of the internal migration defined in `schema.ts`.
     // We're ignoring it because this function is supposed to return the application schema version.
     final schemaVersion = '''
-      SELECT version FROM $tableName
+      SELECT version FROM "$namespace"."$tableName"
         WHERE version != '0'
         ORDER BY version DESC
         LIMIT 1
@@ -150,14 +149,15 @@ class BundleMigrator implements Migrator {
       );
     }
 
-    final applied = '''
-    INSERT INTO $tableName
-        ('version', 'applied_at') VALUES (?, ?)
-        ''';
-
     await adapter.runInTransaction([
       ...statements,
-      Statement(applied, [version, DateTime.now().millisecondsSinceEpoch]),
+      Statement(
+        '''
+INSERT INTO "$namespace"."$tableName" (version, applied_at)
+VALUES (${queryBuilder.makePositionalParam(1)}, ${queryBuilder.makePositionalParam(2)});''',
+        // TODO: Why in the official client it does .toString()
+        [version, DateTime.now().millisecondsSinceEpoch],
+      ),
     ]);
   }
 
@@ -167,13 +167,11 @@ class BundleMigrator implements Migrator {
   /// that indicates if the migration was applied.
   @override
   Future<bool> applyIfNotAlready(StmtMigration migration) async {
-    final versionExists = '''
-      SELECT 1 FROM $tableName
-        WHERE version = ?
-    ''';
     final rows = await adapter.query(
       Statement(
-        versionExists,
+        '''
+SELECT 1 FROM "$namespace"."$tableName"
+WHERE version = ${queryBuilder.makePositionalParam(1)}''',
         [migration.version],
       ),
     );
@@ -188,4 +186,15 @@ class BundleMigrator implements Migrator {
 
     return shouldApply;
   }
+}
+
+// TODO: Add pgBundleMigrator
+
+class SqliteBundleMigrator extends BundleMigratorBase {
+  SqliteBundleMigrator({
+    required super.adapter,
+    super.migrations = const [],
+  }) : super(
+          queryBuilder: kSqliteQueryBuilder,
+        );
 }

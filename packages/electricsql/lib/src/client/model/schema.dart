@@ -16,14 +16,21 @@ mixin ElectricTableMixin on Table {
 abstract class DBSchema {
   final Map<String, Fields> _fieldsByTable;
   final List<Migration> _migrations;
+  final List<Migration> _pgMigrations;
 
   List<Migration> get migrations => _migrations;
+  List<Migration> get pgMigrations => _pgMigrations;
 
+  /// @param tables Description of the database tables
+  /// @param migrations Bundled SQLite migrations
+  /// @param pgMigrations Bundled Postgres migrations
   DBSchema({
     required Map<String, Fields> fieldsByTable,
     required List<Migration> migrations,
+    required List<Migration> pgMigrations,
   })  : _fieldsByTable = fieldsByTable,
-        _migrations = migrations;
+        _migrations = migrations,
+        _pgMigrations = pgMigrations;
 
   bool hasTable(String table) {
     return _fieldsByTable.containsKey(table);
@@ -40,6 +47,7 @@ class DBSchemaDrift extends DBSchema {
   factory DBSchemaDrift({
     required DatabaseConnectionUser db,
     required List<Migration> migrations,
+    required List<Migration> pgMigrations,
   }) {
     // ignore: invalid_use_of_visible_for_overriding_member
     final driftDb = db.attachedDatabase;
@@ -52,6 +60,7 @@ class DBSchemaDrift extends DBSchema {
     return DBSchemaDrift._(
       fieldsByTable: _fieldsByTable,
       migrations: migrations,
+      pgMigrations: pgMigrations,
       db: db,
     );
   }
@@ -59,6 +68,7 @@ class DBSchemaDrift extends DBSchema {
   DBSchemaDrift._({
     required super.fieldsByTable,
     required super.migrations,
+    required super.pgMigrations,
     required this.db,
   });
 
@@ -120,6 +130,7 @@ class DBSchemaRaw extends DBSchema {
   DBSchemaRaw({
     required Map<String, Fields> fields,
     required super.migrations,
+    required super.pgMigrations,
   }) : super(fieldsByTable: fields);
 }
 

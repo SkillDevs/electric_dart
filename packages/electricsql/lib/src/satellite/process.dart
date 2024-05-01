@@ -6,6 +6,7 @@ import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/auth/secure.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/proto/satellite.pbenum.dart';
@@ -21,6 +22,7 @@ import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/exceptions.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/random.dart';
@@ -72,6 +74,7 @@ class SatelliteProcess implements Satellite {
   @override
   final Notifier notifier;
   final Client client;
+  final QueryBuilder builder;
 
   final SatelliteOpts opts;
 
@@ -100,13 +103,11 @@ class SatelliteProcess implements Satellite {
   late String Function() subscriptionIdGenerator;
   late String Function() shapeRequestIdGenerator;
 
-  /*
-  To optimize inserting a lot of data when the subscription data comes, we need to do
-  less `INSERT` queries, but SQLite supports only a limited amount of `?` positional
-  arguments. Precisely, its either 999 for versions prior to 3.32.0 and 32766 for
-  versions after.
-  */
-  int maxSqlParameters = 999; // : 999 | 32766
+  /// To optimize inserting a lot of data when the subscription data comes, we need to do
+  /// less `INSERT` queries, but SQLite/Postgres support only a limited amount of `?`/`$i` positional
+  /// arguments. Precisely, its either 999 for SQLite versions prior to 3.32.0 and 32766 for
+  /// versions after, and 65535 for Postgres.
+  int maxSqlParameters = 999; // 999 | 32766 | 65535
   final Lock _snapshotLock = Lock();
   bool _performingSnapshot = false;
 
@@ -121,7 +122,8 @@ class SatelliteProcess implements Satellite {
     required DatabaseAdapter adapter,
     required this.migrator,
     required this.notifier,
-  }) : _adapter = adapter {
+  })  : _adapter = adapter,
+        builder = migrator.queryBuilder {
     subscriptions = InMemorySubscriptionsManager(
       garbageCollectShapeHandler,
     );
@@ -162,7 +164,7 @@ class SatelliteProcess implements Satellite {
   @override
   Future<void> start(AuthConfig? authConfig) async {
     if (opts.debug) {
-      await _logSQLiteVersion();
+      await _logDatabaseVersion();
     }
 
     await migrator.up();
@@ -226,10 +228,15 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  Future<void> _logSQLiteVersion() async {
-    final sqliteVersionRow =
-        await adapter.query(Statement('SELECT sqlite_version() AS version'));
-    logger.info("Using SQLite version: ${sqliteVersionRow.first['version']}");
+  Future<void> _logDatabaseVersion() async {
+    final versionRow = await adapter.query(
+      Statement(
+        builder.getVersion,
+      ),
+    );
+    logger.info(
+      'Using ${builder.dialect.name} version: ${versionRow[0]['version']}',
+    );
   }
 
   @visibleForTesting
@@ -241,26 +248,26 @@ This means there is a notifier subscription leak.`''');
   Future<void> garbageCollectShapeHandler(
     List<ShapeDefinition> shapeDefs,
   ) async {
+    final namespace = builder.defaultNamespace;
     final allTables = shapeDefs
         .map((ShapeDefinition def) => def.definition)
-        .expand((x) => getAllTablesForShape(x));
+        .expand((x) => getAllTablesForShape(x, namespace));
     final tables = allTables.toSet().toList();
 
     // TODO: table and schema warrant escaping here too, but they aren't in the triggers table.
-    final tablenames = tables.map((x) => x.toString()).toList();
 
     final deleteStmts = tables.map(
       (x) => Statement(
-        'DELETE FROM $x',
+        'DELETE FROM "${x.namespace}"."${x.tablename}"',
       ),
     );
 
     final stmtsWithTriggers = [
       // reverts to off on commit/abort
-      Statement('PRAGMA defer_foreign_keys = ON'),
-      ..._disableTriggers(tablenames),
+      Statement(builder.deferForeignKeys),
+      ..._disableTriggers(tables),
       ...deleteStmts,
-      ..._enableTriggers(tablenames),
+      ..._enableTriggers(tables),
     ];
 
     await adapter.runInTransaction(stmtsWithTriggers);
@@ -433,8 +440,19 @@ This means there is a notifier subscription leak.`''');
     LSN lsn, {
     List<Statement> additionalStatements = const [],
   }) async {
+    final namespace = builder.defaultNamespace;
     final stmts = <Statement>[];
-    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
+
+    if (builder.dialect == Dialect.postgres) {
+      // disable FK checks because order of inserts
+      // may not respect referential integrity
+      // and Postgres doesn't let us defer FKs
+      // that were not originally defined as deferrable
+      stmts.add(Statement(builder.disableForeignKeys));
+    } else {
+      // Defer FKs on SQLite
+      stmts.add(Statement(builder.deferForeignKeys));
+    }
 
     // It's much faster[1] to do less statements to insert the data instead of doing an insert statement for each row
     // so we're going to do just that, but with a caveat: SQLite has a max number of parameters in prepared statements,
@@ -446,24 +464,24 @@ This means there is a notifier subscription leak.`''');
     final groupedChanges = <String,
         ({
       Relation relation,
-      List<InitialDataChange> dataChanges,
-      QualifiedTablename tableName,
+      List<DbRecord> records,
+      QualifiedTablename table,
     })>{};
 
-    final allArgsForShadowInsert = <Record>[];
+    final allArgsForShadowInsert = <DbRecord>[];
 
     // Group all changes by table name to be able to insert them all together
     for (final op in changes) {
-      final tableName = QualifiedTablename('main', op.relation.table);
+      final tableName = QualifiedTablename(namespace, op.relation.table);
       final tableNameString = tableName.toString();
       if (groupedChanges.containsKey(tableNameString)) {
         final changeGroup = groupedChanges[tableNameString]!;
-        changeGroup.dataChanges.add(op);
+        changeGroup.records.add(op.record);
       } else {
         groupedChanges[tableNameString] = (
           relation: op.relation,
-          dataChanges: [op],
-          tableName: tableName,
+          records: [op.record],
+          table: tableName,
         );
       }
 
@@ -477,49 +495,57 @@ This means there is a notifier subscription leak.`''');
       });
 
       allArgsForShadowInsert.add({
-        'namespace': 'main',
+        'namespace': namespace,
         'tablename': op.relation.table,
         'primaryKey': primaryKeyToStr(primaryKeyCols),
         'tags': encodeTags(op.tags),
       });
     }
 
+    final List<QualifiedTablename> qualifiedTableNames = [
+      ...groupedChanges.values.map((chg) => chg.table),
+    ];
+
     // Disable trigger for all affected tables
-    stmts.addAll([..._disableTriggers(groupedChanges.keys.toList())]);
+    stmts.addAll([..._disableTriggers(qualifiedTableNames)]);
 
     // For each table, do a batched insert
     for (final entry in groupedChanges.entries) {
-      final table = entry.key;
-      final (:relation, :dataChanges, tableName: _) = entry.value;
-      final records = dataChanges.map((change) => change.record).toList();
+      // final _table = entry.key;
+      final (:relation, :records, table: table) = entry.value;
       final columnNames = relation.columns.map((col) => col.name).toList();
-      final sqlBase =
-          "INSERT OR IGNORE INTO $table (${columnNames.join(', ')}) VALUES ";
+      final qualifiedTableName = '"${table.namespace}"."${table.tablename}"';
+      final orIgnore = builder.sqliteOnly('OR IGNORE');
+      final onConflictDoNothing = builder.pgOnly('ON CONFLICT DO NOTHING');
+      final sqlBase = '''
+INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES ''';
+      // Must be an insert or ignore into
 
       stmts.addAll([
-        ...prepareInsertBatchedStatements(
+        ...builder.prepareInsertBatchedStatements(
           sqlBase,
           columnNames,
           records,
           maxSqlParameters,
+          onConflictDoNothing,
         ),
       ]);
     }
 
     // And re-enable the triggers for all of them
-    stmts.addAll([..._enableTriggers(groupedChanges.keys.toList())]);
+    stmts.addAll([..._enableTriggers(qualifiedTableNames)]);
 
     // Then do a batched insert for the shadow table
-    final upsertShadowStmt =
-        'INSERT or REPLACE INTO ${opts.shadowTable} (namespace, tablename, primaryKey, tags) VALUES ';
-    stmts.addAll(
-      prepareInsertBatchedStatements(
-        upsertShadowStmt,
-        ['namespace', 'tablename', 'primaryKey', 'tags'],
-        allArgsForShadowInsert,
-        maxSqlParameters,
-      ),
+    final batchedShadowInserts = builder.batchedInsertOrReplace(
+      opts.shadowTable.tablename,
+      ['namespace', 'tablename', 'primaryKey', 'tags'],
+      allArgsForShadowInsert,
+      ['namespace', 'tablename', 'primaryKey'],
+      ['namespace', 'tablename', 'tags'],
+      maxSqlParameters,
+      opts.shadowTable.namespace,
     );
+    stmts.addAll(batchedShadowInserts);
 
     // Then update subscription state and LSN
     stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
@@ -534,7 +560,7 @@ This means there is a notifier subscription leak.`''');
       // `RETURNING` clause in the middle of `runInTransaction`.
       final notificationChanges = <Change>[];
       for (final entry in groupedChanges.entries) {
-        final (:relation, :dataChanges, :tableName) = entry.value;
+        final (:relation, :records, :table) = entry.value;
 
         final primaryKeyColNames = relation.columns
             .where((col) => col.primaryKey != null)
@@ -542,13 +568,13 @@ This means there is a notifier subscription leak.`''');
             .toList();
         notificationChanges.add(
           Change(
-            qualifiedTablename: tableName,
+            qualifiedTablename: table,
             rowids: [],
-            recordChanges: dataChanges.map((change) {
+            recordChanges: records.map((change) {
               return RecordChange(
                 primaryKey: Map.fromEntries(
                   primaryKeyColNames.map((colName) {
-                    return MapEntry(colName, change.record[colName]);
+                    return MapEntry(colName, change[colName]);
                   }),
                 ),
                 type: RecordChangeType.initial,
@@ -948,17 +974,8 @@ This means there is a notifier subscription leak.`''');
     final oplog = opts.oplogTable.tablename;
     final shadow = opts.shadowTable.tablename;
 
-    const tablesExist = '''
-      SELECT count(name) as numTables FROM sqlite_master
-        WHERE type='table'
-        AND name IN (?, ?, ?)
-    ''';
-
     final res = await adapter.query(
-      Statement(
-        tablesExist,
-        [meta, oplog, shadow],
-      ),
+      builder.countTablesIn('numTables', [meta, oplog, shadow]),
     );
     final numTables = res.first['numTables']! as int;
     return numTables == 3;
@@ -994,8 +1011,10 @@ This means there is a notifier subscription leak.`''');
     }
 
     try {
-      final oplog = opts.oplogTable;
-      final shadow = opts.shadowTable;
+      final oplog =
+          '"${opts.oplogTable.namespace}"."${opts.oplogTable.tablename}"';
+      final shadow =
+          '"${opts.shadowTable.namespace}"."${opts.shadowTable.tablename}"';
       final timestamp = DateTime.now();
       final newTag = _generateTag(timestamp);
 
@@ -1014,7 +1033,7 @@ This means there is a notifier subscription leak.`''');
       // Update the timestamps on all "new" entries - they have been added but timestamp is still `NULL`
       final q1 = Statement(
         '''
-      UPDATE $oplog SET timestamp = ?
+      UPDATE $oplog SET timestamp = ${builder.makePositionalParam(1)}
       WHERE rowid in (
         SELECT rowid FROM $oplog
             WHERE timestamp is NULL
@@ -1029,15 +1048,15 @@ This means there is a notifier subscription leak.`''');
       final q2 = Statement(
         '''
       UPDATE $oplog
-      SET clearTags =
+      SET "clearTags" =
           CASE WHEN shadow.tags = '[]' OR shadow.tags = ''
-               THEN '["' || ? || '"]'
-               ELSE '["' || ? || '",' || substring(shadow.tags, 2)
+               THEN '["' || ${builder.makePositionalParam(1)} || '"]'
+               ELSE '["' || ${builder.makePositionalParam(2)} || '",' || substring(shadow.tags, 2)
           END
       FROM $shadow AS shadow
       WHERE $oplog.namespace = shadow.namespace
           AND $oplog.tablename = shadow.tablename
-          AND $oplog.primaryKey = shadow.primaryKey AND $oplog.timestamp = ?
+          AND $oplog."primaryKey" = shadow."primaryKey" AND $oplog.timestamp = ${builder.makePositionalParam(3)}
     ''',
         [
           newTag,
@@ -1048,14 +1067,7 @@ This means there is a notifier subscription leak.`''');
 
       // For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
       final q3 = Statement(
-        '''
-      INSERT OR REPLACE INTO $shadow (namespace, tablename, primaryKey, tags)
-      SELECT namespace, tablename, primaryKey, ?
-        FROM $oplog AS op
-        WHERE timestamp = ?
-        GROUP BY namespace, tablename, primaryKey
-        HAVING rowid = max(rowid) AND optype != 'DELETE'
-    ''',
+        builder.setTagsForShadowRows(opts.oplogTable, opts.shadowTable),
         [
           encodeTags([newTag]),
           timestamp.toISOStringUTC(),
@@ -1063,23 +1075,8 @@ This means there is a notifier subscription leak.`''');
       );
 
       // And finally delete any shadow rows where the last oplog operation was a `DELETE`
-      // We do an inner join in a CTE instead of a `WHERE EXISTS (...)` since this is not reliant on
-      // re-executing a query per every row in shadow table, but uses a PK join instead.
       final q4 = Statement(
-        '''
-      WITH _to_be_deleted (rowid) AS (
-        SELECT shadow.rowid
-          FROM $oplog AS op
-          INNER JOIN $shadow AS shadow
-            ON shadow.namespace = op.namespace AND shadow.tablename = op.tablename AND shadow.primaryKey = op.primaryKey
-          WHERE op.timestamp = ?
-          GROUP BY op.namespace, op.tablename, op.primaryKey
-          HAVING op.rowid = max(op.rowid) AND op.optype = 'DELETE'
-      )
-
-      DELETE FROM $shadow
-      WHERE rowid IN _to_be_deleted
-    ''',
+        builder.removeDeletedShadowRows(opts.oplogTable, opts.shadowTable),
         [timestamp.toISOStringUTC()],
       );
 
@@ -1221,14 +1218,16 @@ This means there is a notifier subscription leak.`''');
           primaryKey: getShadowPrimaryKey(entryChanges),
           tags: encodeTags(entryChanges.tags),
         );
+        final qualifiedTableName = QualifiedTablename.parse(tablenameStr);
         switch (entryChanges.optype) {
           case ChangesOpType.gone:
           case ChangesOpType.delete:
-            stmts.add(_applyDeleteOperation(entryChanges, tablenameStr));
+            stmts.add(_applyDeleteOperation(entryChanges, qualifiedTableName));
             stmts.add(_deleteShadowTagsStatement(shadowEntry));
 
           default:
-            stmts.add(_applyNonDeleteOperation(entryChanges, tablenameStr));
+            stmts.add(
+                _applyNonDeleteOperation(entryChanges, qualifiedTableName));
             stmts.add(_updateShadowTagsStatement(shadowEntry));
         }
       }
@@ -1246,12 +1245,13 @@ This means there is a notifier subscription leak.`''');
   Future<List<OplogEntry>> getEntries({int? since}) async {
     // `rowid` is never below 0, so -1 means "everything"
     since ??= -1;
-    final oplog = opts.oplogTable.toString();
+    final oplog =
+        '"${opts.oplogTable.namespace}"."${opts.oplogTable.tablename}"';
 
     final selectEntries = '''
       SELECT * FROM $oplog
         WHERE timestamp IS NOT NULL
-          AND rowid > ?
+          AND rowid > ${builder.makePositionalParam(1)}
         ORDER BY rowid ASC
     ''';
     final rows = await adapter.query(Statement(selectEntries, [since]));
@@ -1259,12 +1259,15 @@ This means there is a notifier subscription leak.`''');
   }
 
   Statement _deleteShadowTagsStatement(ShadowEntry shadow) {
-    final shadowTable = opts.shadowTable.toString();
+    final shadowTable =
+        '"${opts.shadowTable.namespace}"."${opts.shadowTable.tablename}"';
+    String pos(int i) => builder.makePositionalParam(i);
+
     final deleteRow = '''
       DELETE FROM $shadowTable
-      WHERE namespace = ? AND
-            tablename = ? AND
-            primaryKey = ?;
+      WHERE namespace = ${pos(1)} AND
+            tablename = ${pos(2)} AND
+            primaryKey = ${pos(3)};
     ''';
     return Statement(
       deleteRow,
@@ -1273,19 +1276,13 @@ This means there is a notifier subscription leak.`''');
   }
 
   Statement _updateShadowTagsStatement(ShadowEntry shadow) {
-    final shadowTable = opts.shadowTable.toString();
-    final updateTags = '''
-      INSERT or REPLACE INTO $shadowTable (namespace, tablename, primaryKey, tags) VALUES
-      (?, ?, ?, ?);
-    ''';
-    return Statement(
-      updateTags,
-      <Object?>[
-        shadow.namespace,
-        shadow.tablename,
-        shadow.primaryKey,
-        shadow.tags,
-      ],
+    return builder.insertOrReplace(
+      opts.shadowTable.tablename,
+      ['namespace', 'tablename', 'primaryKey', 'tags'],
+      [shadow.namespace, shadow.tablename, shadow.primaryKey, shadow.tags],
+      ['namespace', 'tablename', 'primaryKey'],
+      ['tags'],
+      opts.shadowTable.namespace,
     );
   }
 
@@ -1321,6 +1318,7 @@ This means there is a notifier subscription leak.`''');
 
   @visibleForTesting
   Future<void> applyTransaction(Transaction transaction) async {
+    final namespace = builder.defaultNamespace;
     final origin = transaction.origin!;
 
     final commitTimestamp = DateTime.fromMillisecondsSinceEpoch(
@@ -1348,8 +1346,17 @@ This means there is a notifier subscription leak.`''');
     final lsn = transaction.lsn;
     bool firstDMLChunk = true;
 
-    // switches off on transaction commit/abort
-    stmts.add(Statement('PRAGMA defer_foreign_keys = ON'));
+    if (builder.dialect == Dialect.postgres) {
+      // Temporarily disable FK checks because order of inserts
+      // may not respect referential integrity
+      // and Postgres doesn't let us defer FKs
+      // that were not originally defined as deferrable
+      stmts.add(Statement(builder.disableForeignKeys));
+    } else {
+      // Defer FKs on SQLite
+      stmts.add(Statement(builder.deferForeignKeys));
+    }
+
     // update lsn.
     stmts.add(updateLsnStmt(lsn));
     stmts.add(_resetSeenAdditionalDataStmt());
@@ -1360,7 +1367,7 @@ This means there is a notifier subscription leak.`''');
         lsn: transaction.lsn,
         changes: changes,
       );
-      final entries = fromTransaction(tx, relations);
+      final entries = fromTransaction(tx, relations, namespace);
 
       // Before applying DML statements we need to assign a timestamp to pending operations.
       // This only needs to be done once, even if there are several DML chunks
@@ -1397,7 +1404,9 @@ This means there is a notifier subscription leak.`''');
           // We will create/update triggers for this new/updated table
           // so store it in `tablenamesSet` such that those
           // triggers can be disabled while executing the transaction
-          final affectedTable = change.table.name;
+          final affectedTable =
+              QualifiedTablename(namespace, change.table.name).toString();
+
           // store the table information to generate the triggers after this `forEach`
           affectedTables[affectedTable] = change.table;
           tablenamesSet.add(affectedTable);
@@ -1410,14 +1419,16 @@ This means there is a notifier subscription leak.`''');
 
       // Also add statements to create the necessary triggers for the created/updated table
       for (final table in affectedTables.values) {
-        final triggers = generateTriggersForTable(table);
+        final triggers = generateTriggersForTable(table, builder);
         stmts.addAll(triggers);
         txStmts.addAll(triggers);
       }
 
       // Disable the newly created triggers
       // during the processing of this transaction
-      stmts.addAll(_disableTriggers([...createdTables]));
+      final createdQualifiedTables =
+          createdTables.map(QualifiedTablename.parse).toList();
+      stmts.addAll(_disableTriggers(createdQualifiedTables));
       newTables = <String>{...newTables, ...createdTables};
     }
 
@@ -1438,13 +1449,16 @@ This means there is a notifier subscription leak.`''');
 
     // Now run the DML and DDL statements in-order in a transaction
     final tablenames = tablenamesSet.toList();
+    final qualifiedTables = tablenames.map(QualifiedTablename.parse).toList();
     final notNewTableNames =
         tablenames.where((t) => !newTables.contains(t)).toList();
+    final notNewQualifiedTables =
+        tablenames.map(QualifiedTablename.parse).toList();
 
     final allStatements = [
-      ..._disableTriggers(notNewTableNames),
+      ..._disableTriggers(notNewQualifiedTables),
       ...stmts,
-      ..._enableTriggers(tablenames),
+      ..._enableTriggers(qualifiedTables),
     ];
 
     if (transaction.migrationVersion != null) {
@@ -1504,36 +1518,48 @@ This means there is a notifier subscription leak.`''');
     }
   }
 
-  List<Statement> _disableTriggers(List<String> tablenames) {
-    return _updateTriggerSettings(tablenames, false);
+  List<Statement> _disableTriggers(List<QualifiedTablename> tables) {
+    return _updateTriggerSettings(tables, false);
   }
 
-  List<Statement> _enableTriggers(List<String> tablenames) {
-    return _updateTriggerSettings(tablenames, true);
+  List<Statement> _enableTriggers(List<QualifiedTablename> tables) {
+    return _updateTriggerSettings(tables, true);
   }
 
-  List<Statement> _updateTriggerSettings(List<String> tablenames, bool flag) {
-    final triggers = opts.triggersTable.toString();
-    if (tablenames.isNotEmpty) {
-      final tablesOr = tablenames.map((_) => 'tablename = ?').join(' OR ');
-      return [
-        Statement(
-          'UPDATE $triggers SET flag = ? WHERE $tablesOr',
-          [if (flag) 1 else 0, ...tablenames],
-        ),
-      ];
-    } else {
-      return [];
-    }
+  List<Statement> _updateTriggerSettings(
+    List<QualifiedTablename> tables,
+    bool flag,
+  ) {
+    if (tables.isEmpty) return [];
+
+    final triggers =
+        '"${opts.triggersTable.namespace}"."${opts.triggersTable.tablename}"';
+    final namespacesAndTableNames = tables.expand(
+      (tbl) => [
+        tbl.namespace,
+        tbl.tablename,
+      ],
+    );
+    String pos(int i) => builder.makePositionalParam(i);
+    int i = 1;
+    final tablesOr = tables
+        .map((_) => '(namespace = ${pos(i++)} AND tablename = ${pos(i++)})')
+        .join(' OR ');
+    return [
+      Statement(
+        'UPDATE $triggers SET flag = ${pos(i++)} WHERE $tablesOr',
+        [if (flag) 1 else 0, ...namespacesAndTableNames],
+      ),
+    ];
   }
 
   Statement _addSeenAdditionalDataStmt(String ref) {
-    final meta = opts.metaTable.toString();
+    final meta = '"${opts.metaTable.namespace}"."${opts.metaTable.tablename}"';
 
     final sql = '''
-      INSERT INTO $meta (key, value) VALUES ('seenAdditionalData', ?)
+      INSERT INTO $meta (key, value) VALUES ('seenAdditionalData', ${builder.makePositionalParam(1)})
         ON CONFLICT (key) DO
-          UPDATE SET value = value || ',' || excluded.value
+          UPDATE SET value = $meta.value || ',' || excluded.value
     ''';
     final args = <Object?>[ref];
     return Statement(sql, args);
@@ -1544,9 +1570,10 @@ This means there is a notifier subscription leak.`''');
   }
 
   Statement _setMetaStatement(String key, Object? value) {
-    final meta = opts.metaTable.toString();
+    final meta = '"${opts.metaTable.namespace}"."${opts.metaTable.tablename}"';
+    String pos(int i) => builder.makePositionalParam(i);
 
-    final sql = 'UPDATE $meta SET value = ? WHERE key = ?';
+    final sql = 'UPDATE $meta SET value = ${pos(1)} WHERE key = ${pos(2)}';
     final args = <Object?>[value, key];
 
     return Statement(sql, args);
@@ -1560,9 +1587,10 @@ This means there is a notifier subscription leak.`''');
 
   @visibleForTesting
   Future<T> getMeta<T>(String key) async {
-    final meta = opts.metaTable.toString();
+    final meta = '"${opts.metaTable.namespace}"."${opts.metaTable.tablename}"';
+    String pos(int i) => builder.makePositionalParam(i);
 
-    final sql = 'SELECT value from $meta WHERE key = ?';
+    final sql = 'SELECT value from $meta WHERE key = ${pos(1)}';
     final args = [key];
     final rows = await adapter.query(Statement(sql, args));
 
@@ -1587,7 +1615,7 @@ This means there is a notifier subscription leak.`''');
 
   @visibleForTesting
   Future<RelationsCache> getLocalRelations() async {
-    return inferRelationsFromSQLite(adapter, opts);
+    return inferRelationsFromDb(adapter, opts, builder);
   }
 
   String _generateTag(DateTime timestamp) {
@@ -1599,11 +1627,13 @@ This means there is a notifier subscription leak.`''');
   @visibleForTesting
   Future<void> garbageCollectOplog(DateTime commitTimestamp) async {
     final isoString = commitTimestamp.toISOStringUTC();
-    final String oplog = opts.oplogTable.tablename;
+    final String oplog =
+        '"${opts.oplogTable.namespace}"."${opts.oplogTable.tablename}"';
+    String pos(int i) => builder.makePositionalParam(i);
 
     await adapter.run(
       Statement(
-        'DELETE FROM $oplog WHERE timestamp = ?',
+        'DELETE FROM $oplog WHERE timestamp = ${pos(1)}',
         <Object?>[isoString],
       ),
     );
@@ -1618,27 +1648,10 @@ This means there is a notifier subscription leak.`''');
     return _setMetaStatement('lsn', base64.encode(lsn));
   }
 
-  Future<void> checkMaxSqlParameters() async {
-    final version = (await adapter.query(
-      Statement(
-        'SELECT sqlite_version() AS version',
-      ),
-    ))
-        .first['version']! as String;
-    final [major, minor, ...] =
-        version.split('.').map((x) => int.parse(x)).toList();
-
-    if (major == 3 && minor >= 32) {
-      maxSqlParameters = 32766;
-    } else {
-      maxSqlParameters = 999;
-    }
-  }
-
   @override
   void setReplicationTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   ) {
     client.setReplicationTransform(tableName, transform);
   }
@@ -1647,75 +1660,100 @@ This means there is a notifier subscription leak.`''');
   void clearReplicationTransform(QualifiedTablename tableName) {
     client.clearReplicationTransform(tableName);
   }
-}
 
-Statement _applyDeleteOperation(
-  ShadowEntryChanges entryChanges,
-  String tablenameStr,
-) {
-  final pkEntries = entryChanges.primaryKeyCols.entries;
-  if (pkEntries.isEmpty) {
-    throw Exception(
-      "Can't apply delete operation. None of the columns in changes are marked as PK.",
+  Statement _applyDeleteOperation(
+    ShadowEntryChanges entryChanges,
+    QualifiedTablename qualifiedTableName,
+  ) {
+    final pkEntries = entryChanges.primaryKeyCols.entries;
+    if (pkEntries.isEmpty) {
+      throw Exception(
+        "Can't apply delete operation. None of the columns in changes are marked as PK.",
+      );
+    }
+    int i = 1;
+    String pos(int i) => builder.makePositionalParam(i);
+    final params = pkEntries.fold<_WhereAndValues>(
+      _WhereAndValues([], []),
+      (acc, entry) {
+        final column = entry.key;
+        final value = entry.value;
+        acc.where.add('$column = ${pos(i++)}');
+        acc.values.add(value);
+        return acc;
+      },
+    );
+
+    return Statement(
+      '''DELETE FROM "${qualifiedTableName.namespace}"."${qualifiedTableName.tablename}" WHERE ${params.where.join(' AND ')}''',
+      params.values,
     );
   }
-  final params = pkEntries.fold<_WhereAndValues>(
-    _WhereAndValues([], []),
-    (acc, entry) {
-      final column = entry.key;
-      final value = entry.value;
-      acc.where.add('$column = ?');
-      acc.values.add(value);
-      return acc;
-    },
-  );
 
-  return Statement(
-    "DELETE FROM $tablenameStr WHERE ${params.where.join(' AND ')}",
-    params.values,
-  );
-}
+  Statement _applyNonDeleteOperation(
+    ShadowEntryChanges shadowEntryChanges,
+    QualifiedTablename qualifiedTableName,
+  ) {
+    final fullRow = shadowEntryChanges.fullRow;
+    final primaryKeyCols = shadowEntryChanges.primaryKeyCols;
 
-Statement _applyNonDeleteOperation(
-  ShadowEntryChanges shadowEntryChanges,
-  String tablenameStr,
-) {
-  final fullRow = shadowEntryChanges.fullRow;
-  final primaryKeyCols = shadowEntryChanges.primaryKeyCols;
+    final columnNames = fullRow.keys.toList();
+    final columnValues = fullRow.values.toList();
+    final updateColumnStmts =
+        columnNames.where((c) => !primaryKeyCols.containsKey(c)).toList();
 
-  final columnNames = fullRow.keys;
-  final List<Object?> columnValues = fullRow.values.toList();
-  String insertStmt =
-      '''INTO $tablenameStr(${columnNames.join(', ')}) VALUES (${columnValues.map((_) => '?').join(',')})''';
+    if (updateColumnStmts.isNotEmpty) {
+      return builder.insertOrReplaceWith(
+        qualifiedTableName.tablename,
+        columnNames,
+        columnValues,
+        ['id'],
+        updateColumnStmts,
+        updateColumnStmts.map((col) => fullRow[col]).toList(),
+        qualifiedTableName.namespace,
+      );
+    }
 
-  final updateColumnStmts =
-      columnNames.where((c) => !primaryKeyCols.containsKey(c)).fold(
-    _WhereAndValues([], []),
-    (acc, c) {
-      acc.where.add('$c = ?');
-      acc.values.add(fullRow[c]);
-      return acc;
-    },
-  );
-
-  if (updateColumnStmts.values.isNotEmpty) {
-    insertStmt = '''
-                INSERT $insertStmt 
-                ON CONFLICT DO UPDATE SET ${updateColumnStmts.where.join(', ')}
-              ''';
-    columnValues.addAll(updateColumnStmts.values);
-  } else {
     // no changes, can ignore statement if exists
-    insertStmt = 'INSERT OR IGNORE $insertStmt';
+    return builder.insertOrIgnore(
+      qualifiedTableName.tablename,
+      columnNames,
+      columnValues,
+      qualifiedTableName.namespace,
+    );
   }
 
-  return Statement(insertStmt, columnValues);
+  Future<void> checkMaxSqlParameters() async {
+    if (builder.dialect == Dialect.sqlite) {
+      final version = (await adapter.query(
+        Statement(
+          'SELECT sqlite_version() AS version',
+        ),
+      ))
+          .first['version']! as String;
+
+      final [major, minor, ...] =
+          version.split('.').map((x) => int.parse(x)).toList();
+
+      if (major == 3 && minor >= 32) {
+        maxSqlParameters = 32766;
+      } else {
+        maxSqlParameters = 999;
+      }
+    } else {
+      // Postgres allows a maximum of 65535 query parameters
+      maxSqlParameters = 65535;
+    }
+  }
 }
 
-List<Statement> generateTriggersForTable(MigrationTable tbl) {
+List<Statement> generateTriggersForTable(
+  MigrationTable tbl,
+  QueryBuilder builder,
+) {
   final table = Table(
     tableName: tbl.name,
-    namespace: 'main',
+    namespace: builder.defaultNamespace,
     columns: tbl.columns.map((col) => col.name).toList(),
     primary: tbl.pks,
     foreignKeys: tbl.fks.map((fk) {
@@ -1735,17 +1773,13 @@ List<Statement> generateTriggersForTable(MigrationTable tbl) {
         (col) {
           return MapEntry(
             col.name,
-            (
-              sqliteType: col.sqliteType.toUpperCase(),
-              pgType: col.ensurePgType().name.toUpperCase(),
-            ),
+            col.ensurePgType().name.toUpperCase(),
           );
         },
       ),
     ),
   );
-  final fullTableName = '${table.namespace}.${table.tableName}';
-  return generateTableTriggers(fullTableName, table);
+  return generateTableTriggers(table, builder);
 }
 
 class _WhereAndValues {

@@ -29,7 +29,10 @@ Future<void> buildMigrations(
   await migrationsFile.writeAsString(contents);
 }
 
-Future<List<Migration>> loadMigrations(Directory migrationsFolder) async {
+Future<List<Migration>> loadMigrations(
+  Directory migrationsFolder,
+  QueryBuilder builder,
+) async {
   final migrationDirNames = await getMigrationNames(migrationsFolder);
   final migrationFiles = migrationDirNames.map(
     (dirName) =>
@@ -38,7 +41,9 @@ Future<List<Migration>> loadMigrations(Directory migrationsFolder) async {
   final migrationsMetadatas = await Future.wait(
     migrationFiles.map(_readMetadataFile),
   );
-  return migrationsMetadatas.map(makeMigration).toList();
+  return migrationsMetadatas
+      .map((data) => makeMigration(data, builder))
+      .toList();
 }
 
 /// Reads the specified metadata file.
