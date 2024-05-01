@@ -15,15 +15,18 @@ import 'package:path/path.dart' as path;
 Future<void> buildMigrations(
   Directory migrationsFolder,
   File migrationsFile,
-) async {
-  final migrations = await loadMigrations(migrationsFolder);
+  QueryBuilder builder, {
+  required String constantName,
+}) async {
+  final migrations = await loadMigrations(migrationsFolder, builder);
 
   final outParent = migrationsFile.parent;
   if (!outParent.existsSync()) {
     await outParent.create(recursive: true);
   }
 
-  final contents = generateMigrationsDartCode(migrations);
+  final contents =
+      generateMigrationsDartCode(migrations, constantName: constantName);
 
   // Update the configuration file
   await migrationsFile.writeAsString(contents);
@@ -80,7 +83,10 @@ Future<List<String>> getMigrationNames(Directory migrationsFolder) async {
   return dirNames;
 }
 
-String generateMigrationsDartCode(List<Migration> migrations) {
+String generateMigrationsDartCode(
+  List<Migration> migrations, {
+  required String constantName,
+}) {
   final migrationReference = refer('Migration', kElectricSqlImport);
 
   // Migrations
@@ -99,7 +105,7 @@ String generateMigrationsDartCode(List<Migration> migrations) {
   // global final immutable field for the migrations
   final electricMigrationsField = Field(
     (b) => b
-      ..name = 'kElectricMigrations'
+      ..name = constantName
       ..modifier = FieldModifier.final$
       ..assignment = unmodifListReference.newInstance([
         literalList(migrationExpressions, migrationReference),
