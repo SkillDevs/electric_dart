@@ -173,7 +173,7 @@ String genEncodedTags(
 }
 
 /// List all shadow entries, or get just one if an `oplog` parameter is provided
-Future<List<ShadowEntry>> getMatchingShadowEntries(
+Future<List<ShadowEntry>> getSQLiteMatchingShadowEntries(
   DatabaseAdapter adapter, {
   OplogEntry? oplog,
   QueryBuilder builder = kSqliteQueryBuilder,

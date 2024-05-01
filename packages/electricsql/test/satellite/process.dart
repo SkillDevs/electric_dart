@@ -10,8 +10,10 @@ import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart' as adp
     show Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
+import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
@@ -19,6 +21,7 @@ import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/satellite/shapes/manager.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:electricsql/src/util/types.dart' as t;
@@ -36,7 +39,6 @@ Future<void> runMigrations() async {
   await context.runMigrations();
 }
 
-Database get db => context.db;
 DatabaseAdapter get adapter => context.adapter;
 Migrator get migrator => context.migrator;
 MockNotifier get notifier => context.notifier;
@@ -48,6 +50,9 @@ String get dbName => context.dbName;
 AuthState get authState => context.authState;
 AuthConfig get authConfig => context.authConfig;
 String get token => context.token;
+SatelliteOpts get opts => context.opts;
+
+late QueryBuilder _globalBuilder;
 
 const parentRecord = <String, Object?>{
   'id': 1,
@@ -67,17 +72,43 @@ Future<({Future<void> connectionFuture})> startSatellite(
 ) async {
   await satellite.start(authConfig);
   satellite.setToken(token);
-  final connectionFuture = satellite.connectWithBackoff();
+  final connectionFuture =
+      satellite.connectWithBackoff().catchError((Object e) {
+    if (e.toString() == 'terminating connection due to administrator command') {
+      // This is to be expected as we stop Postgres at the end of the test
+      return null;
+    }
+    throw e;
+  });
   return (connectionFuture: connectionFuture);
 }
 
-void main() {
-  setUp(() async {
-    context = await makeContext();
-  });
+Object? dialectValue(
+  Object? sqliteValue,
+  Object? pgValue,
+) {
+  if (_globalBuilder.dialect == Dialect.sqlite) {
+    return sqliteValue;
+  }
+  return pgValue;
+}
 
-  tearDown(() async {
-    await context.cleanAndStopSatellite();
+void processTests({
+  required SatelliteTestContext Function() getContext,
+  required String namespace,
+  required QueryBuilder builder,
+  required String qualifiedParentTableName,
+  required Future<List<ShadowEntry>> Function(
+    DatabaseAdapter adapter, {
+    QueryBuilder builder,
+    String? namespace,
+    OplogEntry? oplog,
+    String? shadowTable,
+  }) getMatchingShadowEntries,
+}) {
+  setUp(() {
+    context = getContext();
+    _globalBuilder = builder;
   });
 
   test('start creates system tables', () async {
@@ -93,7 +124,7 @@ void main() {
   test('load metadata', () async {
     await runMigrations();
 
-    final meta = await loadSatelliteMetaTable(adapter);
+    final meta = await loadSatelliteMetaTable(adapter, namespace);
     expect(meta, {
       'compensations': 1,
       'lsn': '',
@@ -348,7 +379,7 @@ void main() {
       },
       kTestRelations,
     );
-    final opLogTableChange = merged['main.parent']!['{"id":1}']!;
+    final opLogTableChange = merged[qualifiedParentTableName]!['{"id":1}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, null);
@@ -375,7 +406,9 @@ void main() {
       },
       kTestRelations,
     );
-    final opLogTableChange = merged['main.bigIntTable']!['{"value":"1"}']!;
+    final qualifiedTableName =
+        QualifiedTablename(namespace, 'bigIntTable').toString();
+    final opLogTableChange = merged[qualifiedTableName]!['{"value":"1"}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, BigInt.from(1));
@@ -405,9 +438,11 @@ void main() {
       },
       kTestRelations,
     );
+    final qualifiedTableName =
+        QualifiedTablename(namespace, 'blobTable').toString();
 
     final opLogTableChange =
-        merged['main.blobTable']!['{"value":"${blobToHexString(blob)}"}']!;
+        merged[qualifiedTableName]!['{"value":"${blobToHexString(blob)}"}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, blob);
@@ -452,7 +487,7 @@ void main() {
       [incomingEntry],
       kTestRelations,
     );
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
@@ -523,7 +558,7 @@ void main() {
       [incomingEntry],
       kTestRelations,
     );
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
@@ -883,7 +918,7 @@ void main() {
 
     final merged =
         mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
@@ -968,7 +1003,7 @@ void main() {
 
     final merged =
         mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
-    final item = merged['main.parent']!['{"id":1}']!;
+    final item = merged[qualifiedParentTableName]!['{"id":1}']!;
 
     // The incoming entry modified the value of the `value` column to `'remote'`
     // The local entry concurrently modified the value of the `other` column to 1.
@@ -1026,7 +1061,7 @@ void main() {
     final local = <OplogEntry>[];
     final merged =
         mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
@@ -1312,7 +1347,7 @@ void main() {
       clearTags: encodeTags([]),
     );
 
-    final opLog = fromTransaction(transaction, relations);
+    final opLog = fromTransaction(transaction, relations, namespace);
     expect(opLog[0], expected);
   });
 
@@ -1597,7 +1632,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
       expect(row.length, 1);
@@ -1690,7 +1725,6 @@ void main() {
 
     const namespace = 'main';
     const tablename = 'parent';
-    final qualified = const QualifiedTablename(namespace, tablename).toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1709,7 +1743,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
       expect(row.length, 1);
@@ -1723,7 +1757,8 @@ void main() {
       expect(shadowRows[0]['namespace'], 'main');
       expect(shadowRows[0]['tablename'], 'parent');
 
-      await adapter.run(Statement('DELETE FROM $qualified WHERE id = 1'));
+      await adapter
+          .run(Statement('DELETE FROM "$namespace"."$tablename" WHERE id = 1'));
       await satellite.performSnapshot();
 
       final oplogs =
@@ -1824,7 +1859,6 @@ void main() {
 
     const tablename = 'child';
     const namespace = 'main';
-    final qualified = const QualifiedTablename(namespace, tablename).toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1843,7 +1877,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
 
@@ -1857,7 +1891,6 @@ void main() {
     await runMigrations();
 
     const tablename = 'child';
-    final qualified = const QualifiedTablename('main', tablename).toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1879,7 +1912,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
       expect(row.length, 1);
@@ -1901,8 +1934,6 @@ void main() {
 
   test('a single subscribe with multiple tables with FKs', () async {
     await runMigrations();
-
-    final qualifiedChild = const QualifiedTablename('main', 'child').toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1928,7 +1959,7 @@ void main() {
           try {
             final row = await adapter.query(
               Statement(
-                'SELECT id FROM $qualifiedChild',
+                'SELECT id FROM "$namespace"."child"',
               ),
             );
             expect(row.length, 1);
@@ -2019,7 +2050,6 @@ void main() {
 
     // relations must be present at subscription delivery
     const tablename = 'parent';
-    final qualified = const QualifiedTablename('main', tablename).toString();
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
@@ -2038,7 +2068,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
       expect(row.length, 1);
@@ -2137,7 +2167,6 @@ void main() {
 
     const namespace = 'main';
     const tablename = 'parent';
-    final qualified = const QualifiedTablename(namespace, tablename).toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -2178,7 +2207,7 @@ void main() {
 
     final row = await adapter.query(
       Statement(
-        'SELECT id FROM $qualified',
+        'SELECT id FROM "$namespace"."$tablename"',
       ),
     );
     expect(row.length, 2);
@@ -2193,7 +2222,8 @@ void main() {
     expect(shadowRows[0]['namespace'], 'main');
     expect(shadowRows[0]['tablename'], 'parent');
 
-    await adapter.run(Statement('DELETE FROM $qualified WHERE id = 2'));
+    await adapter
+        .run(Statement('DELETE FROM "$namespace"."$tablename" WHERE id = 2'));
     final deleteTx = await satellite.performSnapshot();
 
     final oplogs = await adapter.query(

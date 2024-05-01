@@ -241,7 +241,7 @@ END;''',
     );
     return Statement(
       '${insertOrReplaceRes.sql} ON CONFLICT DO UPDATE SET ${updateCols.map((col) => '$col = ?').join(', ')}',
-      [...insertOrReplaceRes.args!, updateVals],
+      [...insertOrReplaceRes.args!, ...updateVals],
     );
   }
 

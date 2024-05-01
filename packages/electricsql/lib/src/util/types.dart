@@ -18,7 +18,7 @@ class Statement with EquatableMixin {
 
   @override
   String toString() {
-    return 'Statement($sql, $args)';
+    return 'Statement(sql: $sql, args: $args)';
   }
 
   @override
