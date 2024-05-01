@@ -80,6 +80,27 @@ class SatInStartReplicationReq_Option extends $pb.ProtobufEnum {
       : super(v, n);
 }
 
+class SatInStartReplicationReq_Dialect extends $pb.ProtobufEnum {
+  static const SatInStartReplicationReq_Dialect SQLITE =
+      SatInStartReplicationReq_Dialect._(0, _omitEnumNames ? '' : 'SQLITE');
+  static const SatInStartReplicationReq_Dialect POSTGRES =
+      SatInStartReplicationReq_Dialect._(1, _omitEnumNames ? '' : 'POSTGRES');
+
+  static const $core.List<SatInStartReplicationReq_Dialect> values =
+      <SatInStartReplicationReq_Dialect>[
+    SQLITE,
+    POSTGRES,
+  ];
+
+  static final $core.Map<$core.int, SatInStartReplicationReq_Dialect> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static SatInStartReplicationReq_Dialect? valueOf($core.int value) =>
+      _byValue[value];
+
+  const SatInStartReplicationReq_Dialect._($core.int v, $core.String n)
+      : super(v, n);
+}
+
 /// error code enum
 class SatInStartReplicationResp_ReplicationError_Code extends $pb.ProtobufEnum {
   static const SatInStartReplicationResp_ReplicationError_Code
@@ -154,12 +175,15 @@ class SatOpMigrate_Type extends $pb.ProtobufEnum {
       SatOpMigrate_Type._(0, _omitEnumNames ? '' : 'CREATE_TABLE');
   static const SatOpMigrate_Type CREATE_INDEX =
       SatOpMigrate_Type._(1, _omitEnumNames ? '' : 'CREATE_INDEX');
+  static const SatOpMigrate_Type CREATE_ENUM_TYPE =
+      SatOpMigrate_Type._(2, _omitEnumNames ? '' : 'CREATE_ENUM_TYPE');
   static const SatOpMigrate_Type ALTER_ADD_COLUMN =
       SatOpMigrate_Type._(6, _omitEnumNames ? '' : 'ALTER_ADD_COLUMN');
 
   static const $core.List<SatOpMigrate_Type> values = <SatOpMigrate_Type>[
     CREATE_TABLE,
     CREATE_INDEX,
+    CREATE_ENUM_TYPE,
     ALTER_ADD_COLUMN,
   ];
 

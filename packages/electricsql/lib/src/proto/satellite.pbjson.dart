@@ -220,10 +220,24 @@ const SatInStartReplicationReq$json = {
       '5': 4,
       '10': 'observedTransactionData'
     },
+    {
+      '1': 'sql_dialect',
+      '3': 7,
+      '4': 1,
+      '5': 14,
+      '6': '.Electric.Satellite.SatInStartReplicationReq.Dialect',
+      '9': 1,
+      '10': 'sqlDialect',
+      '17': true
+    },
   ],
-  '4': [SatInStartReplicationReq_Option$json],
+  '4': [
+    SatInStartReplicationReq_Option$json,
+    SatInStartReplicationReq_Dialect$json
+  ],
   '8': [
     {'1': '_schema_version'},
+    {'1': '_sql_dialect'},
   ],
   '9': [
     {'1': 3, '2': 4},
@@ -244,15 +258,26 @@ const SatInStartReplicationReq_Option$json = {
   ],
 };
 
+@$core.Deprecated('Use satInStartReplicationReqDescriptor instead')
+const SatInStartReplicationReq_Dialect$json = {
+  '1': 'Dialect',
+  '2': [
+    {'1': 'SQLITE', '2': 0},
+    {'1': 'POSTGRES', '2': 1},
+  ],
+};
+
 /// Descriptor for `SatInStartReplicationReq`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satInStartReplicationReqDescriptor = $convert.base64Decode(
     'ChhTYXRJblN0YXJ0UmVwbGljYXRpb25SZXESEAoDbHNuGAEgASgMUgNsc24STQoHb3B0aW9ucx'
     'gCIAMoDjIzLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRJblN0YXJ0UmVwbGljYXRpb25SZXEuT3B0'
     'aW9uUgdvcHRpb25zEikKEHN1YnNjcmlwdGlvbl9pZHMYBCADKAlSD3N1YnNjcmlwdGlvbklkcx'
     'IqCg5zY2hlbWFfdmVyc2lvbhgFIAEoCUgAUg1zY2hlbWFWZXJzaW9uiAEBEjoKGW9ic2VydmVk'
-    'X3RyYW5zYWN0aW9uX2RhdGEYBiADKARSF29ic2VydmVkVHJhbnNhY3Rpb25EYXRhIioKBk9wdG'
-    'lvbhIICgROT05FEAAiBAgBEAEiBAgCEAIiBAgDEAMiBAgEEARCEQoPX3NjaGVtYV92ZXJzaW9u'
-    'SgQIAxAE');
+    'X3RyYW5zYWN0aW9uX2RhdGEYBiADKARSF29ic2VydmVkVHJhbnNhY3Rpb25EYXRhEloKC3NxbF'
+    '9kaWFsZWN0GAcgASgOMjQuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RhcnRSZXBsaWNhdGlv'
+    'blJlcS5EaWFsZWN0SAFSCnNxbERpYWxlY3SIAQEiKgoGT3B0aW9uEggKBE5PTkUQACIECAEQAS'
+    'IECAIQAiIECAMQAyIECAQQBCIjCgdEaWFsZWN0EgoKBlNRTElURRAAEgwKCFBPU1RHUkVTEAFC'
+    'EQoPX3NjaGVtYV92ZXJzaW9uQg4KDF9zcWxfZGlhbGVjdEoECAMQBA==');
 
 @$core.Deprecated('Use satInStartReplicationRespDescriptor instead')
 const SatInStartReplicationResp$json = {
@@ -831,8 +856,16 @@ const SatOpMigrate$json = {
       '5': 11,
       '6': '.Electric.Satellite.SatOpMigrate.Table',
       '9': 0,
-      '10': 'table',
-      '17': true
+      '10': 'table'
+    },
+    {
+      '1': 'enum_type',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.Electric.Satellite.SatOpMigrate.EnumType',
+      '9': 0,
+      '10': 'enumType'
     },
   ],
   '3': [
@@ -840,11 +873,12 @@ const SatOpMigrate$json = {
     SatOpMigrate_PgColumnType$json,
     SatOpMigrate_Column$json,
     SatOpMigrate_ForeignKey$json,
-    SatOpMigrate_Table$json
+    SatOpMigrate_Table$json,
+    SatOpMigrate_EnumType$json
   ],
   '4': [SatOpMigrate_Type$json],
   '8': [
-    {'1': '_table'},
+    {'1': 'affected_entity'},
   ],
 };
 
@@ -927,11 +961,21 @@ const SatOpMigrate_Table$json = {
 };
 
 @$core.Deprecated('Use satOpMigrateDescriptor instead')
+const SatOpMigrate_EnumType$json = {
+  '1': 'EnumType',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'values', '3': 2, '4': 3, '5': 9, '10': 'values'},
+  ],
+};
+
+@$core.Deprecated('Use satOpMigrateDescriptor instead')
 const SatOpMigrate_Type$json = {
   '1': 'Type',
   '2': [
     {'1': 'CREATE_TABLE', '2': 0},
     {'1': 'CREATE_INDEX', '2': 1},
+    {'1': 'CREATE_ENUM_TYPE', '2': 2},
     {'1': 'ALTER_ADD_COLUMN', '2': 6},
   ],
 };
@@ -939,20 +983,23 @@ const SatOpMigrate_Type$json = {
 /// Descriptor for `SatOpMigrate`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satOpMigrateDescriptor = $convert.base64Decode(
     'CgxTYXRPcE1pZ3JhdGUSGAoHdmVyc2lvbhgBIAEoCVIHdmVyc2lvbhI7CgVzdG10cxgCIAMoCz'
-    'IlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuU3RtdFIFc3RtdHMSQQoFdGFibGUY'
-    'AyABKAsyJi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLlRhYmxlSABSBXRhYmxliA'
-    'EBGlMKBFN0bXQSOQoEdHlwZRgBIAEoDjIlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3Jh'
-    'dGUuVHlwZVIEdHlwZRIQCgNzcWwYAiABKAlSA3NxbBpMCgxQZ0NvbHVtblR5cGUSEgoEbmFtZR'
-    'gBIAEoCVIEbmFtZRIUCgVhcnJheRgCIAMoBVIFYXJyYXkSEgoEc2l6ZRgDIAMoBVIEc2l6ZRqF'
-    'AQoGQ29sdW1uEhIKBG5hbWUYASABKAlSBG5hbWUSHwoLc3FsaXRlX3R5cGUYAiABKAlSCnNxbG'
-    'l0ZVR5cGUSRgoHcGdfdHlwZRgDIAEoCzItLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3Jh'
-    'dGUuUGdDb2x1bW5UeXBlUgZwZ1R5cGUaWQoKRm9yZWlnbktleRIXCgdma19jb2xzGAEgAygJUg'
-    'Zma0NvbHMSGQoIcGtfdGFibGUYAiABKAlSB3BrVGFibGUSFwoHcGtfY29scxgDIAMoCVIGcGtD'
-    'b2xzGq8BCgVUYWJsZRISCgRuYW1lGAEgASgJUgRuYW1lEkEKB2NvbHVtbnMYAiADKAsyJy5FbG'
-    'VjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkNvbHVtblIHY29sdW1ucxI9CgNma3MYAyAD'
-    'KAsyKy5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLkZvcmVpZ25LZXlSA2ZrcxIQCg'
-    'Nwa3MYBCADKAlSA3BrcyJACgRUeXBlEhAKDENSRUFURV9UQUJMRRAAEhAKDENSRUFURV9JTkRF'
-    'WBABEhQKEEFMVEVSX0FERF9DT0xVTU4QBkIICgZfdGFibGU=');
+    'IlLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuU3RtdFIFc3RtdHMSPgoFdGFibGUY'
+    'AyABKAsyJi5FbGVjdHJpYy5TYXRlbGxpdGUuU2F0T3BNaWdyYXRlLlRhYmxlSABSBXRhYmxlEk'
+    'gKCWVudW1fdHlwZRgEIAEoCzIpLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuRW51'
+    'bVR5cGVIAFIIZW51bVR5cGUaUwoEU3RtdBI5CgR0eXBlGAEgASgOMiUuRWxlY3RyaWMuU2F0ZW'
+    'xsaXRlLlNhdE9wTWlncmF0ZS5UeXBlUgR0eXBlEhAKA3NxbBgCIAEoCVIDc3FsGkwKDFBnQ29s'
+    'dW1uVHlwZRISCgRuYW1lGAEgASgJUgRuYW1lEhQKBWFycmF5GAIgAygFUgVhcnJheRISCgRzaX'
+    'plGAMgAygFUgRzaXplGoUBCgZDb2x1bW4SEgoEbmFtZRgBIAEoCVIEbmFtZRIfCgtzcWxpdGVf'
+    'dHlwZRgCIAEoCVIKc3FsaXRlVHlwZRJGCgdwZ190eXBlGAMgASgLMi0uRWxlY3RyaWMuU2F0ZW'
+    'xsaXRlLlNhdE9wTWlncmF0ZS5QZ0NvbHVtblR5cGVSBnBnVHlwZRpZCgpGb3JlaWduS2V5EhcK'
+    'B2ZrX2NvbHMYASADKAlSBmZrQ29scxIZCghwa190YWJsZRgCIAEoCVIHcGtUYWJsZRIXCgdwa1'
+    '9jb2xzGAMgAygJUgZwa0NvbHMarwEKBVRhYmxlEhIKBG5hbWUYASABKAlSBG5hbWUSQQoHY29s'
+    'dW1ucxgCIAMoCzInLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuQ29sdW1uUgdjb2'
+    'x1bW5zEj0KA2ZrcxgDIAMoCzIrLkVsZWN0cmljLlNhdGVsbGl0ZS5TYXRPcE1pZ3JhdGUuRm9y'
+    'ZWlnbktleVIDZmtzEhAKA3BrcxgEIAMoCVIDcGtzGjYKCEVudW1UeXBlEhIKBG5hbWUYASABKA'
+    'lSBG5hbWUSFgoGdmFsdWVzGAIgAygJUgZ2YWx1ZXMiVgoEVHlwZRIQCgxDUkVBVEVfVEFCTEUQ'
+    'ABIQCgxDUkVBVEVfSU5ERVgQARIUChBDUkVBVEVfRU5VTV9UWVBFEAISFAoQQUxURVJfQUREX0'
+    'NPTFVNThAGQhEKD2FmZmVjdGVkX2VudGl0eQ==');
 
 @$core.Deprecated('Use satSubsReqDescriptor instead')
 const SatSubsReq$json = {
