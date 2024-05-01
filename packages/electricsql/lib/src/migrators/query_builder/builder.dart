@@ -370,11 +370,12 @@ abstract class QueryBuilder {
   /// @param suffixSql optional SQL string to append to each insert statement
   /// @returns array of statements ready to be executed by the adapter
   List<Statement> prepareInsertBatchedStatements(
-      String baseSql,
-      List<String> columns,
-      List<Map<String, Object?>> records,
-      int maxParameters,
-      [String suffixSql = '']) {
+    String baseSql,
+    List<String> columns,
+    List<Map<String, Object?>> records,
+    int maxParameters, [
+    String suffixSql = '',
+  ]) {
     final stmts = <Statement>[];
     final columnCount = columns.length;
     final recordCount = records.length;

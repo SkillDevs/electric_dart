@@ -8,47 +8,18 @@ import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
-import '../../util/pg_docker.dart';
-import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 import '../drift/generated/electric/drift_schema.dart';
 
-Future<void> main() async {
-  group('SQLite', () {
-    late TestsDatabase db;
-
-    setUpAll(() async {
-      db = TestsDatabase.memory();
-      addTearDown(() => db.close());
-
-      await electrifyTestDatabase(db);
-    });
-
-    typeTests(() => db);
-  });
-
-  withPostgresServer('postgres', (server) {
-    late TestsDatabase db;
-
-    setUpAll(() async {
-      final endpoint = await server.endpoint();
-      db = TestsDatabase.postgres(endpoint);
-      addTearDown(() => db.close());
-
-      await db.customSelect('SELECT 1').getSingle();
-    });
-
-    typeTests(() => db, isPostgres: true);
-  });
-}
-
 @isTestGroup
-void typeTests(TestsDatabase Function() getDb, {bool isPostgres = false}) {
+void dataTypeTests({
+  required TestsDatabase Function() getDb,
+  bool isPostgres = false,
+}) {
   late TestsDatabase db;
 
   setUp(() async {
     db = getDb();
-    await initClientTestsDb(db);
   });
 
   group('date', () {

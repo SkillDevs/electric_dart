@@ -33,11 +33,13 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     // TODO: pgMigrations
     pgMigrations: [],
   );
+  
+  final driftDialect = db.typeMapping.dialect;
 
-  final Dialect dialect = switch (db.typeMapping.dialect) {
+  final Dialect dialect = switch (driftDialect) {
     SqlDialect.sqlite => Dialect.sqlite,
-    SqlDialect.postgres => Dialect.sqlite,
-    _ => throw ArgumentError('Unsupported dialect: ${db.typeMapping.dialect}'),
+    SqlDialect.postgres => Dialect.postgres,
+    _ => throw ArgumentError('Unsupported dialect for Electric: $driftDialect'),
   };
 
   final namespace = await electrify_lib.electrifyBase(
@@ -53,6 +55,9 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
       migrator: opts?.migrator,
       notifier: opts?.notifier,
       registry: opts?.registry,
+      // In postgres, we don't want to run the default prepare function
+      // that enables FK constraints, as Postgres already has them enabled.
+      prepare: dialect == Dialect.postgres ? (_) async {} : null,
     ),
   );
 

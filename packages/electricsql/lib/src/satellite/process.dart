@@ -1226,7 +1226,8 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
           default:
             stmts.add(
-                _applyNonDeleteOperation(entryChanges, qualifiedTableName));
+              _applyNonDeleteOperation(entryChanges, qualifiedTableName),
+            );
             stmts.add(_updateShadowTagsStatement(shadowEntry));
         }
       }
