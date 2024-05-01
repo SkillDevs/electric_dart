@@ -207,7 +207,8 @@ List<Statement> generateTriggers(
 
   final List<Statement> stmts = [
     Statement(
-        'DROP TABLE IF EXISTS "${builder.defaultNamespace}"._electric_trigger_settings;'),
+      'DROP TABLE IF EXISTS "${builder.defaultNamespace}"._electric_trigger_settings;',
+    ),
     Statement(
       'CREATE TABLE "${builder.defaultNamespace}"._electric_trigger_settings(namespace TEXT, tablename TEXT, flag INTEGER, PRIMARY KEY(namespace, tablename));',
     ),

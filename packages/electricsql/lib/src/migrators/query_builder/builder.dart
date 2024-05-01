@@ -1,7 +1,8 @@
-import 'package:electricsql/src/satellite/oplog.dart';
+import 'dart:math';
+
+import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/util/index.dart';
-import 'package:electricsql/src/util/tablename.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/src/util/js_array_funs.dart';
 
 enum Dialect {
   sqlite,
@@ -23,7 +24,7 @@ enum SqlOpType {
   const SqlOpType(this.text);
 }
 
-abstract interface class QueryBuilder {
+abstract class QueryBuilder {
   const QueryBuilder();
 
   abstract final Dialect dialect;
@@ -112,13 +113,14 @@ abstract interface class QueryBuilder {
   /// If it already exists we update the provided columns `updateCols`
   /// with the provided values `updateVals`
   Statement insertOrReplaceWith(
-      String table,
-      List<String> columns,
-      List<Object?> values,
-      List<String> conflictCols,
-      List<String> updateCols,
-      List<Object?> updateVals,
-      String? schema);
+    String table,
+    List<String> columns,
+    List<Object?> values,
+    List<String> conflictCols,
+    List<String> updateCols,
+    List<Object?> updateVals,
+    String? schema,
+  );
 
   /// Inserts a batch of rows into a table, replacing them if they already exist.
   List<Statement> batchedInsertOrReplace(
@@ -253,35 +255,38 @@ abstract interface class QueryBuilder {
     );
   }
 
-/*   /// Creates a trigger that logs compensations for operations into the oplog.
-  abstract createFkCompensationTrigger(
-    opType: 'INSERT' | 'UPDATE',
-    tableName: string,
-    childKey: string,
-    fkTableName: string,
-    joinedFkPKs: string,
-    foreignKey: ForeignKey,
-    namespace?: string,
-    fkTableNamespace?: string
-  ): string[]
+  /// Creates a trigger that logs compensations for operations into the oplog.
+  List<String> createFkCompensationTrigger(
+    String opType,
+    String tableName,
+    String childKey,
+    String fkTableName,
+    String joinedFkPKs,
+    ForeignKey foreignKey,
+    String? namespace,
+    String? fkTableNamespace,
+  );
 
-  createOrReplaceFkCompensationTrigger(
-    opType: 'INSERT' | 'UPDATE',
-    tableName: string,
-    childKey: string,
-    fkTableName: string,
-    joinedFkPKs: string,
-    foreignKey: ForeignKey,
-    namespace: string = this.defaultNamespace,
-    fkTableNamespace: string = this.defaultNamespace
-  ): string[] {
+  List<String> createOrReplaceFkCompensationTrigger(
+    String opType,
+    String tableName,
+    String childKey,
+    String fkTableName,
+    String joinedFkPKs,
+    ForeignKey foreignKey,
+    String? namespace,
+    String? fkTableNamespace,
+  ) {
+    namespace = namespace ?? defaultNamespace;
+    fkTableNamespace = fkTableNamespace ?? defaultNamespace;
+
     return [
-      this.dropTriggerIfExists(
-        `compensation_${opType.toLowerCase()}_${namespace}_${tableName}_${childKey}_into_oplog`,
+      dropTriggerIfExists(
+        'compensation_${opType.toLowerCase()}_${namespace}_${tableName}_${childKey}_into_oplog',
         tableName,
-        namespace
+        namespace,
       ),
-      ...this.createFkCompensationTrigger(
+      ...createFkCompensationTrigger(
         opType,
         tableName,
         childKey,
@@ -289,30 +294,66 @@ abstract interface class QueryBuilder {
         joinedFkPKs,
         foreignKey,
         namespace,
-        fkTableNamespace
+        fkTableNamespace,
       ),
-    ]
+    ];
   }
 
   /// Creates a trigger that logs compensations for insertions into the oplog.
-  createOrReplaceInsertCompensationTrigger =
-    this.createOrReplaceFkCompensationTrigger.bind(this, 'INSERT')
+  List<String> createOrReplaceInsertCompensationTrigger(
+    String tableName,
+    String childKey,
+    String fkTableName,
+    String joinedFkPKs,
+    ForeignKey foreignKey,
+    String? namespace,
+    String? fkTableNamespace,
+  ) {
+    return createOrReplaceFkCompensationTrigger(
+      'INSERT',
+      tableName,
+      childKey,
+      fkTableName,
+      joinedFkPKs,
+      foreignKey,
+      namespace,
+      fkTableNamespace,
+    );
+  }
 
   /// Creates a trigger that logs compensations for updates into the oplog.
-  createOrReplaceUpdateCompensationTrigger =
-    this.createOrReplaceFkCompensationTrigger.bind(this, 'UPDATE')
+  List<String> createOrReplaceUpdateCompensationTrigger(
+    String tableName,
+    String childKey,
+    String fkTableName,
+    String joinedFkPKs,
+    ForeignKey foreignKey,
+    String? namespace,
+    String? fkTableNamespace,
+  ) {
+    return createOrReplaceFkCompensationTrigger(
+      'UPDATE',
+      tableName,
+      childKey,
+      fkTableName,
+      joinedFkPKs,
+      foreignKey,
+      namespace,
+      fkTableNamespace,
+    );
+  }
 
   /// For each affected shadow row, set new tag array, unless the last oplog operation was a DELETE
-  abstract setTagsForShadowRows(
-    oplogTable: QualifiedTablename,
-    shadowTable: QualifiedTablename
-  ): string
+  String setTagsForShadowRows(
+    QualifiedTablename oplogTable,
+    QualifiedTablename shadowTable,
+  );
 
   /// Deletes any shadow rows where the last oplog operation was a `DELETE`
-  abstract removeDeletedShadowRows(
-    oplogTable: QualifiedTablename,
-    shadowTable: QualifiedTablename
-  ): string
+  String removeDeletedShadowRows(
+    QualifiedTablename oplogTable,
+    QualifiedTablename shadowTable,
+  );
 
   /// Prepare multiple batched insert statements for an array of records.
   ///
@@ -327,48 +368,45 @@ abstract interface class QueryBuilder {
   /// @param maxParameters max parameters this SQLite can accept - determines batching factor
   /// @param suffixSql optional SQL string to append to each insert statement
   /// @returns array of statements ready to be executed by the adapter
-  prepareInsertBatchedStatements(
-    baseSql: string,
-    columns: string[],
-    records: Record<string, SqlValue>[],
-    maxParameters: number,
-    suffixSql = ''
-  ): Statement[] {
-    const stmts: Statement[] = []
-    const columnCount = columns.length
-    const recordCount = records.length
-    let processed = 0
-    let positionalParam = 1
-    const pos = (i: number) => `${this.makePositionalParam(i)}`
-    const makeInsertPattern = () => {
-      return ` (${Array.from(
-        { length: columnCount },
-        () => `${pos(positionalParam++)}`
-      ).join(', ')})`
+  List<Statement> prepareInsertBatchedStatements(
+      String baseSql,
+      List<String> columns,
+      List<Map<String, Object?>> records,
+      int maxParameters,
+      [String suffixSql = '']) {
+    final stmts = <Statement>[];
+    final columnCount = columns.length;
+    final recordCount = records.length;
+    int processed = 0;
+    int positionalParam = 1;
+    String pos(int i) => makePositionalParam(i);
+    String makeInsertPattern() {
+      return ' (${List.generate(columnCount, (_) => pos(positionalParam++)).join(', ')})';
     }
 
     // Largest number below maxSqlParamers that evenly divides by column count,
     // divided by columnCount, giving the amount of rows we can insert at once
-    const batchMaxSize =
-      (maxParameters - (maxParameters % columnCount)) / columnCount
+    final int batchMaxSize =
+        (maxParameters - (maxParameters % columnCount)) ~/ columnCount;
     while (processed < recordCount) {
-      positionalParam = 1 // start counting parameters from 1 again
-      const currentInsertCount = Math.min(recordCount - processed, batchMaxSize)
-      let sql =
-        baseSql +
-        Array.from({ length: currentInsertCount }, makeInsertPattern).join(',')
+      positionalParam = 1; // start counting parameters from 1 again
+      final currentInsertCount = min(recordCount - processed, batchMaxSize);
+      String sql = baseSql +
+          List.generate(currentInsertCount, (_) => makeInsertPattern())
+              .join(',');
 
-      if (suffixSql !== '') {
-        sql += ' ' + suffixSql
+      if (suffixSql != '') {
+        sql += ' $suffixSql';
       }
 
-      const args = records
-        .slice(processed, processed + currentInsertCount)
-        .flatMap((record) => columns.map((col) => record[col] as SqlValue))
+      final List<Object?> args = records
+          .slice(processed, processed + currentInsertCount)
+          .expand((record) => columns.map((col) => record[col]))
+          .toList();
 
-      processed += currentInsertCount
-      stmts.push({ sql, args })
+      processed += currentInsertCount;
+      stmts.add(Statement(sql, args));
     }
-    return stmts
-  }  */
+    return stmts;
+  }
 }

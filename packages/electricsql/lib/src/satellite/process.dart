@@ -27,7 +27,6 @@ import 'package:electricsql/src/util/exceptions.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/relations.dart';
-import 'package:electricsql/src/util/statements.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:fixnum/fixnum.dart';
@@ -251,7 +250,7 @@ This means there is a notifier subscription leak.`''');
     final namespace = builder.defaultNamespace;
     final allTables = shapeDefs
         .map((ShapeDefinition def) => def.definition)
-        .expand((x) => getAllTablesForShape(x, namespace));
+        .expand((x) => getAllTablesForShape(x, schema: namespace));
     final tables = allTables.toSet().toList();
 
     // TODO: table and schema warrant escaping here too, but they aren't in the triggers table.
@@ -1453,7 +1452,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     final notNewTableNames =
         tablenames.where((t) => !newTables.contains(t)).toList();
     final notNewQualifiedTables =
-        tablenames.map(QualifiedTablename.parse).toList();
+        notNewTableNames.map(QualifiedTablename.parse).toList();
 
     final allStatements = [
       ..._disableTriggers(notNewQualifiedTables),
