@@ -28,15 +28,15 @@ void main() {
 
   test('run the bundle migrator', () async {
     final migrator =
-        BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+        BundleMigrator(adapter: adapter, migrations: kTestSqliteMigrations);
     await expectLater(await migrator.up(), 3);
     await expectLater(await migrator.up(), 0);
   });
 
   test('applyIfNotAlready applies new migrations', () async {
-    final migrations = kTestMigrations;
+    final migrations = kTestSqliteMigrations;
     final allButLastMigrations =
-        migrations.sublist(0, kTestMigrations.length - 1);
+        migrations.sublist(0, kTestSqliteMigrations.length - 1);
     final lastMigration = makeStmtMigration(migrations[migrations.length - 1]);
 
     final migrator = BundleMigrator(
@@ -51,11 +51,11 @@ void main() {
 
   test('applyIfNotAlready ignores already applied migrations', () async {
     final migrator =
-        BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+        BundleMigrator(adapter: adapter, migrations: kTestSqliteMigrations);
     expect(await migrator.up(), 3);
 
     final wasApplied = await migrator.applyIfNotAlready(
-      makeStmtMigration(kTestMigrations[0]),
+      makeStmtMigration(kTestSqliteMigrations[0]),
     );
     expect(!wasApplied, isTrue);
   });

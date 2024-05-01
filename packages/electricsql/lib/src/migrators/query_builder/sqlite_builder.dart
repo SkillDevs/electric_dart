@@ -88,14 +88,14 @@ class SqliteBuilder extends QueryBuilder {
 
     return [
       '''
-        CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
-          BEFORE UPDATE ON "$namespace"."$tablename"
-        BEGIN
-          SELECT
-            CASE
-              ${pk.map((col) => '''WHEN old."$col" != new."$col" THEN\n\t\tRAISE (ABORT, 'cannot change the value of column $col as it belongs to the primary key')''').join('\n')}
-            END;
+    CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
+      BEFORE UPDATE ON "$namespace"."$tablename"
+    BEGIN
+      SELECT
+        CASE
+          ${pk.map((col) => '''WHEN old."$col" != new."$col" THEN\n\t\tRAISE (ABORT, 'cannot change the value of column $col as it belongs to the primary key')''').join('\n')}
         END;
+    END;
       ''',
     ];
   }
@@ -123,14 +123,13 @@ class SqliteBuilder extends QueryBuilder {
 
     return [
       '''
-        CREATE TRIGGER ${opTypeLower}_${namespace}_${tableName}_into_oplog
-           AFTER $opType ON "$namespace"."$tableName"
-           WHEN 1 = (SELECT flag from _electric_trigger_settings WHERE namespace = '$namespace' AND tablename = '$tableName')
-        BEGIN
-          INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-          VALUES ('$namespace', '$tableName', '$opType', $pk, $newRecord, $oldRecord, NULL);
-        END;
-      ''',
+CREATE TRIGGER ${opTypeLower}_${namespace}_${tableName}_into_oplog
+  AFTER ${opType.text} ON "$namespace"."$tableName"
+  WHEN 1 = (SELECT flag from _electric_trigger_settings WHERE namespace = '$namespace' AND tablename = '$tableName')
+BEGIN
+  INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
+  VALUES ('$namespace', '$tableName', '${opType.text}', $pk, $newRecord, $oldRecord, NULL);
+END;''',
     ];
   }
 

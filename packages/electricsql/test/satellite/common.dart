@@ -9,6 +9,7 @@ import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
+import 'package:electricsql/src/migrators/bundle.dart';
 import 'package:electricsql/src/migrators/schema.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/index.dart';
@@ -26,10 +27,10 @@ import '../util/io.dart';
 import '../util/sqlite.dart';
 
 // Speed up the intervals for testing.
-final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: const Duration(milliseconds: 40),
-  pollingInterval: const Duration(milliseconds: 200),
-);
+SatelliteOpts opts(String namespace) => satelliteDefaults(namespace).copyWith(
+      minSnapshotWindow: const Duration(milliseconds: 40),
+      pollingInterval: const Duration(milliseconds: 200),
+    );
 
 DBSchema kTestDbDescription = DBSchemaRaw(
   fields: {
@@ -47,6 +48,7 @@ DBSchema kTestDbDescription = DBSchemaRaw(
     },
   },
   migrations: [],
+  pgMigrations: [],
 );
 
 Map<String, Relation> kTestRelations = {
@@ -216,33 +218,26 @@ Map<String, Relation> kTestRelations = {
   ),
 };
 
-Future<SatelliteTestContext> makeContext({
+Future<SatelliteTestContext> makeContextInternal({
+  required DbName dbName,
+  required DatabaseAdapter adapter,
+  required BundleMigratorBase migrator,
+  required String namespace,
   SatelliteOpts? options,
 }) async {
-  await Directory('.tmp').create(recursive: true);
-
-  final dbName = '.tmp/test-${randomValue()}.db';
-  final db = openSqliteDb(dbName);
-
-  final adapter = SqliteAdapter(db);
-  // Electric depends on Foregin keys being ON and tests do not electrify
-  // So we call it explicitly
-  await adapter.run(Statement('PRAGMA foreign_keys = ON'));
-
-  final migrator =
-      BundleMigrator(adapter: adapter, migrations: kTestMigrations);
   final notifier = MockNotifier(dbName, eventEmitter: EventEmitter());
   final client = MockSatelliteClient();
+  final effectiveOptions = options ?? opts(namespace);
   final satellite = SatelliteProcess(
     dbName: dbName,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,
     client: client,
-    opts: options ?? opts,
+    opts: effectiveOptions,
   );
 
-  final tableInfo = initTableInfo();
+  final tableInfo = initTableInfo(namespace);
   final timestamp = DateTime.now();
 
   const authConfig = AuthConfig(clientId: '');
@@ -250,7 +245,6 @@ Future<SatelliteTestContext> makeContext({
 
   return SatelliteTestContext(
     dbName: dbName,
-    db: db,
     adapter: adapter,
     migrator: migrator,
     notifier: notifier,
@@ -260,14 +254,67 @@ Future<SatelliteTestContext> makeContext({
     timestamp: timestamp,
     authConfig: authConfig,
     token: token,
+    namespace: namespace,
+    opts: effectiveOptions,
+  );
+}
+
+Future<SatelliteTestContext> makeContext(
+  String namespace, {
+  SatelliteOpts? options,
+}) async {
+  await Directory('.tmp').create(recursive: true);
+  final dbName = '.tmp/test-${randomValue()}.db';
+  final db = openSqliteDb(dbName);
+  final adapter = SqliteAdapter(db);
+  final migrator =
+      SqliteBundleMigrator(adapter: adapter, migrations: kTestSqliteMigrations);
+
+  // Electric depends on Foregin keys being ON and tests do not electrify
+  // So we call it explicitly
+  await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+
+  return makeContextInternal(
+    dbName: dbName,
+    adapter: adapter,
+    migrator: migrator,
+    namespace: namespace,
+    options: options,
+  );
+}
+
+Future<SatelliteTestContext> makePgContext(
+  int port,
+  String namespace, {
+  SatelliteOpts? options,
+}) async {
+  // TODO: makePgContext
+  throw UnimplementedError();
+
+  await Directory('.tmp').create(recursive: true);
+  final dbName = '.tmp/test-${randomValue()}.db';
+  final db = openSqliteDb(dbName);
+  final adapter = SqliteAdapter(db);
+  final migrator =
+      SqliteBundleMigrator(adapter: adapter, migrations: kTestSqliteMigrations);
+
+  // Electric depends on Foregin keys being ON and tests do not electrify
+  // So we call it explicitly
+  await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+
+  return makeContextInternal(
+    dbName: dbName,
+    adapter: adapter,
+    migrator: migrator,
+    namespace: namespace,
+    options: options,
   );
 }
 
 class SatelliteTestContext {
   final String dbName;
-  final Database db;
   final DatabaseAdapter adapter;
-  final BundleMigrator migrator;
+  final BundleMigratorBase migrator;
   final MockNotifier notifier;
   final MockSatelliteClient client;
   final SatelliteProcess satellite;
@@ -275,12 +322,15 @@ class SatelliteTestContext {
   final DateTime timestamp;
   final AuthConfig authConfig;
   final String token;
+  final SatelliteOpts opts;
+  final String namespace;
 
   late final AuthState authState = AuthState(clientId: authConfig.clientId!);
 
+  Future<void> Function()? stop;
+
   SatelliteTestContext({
     required this.dbName,
-    required this.db,
     required this.adapter,
     required this.migrator,
     required this.notifier,
@@ -290,6 +340,9 @@ class SatelliteTestContext {
     required this.timestamp,
     required this.authConfig,
     required this.token,
+    required this.opts,
+    required this.namespace,
+    this.stop,
   });
 
   Future<void> runMigrations() async {
@@ -302,6 +355,7 @@ class SatelliteTestContext {
 
   Future<void> cleanAndStopSatellite() async {
     await cleanAndStopSatelliteRaw(dbName: dbName, satellite: satellite);
+    await stop?.call();
   }
 }
 
@@ -309,13 +363,14 @@ Future<ElectricClientRaw> mockElectricClient(
   DatabaseConnectionUser db,
   Registry registry, {
   required DbName dbName,
+  String namespace = 'main',
   SatelliteOpts? options,
 }) async {
-  options ??= opts;
+  options ??= opts(namespace);
 
   final adapter = DriftAdapter(db);
   final migrator =
-      BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+      SqliteBundleMigrator(adapter: adapter, migrations: kTestSqliteMigrations);
   final notifier = MockNotifier(dbName, eventEmitter: EventEmitter());
   final client = MockSatelliteClient();
   final satellite = SatelliteProcess(
@@ -337,7 +392,8 @@ Future<ElectricClientRaw> mockElectricClient(
     notifier: notifier,
     registry: registry,
     satellite: satellite,
-    dbDescription: DBSchemaRaw(fields: {}, migrations: []),
+    dbDescription: DBSchemaRaw(fields: {}, migrations: [], pgMigrations: []),
+    dialect: Dialect.sqlite,
   );
 
   await electric.connect(insecureAuthToken({'sub': 'test-token'}));
@@ -357,38 +413,51 @@ Future<void> cleanDb(DbName dbName) async {
   await removeFile('$dbName-journal');
 }
 
-void migrateDb(Database db, Table table) {
+Future<void> migrateDb(
+  DatabaseAdapter db,
+  Table table,
+  QueryBuilder builder,
+) async {
+  // First create the "main" schema (only when running on PG)
+  final initialMigration = buildInitialMigration(builder);
+  final migration = initialMigration[0].statements;
+  final [createMainSchema, ...restMigration] = migration;
+  await db.run(Statement(createMainSchema));
+
+  final namespace = table.namespace;
   final tableName = table.tableName;
-  // Create the table in the database
+  // Create the table in the database on the given namespace
+  final blobType = builder.dialect == Dialect.sqlite ? 'BLOB' : 'BYTEA';
   final createTableSQL =
-      'CREATE TABLE $tableName (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER, blob BLOB)';
-  db.execute(createTableSQL);
+      'CREATE TABLE "$namespace"."$tableName" (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER, blob $blobType)';
+  await db.run(Statement(createTableSQL));
 
   // Apply the initial migration on the database
-  final migration = kBaseMigrations[0].statements;
-  for (final stmt in migration) {
-    db.execute(stmt);
+  for (final stmt in restMigration) {
+    await db.run(Statement(stmt));
   }
-  final triggers = generateTableTriggers(tableName, table);
+
+  // Generate the table triggers
+  final triggers = generateTableTriggers(table, builder);
 
   // Apply the triggers on the database
   for (final trigger in triggers) {
-    db.execute(trigger.sql);
+    await db.run(Statement(trigger.sql));
   }
 }
 
-final kPersonTable = Table(
-  namespace: 'main',
-  tableName: 'personTable',
-  columns: ['id', 'name', 'age', 'bmi', 'int8', 'blob'],
-  primary: ['id'],
-  foreignKeys: [],
-  columnTypes: {
-    'id': (sqliteType: 'REAL', pgType: 'REAL'),
-    'name': (sqliteType: 'TEXT', pgType: 'TEXT'),
-    'age': (sqliteType: 'INTEGER', pgType: 'INTEGER'),
-    'bmi': (sqliteType: 'REAL', pgType: 'REAL'),
-    'int8': (sqliteType: 'INTEGER', pgType: 'INT8'),
-    'blob': (sqliteType: 'BLOB', pgType: 'BYTEA'),
-  },
-);
+Table getPersonTable(String namespace) => Table(
+      namespace: namespace,
+      tableName: 'personTable',
+      columns: ['id', 'name', 'age', 'bmi', 'int8', 'blob'],
+      primary: ['id'],
+      foreignKeys: [],
+      columnTypes: {
+        'id': 'REAL',
+        'name': 'TEXT',
+        'age': 'INTEGER',
+        'bmi': 'REAL',
+        'int8': 'INT8',
+        'blob': 'BYTEA',
+      },
+    );
