@@ -1,6 +1,7 @@
 ## Next
 
 * Add a escape hatch method `syncTableRaw` to allow creating a shape subscription manually, without the `drift` API. Using `syncTable` is still recommended.
+* Fix error when the websocket close code or reason are null.
 
 
 ## 0.6.0

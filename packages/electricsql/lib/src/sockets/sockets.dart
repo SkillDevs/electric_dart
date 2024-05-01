@@ -45,8 +45,8 @@ abstract class SocketFactory {
 }
 
 class CloseEvent {
-  final int code;
-  final String reason;
+  final int? code;
+  final String? reason;
 
   CloseEvent({required this.code, required this.reason});
 }
@@ -245,8 +245,8 @@ abstract class WebSocketBase implements Socket {
         closeFuture.then((_) {
           listener.call(
             CloseEvent(
-              code: channelToClose.closeCode!,
-              reason: channelToClose.closeReason!,
+              code: channelToClose.closeCode,
+              reason: channelToClose.closeReason,
             ),
           );
         });
