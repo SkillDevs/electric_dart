@@ -1,11 +1,10 @@
-// ignore_for_file: unreachable_from_main
-
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/mock.dart';
@@ -14,7 +13,6 @@ import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:equatable/equatable.dart';
 import 'package:fixnum/fixnum.dart';
-import 'package:sqlite3/sqlite3.dart' hide Row;
 import 'package:test/test.dart';
 
 import '../support/satellite_helpers.dart';
@@ -26,7 +24,6 @@ Future<void> runMigrations() async {
   await context.runMigrations();
 }
 
-Database get db => context.db;
 DatabaseAdapter get adapter => context.adapter;
 Migrator get migrator => context.migrator;
 MockNotifier get notifier => context.notifier;
@@ -60,31 +57,35 @@ class ColumnInfo with EquatableMixin {
   List<Object?> get props => [cid, name, type, notnull, dfltValue, pk];
 }
 
-void main() {
+Future<void> commonSetup(SatelliteTestContext context) async {
+  final satellite = context.satellite;
+  await satellite.start(context.authConfig);
+  satellite.setToken(context.token);
+  await satellite.connectWithBackoff();
+  clientId = satellite.authState!.clientId; // store clientId in the context
+  await populateDB(context);
+  txDate = await satellite.performSnapshot();
+  // Mimic Electric sending our own operations back
+  // which serves as an acknowledgement (even though there is a separate ack also)
+  // and leads to GC of the oplog
+  final ackTx = Transaction(
+    origin: satellite.authState!.clientId,
+    commitTimestamp: Int64(txDate.millisecondsSinceEpoch),
+    changes: [], // doesn't matter, only the origin and timestamp matter for GC of the oplog
+    lsn: [],
+  );
+  await satellite.applyTransaction(ackTx);
+}
+
+void processMigrationTests({
+  required SatelliteTestContext Function() getContext,
+  required String namespace,
+  required QueryBuilder builder,
+  required String qualifiedParentTableName,
+  required GetMatchingShadowEntries getMatchingShadowEntries,
+}) {
   setUp(() async {
-    context = await makeContext();
-
-    final satellite = context.satellite;
-    await satellite.start(context.authConfig);
-    satellite.setToken(context.token);
-    await satellite.connectWithBackoff();
-    clientId = satellite.authState!.clientId; // store clientId in the context
-    await populateDB(context);
-    txDate = await satellite.performSnapshot();
-    // Mimic Electric sending our own operations back
-    // which serves as an acknowledgement (even though there is a separate ack also)
-    // and leads to GC of the oplog
-    final ackTx = Transaction(
-      origin: satellite.authState!.clientId,
-      commitTimestamp: Int64(txDate.millisecondsSinceEpoch),
-      changes: [], // doesn't matter, only the origin and timestamp matter for GC of the oplog
-      lsn: [],
-    );
-    await satellite.applyTransaction(ackTx);
-  });
-
-  tearDown(() async {
-    await context.cleanAndStopSatellite();
+    context = getContext();
   });
 
   test('setup populates DB', () async {

@@ -98,13 +98,7 @@ void processTests({
   required String namespace,
   required QueryBuilder builder,
   required String qualifiedParentTableName,
-  required Future<List<ShadowEntry>> Function(
-    DatabaseAdapter adapter, {
-    QueryBuilder builder,
-    String? namespace,
-    OplogEntry? oplog,
-    String? shadowTable,
-  }) getMatchingShadowEntries,
+  required GetMatchingShadowEntries getMatchingShadowEntries,
 }) {
   setUp(() {
     context = getContext();

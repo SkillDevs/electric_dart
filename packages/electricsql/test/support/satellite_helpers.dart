@@ -172,6 +172,14 @@ String genEncodedTags(
   return encodeTags(tags);
 }
 
+typedef GetMatchingShadowEntries = Future<List<ShadowEntry>> Function(
+  DatabaseAdapter adapter, {
+  OplogEntry? oplog,
+  QueryBuilder builder,
+  String? namespace,
+  String? shadowTable,
+});
+
 /// List all shadow entries, or get just one if an `oplog` parameter is provided
 Future<List<ShadowEntry>> getSQLiteMatchingShadowEntries(
   DatabaseAdapter adapter, {
