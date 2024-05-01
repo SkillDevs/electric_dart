@@ -4,6 +4,7 @@ import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/int2.dart';
 import 'package:electricsql/src/util/converters/codecs/int4.dart';
+import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:electricsql/src/util/converters/codecs/uuid.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:postgres/postgres.dart' as pg;
@@ -19,6 +20,10 @@ Object mapToSql(PgType? type, Object inputDartValue) {
   if (type == null) {
     // Enum as string
     typedValue = pg.TypedValue(pgType, dartValue as String);
+  } else if (dartValue == null) {
+    // Don't infer SQL nulls. At this level, SQL nulls have been handled.
+    // This can happen when inserting Json null values
+    typedValue = pg.TypedValue(pgType, null, isSqlNull: false);
   } else {
     typedValue = pg.TypedValue(pgType, dartValue);
   }
@@ -167,6 +172,9 @@ dynamic _updateDartInput(
         dartValue.microsecond,
       );
     }
+  } else if (isJsonNull(dartValue) &&
+      (pgType == pg.Type.json || pgType == pg.Type.jsonb)) {
+    return null;
   }
 
   return dartValue;
