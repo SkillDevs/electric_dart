@@ -8,7 +8,7 @@ abstract interface class TypeEncoder {
 abstract interface class TypeDecoder {
   String text(List<int> bytes, {bool? allowMalformed});
   String json(List<int> bytes, {bool? allowMalformed});
-  int boolean(List<int> bytes);
+  Object boolean(List<int> bytes);
   String timetz(List<int> bytes);
   Object float(List<int> bytes);
 }

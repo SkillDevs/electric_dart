@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnectionUser;
+import 'package:drift_postgres/drift_postgres.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
@@ -19,8 +20,12 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/types.dart';
+import 'package:postgres/postgres.dart' as pg;
 
+import '../drivers/drift_test.dart';
 import '../support/migrations.dart';
+import '../support/pg_migrations.dart';
+import '../support/postgres.dart';
 import '../support/satellite_helpers.dart';
 import '../util/io.dart';
 import '../util/sqlite.dart';
@@ -223,6 +228,7 @@ Future<SatelliteTestContext> makeContextInternal({
   required BundleMigratorBase migrator,
   required String namespace,
   SatelliteOpts? options,
+  Future<void> Function()? stop,
 }) async {
   final notifier = MockNotifier(dbName, eventEmitter: EventEmitter());
   final client = MockSatelliteClient();
@@ -255,6 +261,7 @@ Future<SatelliteTestContext> makeContextInternal({
     token: token,
     namespace: namespace,
     opts: effectiveOptions,
+    stop: stop,
   );
 }
 
@@ -287,19 +294,20 @@ Future<SatelliteTestContext> makePgContext(
   String namespace, {
   SatelliteOpts? options,
 }) async {
-  // TODO: makePgContext
-  throw UnimplementedError();
+  final dbName = 'test-${randomValue()}.db';
+  final pgEmbedded = await makePgDatabase(dbName, port);
 
-  await Directory('.tmp').create(recursive: true);
-  final dbName = '.tmp/test-${randomValue()}.db';
-  final db = openSqliteDb(dbName);
-  final adapter = SqliteAdapter(db);
+  final endpoint = await pgEmbedded.server.endpoint();
+  final db = await GenericDb.open(
+    PgDatabase(
+      endpoint: endpoint,
+      settings: const pg.ConnectionSettings(sslMode: pg.SslMode.disable),
+    ),
+  );
+
+  final adapter = DriftAdapter(db);
   final migrator =
-      SqliteBundleMigrator(adapter: adapter, migrations: kTestSqliteMigrations);
-
-  // Electric depends on Foregin keys being ON and tests do not electrify
-  // So we call it explicitly
-  await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+      PgBundleMigrator(adapter: adapter, migrations: kTestPostgresMigrations);
 
   return makeContextInternal(
     dbName: dbName,
@@ -307,6 +315,7 @@ Future<SatelliteTestContext> makePgContext(
     migrator: migrator,
     namespace: namespace,
     options: options,
+    stop: () async => await pgEmbedded.stop(),
   );
 }
 

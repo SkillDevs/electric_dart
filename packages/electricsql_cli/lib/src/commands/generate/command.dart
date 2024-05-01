@@ -396,9 +396,8 @@ Future<Future<void> Function()> bundleMigrationsFor(
   await fetchMigrations(migrationEndpoint, migrationsDir, tmpDir);
 
   // Build the migrations
-  // TODO: Implement pg
   final builder =
-      dialect == Dialect.sqlite ? kSqliteQueryBuilder : kSqliteQueryBuilder;
+      dialect == Dialect.sqlite ? kSqliteQueryBuilder : kPostgresQueryBuilder;
 
   return () async {
     await buildMigrations(

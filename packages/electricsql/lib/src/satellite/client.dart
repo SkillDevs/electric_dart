@@ -133,12 +133,10 @@ class SatelliteClient implements Client {
         : SatInStartReplicationReq_Dialect.POSTGRES;
     _encoder = opts.dialect == Dialect.sqlite
         ? kSqliteTypeEncoder
-        // TODO: Implement
-        : throw UnimplementedError();
+        : kPostgresTypeEncoder;
     _decoder = opts.dialect == Dialect.sqlite
         ? kSqliteTypeDecoder
-        // TODO: Implement
-        : throw UnimplementedError();
+        : kPostgresTypeDecoder;
 
     // This cannot be lazyly instantiated in the 'late final' property, otherwise
     // it won't be properly ready to emit events at the right time

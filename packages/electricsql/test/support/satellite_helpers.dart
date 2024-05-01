@@ -175,13 +175,12 @@ String genEncodedTags(
 typedef GetMatchingShadowEntries = Future<List<ShadowEntry>> Function(
   DatabaseAdapter adapter, {
   OplogEntry? oplog,
-  QueryBuilder builder,
-  String? namespace,
+  String namespace,
   String? shadowTable,
 });
 
 /// List all shadow entries, or get just one if an `oplog` parameter is provided
-Future<List<ShadowEntry>> getSQLiteMatchingShadowEntries(
+Future<List<ShadowEntry>> getMatchingShadowEntries(
   DatabaseAdapter adapter, {
   OplogEntry? oplog,
   QueryBuilder builder = kSqliteQueryBuilder,
@@ -223,19 +222,32 @@ primaryKey = ${builder.makePositionalParam(3)}
   }).toList();
 }
 
+Future<List<ShadowEntry>> getSQLiteMatchingShadowEntries(
+  DatabaseAdapter adapter, {
+  OplogEntry? oplog,
+  String namespace = 'main',
+  String? shadowTable,
+}) async {
+  return getMatchingShadowEntries(
+    adapter,
+    oplog: oplog,
+    builder: kSqliteQueryBuilder,
+    namespace: namespace,
+    shadowTable: shadowTable,
+  );
+}
+
 Future<List<ShadowEntry>> getPgMatchingShadowEntries(
   DatabaseAdapter adapter, {
   OplogEntry? oplog,
   String namespace = 'public',
   String? shadowTable,
 }) async {
-  // TODO: Implement
-  throw UnimplementedError();
-  /* return getMatchingShadowEntries(
+  return getMatchingShadowEntries(
     adapter,
-    oplog,
-    // pgBuilder,
-    namespace,
-    shadowTable,
-  ); */
+    oplog: oplog,
+    builder: kPostgresQueryBuilder,
+    namespace: namespace,
+    shadowTable: shadowTable,
+  );
 }

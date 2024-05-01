@@ -188,7 +188,6 @@ WHERE version = ${queryBuilder.makePositionalParam(1)}''',
   }
 }
 
-// TODO: Add pgBundleMigrator
 
 class SqliteBundleMigrator extends BundleMigratorBase {
   SqliteBundleMigrator({
@@ -196,5 +195,15 @@ class SqliteBundleMigrator extends BundleMigratorBase {
     super.migrations = const [],
   }) : super(
           queryBuilder: kSqliteQueryBuilder,
+        );
+}
+
+
+class PgBundleMigrator extends BundleMigratorBase {
+  PgBundleMigrator({
+    required super.adapter,
+    super.migrations = const [],
+  }) : super(
+          queryBuilder: kPostgresQueryBuilder,
         );
 }

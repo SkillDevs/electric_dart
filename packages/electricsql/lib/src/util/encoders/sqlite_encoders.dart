@@ -54,7 +54,7 @@ class SqliteTypeDecoder implements TypeDecoder {
   }
 
   @override
-  int boolean(List<int> bytes) {
+  Object boolean(List<int> bytes) {
     return bytesToBool(bytes);
   }
 
