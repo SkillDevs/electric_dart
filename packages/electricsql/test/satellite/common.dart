@@ -19,7 +19,6 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:sqlite3/sqlite3.dart';
 
 import '../support/migrations.dart';
 import '../support/satellite_helpers.dart';

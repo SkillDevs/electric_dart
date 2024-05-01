@@ -1,13 +1,6 @@
-import 'dart:convert';
 
 import 'package:electricsql/drivers/sqlite3.dart';
-import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
-import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/drivers/sqlite3/sqlite3.dart';
-import 'package:electricsql/src/proto/satellite.pb.dart';
-import 'package:electricsql/src/sockets/mock.dart';
-import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';

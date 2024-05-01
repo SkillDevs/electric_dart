@@ -12,7 +12,6 @@ import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:fixnum/fixnum.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 import '../support/satellite_helpers.dart';
@@ -20,7 +19,6 @@ import 'common.dart';
 
 late SatelliteTestContext context;
 
-Database get db => context.db;
 DatabaseAdapter get adapter => context.adapter;
 Migrator get migrator => context.migrator;
 MockNotifier get notifier => context.notifier;
@@ -30,13 +28,13 @@ MockSatelliteClient get client => context.client;
 String get dbName => context.dbName;
 AuthState get authState => context.authState;
 
-void main() {
+void processTagsTests({
+  required SatelliteTestContext Function() getContext,
+  required String namespace,
+  required GetMatchingShadowEntries getMatchingShadowEntries,
+}) {
   setUp(() async {
-    context = await makeContext();
-  });
-
-  tearDown(() async {
-    await context.cleanAndStopSatellite();
+    context = getContext();
   });
 
   test('basic rules for setting tags', () async {

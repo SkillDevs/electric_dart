@@ -14,7 +14,6 @@ import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/io.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
-import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/util.dart';
