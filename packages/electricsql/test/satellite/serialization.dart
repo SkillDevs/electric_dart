@@ -4,17 +4,22 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
+import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/config.dart';
+import 'package:electricsql/src/util/encoders/types.dart';
 import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:test/test.dart';
 
-import '../util/sqlite.dart';
-
-void main() {
+void serializationTests({
+  required Dialect dialect,
+  required TypeEncoder typeEncoder,
+  required TypeDecoder typeDecoder,
+  required Future<List<dynamic>> Function() setup,
+}) {
   test('serialize/deserialize row data', () {
     final rel = Relation(
       id: 1,
@@ -69,6 +74,7 @@ void main() {
         },
       },
       migrations: [],
+      pgMigrations: [],
     );
 
     final record = <String, Object?>{
@@ -85,14 +91,14 @@ void main() {
       'float1': 1.0,
       'float2': -30.3,
       'float3': 5e234,
-      'bool1': 1,
-      'bool2': 0,
+      'bool1': dialect == Dialect.sqlite ? 1 : true,
+      'bool2': dialect == Dialect.sqlite ? 0 : false,
       'bool3': null,
       'enum1': 'red',
       'enum2': null,
     };
     final recordKeys = record.keys.toList();
-    final sRow = serializeRow(record, rel, dbDescription);
+    final sRow = serializeRow(record, rel, dbDescription, typeEncoder);
     expect(
       sRow.values.mapIndexed(
         (i, bytes) =>
@@ -119,7 +125,7 @@ void main() {
         '',
       ],
     );
-    final dRow = deserializeRow(sRow, rel, dbDescription);
+    final dRow = deserializeRow(sRow, rel, dbDescription, typeDecoder);
 
     expect(dRow, record);
 
@@ -146,7 +152,7 @@ void main() {
     };
 
     final recordKeys2 = record2.keys.toList();
-    final sRow2 = serializeRow(record2, rel, dbDescription);
+    final sRow2 = serializeRow(record2, rel, dbDescription, typeEncoder);
     expect(
       sRow2.values.mapIndexed(
         (i, bytes) =>
@@ -173,7 +179,7 @@ void main() {
         '',
       ],
     );
-    final dRow2 = deserializeRow(sRow2, rel, dbDescription);
+    final dRow2 = deserializeRow(sRow2, rel, dbDescription, typeDecoder);
 
     expect(dRow2, {
       ...record2,
@@ -216,6 +222,7 @@ void main() {
         },
       },
       migrations: [],
+      pgMigrations: [],
     );
 
     final record = {
@@ -229,7 +236,7 @@ void main() {
       'bit7': 'Filled',
       'bit8': null,
     };
-    final sRow = serializeRow(record, rel, dbDescription);
+    final sRow = serializeRow(record, rel, dbDescription, typeEncoder);
 
     final mask = [...sRow.nullsBitmask].map((x) => x.toRadixString(2)).join('');
 
@@ -238,16 +245,17 @@ void main() {
 
   test('Prioritize PG types in the schema before inferred SQLite types',
       () async {
-    final db = openSqliteDbMemory();
-    addTearDown(() => db.dispose());
+    final [_adapter, _builder, _defaults] = await setup();
+    final adapter = _adapter as DatabaseAdapter;
+    final builder = _builder as QueryBuilder;
+    final defaults = _defaults as SatelliteOpts;
 
-    final adapter = SqliteAdapter(db);
     await adapter.run(
       Statement('CREATE TABLE bools (id INTEGER PRIMARY KEY, b INTEGER)'),
     );
 
     final sqliteInferredRelations =
-        await inferRelationsFromDb(adapter, kSatelliteDefaults);
+        await inferRelationsFromDb(adapter, defaults, builder);
     final boolsInferredRelation = sqliteInferredRelations['bools']!;
 
     // Inferred types only support SQLite types, so the bool column is INTEGER
@@ -264,12 +272,14 @@ void main() {
         },
       },
       migrations: [],
+      pgMigrations: [],
     );
 
     final satOpRow = serializeRow(
-      {'id': 5, 'b': 1},
+      {'id': 5, 'b': dialect == Dialect.sqlite ? 1 : true},
       boolsInferredRelation,
       boolsDbDescription,
+      typeEncoder,
     );
 
     // Encoded values ["5", "t"]
@@ -281,20 +291,27 @@ void main() {
       ],
     );
 
-    final deserializedRow =
-        deserializeRow(satOpRow, boolsInferredRelation, boolsDbDescription);
+    final deserializedRow = deserializeRow(
+      satOpRow,
+      boolsInferredRelation,
+      boolsDbDescription,
+      typeDecoder,
+    );
 
-    expect(deserializedRow, {'id': 5, 'b': 1});
+    expect(deserializedRow, {
+      'id': 5,
+      'b': dialect == Dialect.sqlite ? 1 : true,
+    });
   });
 
   test('Use incoming Relation types if not found in the schema', () async {
-    final db = openSqliteDbMemory();
-    addTearDown(() => db.dispose());
-
-    final adapter = SqliteAdapter(db);
+    final [_adapter, _builder, _defaults] = await setup();
+    final adapter = _adapter as DatabaseAdapter;
+    final builder = _builder as QueryBuilder;
+    final defaults = _defaults as SatelliteOpts;
 
     final sqliteInferredRelations =
-        await inferRelationsFromDb(adapter, kSatelliteDefaults);
+        await inferRelationsFromDb(adapter, defaults, builder);
 
     // Empty database
     expect(sqliteInferredRelations.length, 0);
@@ -303,6 +320,7 @@ void main() {
     final testDbDescription = DBSchemaRaw(
       fields: {},
       migrations: [],
+      pgMigrations: [],
     );
 
     final newTableRelation = Relation(
@@ -325,6 +343,7 @@ void main() {
       row,
       newTableRelation,
       testDbDescription,
+      typeEncoder,
     );
 
     expect(
@@ -332,8 +351,12 @@ void main() {
       ['6', 'red'],
     );
 
-    final deserializedRow =
-        deserializeRow(satOpRow, newTableRelation, testDbDescription);
+    final deserializedRow = deserializeRow(
+      satOpRow,
+      newTableRelation,
+      testDbDescription,
+      typeDecoder,
+    );
 
     expect(deserializedRow, row);
   });

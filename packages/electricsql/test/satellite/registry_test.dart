@@ -15,13 +15,14 @@ import 'package:test/test.dart';
 const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
-final DBSchema dbDescription = DBSchemaRaw(fields: {}, migrations: []);
+final DBSchema dbDescription =
+    DBSchemaRaw(fields: {}, migrations: [], pgMigrations: []);
 final Migrator migrator = MockMigrator();
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
 
 final HydratedConfig config = hydrateConfig(
-  ElectricConfig(),
+  ElectricConfigWithDialect.from(config: ElectricConfig()),
 );
 
 void main() {
