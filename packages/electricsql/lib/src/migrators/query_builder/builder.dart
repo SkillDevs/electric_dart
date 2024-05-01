@@ -187,9 +187,10 @@ abstract class QueryBuilder {
     namespace = namespace ?? defaultNamespace;
     return [
       dropTriggerIfExists(
-          '${opType.text.toLowerCase()}_${namespace}_${tableName}_into_oplog',
-          tableName,
-          namespace),
+        '${opType.text.toLowerCase()}_${namespace}_${tableName}_into_oplog',
+        tableName,
+        namespace,
+      ),
       ...createOplogTrigger(
         opType,
         tableName,

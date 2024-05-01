@@ -88,15 +88,18 @@ class SqliteBuilder extends QueryBuilder {
 
     return [
       '''
-    CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
-      BEFORE UPDATE ON "$namespace"."$tablename"
-    BEGIN
-      SELECT
-        CASE
-          ${pk.map((col) => '''WHEN old."$col" != new."$col" THEN\n\t\tRAISE (ABORT, 'cannot change the value of column $col as it belongs to the primary key')''').join('\n')}
-        END;
+CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
+  BEFORE UPDATE ON "$namespace"."$tablename"
+BEGIN
+  SELECT
+    CASE
+      ${pk.map(
+            (col) => '''
+WHEN old."$col" != new."$col" THEN
+      \t\tRAISE (ABORT, 'cannot change the value of column $col as it belongs to the primary key')''',
+          ).join('\n')}
     END;
-      ''',
+END;''',
     ];
   }
 
