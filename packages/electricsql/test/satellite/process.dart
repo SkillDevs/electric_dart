@@ -29,6 +29,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
+import '../support/matchers.dart';
 import '../support/satellite_helpers.dart';
 import '../util/sqlite_errors.dart';
 import 'common.dart';
@@ -72,14 +73,16 @@ Future<({Future<void> connectionFuture})> startSatellite(
 ) async {
   await satellite.start(authConfig);
   satellite.setToken(token);
-  final connectionFuture =
-      satellite.connectWithBackoff().catchError((Object e) {
+  final connectionFuture = satellite.connectWithBackoff();
+  // TODO(dart): Is this necessary?
+  /*   .catchError((Object e) {
+        print(e);
     if (e.toString() == 'terminating connection due to administrator command') {
       // This is to be expected as we stop Postgres at the end of the test
       return null;
     }
-    throw e;
-  });
+    return e;
+  }); */
   return (connectionFuture: connectionFuture);
 }
 
@@ -106,10 +109,9 @@ void processTests({
   });
 
   test('start creates system tables', () async {
-    await satellite.start(context.authConfig);
+    await satellite.start(authConfig);
 
-    const sql = "select name from sqlite_master where type = 'table'";
-    final rows = await adapter.query(Statement(sql));
+    final rows = await adapter.query(builder.getLocalTableNames());
     final names = rows.map((row) => row['name']! as String).toList();
 
     expect(names, contains('_electric_oplog'));
@@ -120,7 +122,7 @@ void processTests({
 
     final meta = await loadSatelliteMetaTable(adapter, namespace);
     expect(meta, {
-      'compensations': 1,
+      'compensations': dialectValue(1, '1'),
       'lsn': '',
       'clientId': '',
       'subscriptions': '',
@@ -201,10 +203,10 @@ void processTests({
     await expectLater(
       adapter.run(Statement("UPDATE parent SET id='3' WHERE id = '1'")),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_TRIGGER,
+          'P0001',
         ),
       ),
     );
@@ -233,7 +235,7 @@ void processTests({
 
     final changes = (notifier.notifications[0] as ChangeNotification).changes;
     final expectedChange = Change(
-      qualifiedTablename: const QualifiedTablename('main', 'parent'),
+      qualifiedTablename: QualifiedTablename(namespace, 'parent'),
       rowids: [1, 2],
       recordChanges: [
         RecordChange(

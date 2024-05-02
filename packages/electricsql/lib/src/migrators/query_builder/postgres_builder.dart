@@ -33,8 +33,17 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   Statement countTablesIn(String countName, List<String> tables) {
-    // TODO: implement countTablesIn
-    throw UnimplementedError();
+    final sql = '''
+      SELECT COUNT(table_name)::integer AS "$countName"
+        FROM information_schema.tables
+          WHERE
+            table_type = 'BASE TABLE' AND
+            table_name IN (${tables.mapIndexed((i, _) => "\$${i + 1}").join(', ')});
+    ''';
+    return Statement(
+      sql,
+      [...tables],
+    );
   }
 
   @override
