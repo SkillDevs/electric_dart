@@ -14,6 +14,7 @@ import '../triggers.dart';
 
 late Database db;
 late DatabaseAdapter adapter;
+const dialect = Dialect.sqlite;
 
 final defaults = satelliteDefaults('main');
 final oplogTable =
@@ -167,5 +168,6 @@ END;''',
     personTable: personTable,
     migratePersonTable: migratePersonTable,
     defaults: defaults,
+    dialect: dialect,
   );
 }

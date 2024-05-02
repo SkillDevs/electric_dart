@@ -1,12 +1,9 @@
-import 'dart:convert';
 
-import 'package:electricsql/drivers/sqlite3.dart';
 import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/satellite/config.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 import '../../drivers/drift_test.dart';
@@ -15,6 +12,8 @@ import '../../support/postgres.dart';
 import '../triggers.dart';
 
 const port = 5300;
+
+const Dialect dialect = Dialect.postgres;
 
 late EmbeddedPostgresDb pgEmbedded;
 late ScopedPgDb scopedPgDb;
@@ -72,37 +71,35 @@ void main() {
       isTrue,
     );
 
-    print(triggersSQL);
-
     expect(
       triggersSQL.contains('''
-      CREATE OR REPLACE FUNCTION insert_public_personTable_into_oplog_function()
-      RETURNS TRIGGER AS \$\$
-      BEGIN
-        DECLARE
-          flag_value INTEGER;
+        CREATE OR REPLACE FUNCTION insert_public_personTable_into_oplog_function()
+        RETURNS TRIGGER AS \$\$
         BEGIN
-          -- Get the flag value from _electric_trigger_settings
-          SELECT flag INTO flag_value FROM "public"._electric_trigger_settings WHERE namespace = 'public' AND tablename = 'personTable';
-  
-          IF flag_value = 1 THEN
-            -- Insert into _electric_oplog
-            INSERT INTO "public"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
-            VALUES (
-              'public',
-              'personTable',
-              'INSERT',
-              json_strip_nulls(json_build_object('id', cast(new."id" as TEXT))),
-              jsonb_build_object('age', new."age", 'blob', CASE WHEN new."blob" IS NOT NULL THEN encode(new."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(new."bmi" as TEXT), 'id', cast(new."id" as TEXT), 'int8', cast(new."int8" as TEXT), 'name', new."name"),
-              NULL,
-              NULL
-            );
-          END IF;
-  
-          RETURN NEW;
+          DECLARE
+            flag_value INTEGER;
+          BEGIN
+            -- Get the flag value from _electric_trigger_settings
+            SELECT flag INTO flag_value FROM "public"._electric_trigger_settings WHERE namespace = 'public' AND tablename = 'personTable';
+    
+            IF flag_value = 1 THEN
+              -- Insert into _electric_oplog
+              INSERT INTO "public"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
+              VALUES (
+                'public',
+                'personTable',
+                'INSERT',
+                json_strip_nulls(json_build_object('id', cast(new."id" as TEXT))),
+                jsonb_build_object('age', new."age", 'blob', CASE WHEN new."blob" IS NOT NULL THEN encode(new."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(new."bmi" as TEXT), 'id', cast(new."id" as TEXT), 'int8', cast(new."int8" as TEXT), 'name', new."name"),
+                NULL,
+                NULL
+              );
+            END IF;
+    
+            RETURN NEW;
+          END;
         END;
-      END;
-      \$\$ LANGUAGE plpgsql;
+        \$\$ LANGUAGE plpgsql;
       '''),
       isTrue,
     );
@@ -122,34 +119,33 @@ void main() {
     expect(
       triggersSQL.contains(
         '''
-      CREATE OR REPLACE FUNCTION update_public_personTable_into_oplog_function()
-      RETURNS TRIGGER AS \$\$
-      BEGIN
-        DECLARE
-          flag_value INTEGER;
+        CREATE OR REPLACE FUNCTION update_public_personTable_into_oplog_function()
+        RETURNS TRIGGER AS \$\$
         BEGIN
-          -- Get the flag value from _electric_trigger_settings
-          SELECT flag INTO flag_value FROM "public"._electric_trigger_settings WHERE namespace = 'public' AND tablename = 'personTable';
-  
-          IF flag_value = 1 THEN
-            -- Insert into _electric_oplog
-            INSERT INTO "public"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
-            VALUES (
-              'public',
-              'personTable',
-              'UPDATE',
-              json_strip_nulls(json_build_object('id', cast(new."id" as TEXT))),
-              jsonb_build_object('age', new."age", 'blob', CASE WHEN new."blob" IS NOT NULL THEN encode(new."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(new."bmi" as TEXT), 'id', cast(new."id" as TEXT), 'int8', cast(new."int8" as TEXT), 'name', new."name"),
-              jsonb_build_object('age', old."age", 'blob', CASE WHEN old."blob" IS NOT NULL THEN encode(old."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(old."bmi" as TEXT), 'id', cast(old."id" as TEXT), 'int8', cast(old."int8" as TEXT), 'name', old."name"),
-              NULL
-            );
-          END IF;
-  
-          RETURN NEW;
+          DECLARE
+            flag_value INTEGER;
+          BEGIN
+            -- Get the flag value from _electric_trigger_settings
+            SELECT flag INTO flag_value FROM "public"._electric_trigger_settings WHERE namespace = 'public' AND tablename = 'personTable';
+    
+            IF flag_value = 1 THEN
+              -- Insert into _electric_oplog
+              INSERT INTO "public"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
+              VALUES (
+                'public',
+                'personTable',
+                'UPDATE',
+                json_strip_nulls(json_build_object('id', cast(new."id" as TEXT))),
+                jsonb_build_object('age', new."age", 'blob', CASE WHEN new."blob" IS NOT NULL THEN encode(new."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(new."bmi" as TEXT), 'id', cast(new."id" as TEXT), 'int8', cast(new."int8" as TEXT), 'name', new."name"),
+                jsonb_build_object('age', old."age", 'blob', CASE WHEN old."blob" IS NOT NULL THEN encode(old."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(old."bmi" as TEXT), 'id', cast(old."id" as TEXT), 'int8', cast(old."int8" as TEXT), 'name', old."name"),
+                NULL
+              );
+            END IF;
+    
+            RETURN NEW;
+          END;
         END;
-      END;
-      \$\$ LANGUAGE plpgsql;
-      ''',
+        \$\$ LANGUAGE plpgsql;''',
       ),
       isTrue,
     );
@@ -169,34 +165,33 @@ void main() {
     expect(
       triggersSQL.contains(
         '''
-      CREATE OR REPLACE FUNCTION delete_public_personTable_into_oplog_function()
-      RETURNS TRIGGER AS \$\$
-      BEGIN
-        DECLARE
-          flag_value INTEGER;
+        CREATE OR REPLACE FUNCTION delete_public_personTable_into_oplog_function()
+        RETURNS TRIGGER AS \$\$
         BEGIN
-          -- Get the flag value from _electric_trigger_settings
-          SELECT flag INTO flag_value FROM "public"._electric_trigger_settings WHERE namespace = 'public' AND tablename = 'personTable';
-  
-          IF flag_value = 1 THEN
-            -- Insert into _electric_oplog
-            INSERT INTO "public"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
-            VALUES (
-              'public',
-              'personTable',
-              'DELETE',
-              json_strip_nulls(json_build_object('id', cast(old."id" as TEXT))),
-              NULL,
-              jsonb_build_object('age', old."age", 'blob', CASE WHEN old."blob" IS NOT NULL THEN encode(old."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(old."bmi" as TEXT), 'id', cast(old."id" as TEXT), 'int8', cast(old."int8" as TEXT), 'name', old."name"),
-              NULL
-            );
-          END IF;
-  
-          RETURN NEW;
+          DECLARE
+            flag_value INTEGER;
+          BEGIN
+            -- Get the flag value from _electric_trigger_settings
+            SELECT flag INTO flag_value FROM "public"._electric_trigger_settings WHERE namespace = 'public' AND tablename = 'personTable';
+    
+            IF flag_value = 1 THEN
+              -- Insert into _electric_oplog
+              INSERT INTO "public"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
+              VALUES (
+                'public',
+                'personTable',
+                'DELETE',
+                json_strip_nulls(json_build_object('id', cast(old."id" as TEXT))),
+                NULL,
+                jsonb_build_object('age', old."age", 'blob', CASE WHEN old."blob" IS NOT NULL THEN encode(old."blob"::bytea, 'hex') ELSE NULL END, 'bmi', cast(old."bmi" as TEXT), 'id', cast(old."id" as TEXT), 'int8', cast(old."int8" as TEXT), 'name', old."name"),
+                NULL
+              );
+            END IF;
+    
+            RETURN NEW;
+          END;
         END;
-      END;
-      \$\$ LANGUAGE plpgsql;
-      ''',
+        \$\$ LANGUAGE plpgsql;''',
       ),
       isTrue,
     );
@@ -215,7 +210,7 @@ void main() {
     final oplogRows = await db.customSelect('SELECT * FROM $oplogTable').get();
 
     expect(oplogRows.length, 1);
-    expect(oplogRows[0], {
+    expect(oplogRows[0].data, {
       'namespace': 'public',
       'tablename': personTableName,
       'optype': 'INSERT',
@@ -251,7 +246,7 @@ void main() {
     // Check that the oplog table contains an entry for the inserted row
     final oplogRows = await db.customSelect('SELECT * FROM $oplogTable').get();
     expect(oplogRows.length, 1);
-    expect(oplogRows[0], {
+    expect(oplogRows[0].data, {
       'namespace': 'public',
       'tablename': tableName,
       'optype': 'INSERT',
@@ -278,5 +273,6 @@ void main() {
     personTable: personTable,
     migratePersonTable: migratePersonTable,
     defaults: defaults,
+    dialect: dialect,
   );
 }
