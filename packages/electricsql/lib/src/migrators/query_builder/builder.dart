@@ -37,26 +37,17 @@ abstract class QueryBuilder {
   /// The type to use for BLOB for the current SQL dialect.
   abstract final String blobType;
 
-  /// Defers foreign key checks for the current transaction.
-  abstract final String deferForeignKeys;
-
   /// Queries the version of SQLite/Postgres we are using.
   abstract final String getVersion;
 
-  /// Disables foreign key checks.
-  abstract final String disableForeignKeys;
+  /// Depending on the dialect, defers or disables foreign key checks for the duration of the transaction.
+  abstract final String deferOrDisableFKsForTx;
 
   /// Returns the given query if the current SQL dialect is PostgreSQL.
   String pgOnly(String query);
 
-  /// Returns an array containing the given query if the current SQL dialect is PostgreSQL.
-  List<String> pgOnlyQuery(String query);
-
   /// Returns the given query if the current SQL dialect is SQLite.
   String sqliteOnly(String query);
-
-  /// Returns an array containing the given query if the current SQL dialect is SQLite.
-  List<String> sqliteOnlyQuery(String query);
 
   /// Makes the i-th positional parameter,
   /// e.g. '$3' For Postgres when `i` is 3
@@ -64,11 +55,10 @@ abstract class QueryBuilder {
   String makePositionalParam(int i);
 
   /// Checks if the given table exists.
-  Statement tableExists(String tableName, String? namespace);
+  Statement tableExists(QualifiedTablename table);
 
-  /// Counts tables whose name is included in `tables`.
-  /// The count is returned as `countName`.
-  Statement countTablesIn(String countName, List<String> tables);
+  /// Counts tables whose name is included in `tableNames`.
+  Statement countTablesIn(List<String> tableNames);
 
   /// Converts a column value to a hexidecimal string.
   String toHex(String column);
@@ -89,258 +79,224 @@ abstract class QueryBuilder {
   /// Fetches information about the columns of a table.
   /// The information includes all column names, their type,
   /// whether or not they are nullable, and whether they are part of the PK.
-  Statement getTableInfo(String tablename);
+  Statement getTableInfo(QualifiedTablename table);
 
   /// Insert a row into a table, ignoring it if it already exists.
   Statement insertOrIgnore(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
-    String? schema,
   );
 
   /// Insert a row into a table, replacing it if it already exists.
   Statement insertOrReplace(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
     List<String> conflictCols,
     List<String> updateCols,
-    String? schema,
   );
 
   /// Insert a row into a table.
   /// If it already exists we update the provided columns `updateCols`
   /// with the provided values `updateVals`
   Statement insertOrReplaceWith(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
     List<String> conflictCols,
     List<String> updateCols,
     List<Object?> updateVals,
-    String? schema,
   );
 
   /// Inserts a batch of rows into a table, replacing them if they already exist.
   List<Statement> batchedInsertOrReplace(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Map<String, Object?>> records,
     List<String> conflictCols,
     List<String> updateCols,
     int maxSqlParameters,
-    String? schema,
   );
 
   /// Drop a trigger if it exists.
   String dropTriggerIfExists(
     String triggerName,
-    String tablename,
-    String? namespace,
+    QualifiedTablename table,
   );
 
   /// Create a trigger that prevents updates to the primary key.
   List<String> createNoFkUpdateTrigger(
-    String tablename,
+    QualifiedTablename table,
     List<String> pk,
-    String? namespace,
   );
 
   /// Creates or replaces a trigger that prevents updates to the primary key.
   List<String> createOrReplaceNoFkUpdateTrigger(
-    String tablename,
+    QualifiedTablename table,
     List<String> pk,
-    String? namespace,
   ) {
     return [
       dropTriggerIfExists(
-        'update_ensure_${namespace}_${tablename}_primarykey',
-        tablename,
-        namespace,
+        'update_ensure_${table.namespace}_${table.tablename}_primarykey',
+        table,
       ),
-      ...createNoFkUpdateTrigger(tablename, pk, namespace),
+      ...createNoFkUpdateTrigger(table, pk),
     ];
   }
 
   /// Modifies the trigger setting for the table identified by its tablename and namespace.
-  String setTriggerSetting(String tableName, int value, String? namespace);
+  String setTriggerSetting(QualifiedTablename table, int value);
 
   /// Create a trigger that logs operations into the oplog.
   List<String> createOplogTrigger(
     SqlOpType opType,
-    String tableName,
+    QualifiedTablename table,
     String newPKs,
     String newRows,
     String oldRows,
-    String? namespace,
   );
 
   List<String> createOrReplaceOplogTrigger(
     SqlOpType opType,
-    String tableName,
+    QualifiedTablename table,
     String newPKs,
     String newRows,
-    String oldRows, [
-    String? namespace,
-  ]) {
-    namespace = namespace ?? defaultNamespace;
+    String oldRows,
+  ) {
+    final namespace = table.namespace;
+    final tableName = table.tablename;
+
     return [
       dropTriggerIfExists(
         '${opType.text.toLowerCase()}_${namespace}_${tableName}_into_oplog',
-        tableName,
-        namespace,
+        table,
       ),
       ...createOplogTrigger(
         opType,
-        tableName,
+        table,
         newPKs,
         newRows,
         oldRows,
-        namespace,
       ),
     ];
   }
 
   /// Creates or replaces a trigger that logs insertions into the oplog.
   List<String> createOrReplaceInsertTrigger(
-    String tableName,
+    QualifiedTablename table,
     String newPKs,
     String newRows,
-    String oldRows, [
-    String? namespace,
-  ]) {
+    String oldRows,
+  ) {
     return createOrReplaceOplogTrigger(
       SqlOpType.insert,
-      tableName,
+      table,
       newPKs,
       newRows,
       oldRows,
-      namespace,
     );
   }
 
   /// Creates or replaces a trigger that logs updates into the oplog.
   List<String> createOrReplaceUpdateTrigger(
-    String tableName,
+    QualifiedTablename table,
     String newPKs,
     String newRows,
-    String oldRows, [
-    String? namespace,
-  ]) {
+    String oldRows,
+  ) {
     return createOrReplaceOplogTrigger(
       SqlOpType.update,
-      tableName,
+      table,
       newPKs,
       newRows,
       oldRows,
-      namespace,
     );
   }
 
   /// Creates or replaces a trigger that logs deletions into the oplog.
   List<String> createOrReplaceDeleteTrigger(
-    String tableName,
+    QualifiedTablename table,
     String newPKs,
     String newRows,
-    String oldRows, [
-    String? namespace,
-  ]) {
+    String oldRows,
+  ) {
     return createOrReplaceOplogTrigger(
       SqlOpType.delete,
-      tableName,
+      table,
       newPKs,
       newRows,
       oldRows,
-      namespace,
     );
   }
 
   /// Creates a trigger that logs compensations for operations into the oplog.
   List<String> createFkCompensationTrigger(
     String opType,
-    String tableName,
+    QualifiedTablename table,
     String childKey,
-    String fkTableName,
+    QualifiedTablename fkTable,
     String joinedFkPKs,
     ForeignKey foreignKey,
-    String? namespace,
-    String? fkTableNamespace,
   );
 
   List<String> createOrReplaceFkCompensationTrigger(
     String opType,
-    String tableName,
+    QualifiedTablename table,
     String childKey,
-    String fkTableName,
+    QualifiedTablename fkTable,
     String joinedFkPKs,
     ForeignKey foreignKey,
-    String? namespace,
-    String? fkTableNamespace,
   ) {
-    namespace = namespace ?? defaultNamespace;
-    fkTableNamespace = fkTableNamespace ?? defaultNamespace;
-
     return [
       dropTriggerIfExists(
-        'compensation_${opType.toLowerCase()}_${namespace}_${tableName}_${childKey}_into_oplog',
-        tableName,
-        namespace,
+        'compensation_${opType.toLowerCase()}_${table.namespace}_${table.tablename}_${childKey}_into_oplog',
+        table,
       ),
       ...createFkCompensationTrigger(
         opType,
-        tableName,
+        table,
         childKey,
-        fkTableName,
+        fkTable,
         joinedFkPKs,
         foreignKey,
-        namespace,
-        fkTableNamespace,
       ),
     ];
   }
 
   /// Creates a trigger that logs compensations for insertions into the oplog.
   List<String> createOrReplaceInsertCompensationTrigger(
-    String tableName,
+    QualifiedTablename table,
     String childKey,
-    String fkTableName,
+    QualifiedTablename fkTable,
     String joinedFkPKs,
     ForeignKey foreignKey,
-    String? namespace,
-    String? fkTableNamespace,
   ) {
     return createOrReplaceFkCompensationTrigger(
       'INSERT',
-      tableName,
+      table,
       childKey,
-      fkTableName,
+      fkTable,
       joinedFkPKs,
       foreignKey,
-      namespace,
-      fkTableNamespace,
     );
   }
 
   /// Creates a trigger that logs compensations for updates into the oplog.
   List<String> createOrReplaceUpdateCompensationTrigger(
-    String tableName,
+    QualifiedTablename table,
     String childKey,
-    String fkTableName,
+    QualifiedTablename fkTable,
     String joinedFkPKs,
     ForeignKey foreignKey,
-    String? namespace,
-    String? fkTableNamespace,
   ) {
     return createOrReplaceFkCompensationTrigger(
       'UPDATE',
-      tableName,
+      table,
       childKey,
-      fkTableName,
+      fkTable,
       joinedFkPKs,
       foreignKey,
-      namespace,
-      fkTableNamespace,
     );
   }
 

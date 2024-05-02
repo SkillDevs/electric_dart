@@ -16,17 +16,15 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   List<Statement> batchedInsertOrReplace(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Map<String, Object?>> records,
     List<String> conflictCols,
     List<String> updateCols,
     int maxSqlParameters,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
     final baseSql =
-        '''INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')}) VALUES ''';
+        '''INSERT INTO $table (${columns.map(quote).join(', ')}) VALUES ''';
     final statements = prepareInsertBatchedStatements(
       baseSql,
       columns,
@@ -51,33 +49,33 @@ class PostgresBuilder extends QueryBuilder {
   String get blobType => 'TEXT'; // TODO(dart): Revisar
 
   @override
-  Statement countTablesIn(String countName, List<String> tables) {
+  Statement countTablesIn(List<String> tableNames) {
     final sql = '''
-      SELECT COUNT(table_name)::integer AS "$countName"
+      SELECT COUNT(table_name)::integer AS "count"
         FROM information_schema.tables
           WHERE
             table_type = 'BASE TABLE' AND
-            table_name IN (${tables.mapIndexed((i, _) => "\$${i + 1}").join(', ')});
+            table_name IN (${tableNames.mapIndexed((i, _) => "\$${i + 1}").join(', ')});
     ''';
     return Statement(
       sql,
-      [...tables],
+      [...tableNames],
     );
   }
 
   @override
   List<String> createFkCompensationTrigger(
     String opType,
-    String tableName,
+    QualifiedTablename table,
     String childKey,
-    String fkTableName,
+    QualifiedTablename fkTable,
     String joinedFkPKs,
     ForeignKey foreignKey,
-    String? namespace,
-    String? fkTableNamespace,
   ) {
-    namespace ??= defaultNamespace;
-    fkTableNamespace ??= defaultNamespace;
+    final namespace = table.namespace;
+    final tableName = table.tablename;
+    final fkTableNamespace = fkTable.namespace;
+    final fkTableName = fkTable.tablename;
 
     final opTypeLower = opType.toLowerCase();
 
@@ -104,7 +102,7 @@ class PostgresBuilder extends QueryBuilder {
                 jsonb_build_object($joinedFkPKs),
                 NULL,
                 NULL
-              FROM "$fkTableNamespace"."$fkTableName"
+              FROM $fkTable
               WHERE "${foreignKey.parentKey}" = NEW."${foreignKey.childKey}";
             END IF;
     
@@ -115,7 +113,7 @@ class PostgresBuilder extends QueryBuilder {
         ''',
       '''
           CREATE TRIGGER compensation_${opTypeLower}_${namespace}_${tableName}_${childKey}_into_oplog
-            AFTER $opType ON "$namespace"."$tableName"
+            AFTER $opType ON $table
               FOR EACH ROW
                 EXECUTE FUNCTION compensation_${opTypeLower}_${namespace}_${tableName}_${childKey}_into_oplog_function();
         ''',
@@ -128,18 +126,16 @@ class PostgresBuilder extends QueryBuilder {
     QualifiedTablename onTable,
     List<String> columns,
   ) {
-    final namespace = onTable.namespace;
-    final tablename = onTable.tablename;
-    return '''CREATE INDEX IF NOT EXISTS $indexName ON "$namespace"."$tablename" (${columns.map(quote).join(', ')})''';
+    return '''CREATE INDEX IF NOT EXISTS $indexName ON $onTable (${columns.map(quote).join(', ')})''';
   }
 
   @override
   List<String> createNoFkUpdateTrigger(
-    String tablename,
+    QualifiedTablename table,
     List<String> pk,
-    String? namespace,
   ) {
-    namespace ??= defaultNamespace;
+    final namespace = table.namespace;
+    final tablename = table.tablename;
 
     return [
       '''
@@ -158,7 +154,7 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
       ''',
       '''
         CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
-          BEFORE UPDATE ON "$namespace"."$tablename"
+          BEFORE UPDATE ON $table
             FOR EACH ROW
               EXECUTE FUNCTION update_ensure_${namespace}_${tablename}_primarykey_function();
       ''',
@@ -168,13 +164,13 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
   @override
   List<String> createOplogTrigger(
     SqlOpType opType,
-    String tableName,
+    QualifiedTablename table,
     String newPKs,
     String newRows,
     String oldRows,
-    String? namespace,
   ) {
-    namespace ??= defaultNamespace;
+    final namespace = table.namespace;
+    final tableName = table.tablename;
 
     final opTypeLower = opType.text.toLowerCase();
     final pk = createPKJsonObject(newPKs);
@@ -218,7 +214,7 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
       ''',
       '''
         CREATE TRIGGER ${opTypeLower}_${namespace}_${tableName}_into_oplog
-          AFTER ${opType.text} ON "$namespace"."$tableName"
+          AFTER ${opType.text} ON $table
             FOR EACH ROW
               EXECUTE FUNCTION ${opTypeLower}_${namespace}_${tableName}_into_oplog_function();
       ''',
@@ -229,39 +225,35 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
   String get defaultNamespace => 'public';
 
   @override
-  String get deferForeignKeys => 'SET CONSTRAINTS ALL DEFERRED;';
-
-  @override
   Dialect get dialect => Dialect.postgres;
 
   /// **Disables** FKs for the duration of the transaction
   @override
-  String get disableForeignKeys =>
+  String get deferOrDisableFKsForTx =>
       'SET LOCAL session_replication_role = replica;';
 
   @override
   String dropTriggerIfExists(
     String triggerName,
-    String tablename,
-    String? namespace,
+    QualifiedTablename table,
   ) {
-    namespace ??= defaultNamespace;
-    return 'DROP TRIGGER IF EXISTS $triggerName ON "$namespace"."$tablename";';
+    return 'DROP TRIGGER IF EXISTS $triggerName ON $table;';
   }
 
   @override
   Statement getLocalTableNames([List<String> notIn = const []]) {
     String tables = '''
-      SELECT table_name AS name
-        FROM information_schema.tables
-        WHERE
-          table_type = 'BASE TABLE' AND
-          table_schema <> 'pg_catalog' AND
-          table_schema <> 'information_schema'
+      SELECT relname AS name
+      FROM pg_class
+      JOIN pg_namespace ON relnamespace = pg_namespace.oid
+      WHERE
+        relkind = 'r'
+        AND nspname <> 'pg_catalog'
+        AND nspname <> 'information_schema'
     ''';
     if (notIn.isNotEmpty) {
       tables +=
-          ''' AND table_name NOT IN (${notIn.mapIndexed((i, _) => '\$${i + 1}').join(', ')})''';
+          '''\n  AND relname NOT IN (${notIn.mapIndexed((i, _) => '\$${i + 1}').join(', ')})''';
     }
     return Statement(
       tables,
@@ -270,7 +262,7 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
   }
 
   @override
-  Statement getTableInfo(String tablename) {
+  Statement getTableInfo(QualifiedTablename table) {
     return Statement(
       r'''
         SELECT
@@ -298,9 +290,10 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
             )
         FROM information_schema.columns AS c
         WHERE
-          c.table_name = $1;
+          c.table_name = $1 AND
+          c.table_schema = $2;
       ''',
-      [tablename],
+      [table.tablename, table.namespace],
     );
   }
 
@@ -314,15 +307,13 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
 
   @override
   Statement insertOrIgnore(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
     return Statement(
       '''
-        INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')})
+        INSERT INTO $table (${columns.map(quote).join(', ')})
           VALUES (${columns.mapIndexed((i, _) => '\$${i + 1}').join(', ')})
           ON CONFLICT DO NOTHING;
       ''',
@@ -332,17 +323,15 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
 
   @override
   Statement insertOrReplace(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
     List<String> conflictCols,
     List<String> updateCols,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
     return Statement(
       '''
-        INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')})
+        INSERT INTO $table (${columns.map(quote).join(', ')})
           VALUES (${columns.mapIndexed((i, _) => '\$${i + 1}').join(', ')})
         ON CONFLICT (${conflictCols.map(quote).join(', ')}) DO UPDATE
           SET ${updateCols.map((col) => '${quote(col)} = EXCLUDED.${quote(col)}').join(', ')};
@@ -353,18 +342,16 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
 
   @override
   Statement insertOrReplaceWith(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
     List<String> conflictCols,
     List<String> updateCols,
     List<Object?> updateVals,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
     return Statement(
       '''
-        INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')})
+        INSERT INTO $table (${columns.map(quote).join(', ')})
           VALUES (${columns.mapIndexed((i, _) => "\$${i + 1}").join(', ')})
         ON CONFLICT (${conflictCols.map(quote).join(', ')}) DO UPDATE
           SET ${updateCols.mapIndexed((i, col) => '${quote(col)} = \$${columns.length + i + 1}').join(', ')};
@@ -387,17 +374,10 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
   }
 
   @override
-  List<String> pgOnlyQuery(String query) {
-    return [query];
-  }
-
-  @override
   String removeDeletedShadowRows(
-    QualifiedTablename oplogTable,
-    QualifiedTablename shadowTable,
+    QualifiedTablename oplog,
+    QualifiedTablename shadow,
   ) {
-    final oplog = '"${oplogTable.namespace}"."${oplogTable.tablename}"';
-    final shadow = '"${shadowTable.namespace}"."${shadowTable.tablename}"';
     // We do an inner join in a CTE instead of a `WHERE EXISTS (...)`
     // since this is not reliant on re-executing a query
     // for every row in the shadow table, but uses a PK join instead.
@@ -425,11 +405,9 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
 
   @override
   String setTagsForShadowRows(
-    QualifiedTablename oplogTable,
-    QualifiedTablename shadowTable,
+    QualifiedTablename oplog,
+    QualifiedTablename shadow,
   ) {
-    final oplog = '"${oplogTable.namespace}"."${oplogTable.tablename}"';
-    final shadow = '"${shadowTable.namespace}"."${shadowTable.tablename}"';
     return '''
       INSERT INTO $shadow (namespace, tablename, "primaryKey", tags)
         SELECT DISTINCT namespace, tablename, "primaryKey", \$1
@@ -443,8 +421,9 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
   }
 
   @override
-  String setTriggerSetting(String tableName, int value, String? namespace) {
-    namespace ??= defaultNamespace;
+  String setTriggerSetting(QualifiedTablename table, int value) {
+    final tableName = table.tablename;
+    final namespace = table.namespace;
 
     return '''
 INSERT INTO "$namespace"."_electric_trigger_settings" ("namespace", "tablename", "flag")
@@ -459,20 +438,10 @@ ON CONFLICT DO NOTHING;
   }
 
   @override
-  List<String> sqliteOnlyQuery(String query) {
-    return [];
-  }
-
-  @override
-  Statement tableExists(
-    String tableName,
-    String? namespace,
-  ) {
-    namespace ??= defaultNamespace;
-
+  Statement tableExists(QualifiedTablename table) {
     return Statement(
       r'SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2',
-      [namespace, tableName],
+      [table.namespace, table.tablename],
     );
   }
 

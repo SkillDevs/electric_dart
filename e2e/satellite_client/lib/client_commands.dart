@@ -30,7 +30,9 @@ Future<ClientDatabase> makeDb(String dbPath) async {
   ClientDatabase db;
   if (dialectEnv == 'Postgres') {
     builder = kPostgresQueryBuilder;
-    db = ClientDatabase(PgDatabase(endpoint: makePgEndpoint(dbName)));
+    final endpoint = makePgEndpoint(dbPath);
+    db = ClientDatabase(PgDatabase(endpoint: endpoint));
+    dbName = '${endpoint.host}:${endpoint.port}/${endpoint.database}';
   } else {
     builder = kSqliteQueryBuilder;
     db = ClientDatabase(NativeDatabase(File(dbPath)));

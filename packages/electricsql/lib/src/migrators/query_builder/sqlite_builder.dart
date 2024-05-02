@@ -21,7 +21,7 @@ class SqliteBuilder extends QueryBuilder {
   String get defaultNamespace => 'main';
 
   @override
-  String get deferForeignKeys => 'PRAGMA defer_foreign_keys = ON;';
+  String get deferOrDisableFKsForTx => 'PRAGMA defer_foreign_keys = ON;';
 
   @override
   String get paramSign => '?';
@@ -34,18 +34,15 @@ class SqliteBuilder extends QueryBuilder {
 
   @override
   List<Statement> batchedInsertOrReplace(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Map<String, Object?>> records,
     List<String> conflictCols,
     List<String> updateCols,
     int maxSqlParameters,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
-
     final baseSql =
-        'INSERT OR REPLACE INTO $schema.$table (${columns.join(', ')}) VALUES ';
+        'INSERT OR REPLACE INTO $table (${columns.join(', ')}) VALUES ';
     return prepareInsertBatchedStatements(
       baseSql,
       columns,
@@ -55,15 +52,15 @@ class SqliteBuilder extends QueryBuilder {
   }
 
   @override
-  Statement countTablesIn(String countName, List<String> tables) {
+  Statement countTablesIn(List<String> tableNames) {
     final sql = '''
-      SELECT count(name) as $countName FROM sqlite_master
+      SELECT count(name) as "count" FROM sqlite_master
         WHERE type='table'
-        AND name IN (${tables.map((_) => '?').join(', ')})
+        AND name IN (${tableNames.map((_) => '?').join(', ')})
     ''';
     return Statement(
       sql,
-      tables,
+      tableNames,
     );
   }
 
@@ -80,16 +77,15 @@ class SqliteBuilder extends QueryBuilder {
 
   @override
   List<String> createNoFkUpdateTrigger(
-    String tablename,
+    QualifiedTablename table,
     List<String> pk,
-    String? namespace,
   ) {
-    namespace ??= defaultNamespace;
-
+    final namespace = table.namespace;
+    final tablename = table.tablename;
     return [
       '''
 CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
-  BEFORE UPDATE ON "$namespace"."$tablename"
+  BEFORE UPDATE ON $table
 BEGIN
   SELECT
     CASE
@@ -106,13 +102,13 @@ END;''',
   @override
   List<String> createOplogTrigger(
     SqlOpType opType,
-    String tableName,
+    QualifiedTablename table,
     String newPKs,
     String newRows,
     String oldRows,
-    String? namespace,
   ) {
-    namespace ??= defaultNamespace;
+    final namespace = table.namespace;
+    final tableName = table.tablename;
 
     final opTypeLower = opType.name.toLowerCase();
     final pk = createPKJsonObject(newPKs);
@@ -127,7 +123,7 @@ END;''',
     return [
       '''
 CREATE TRIGGER ${opTypeLower}_${namespace}_${tableName}_into_oplog
-  AFTER ${opType.text} ON "$namespace"."$tableName"
+  AFTER ${opType.text} ON $table
   WHEN 1 = (SELECT flag from _electric_trigger_settings WHERE namespace = '$namespace' AND tablename = '$tableName')
 BEGIN
   INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
@@ -137,13 +133,9 @@ END;''',
   }
 
   @override
-  String get disableForeignKeys => 'PRAGMA foreign_keys = OFF;';
-
-  @override
   String dropTriggerIfExists(
     String triggerName,
-    String tablename,
-    String? namespace,
+    QualifiedTablename table,
   ) {
     return 'DROP TRIGGER IF EXISTS $triggerName;';
   }
@@ -165,10 +157,10 @@ END;''',
   }
 
   @override
-  Statement getTableInfo(String tablename) {
+  Statement getTableInfo(QualifiedTablename table) {
     return Statement(
       'SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info(?)',
-      [tablename],
+      [table.tablename],
     );
   }
 
@@ -182,16 +174,13 @@ END;''',
 
   @override
   Statement insertOrIgnore(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
-
     return Statement(
       '''
-        INSERT OR IGNORE INTO $schema.$table (${columns.join(', ')})
+        INSERT OR IGNORE INTO $table (${columns.join(', ')})
           VALUES (${columns.map((_) => '?').join(', ')});
       ''',
       values,
@@ -200,18 +189,15 @@ END;''',
 
   @override
   Statement insertOrReplace(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
     List<String> conflictCols,
     List<String> updateCols,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
-
     return Statement(
       '''
-        INSERT OR REPLACE INTO $schema.$table (${columns.join(', ')})
+        INSERT OR REPLACE INTO $table (${columns.join(', ')})
         VALUES (${columns.map((_) => '?').join(', ')})
       ''',
       values,
@@ -220,23 +206,19 @@ END;''',
 
   @override
   Statement insertOrReplaceWith(
-    String table,
+    QualifiedTablename table,
     List<String> columns,
     List<Object?> values,
     List<String> conflictCols,
     List<String> updateCols,
     List<Object?> updateVals,
-    String? schema,
   ) {
-    schema ??= defaultNamespace;
-
     final insertOrReplaceRes = insertOrReplace(
       table,
       columns,
       values,
       conflictCols,
       updateCols,
-      schema,
     );
     return Statement(
       '${insertOrReplaceRes.sql} ON CONFLICT DO UPDATE SET ${updateCols.map((col) => '$col = ?').join(', ')}',
@@ -255,15 +237,8 @@ END;''',
   }
 
   @override
-  List<String> pgOnlyQuery(String query) {
-    return [];
-  }
-
-  @override
-  String setTriggerSetting(String tableName, int value, String? namespace) {
-    namespace ??= defaultNamespace;
-
-    return "INSERT OR IGNORE INTO _electric_trigger_settings (namespace, tablename, flag) VALUES ('$namespace', '$tableName', $value);";
+  String setTriggerSetting(QualifiedTablename table, int value) {
+    return "INSERT OR IGNORE INTO _electric_trigger_settings (namespace, tablename, flag) VALUES ('${table.namespace}', '${table.tablename}', $value);";
   }
 
   @override
@@ -272,15 +247,10 @@ END;''',
   }
 
   @override
-  List<String> sqliteOnlyQuery(String query) {
-    return [query];
-  }
-
-  @override
-  Statement tableExists(String tableName, String? namespace) {
+  Statement tableExists(QualifiedTablename table) {
     return Statement(
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
-      [tableName],
+      [table.tablename],
     );
   }
 
@@ -292,28 +262,28 @@ END;''',
   @override
   List<String> createFkCompensationTrigger(
     String opType,
-    String tableName,
+    QualifiedTablename table,
     String childKey,
-    String fkTableName,
+    QualifiedTablename fkTable,
     String joinedFkPKs,
     ForeignKey foreignKey,
-    String? namespace,
-    String? fkTableNamespace,
   ) {
-    namespace ??= defaultNamespace;
-    fkTableNamespace ??= defaultNamespace;
+    final namespace = table.namespace;
+    final tableName = table.tablename;
+    final fkTableNamespace = fkTable.namespace;
+    final fkTableName = fkTable.tablename;
 
     final opTypeLower = opType.toLowerCase();
     return [
       '''
         CREATE TRIGGER compensation_${opTypeLower}_${namespace}_${tableName}_${childKey}_into_oplog
-          AFTER $opType ON "$namespace"."$tableName"
+          AFTER $opType ON $table
           WHEN 1 = (SELECT flag from _electric_trigger_settings WHERE namespace = '$namespace' AND tablename = '$tableName') AND
                1 = (SELECT value from _electric_meta WHERE key = 'compensations')
         BEGIN
           INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
           SELECT '$fkTableNamespace', '$fkTableName', 'COMPENSATION', ${createPKJsonObject(joinedFkPKs)}, json_object($joinedFkPKs), NULL, NULL
-          FROM "$fkTableNamespace"."$fkTableName" WHERE "${foreignKey.parentKey}" = new."${foreignKey.childKey}";
+          FROM $fkTable WHERE "${foreignKey.parentKey}" = new."${foreignKey.childKey}";
         END;
       ''',
     ];
@@ -321,11 +291,9 @@ END;''',
 
   @override
   String removeDeletedShadowRows(
-    QualifiedTablename oplogTable,
-    QualifiedTablename shadowTable,
+    QualifiedTablename oplog,
+    QualifiedTablename shadow,
   ) {
-    final oplog = '"${oplogTable.namespace}"."${oplogTable.tablename}"';
-    final shadow = '"${shadowTable.namespace}"."${shadowTable.tablename}"';
     // We do an inner join in a CTE instead of a `WHERE EXISTS (...)`
     // since this is not reliant on re-executing a query
     // for every row in the shadow table, but uses a PK join instead.
@@ -347,11 +315,9 @@ END;''',
 
   @override
   String setTagsForShadowRows(
-    QualifiedTablename oplogTable,
-    QualifiedTablename shadowTable,
+    QualifiedTablename oplog,
+    QualifiedTablename shadow,
   ) {
-    final oplog = '"${oplogTable.namespace}"."${oplogTable.tablename}"';
-    final shadow = '"${shadowTable.namespace}"."${shadowTable.tablename}"';
     return '''
       INSERT OR REPLACE INTO $shadow (namespace, tablename, primaryKey, tags)
       SELECT namespace, tablename, primaryKey, ?
