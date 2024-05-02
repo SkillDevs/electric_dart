@@ -346,6 +346,40 @@ void processTests({
     expect(notifier.notifications.length, 1);
   });
 
+  test('snapshot of INSERT with blob/Uint8Array', () async {
+    await runMigrations();
+
+    final blob = Uint8List.fromList([1, 2, 255, 244, 160, 1]);
+
+    await adapter.run(
+      Statement(
+        'INSERT INTO "blobTable"(value) VALUES (${builder.makePositionalParam(1)})',
+        [blob],
+      ),
+    );
+
+    satellite.setAuthState(authState);
+    await satellite.performSnapshot();
+    final entries = await satellite.getEntries();
+    final clientId = satellite.authState!.clientId;
+
+    final merged = localOperationsToTableChanges(
+      entries,
+      (timestamp) {
+        return generateTag(clientId, timestamp);
+      },
+      kTestRelations,
+    );
+    final qualifiedTableName =
+        QualifiedTablename(namespace, 'blobTable').toString();
+
+    final opLogTableChange =
+        merged[qualifiedTableName]!['{"value":"${blobToHexString(blob)}"}']!;
+    final keyChanges = opLogTableChange.oplogEntryChanges;
+    final resultingValue = keyChanges.changes['value']!.value;
+    expect(resultingValue, blob);
+  });
+
   // INSERT after DELETE shall nullify all non explicitly set columns
 // If last operation is a DELETE, concurrent INSERT shall resurrect deleted
 // values as in 'INSERT wins over DELETE and restored deleted values'
@@ -405,40 +439,6 @@ void processTests({
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, BigInt.from(1));
-  });
-
-  test('snapshot of INSERT with blob/Uint8Array', () async {
-    await runMigrations();
-
-    final blob = Uint8List.fromList([1, 2, 255, 244, 160, 1]);
-
-    await adapter.run(
-      Statement(
-        'INSERT INTO "blobTable"(value) VALUES (${builder.makePositionalParam(1)})',
-        [blob],
-      ),
-    );
-
-    satellite.setAuthState(authState);
-    await satellite.performSnapshot();
-    final entries = await satellite.getEntries();
-    final clientId = satellite.authState!.clientId;
-
-    final merged = localOperationsToTableChanges(
-      entries,
-      (timestamp) {
-        return generateTag(clientId, timestamp);
-      },
-      kTestRelations,
-    );
-    final qualifiedTableName =
-        QualifiedTablename(namespace, 'blobTable').toString();
-
-    final opLogTableChange =
-        merged[qualifiedTableName]!['{"value":"${blobToHexString(blob)}"}']!;
-    final keyChanges = opLogTableChange.oplogEntryChanges;
-    final resultingValue = keyChanges.changes['value']!.value;
-    expect(resultingValue, blob);
   });
 
   test('take snapshot and merge local wins', () async {
@@ -813,7 +813,7 @@ void processTests({
     );
     await satellite.applyTransaction(incomingTx);
 
-    const sql = "SELECT * from main.parent WHERE value='incoming'";
+    const sql = "SELECT * from parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
 
     expect(rows[0]['other'], null);
@@ -1083,13 +1083,12 @@ void processTests({
     await satellite.setMeta('compensations', 0);
     await adapter.run(
       Statement(
-        "INSERT INTO main.parent(id, value) VALUES (1, '1')",
+        "INSERT INTO parent(id, value) VALUES (1, '1')",
       ),
     );
 
     await expectLater(
-      adapter
-          .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 2)')),
+      adapter.run(Statement('INSERT INTO child(id, parent) VALUES (1, 2)')),
       throwsA(
         isADbExceptionWithCode(
           builder.dialect,
@@ -1103,6 +1102,13 @@ void processTests({
 
   test('compensations: incoming operation breaks referential integrity',
       () async {
+    if (builder.dialect == Dialect.postgres) {
+      // Ignore this unit test for Postgres
+      // because we don't defer FK checks
+      // but completely disable them for incoming transactions
+      return;
+    }
+
     await runMigrations();
 
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
@@ -1153,7 +1159,9 @@ void processTests({
       () async {
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
+    }
     await satellite.setMeta('compensations', 0);
     satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
@@ -1185,10 +1193,10 @@ void processTests({
 
     await adapter.run(
       Statement(
-        "INSERT INTO main.parent(id, value) VALUES (1, '1')",
+        "INSERT INTO parent(id, value) VALUES (1, '1')",
       ),
     );
-    await adapter.run(Statement('DELETE FROM main.parent WHERE id=1'));
+    await adapter.run(Statement('DELETE FROM parent WHERE id=1'));
 
     await satellite.performSnapshot();
 
@@ -1211,7 +1219,7 @@ void processTests({
 
     final rows = await adapter.query(
       Statement(
-        'SELECT * from main.parent WHERE id=1',
+        'SELECT * from parent WHERE id=1',
       ),
     );
 
@@ -1223,6 +1231,17 @@ void processTests({
   });
 
   test('compensations: using triggers with flag 0', () async {
+    // since this test disables compensations
+    // by putting the flag on 0
+    // it is expecting a FK violation
+    if (builder.dialect == Dialect.postgres) {
+      // if we're running Postgres
+      // we are not deferring FK checks
+      // but completely disabling them for incoming transactions
+      // so the FK violation will not occur
+      return;
+    }
+
     await runMigrations();
 
     if (builder.dialect == Dialect.sqlite) {
@@ -1231,14 +1250,13 @@ void processTests({
     await satellite.setMeta('compensations', 0);
 
     await adapter.run(
-      Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
+      Statement("INSERT INTO parent(id, value) VALUES (1, '1')"),
     );
     satellite.setAuthState(authState);
     final ts = await satellite.performSnapshot();
     await satellite.garbageCollectOplog(ts);
 
-    await adapter
-        .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
+    await adapter.run(Statement('INSERT INTO child(id, parent) VALUES (1, 1)'));
     await satellite.performSnapshot();
 
     final timestamp = DateTime.now();
@@ -1281,18 +1299,19 @@ void processTests({
   test('compensations: using triggers with flag 1', () async {
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
     await satellite.setMeta('compensations', 1);
 
     await adapter.run(
-      Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
+      Statement("INSERT INTO parent(id, value) VALUES (1, '1')"),
     );
     satellite.setAuthState(authState);
     final ts = await satellite.performSnapshot();
     await satellite.garbageCollectOplog(ts);
 
-    await adapter
-        .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
+    await adapter.run(Statement('INSERT INTO child(id, parent) VALUES (1, 1)'));
     await satellite.performSnapshot();
 
     final timestamp = DateTime.now();
@@ -1801,7 +1820,7 @@ void processTests({
 
     final [result] = await adapter.query(
       Statement(
-        'SELECT * FROM main.parent WHERE id = 100',
+        'SELECT * FROM parent WHERE id = 100',
       ),
     );
     expect(result, {'id': 100, 'value': 'new_value', 'other': null});
@@ -1844,7 +1863,7 @@ void processTests({
 
     final results = await adapter.query(
       Statement(
-        'SELECT * FROM main.parent',
+        'SELECT * FROM parent',
       ),
     );
     expect(results, <dynamic>[]);
@@ -1853,6 +1872,13 @@ void processTests({
   test(
       'a subscription that failed to apply because of FK constraint triggers GC',
       () async {
+    if (builder.dialect == Dialect.postgres) {
+      // Ignore this unit test for Postgres
+      // because we don't defer FK checks
+      // but completely disable them for incoming transactions
+      return;
+    }
+
     await runMigrations();
 
     const tablename = 'child';
@@ -2000,9 +2026,9 @@ void processTests({
     final ShapeSubscription(synced: synced1) =
         await satellite.subscribe([shapeDef1]);
     await synced1;
-    final row = await adapter.query(Statement('SELECT id FROM main.parent'));
+    final row = await adapter.query(Statement('SELECT id FROM parent'));
     expect(row.length, 1);
-    final row1 = await adapter.query(Statement('SELECT id FROM main.child'));
+    final row1 = await adapter.query(Statement('SELECT id FROM child'));
     expect(row1.length, 1);
     final ShapeSubscription(synced: synced) =
         await satellite.subscribe([shapeDef2]);
@@ -2015,11 +2041,11 @@ void processTests({
 
       try {
         final row = await adapter.query(
-          Statement('SELECT id FROM main.parent'),
+          Statement('SELECT id FROM parent'),
         );
         expect(row.length, 0);
         final row1 = await adapter.query(
-          Statement('SELECT id FROM main.child'),
+          Statement('SELECT id FROM child'),
         );
         expect(row1.length, 0);
 
@@ -2083,9 +2109,34 @@ void processTests({
     }
   });
 
+  test("snapshot while not fully connected doesn't throw", () async {
+    client.setStartReplicationDelay(const Duration(milliseconds: 100));
+
+    await runMigrations();
+
+    // Add log entry while offline
+    await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
+
+    final conn = await startSatellite(satellite, authConfig, token);
+
+    // Performing a snapshot while the replication connection has not been stablished
+    // should not throw
+    await satellite.performSnapshot();
+
+    await conn.connectionFuture;
+
+    await satellite.performSnapshot();
+  });
+
   test('unsubscribing all subscriptions does not trigger FK violations',
       () async {
     await runMigrations(); // because the meta tables need to exist for shape GC
+
+    unawaited(
+      satellite.garbageCollectShapeHandler(
+        [ShapeDefinition(uuid: '', definition: Shape(tablename: 'parent'))],
+      ),
+    );
 
     final subsManager = MockSubscriptionsManager(
       satellite.garbageCollectShapeHandler,
@@ -2097,7 +2148,7 @@ void processTests({
     await satellite.adapter.runInTransaction([
       Statement('CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT)'),
       Statement(
-        'CREATE TABLE posts (id TEXT PRIMARY KEY, title TEXT, author_id TEXT, FOREIGN KEY(author_id) REFERENCES users(id))',
+        'CREATE TABLE posts (id TEXT PRIMARY KEY, title TEXT, author_id TEXT, FOREIGN KEY(author_id) REFERENCES users(id) ${builder.pgOnly('DEFERRABLE INITIALLY IMMEDIATE')})',
       ),
       Statement("INSERT INTO users (id, name) VALUES ('u1', 'user1')"),
       Statement(
@@ -2140,24 +2191,7 @@ void processTests({
     expect(await satellite.getEntries(since: 0), <OplogEntry>[]);
   });
 
-  test("snapshot while not fully connected doesn't throw", () async {
-    client.setStartReplicationDelay(const Duration(milliseconds: 100));
-
-    await runMigrations();
-
-    // Add log entry while offline
-    await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
-
-    final conn = await startSatellite(satellite, authConfig, token);
-
-    // Performing a snapshot while the replication connection has not been stablished
-    // should not throw
-    await satellite.performSnapshot();
-
-    await conn.connectionFuture;
-
-    await satellite.performSnapshot();
-  });
+  
 
   test('snapshots: generated oplog entries have the correct tags', () async {
     await runMigrations();
