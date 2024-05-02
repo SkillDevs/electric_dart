@@ -1600,7 +1600,7 @@ void processTests({
     await runMigrations();
 
     const tablename = 'parent';
-    final qualified = QualifiedTablename(namespace, tablename);
+    final qualifiedTableName = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1623,7 +1623,7 @@ void processTests({
     expect(
       changeNotification.changes[0],
       Change(
-        qualifiedTablename: qualified,
+        qualifiedTablename: qualifiedTableName,
         rowids: [],
         recordChanges: [
           RecordChange(
@@ -1638,7 +1638,7 @@ void processTests({
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM "$namespace"."$tablename"',
+          'SELECT id FROM $qualifiedTableName',
         ),
       );
       expect(row.length, 1);
@@ -1730,6 +1730,7 @@ void processTests({
     await runMigrations();
 
     const tablename = 'parent';
+    final qualified = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1748,7 +1749,7 @@ void processTests({
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM "$namespace"."$tablename"',
+          'SELECT id FROM $qualified',
         ),
       );
       expect(row.length, 1);
@@ -1762,8 +1763,7 @@ void processTests({
       expect(shadowRows[0]['namespace'], namespace);
       expect(shadowRows[0]['tablename'], 'parent');
 
-      await adapter
-          .run(Statement('DELETE FROM "$namespace"."$tablename" WHERE id = 1'));
+      await adapter.run(Statement('DELETE FROM $qualified WHERE id = 1'));
       await satellite.performSnapshot();
 
       final oplogs =
@@ -2183,6 +2183,7 @@ void processTests({
     await runMigrations();
 
     const tablename = 'parent';
+    final qualified = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -2223,7 +2224,7 @@ void processTests({
 
     final row = await adapter.query(
       Statement(
-        'SELECT id FROM "$namespace"."$tablename"',
+        'SELECT id FROM $qualified',
       ),
     );
     expect(row.length, 2);
@@ -2238,8 +2239,7 @@ void processTests({
     expect(shadowRows[0]['namespace'], namespace);
     expect(shadowRows[0]['tablename'], 'parent');
 
-    await adapter
-        .run(Statement('DELETE FROM "$namespace"."$tablename" WHERE id = 2'));
+    await adapter.run(Statement('DELETE FROM $qualified WHERE id = 2'));
     final deleteTx = await satellite.performSnapshot();
 
     final oplogs = await adapter.query(

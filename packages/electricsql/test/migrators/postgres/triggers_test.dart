@@ -1,4 +1,3 @@
-
 @Tags(['postgres'])
 library;
 
@@ -25,13 +24,11 @@ late GenericDb db;
 late DatabaseAdapter adapter;
 
 final defaults = satelliteDefaults('public');
-final oplogTable =
-    '"${defaults.oplogTable.namespace}"."${defaults.oplogTable.tablename}"';
+final oplogTable = '${defaults.oplogTable}';
 
 final personTable = getPersonTable('public');
-final personNamespace = personTable.namespace;
-final personTableName = personTable.tableName;
-final qualifiedPersonTable = '"$personNamespace"."$personTableName"';
+final personTableName = personTable.qualifiedTableName.tablename;
+final qualifiedPersonTable = personTable.qualifiedTableName;
 
 Future<void> migratePersonTable() async {
   await migrateDb(adapter, personTable, kPostgresQueryBuilder);
@@ -236,8 +233,6 @@ void main() {
   });
 
   test('oplog trigger should handle Infinity values correctly', () async {
-    final tableName = personTable.tableName;
-
     // Migrate the DB with the necessary tables and triggers
     await migratePersonTable();
 
@@ -251,7 +246,7 @@ void main() {
     expect(oplogRows.length, 1);
     expect(oplogRows[0].data, {
       'namespace': 'public',
-      'tablename': tableName,
+      'tablename': personTableName,
       'optype': 'INSERT',
       // `id` and `bmi` values are stored as strings
       // because we cast REAL values to text in the trigger

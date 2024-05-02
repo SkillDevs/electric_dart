@@ -46,7 +46,8 @@ const kElectricShadowTable = '_electric_shadow';
 SatelliteOpts Function(String namespace) satelliteDefaults =
     (String namespace) => SatelliteOpts(
           metaTable: QualifiedTablename(namespace, kElectricMetaTable),
-          migrationsTable: QualifiedTablename(namespace, kElectricMigrationsTable),
+          migrationsTable:
+              QualifiedTablename(namespace, kElectricMigrationsTable),
           oplogTable: QualifiedTablename(namespace, kElectricOplogTable),
           triggersTable:
               QualifiedTablename(namespace, kElectricTriggerSettingsTable),

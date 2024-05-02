@@ -47,7 +47,7 @@ class ElectricConfigWithDialect extends ElectricConfig {
   final Dialect? dialect; // defaults to SQLite
 
   factory ElectricConfigWithDialect.from({
-    required ElectricConfig config, 
+    required ElectricConfig config,
     Dialect? dialect,
   }) {
     return ElectricConfigWithDialect._(

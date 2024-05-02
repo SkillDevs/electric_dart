@@ -2,7 +2,7 @@ import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
 
 // TODO: Improve this code once with Migrator and consider simplifying oplog.
 Future<RelationsCache> inferRelationsFromDb(
@@ -14,17 +14,22 @@ Future<RelationsCache> inferRelationsFromDb(
   final RelationsCache relations = {};
 
   int id = 0;
-  const schema = 'public'; // TODO
   for (final table in tableNames) {
     final tableName = table.name;
-    final columnsForTable =
-        await adapter.query(builder.getTableInfo(tableName));
+    final columnsForTable = await adapter.query(
+      builder.getTableInfo(
+        QualifiedTablename(builder.defaultNamespace, tableName),
+      ),
+    );
     if (columnsForTable.isEmpty) {
       continue;
     }
     final Relation relation = Relation(
       id: id++,
-      schema: schema,
+      // schema needs to be 'public' because these relations are used
+      // by the Satellite process and client to replicate changes to Electric
+      // and merge incoming changes from Electric, and those use the 'public' namespace.
+      schema: 'public',
       table: tableName,
       tableType: SatRelation_RelationType.TABLE,
       columns: [],

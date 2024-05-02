@@ -1264,14 +1264,6 @@ class SatelliteClient implements Client {
     // Shouldn't ack the same message
     if (inbound.lastAckedTxId == inbound.lastTxId) return;
 
-    final SatOpLogAck msg = SatOpLogAck(
-      ackTimestamp: Int64.ZERO + DateTime.now().millisecondsSinceEpoch,
-      lsn: inbound.lastLsn,
-      transactionId: inbound.lastTxId,
-      subscriptionIds: inbound.seenAdditionalDataSinceLastTx.subscriptions,
-      additionalDataSourceIds: inbound.seenAdditionalDataSinceLastTx.dataRefs,
-    );
-
     // Send acks earlier rather than later to keep the stream continuous -
     // definitely send at 70% of allowed lag.
     final boundary = (inbound.maxUnackedTxs * 0.7).floor();
@@ -1281,6 +1273,14 @@ class SatelliteClient implements Client {
     if (inbound.unackedTxs >= boundary ||
         reason == 'timeout' ||
         reason == 'additionalData') {
+      final SatOpLogAck msg = SatOpLogAck(
+        ackTimestamp: Int64.ZERO + DateTime.now().millisecondsSinceEpoch,
+        lsn: inbound.lastLsn,
+        transactionId: inbound.lastTxId,
+        subscriptionIds: inbound.seenAdditionalDataSinceLastTx.subscriptions,
+        additionalDataSourceIds: inbound.seenAdditionalDataSinceLastTx.dataRefs,
+      );
+
       sendMessage(msg);
       inbound.lastAckedTxId = msg.transactionId;
     }

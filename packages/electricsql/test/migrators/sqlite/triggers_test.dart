@@ -17,9 +17,10 @@ late DatabaseAdapter adapter;
 const dialect = Dialect.sqlite;
 
 final defaults = satelliteDefaults('main');
-final oplogTable =
-    '"${defaults.oplogTable.namespace}"."${defaults.oplogTable.tablename}"';
+final oplogTable = '${defaults.oplogTable}';
 final personTable = getPersonTable('main');
+final qualifiedPersonTable = personTable.qualifiedTableName;
+final personTableName = qualifiedPersonTable.tablename;
 
 Future<void> migratePersonTable() async {
   await migrateDb(adapter, personTable, kSqliteQueryBuilder);
@@ -81,14 +82,12 @@ END;''',
   });
 
   test('oplog insertion trigger should insert row into oplog table', () async {
-    final tableName = personTable.tableName;
-
     // Migrate the DB with the necessary tables and triggers
     await migratePersonTable();
 
     // Insert a row in the table
     final insertRowSQL =
-        "INSERT INTO $tableName (id, name, age, bmi, int8, blob) VALUES (1, 'John Doe', 30, 25.5, 7, x'0001ff')";
+        "INSERT INTO $qualifiedPersonTable (id, name, age, bmi, int8, blob) VALUES (1, 'John Doe', 30, 25.5, 7, x'0001ff')";
     db.execute(insertRowSQL);
 
     // Check that the oplog table contains an entry for the inserted row
@@ -97,7 +96,7 @@ END;''',
     expect(oplogRows.length, 1);
     expect(oplogRows[0], {
       'namespace': 'main',
-      'tablename': tableName,
+      'tablename': personTableName,
       'optype': 'INSERT',
       // `id` and `bmi` values are stored as strings
       // because we cast REAL values to text in the trigger
@@ -123,14 +122,12 @@ END;''',
   });
 
   test('oplog trigger should handle Infinity values correctly', () async {
-    final tableName = personTable.tableName;
-
     // Migrate the DB with the necessary tables and triggers
     await migratePersonTable();
 
     // Insert a row in the table
     final insertRowSQL =
-        "INSERT INTO $tableName (id, name, age, bmi, int8, blob) VALUES (-9e999, 'John Doe', 30, 9e999, 7, x'0001ff')";
+        "INSERT INTO $qualifiedPersonTable (id, name, age, bmi, int8, blob) VALUES (-9e999, 'John Doe', 30, 9e999, 7, x'0001ff')";
     db.execute(insertRowSQL);
 
     // Check that the oplog table contains an entry for the inserted row
@@ -138,7 +135,7 @@ END;''',
     expect(oplogRows.length, 1);
     expect(oplogRows[0], {
       'namespace': 'main',
-      'tablename': tableName,
+      'tablename': personTableName,
       'optype': 'INSERT',
       // `id` and `bmi` values are stored as strings
       // because we cast REAL values to text in the trigger

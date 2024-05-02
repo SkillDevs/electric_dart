@@ -33,7 +33,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     migrations: migrations,
     pgMigrations: pgMigrations,
   );
-  
+
   final driftDialect = db.typeMapping.dialect;
 
   final Dialect dialect = switch (driftDialect) {

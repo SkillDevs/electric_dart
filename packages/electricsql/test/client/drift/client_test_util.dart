@@ -12,6 +12,7 @@ Future<ElectricClient<TestsDatabase>> electrifyTestDatabase(
     dbName: 'test-db',
     db: db,
     migrations: [],
+    pgMigrations: [],
     config: ElectricConfig(),
     opts: ElectrifyOptions(
       registry: MockRegistry(),

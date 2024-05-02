@@ -10,6 +10,7 @@ import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
+import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:equatable/equatable.dart';
 import 'package:fixnum/fixnum.dart';
@@ -36,6 +37,7 @@ String get dbName => context.dbName;
 late String clientId;
 late DateTime txDate;
 late QueryBuilder globalBuilder;
+late String globalNamespace;
 
 class ColumnInfo with EquatableMixin {
   String name;
@@ -85,6 +87,7 @@ void processMigrationTests({
   setUp(() async {
     context = getContext();
     globalBuilder = builder;
+    globalNamespace = namespace;
   });
 
   test('setup populates DB', () async {
@@ -635,7 +638,7 @@ Future<void> assertDbHasTables(List<String> tables) async {
   }
 }
 
-Future<List<ColumnInfo>> getTableInfo(String table) async {
+Future<List<ColumnInfo>> getTableInfo(QualifiedTablename table) async {
   final rows = await adapter.query(globalBuilder.getTableInfo(table));
 
   return rows.map((r) {
@@ -776,7 +779,8 @@ final newTableRelation = Relation(
 Future<void> checkMigrationIsApplied() async {
   await assertDbHasTables(['parent', 'child', 'NewTable']);
 
-  final newTableInfo = await getTableInfo('NewTable');
+  final newTableInfo =
+      await getTableInfo(QualifiedTablename(globalNamespace, 'NewTable'));
 
   expect(newTableInfo.toSet(), {
     // id, foo, bar
@@ -803,7 +807,8 @@ Future<void> checkMigrationIsApplied() async {
     ),
   });
 
-  final parentTableInfo = await getTableInfo('parent');
+  final parentTableInfo =
+      await getTableInfo(QualifiedTablename(globalNamespace, 'parent'));
   final parentTableHasColumn = parentTableInfo.any((col) {
     return col.name == 'baz' &&
         col.type == 'TEXT' &&

@@ -1,4 +1,3 @@
-
 import 'package:electricsql/drivers/sqlite3.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/util/types.dart';

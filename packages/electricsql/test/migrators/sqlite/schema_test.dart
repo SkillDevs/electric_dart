@@ -29,12 +29,13 @@ void main() {
   });
 
   test('check schema keys are unique', () async {
-    final migrator =
-        SqliteBundleMigrator(adapter: adapter, migrations: kTestSqliteMigrations);
+    final migrator = SqliteBundleMigrator(
+      adapter: adapter,
+      migrations: kTestSqliteMigrations,
+    );
     await migrator.up();
     final defaults = satelliteDefaults(migrator.queryBuilder.defaultNamespace);
-    final metaTable =
-        '"${defaults.metaTable.namespace}"."${defaults.metaTable.tablename}"';
+    final metaTable = '${defaults.metaTable}';
     await adapter.run(
       Statement(
         "INSERT INTO $metaTable (key, value) values ('key', 'value')",

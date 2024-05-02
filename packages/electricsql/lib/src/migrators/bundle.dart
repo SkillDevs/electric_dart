@@ -5,6 +5,7 @@ import 'package:electricsql/src/migrators/schema.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
+import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
 
 const kSchemaVersionErrorMsg = '''
@@ -21,9 +22,8 @@ abstract class BundleMigratorBase implements Migrator {
   @override
   final QueryBuilder queryBuilder;
 
-  late final String namespace;
-
   final String tableName = kElectricMigrationsTable;
+  late final QualifiedTablename migrationsTable;
 
   BundleMigratorBase({
     required this.adapter,
@@ -31,12 +31,14 @@ abstract class BundleMigratorBase implements Migrator {
     required this.queryBuilder,
     String? namespace,
   }) {
-    this.namespace = namespace ?? queryBuilder.defaultNamespace;
+    final String _namespace = namespace ?? queryBuilder.defaultNamespace;
 
     final List<Migration> baseMigration = buildInitialMigration(queryBuilder);
     this.migrations = <Migration>[...baseMigration, ...migrations]
         .map((migration) => makeStmtMigration(migration))
         .toList();
+
+    migrationsTable = QualifiedTablename(_namespace, tableName);
   }
 
   @override
@@ -56,8 +58,7 @@ abstract class BundleMigratorBase implements Migrator {
   Future<bool> migrationsTableExists() async {
     // If this is the first time we're running migrations, then the
     // migrations table won't exist.
-    final namespace = queryBuilder.defaultNamespace;
-    final tableExists = queryBuilder.tableExists(tableName, namespace);
+    final tableExists = queryBuilder.tableExists(migrationsTable);
     final resTables = await adapter.query(tableExists);
     return resTables.isNotEmpty;
   }
@@ -68,7 +69,7 @@ abstract class BundleMigratorBase implements Migrator {
     }
 
     final existingRecords = '''
-      SELECT version FROM "$namespace"."$tableName"
+      SELECT version FROM $migrationsTable
         ORDER BY id ASC
     ''';
     final rows = await adapter.query(Statement(existingRecords));
@@ -91,7 +92,7 @@ abstract class BundleMigratorBase implements Migrator {
     // The hard-coded version '0' below corresponds to the version of the internal migration defined in `schema.ts`.
     // We're ignoring it because this function is supposed to return the application schema version.
     final schemaVersion = '''
-      SELECT version FROM "$namespace"."$tableName"
+      SELECT version FROM $migrationsTable
         WHERE version != '0'
         ORDER BY version DESC
         LIMIT 1
@@ -153,7 +154,7 @@ abstract class BundleMigratorBase implements Migrator {
       ...statements,
       Statement(
         '''
-INSERT INTO "$namespace"."$tableName" (version, applied_at)
+INSERT INTO $migrationsTable (version, applied_at)
 VALUES (${queryBuilder.makePositionalParam(1)}, ${queryBuilder.makePositionalParam(2)});''',
         [version, DateTime.now().millisecondsSinceEpoch],
       ),
@@ -169,7 +170,7 @@ VALUES (${queryBuilder.makePositionalParam(1)}, ${queryBuilder.makePositionalPar
     final rows = await adapter.query(
       Statement(
         '''
-SELECT 1 FROM "$namespace"."$tableName"
+SELECT 1 FROM $migrationsTable
 WHERE version = ${queryBuilder.makePositionalParam(1)}''',
         [migration.version],
       ),
@@ -187,7 +188,6 @@ WHERE version = ${queryBuilder.makePositionalParam(1)}''',
   }
 }
 
-
 class SqliteBundleMigrator extends BundleMigratorBase {
   SqliteBundleMigrator({
     required super.adapter,
@@ -196,7 +196,6 @@ class SqliteBundleMigrator extends BundleMigratorBase {
           queryBuilder: kSqliteQueryBuilder,
         );
 }
-
 
 class PgBundleMigrator extends BundleMigratorBase {
   PgBundleMigrator({

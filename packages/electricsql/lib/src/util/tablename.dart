@@ -10,29 +10,40 @@ class QualifiedTablename with EquatableMixin {
 
   @override
   String toString() {
-    // Don't collapse it to '<namespace>.<tablename>' because that can lead to clashes
-    // since both `QualifiedTablename('foo', 'bar.baz')` and `QualifiedTablename('foo.bar', 'baz')`
-    // would be collapsed to 'foo.bar.baz'.
-    return json.encode({
-      'namespace': namespace,
-      'tablename': tablename,
-    });
+    // Escapes double quotes because names can contain double quotes
+    // e.g. CREATE TABLE "f""oo" (...) creates a table named f"oo
+    return '"${escDoubleQ(namespace)}"."${escDoubleQ(tablename)}"';
   }
 
   @override
   List<Object?> get props => [namespace, tablename];
 
-  static QualifiedTablename parse(String jString) {
+  static QualifiedTablename parse(String fullyQualifiedName) {
     try {
-      final j = json.decode(jString) as Map<String, dynamic>;
+      // allow only paired double quotes within the quotes
+      // identifiers can't be empty
+      final regex = RegExp(r'^"((?:[^"]|"")+)"\."((?:[^"]|"")+)"$');
+
+      final match = regex.firstMatch(fullyQualifiedName)!;
+      final namespace = match.group(1)!;
+      final tablename = match.group(2)!;
+
       return QualifiedTablename(
-        j['namespace']! as String,
-        j['tablename']! as String,
+        unescDoubleQ(namespace),
+        unescDoubleQ(tablename),
       );
     } catch (_e) {
       throw Exception(
-        'Could not parse string into a qualified table name: $jString',
+        'Could not parse string into a qualified table name: $fullyQualifiedName',
       );
     }
   }
+}
+
+String escDoubleQ(String str) {
+  return str.replaceAll('"', '""');
+}
+
+String unescDoubleQ(String str) {
+  return str.replaceAll('""', '"');
 }

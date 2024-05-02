@@ -9,7 +9,7 @@ late TestsDatabase db;
 void main() {
   setUp(() async {
     db = TestsDatabase.memory();
-    
+
     final electric = await electrifyTestDatabase(db);
     await electric.syncTable(db.dataTypes);
     await initClientTestsDb(db);

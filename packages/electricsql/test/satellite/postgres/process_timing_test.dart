@@ -12,7 +12,6 @@ late SatelliteTestContext context;
 int port = 4900;
 
 void main() {
-
   late EmbeddedPostgresDb pgEmbedded;
 
   setUpAll(() async {

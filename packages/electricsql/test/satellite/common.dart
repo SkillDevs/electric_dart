@@ -18,7 +18,7 @@ import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/util/random.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
 
 import '../support/migrations.dart';
 import '../support/pg_migrations.dart';
@@ -422,12 +422,10 @@ Future<void> migrateDb(
   final [createMainSchema, ...restMigration] = migration;
   await db.run(Statement(createMainSchema));
 
-  final namespace = table.namespace;
-  final tableName = table.tableName;
   // Create the table in the database on the given namespace
   final blobType = builder.dialect == Dialect.sqlite ? 'BLOB' : 'BYTEA';
   final createTableSQL =
-      'CREATE TABLE "$namespace"."$tableName" (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER, blob $blobType)';
+      'CREATE TABLE ${table.qualifiedTableName} (id REAL PRIMARY KEY, name TEXT, age INTEGER, bmi REAL, int8 INTEGER, blob $blobType)';
   await db.run(Statement(createTableSQL));
 
   // Apply the initial migration on the database
@@ -445,8 +443,7 @@ Future<void> migrateDb(
 }
 
 Table getPersonTable(String namespace) => Table(
-      namespace: namespace,
-      tableName: 'personTable',
+      qualifiedTableName: QualifiedTablename(namespace, 'personTable'),
       columns: ['id', 'name', 'age', 'bmi', 'int8', 'blob'],
       primary: ['id'],
       foreignKeys: [],

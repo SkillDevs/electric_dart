@@ -4,7 +4,6 @@ import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
-
 @isTestGroup
 void bundleTests({
   required String Function() getDbName,

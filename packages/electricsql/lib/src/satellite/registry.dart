@@ -196,7 +196,8 @@ class GlobalRegistry extends BaseRegistry {
       opts: satelliteClientOpts,
     );
 
-    final SatelliteOpts satelliteOpts = satelliteDefaults(config.namespace).copyWith(
+    final SatelliteOpts satelliteOpts =
+        satelliteDefaults(config.namespace).copyWith(
       connectionBackoffOptions: config.connectionBackoffOptions,
     );
 

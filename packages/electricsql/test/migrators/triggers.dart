@@ -16,25 +16,23 @@ void triggerTests({
 }) {
   test('oplog trigger should separate null blobs from empty blobs', () async {
     final adapter = getAdapter();
-    final namespace = personTable.namespace;
-    final tableName = personTable.tableName;
 
     // Migrate the DB with the necessary tables and triggers
     await migratePersonTable();
 
     // Insert null and empty rows in the table
     final insertRowNullSQL =
-        '''INSERT INTO "$namespace"."$tableName" (id, name, age, bmi, int8, blob) VALUES (1, 'John Doe', 30, 25.5, 7, NULL)''';
+        '''INSERT INTO ${personTable.qualifiedTableName} (id, name, age, bmi, int8, blob) VALUES (1, 'John Doe', 30, 25.5, 7, NULL)''';
     final blobValue = dialect == Dialect.postgres ? "'\\x'" : "x''";
     final insertRowEmptySQL =
-        '''INSERT INTO "$namespace"."$tableName" (id, name, age, bmi, int8, blob) VALUES (2, 'John Doe', 30, 25.5, 7, $blobValue)''';
+        '''INSERT INTO ${personTable.qualifiedTableName} (id, name, age, bmi, int8, blob) VALUES (2, 'John Doe', 30, 25.5, 7, $blobValue)''';
     await adapter.run(Statement(insertRowNullSQL));
     await adapter.run(Statement(insertRowEmptySQL));
 
     // Check that the oplog table contains an entry for the inserted row
     final oplogRows = await adapter.query(
       Statement(
-        'SELECT * FROM "${defaults.oplogTable.namespace}"."${defaults.oplogTable.tablename}"',
+        'SELECT * FROM ${defaults.oplogTable}',
       ),
     );
     expect(oplogRows.length, 2);

@@ -1,4 +1,5 @@
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
+import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class ForeignKey {
@@ -18,16 +19,14 @@ typedef ColumnType = String;
 typedef ColumnTypes = Map<ColumnName, ColumnType>;
 
 class Table {
-  String tableName;
-  String namespace;
+  QualifiedTablename qualifiedTableName;
   List<ColumnName> columns;
   List<ColumnName> primary;
   List<ForeignKey> foreignKeys;
   ColumnTypes columnTypes;
 
   Table({
-    required this.tableName,
-    required this.namespace,
+    required this.qualifiedTableName,
     required this.columns,
     required this.primary,
     required this.foreignKeys,
@@ -50,10 +49,9 @@ List<Statement> generateOplogTriggers(
   Table table,
   QueryBuilder builder,
 ) {
-  final tableName = table.tableName;
+  final qualifiedTableName = table.qualifiedTableName;
   final primary = table.primary;
   final columns = table.columns;
-  final namespace = table.namespace;
   final columnTypes = table.columnTypes;
 
   final newPKs = joinColsForJSON(primary, columnTypes, builder, 'new');
@@ -62,19 +60,18 @@ List<Statement> generateOplogTriggers(
   final oldRows = joinColsForJSON(columns, columnTypes, builder, 'old');
 
   final [dropFkTrigger, ...createFkTrigger] =
-      builder.createOrReplaceNoFkUpdateTrigger(tableName, primary, namespace);
+      builder.createOrReplaceNoFkUpdateTrigger(qualifiedTableName, primary);
   final [dropInsertTrigger, ...createInsertTrigger] =
       builder.createOrReplaceInsertTrigger(
-    tableName,
+    qualifiedTableName,
     newPKs,
     newRows,
     oldRows,
-    namespace,
   );
 
   return <String>[
     // Toggles for turning the triggers on and off
-    builder.setTriggerSetting(tableName, 1, namespace),
+    builder.setTriggerSetting(qualifiedTableName, 1),
     // Triggers for table ${tableName}
     // ensures primary key is immutable
     dropFkTrigger,
@@ -83,18 +80,16 @@ List<Statement> generateOplogTriggers(
     dropInsertTrigger,
     ...createInsertTrigger,
     ...builder.createOrReplaceUpdateTrigger(
-      tableName,
+      qualifiedTableName,
       newPKs,
       newRows,
       oldRows,
-      namespace,
     ),
     ...builder.createOrReplaceDeleteTrigger(
-      tableName,
+      qualifiedTableName,
       oldPKs,
       newRows,
       oldRows,
-      namespace,
     ),
   ].map(Statement.new).toList();
 }
@@ -115,8 +110,7 @@ List<Statement> generateCompensationTriggers(
   Table table,
   QueryBuilder builder,
 ) {
-  final tableName = table.tableName;
-  final namespace = table.namespace;
+  final qualifiedTableName = table.qualifiedTableName;
   final foreignKeys = table.foreignKeys;
   final columnTypes = table.columnTypes;
 
@@ -128,6 +122,7 @@ List<Statement> generateCompensationTriggers(
     final fkTableName = foreignKey.table;
     final fkTablePK =
         foreignKey.parentKey; // primary key of the table pointed at by the FK.
+    final qualifiedFkTable = QualifiedTablename(fkTableNamespace, fkTableName);
 
     // This table's `childKey` points to the parent's table `parentKey`.
     // `joinColsForJSON` looks up the type of the `parentKey` column in the provided `colTypes` object.
@@ -146,13 +141,11 @@ List<Statement> generateCompensationTriggers(
 
     final [dropInsertTrigger, ...createInsertTrigger] =
         builder.createOrReplaceInsertCompensationTrigger(
-      tableName,
+      qualifiedTableName,
       childKey,
-      fkTableName,
+      qualifiedFkTable,
       joinedFkPKs,
       foreignKey,
-      namespace,
-      fkTableNamespace,
     );
 
     return <String>[
@@ -163,13 +156,11 @@ List<Statement> generateCompensationTriggers(
       dropInsertTrigger,
       ...createInsertTrigger,
       ...builder.createOrReplaceUpdateCompensationTrigger(
-        tableName,
+        qualifiedTableName,
         foreignKey.childKey,
-        fkTableName,
+        qualifiedFkTable,
         joinedFkPKs,
         foreignKey,
-        namespace,
-        fkTableNamespace,
       ),
     ].map(Statement.new).toList();
   }

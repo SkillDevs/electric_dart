@@ -151,16 +151,16 @@ void main() {
 
         // Migrate the DB with the necessary tables and triggers
         final personTable = getPersonTable(namespace);
+        final qualifiedPersonTable = personTable.qualifiedTableName;
         await migrateDb(adapter, personTable, builder);
 
         // Insert a row in the table
         final insertRowSQL =
-            '''INSERT INTO "${personTable.namespace}"."${personTable.tableName}" (id, name, age, bmi, int8, blob) VALUES (54321, 'John Doe', 30, 25.5, 7, ${builder.hexValue('0001ff')})''';
+            '''INSERT INTO $qualifiedPersonTable (id, name, age, bmi, int8, blob) VALUES (54321, 'John Doe', 30, 25.5, 7, ${builder.hexValue('0001ff')})''';
         await adapter.run(Statement(insertRowSQL));
 
         // Fetch the oplog entry for the inserted row
-        final oplogTable =
-            '"${defaults.oplogTable.namespace}"."${defaults.oplogTable.tablename}"';
+        final oplogTable = '${defaults.oplogTable}';
         final oplogRows = await adapter.query(
           Statement(
             'SELECT * FROM $oplogTable',
@@ -182,7 +182,7 @@ void main() {
           commitTimestamp: toCommitTimestamp('1970-01-02T03:46:42.000Z'),
           changes: [
             DataChange(
-              relation: kTestRelations[personTable.tableName]!,
+              relation: kTestRelations[qualifiedPersonTable.tablename]!,
               type: DataChangeType.insert,
               record: {
                 // fields must be ordered alphabetically to match the behavior of the triggers
@@ -211,9 +211,7 @@ void main() {
         final pk = primaryKeyToStr({'id': 54321});
 
         // the incoming transaction wins
-        final qualifiedTableName =
-            QualifiedTablename(personTable.namespace, personTable.tableName)
-                .toString();
+        final qualifiedTableName = qualifiedPersonTable.toString();
         expect(
           merged[qualifiedTableName]![pk]!.optype,
           ChangesOpType.upsert,

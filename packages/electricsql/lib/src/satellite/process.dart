@@ -257,13 +257,13 @@ This means there is a notifier subscription leak.`''');
 
     final deleteStmts = tables.map(
       (x) => Statement(
-        'DELETE FROM "${x.namespace}"."${x.tablename}"',
+        'DELETE FROM $x',
       ),
     );
 
     final stmtsWithTriggers = [
       // reverts to off on commit/abort
-      Statement(builder.deferForeignKeys),
+      Statement(builder.deferOrDisableFKsForTx),
       ..._disableTriggers(tables),
       ...deleteStmts,
       ..._enableTriggers(tables),
@@ -442,16 +442,11 @@ This means there is a notifier subscription leak.`''');
     final namespace = builder.defaultNamespace;
     final stmts = <Statement>[];
 
-    if (builder.dialect == Dialect.postgres) {
-      // disable FK checks because order of inserts
-      // may not respect referential integrity
-      // and Postgres doesn't let us defer FKs
-      // that were not originally defined as deferrable
-      stmts.add(Statement(builder.disableForeignKeys));
-    } else {
-      // Defer FKs on SQLite
-      stmts.add(Statement(builder.deferForeignKeys));
-    }
+    // Defer (SQLite) or temporarily disable FK checks (Postgres)
+    // because order of inserts may not respect referential integrity
+    // and Postgres doesn't let us defer FKs
+    // that were not originally defined as deferrable
+    stmts.add(Statement(builder.deferOrDisableFKsForTx));
 
     // It's much faster[1] to do less statements to insert the data instead of doing an insert statement for each row
     // so we're going to do just that, but with a caveat: SQLite has a max number of parameters in prepared statements,
@@ -513,7 +508,7 @@ This means there is a notifier subscription leak.`''');
       // final _table = entry.key;
       final (:relation, :records, table: table) = entry.value;
       final columnNames = relation.columns.map((col) => col.name).toList();
-      final qualifiedTableName = '"${table.namespace}"."${table.tablename}"';
+      final qualifiedTableName = '$table';
       final orIgnore = builder.sqliteOnly('OR IGNORE');
       final onConflictDoNothing = builder.pgOnly('ON CONFLICT DO NOTHING');
       final sqlBase = '''
@@ -536,13 +531,12 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
     // Then do a batched insert for the shadow table
     final batchedShadowInserts = builder.batchedInsertOrReplace(
-      opts.shadowTable.tablename,
+      opts.shadowTable,
       ['namespace', 'tablename', 'primaryKey', 'tags'],
       allArgsForShadowInsert,
       ['namespace', 'tablename', 'primaryKey'],
       ['namespace', 'tablename', 'tags'],
       maxSqlParameters,
-      opts.shadowTable.namespace,
     );
     stmts.addAll(batchedShadowInserts);
 
@@ -974,9 +968,9 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     final shadow = opts.shadowTable.tablename;
 
     final res = await adapter.query(
-      builder.countTablesIn('numTables', [meta, oplog, shadow]),
+      builder.countTablesIn([meta, oplog, shadow]),
     );
-    final numTables = res.first['numTables']! as int;
+    final numTables = res.first['count']! as int;
     return numTables == 3;
   }
 
@@ -1010,10 +1004,8 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     }
 
     try {
-      final oplog =
-          '"${opts.oplogTable.namespace}"."${opts.oplogTable.tablename}"';
-      final shadow =
-          '"${opts.shadowTable.namespace}"."${opts.shadowTable.tablename}"';
+      final oplog = '${opts.oplogTable}';
+      final shadow = '${opts.shadowTable}';
       final timestamp = DateTime.now();
       final newTag = _generateTag(timestamp);
 
@@ -1209,6 +1201,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
     for (final entry in merged.entries) {
       final tablenameStr = entry.key;
+      final qualifiedTableName = QualifiedTablename.parse(tablenameStr);
       final mapping = entry.value;
       for (final entryChanges in mapping.values) {
         final ShadowEntry shadowEntry = ShadowEntry(
@@ -1217,7 +1210,6 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
           primaryKey: getShadowPrimaryKey(entryChanges),
           tags: encodeTags(entryChanges.tags),
         );
-        final qualifiedTableName = QualifiedTablename.parse(tablenameStr);
         switch (entryChanges.optype) {
           case ChangesOpType.gone:
           case ChangesOpType.delete:
@@ -1245,8 +1237,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   Future<List<OplogEntry>> getEntries({int? since}) async {
     // `rowid` is never below 0, so -1 means "everything"
     since ??= -1;
-    final oplog =
-        '"${opts.oplogTable.namespace}"."${opts.oplogTable.tablename}"';
+    final oplog = '${opts.oplogTable}';
 
     final selectEntries = '''
       SELECT * FROM $oplog
@@ -1259,8 +1250,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   }
 
   Statement _deleteShadowTagsStatement(ShadowEntry shadow) {
-    final shadowTable =
-        '"${opts.shadowTable.namespace}"."${opts.shadowTable.tablename}"';
+    final shadowTable = '${opts.shadowTable}';
     String pos(int i) => builder.makePositionalParam(i);
 
     final deleteRow = '''
@@ -1277,12 +1267,11 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
   Statement _updateShadowTagsStatement(ShadowEntry shadow) {
     return builder.insertOrReplace(
-      opts.shadowTable.tablename,
+      opts.shadowTable,
       ['namespace', 'tablename', 'primaryKey', 'tags'],
       [shadow.namespace, shadow.tablename, shadow.primaryKey, shadow.tags],
       ['namespace', 'tablename', 'primaryKey'],
       ['tags'],
-      opts.shadowTable.namespace,
     );
   }
 
@@ -1346,16 +1335,11 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     final lsn = transaction.lsn;
     bool firstDMLChunk = true;
 
-    if (builder.dialect == Dialect.postgres) {
-      // Temporarily disable FK checks because order of inserts
-      // may not respect referential integrity
-      // and Postgres doesn't let us defer FKs
-      // that were not originally defined as deferrable
-      stmts.add(Statement(builder.disableForeignKeys));
-    } else {
-      // Defer FKs on SQLite
-      stmts.add(Statement(builder.deferForeignKeys));
-    }
+    // Defer (SQLite) or temporarily disable FK checks (Postgres)
+    // because order of inserts may not respect referential integrity
+    // and Postgres doesn't let us defer FKs
+    // that were not originally defined as deferrable
+    stmts.add(Statement(builder.deferOrDisableFKsForTx));
 
     // update lsn.
     stmts.add(updateLsnStmt(lsn));
@@ -1532,8 +1516,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   ) {
     if (tables.isEmpty) return [];
 
-    final triggers =
-        '"${opts.triggersTable.namespace}"."${opts.triggersTable.tablename}"';
+    final triggers = '${opts.triggersTable}';
     final namespacesAndTableNames = tables.expand(
       (tbl) => [
         tbl.namespace,
@@ -1554,7 +1537,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   }
 
   Statement _addSeenAdditionalDataStmt(String ref) {
-    final meta = '"${opts.metaTable.namespace}"."${opts.metaTable.tablename}"';
+    final meta = '${opts.metaTable}';
 
     final sql = '''
       INSERT INTO $meta (key, value) VALUES ('seenAdditionalData', ${builder.makePositionalParam(1)})
@@ -1570,7 +1553,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   }
 
   Statement _setMetaStatement(String key, Object? value) {
-    final meta = '"${opts.metaTable.namespace}"."${opts.metaTable.tablename}"';
+    final meta = '${opts.metaTable}';
     String pos(int i) => builder.makePositionalParam(i);
 
     final sql = 'UPDATE $meta SET value = ${pos(1)} WHERE key = ${pos(2)}';
@@ -1587,7 +1570,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
   @visibleForTesting
   Future<T> getMeta<T>(String key) async {
-    final meta = '"${opts.metaTable.namespace}"."${opts.metaTable.tablename}"';
+    final meta = '${opts.metaTable}';
     String pos(int i) => builder.makePositionalParam(i);
 
     final sql = 'SELECT value from $meta WHERE key = ${pos(1)}';
@@ -1627,8 +1610,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   @visibleForTesting
   Future<void> garbageCollectOplog(DateTime commitTimestamp) async {
     final isoString = commitTimestamp.toISOStringUTC();
-    final String oplog =
-        '"${opts.oplogTable.namespace}"."${opts.oplogTable.tablename}"';
+    final String oplog = '${opts.oplogTable}';
     String pos(int i) => builder.makePositionalParam(i);
 
     await adapter.run(
@@ -1704,22 +1686,20 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
     if (updateColumnStmts.isNotEmpty) {
       return builder.insertOrReplaceWith(
-        qualifiedTableName.tablename,
+        qualifiedTableName,
         columnNames,
         columnValues,
         ['id'],
         updateColumnStmts,
         updateColumnStmts.map((col) => fullRow[col]).toList(),
-        qualifiedTableName.namespace,
       );
     }
 
     // no changes, can ignore statement if exists
     return builder.insertOrIgnore(
-      qualifiedTableName.tablename,
+      qualifiedTableName,
       columnNames,
       columnValues,
-      qualifiedTableName.namespace,
     );
   }
 
@@ -1752,8 +1732,10 @@ List<Statement> generateTriggersForTable(
   QueryBuilder builder,
 ) {
   final table = Table(
-    tableName: tbl.name,
-    namespace: builder.defaultNamespace,
+    qualifiedTableName: QualifiedTablename(
+      builder.defaultNamespace,
+      tbl.name,
+    ),
     columns: tbl.columns.map((col) => col.name).toList(),
     primary: tbl.pks,
     foreignKeys: tbl.fks.map((fk) {
