@@ -198,7 +198,7 @@ Future<List<ShadowEntry>> getMatchingShadowEntries(
 $selectTags WHERE
 namespace = ${builder.makePositionalParam(1)} AND
 tablename = ${builder.makePositionalParam(2)} AND
-primaryKey = ${builder.makePositionalParam(3)}
+"primaryKey" = ${builder.makePositionalParam(3)}
 ''';
     final args = <Object?>[
       oplog.namespace,

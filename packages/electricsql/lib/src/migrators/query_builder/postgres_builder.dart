@@ -186,40 +186,68 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   String hexValue(String hexString) {
-    // TODO: implement hexValue
-    throw UnimplementedError();
+    return "'\\x$hexString'";
   }
 
   @override
-  Statement insertOrIgnore(String table, List<String> columns,
-      List<Object?> values, String? schema) {
-    // TODO: implement insertOrIgnore
-    throw UnimplementedError();
+  Statement insertOrIgnore(
+    String table,
+    List<String> columns,
+    List<Object?> values,
+    String? schema,
+  ) {
+    schema ??= defaultNamespace;
+    return Statement(
+      '''
+        INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')})
+          VALUES (${columns.mapIndexed((i, _) => '\$${i + 1}').join(', ')})
+          ON CONFLICT DO NOTHING;
+      ''',
+      values,
+    );
   }
 
   @override
   Statement insertOrReplace(
-      String table,
-      List<String> columns,
-      List<Object?> values,
-      List<String> conflictCols,
-      List<String> updateCols,
-      String? schema) {
-    // TODO: implement insertOrReplace
-    throw UnimplementedError();
+    String table,
+    List<String> columns,
+    List<Object?> values,
+    List<String> conflictCols,
+    List<String> updateCols,
+    String? schema,
+  ) {
+    schema ??= defaultNamespace;
+    return Statement(
+      '''
+        INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')})
+          VALUES (${columns.mapIndexed((i, _) => '\$${i + 1}').join(', ')})
+        ON CONFLICT (${conflictCols.map(quote).join(', ')}) DO UPDATE
+          SET ${updateCols.map((col) => '${quote(col)} = EXCLUDED.${quote(col)}').join(', ')};
+      ''',
+      values,
+    );
   }
 
   @override
   Statement insertOrReplaceWith(
-      String table,
-      List<String> columns,
-      List<Object?> values,
-      List<String> conflictCols,
-      List<String> updateCols,
-      List<Object?> updateVals,
-      String? schema) {
-    // TODO: implement insertOrReplaceWith
-    throw UnimplementedError();
+    String table,
+    List<String> columns,
+    List<Object?> values,
+    List<String> conflictCols,
+    List<String> updateCols,
+    List<Object?> updateVals,
+    String? schema,
+  ) {
+    schema ??= defaultNamespace;
+    return Statement(
+      '''
+        INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')})
+          VALUES (${columns.mapIndexed((i, _) => "\$${i + 1}").join(', ')})
+        ON CONFLICT (${conflictCols.map(quote).join(', ')}) DO UPDATE
+          SET ${updateCols.mapIndexed((i, col) => '${quote(col)} = \$${columns.length + i + 1}').join(', ')};
+      ''',
+      [...values, ...updateVals],
+    );
   }
 
   @override

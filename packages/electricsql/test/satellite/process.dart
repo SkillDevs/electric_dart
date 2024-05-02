@@ -5,10 +5,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
-    show SqliteAdapter;
-import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart' as adp
-    show Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
@@ -27,7 +23,6 @@ import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:electricsql/src/util/types.dart' as t;
 import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 import '../support/matchers.dart';
@@ -259,7 +254,7 @@ void processTests({
     satellite.setAuthState(authState);
 
     satellite.updateDatabaseAdapter(
-      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+      SlowDatabaseAdapter(satellite.adapter),
     );
 
     await expectLater(
@@ -287,7 +282,7 @@ void processTests({
 
     // delay termination of _performSnapshot
     satellite.updateDatabaseAdapter(
-      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+      SlowDatabaseAdapter(satellite.adapter),
     );
 
     final p1 = satellite.throttledSnapshot();
@@ -388,7 +383,7 @@ void processTests({
 
     await adapter.run(
       Statement(
-        'INSERT INTO bigIntTable(value) VALUES (1)',
+        'INSERT INTO "bigIntTable"(value) VALUES (1)',
       ),
     );
 
@@ -419,7 +414,7 @@ void processTests({
 
     await adapter.run(
       Statement(
-        'INSERT INTO blobTable(value) VALUES (?)',
+        'INSERT INTO "blobTable"(value) VALUES (${builder.makePositionalParam(1)})',
         [blob],
       ),
     );
@@ -452,7 +447,7 @@ void processTests({
     final incomingTs = DateTime.now().millisecondsSinceEpoch - 1;
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs,
@@ -490,7 +485,7 @@ void processTests({
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -537,7 +532,7 @@ void processTests({
 
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -561,7 +556,7 @@ void processTests({
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -616,7 +611,7 @@ void processTests({
     final incomingTs = offlineTimestamp.add(const Duration(milliseconds: 1));
     final firstIncomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.update,
       incomingTs.millisecondsSinceEpoch,
@@ -647,7 +642,7 @@ void processTests({
     // And after the offline transaction was sent, the resolved no-op transaction comes in
     final secondIncomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.update,
       offlineTimestamp.millisecondsSinceEpoch,
@@ -695,7 +690,7 @@ void processTests({
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -750,7 +745,7 @@ void processTests({
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.delete,
       incomingTs.millisecondsSinceEpoch,
@@ -791,7 +786,7 @@ void processTests({
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -830,7 +825,7 @@ void processTests({
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -856,7 +851,7 @@ void processTests({
     );
     await satellite.applyTransaction(incomingTx);
 
-    const sql = "SELECT * from main.parent WHERE value='incoming'";
+    const sql = "SELECT * from parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
 
     expect(rows[0]['other'], 0);
@@ -873,7 +868,7 @@ void processTests({
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.insert,
         incomingTs.millisecondsSinceEpoch,
@@ -886,7 +881,7 @@ void processTests({
       ),
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.delete,
         incomingTs.millisecondsSinceEpoch,
@@ -901,7 +896,7 @@ void processTests({
     final local = [
       generateLocalOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.insert,
         localTs.millisecondsSinceEpoch,
@@ -921,7 +916,7 @@ void processTests({
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -954,7 +949,7 @@ void processTests({
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.update,
         incomingTs,
@@ -978,7 +973,7 @@ void processTests({
     final local = [
       generateLocalOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.update,
         localTs,
@@ -1009,7 +1004,7 @@ void processTests({
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -1044,7 +1039,7 @@ void processTests({
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.insert,
         incomingTs.millisecondsSinceEpoch,
@@ -1064,7 +1059,7 @@ void processTests({
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -1082,7 +1077,9 @@ void processTests({
   test('compensations: referential integrity is enforced', () async {
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
     await satellite.setMeta('compensations', 0);
     await adapter.run(
       Statement(
@@ -1094,10 +1091,11 @@ void processTests({
       adapter
           .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 2)')),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+          // TODO(dart): Refactor postgres codes
+          '23503',
         ),
       ),
     );
@@ -1113,7 +1111,7 @@ void processTests({
 
     final incoming = generateLocalOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'child',
       OpType.insert,
       timestamp.millisecondsSinceEpoch,
@@ -1140,10 +1138,11 @@ void processTests({
     await expectLater(
       satellite.applyTransaction(incomingTx),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+          // TODO(dart): Refactor postgres codes
+          '23503',
         ),
       ),
     );
@@ -1161,7 +1160,7 @@ void processTests({
 
     final childInsertEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'child',
       OpType.insert,
       timestamp.millisecondsSinceEpoch,
@@ -1174,7 +1173,7 @@ void processTests({
 
     final parentInsertEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       timestamp.millisecondsSinceEpoch,
@@ -1226,7 +1225,9 @@ void processTests({
   test('compensations: using triggers with flag 0', () async {
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
     await satellite.setMeta('compensations', 0);
 
     await adapter.run(
@@ -1243,7 +1244,7 @@ void processTests({
     final timestamp = DateTime.now();
     final incoming = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.delete,
       timestamp.millisecondsSinceEpoch,
@@ -1267,10 +1268,11 @@ void processTests({
     await expectLater(
       satellite.applyTransaction(incomingTx),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+          // TODO(dart): Refactor postgres codes
+          '23503',
         ),
       ),
     );
@@ -1297,7 +1299,7 @@ void processTests({
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.delete,
         timestamp.millisecondsSinceEpoch,
@@ -1334,7 +1336,7 @@ void processTests({
     );
 
     final expected = OplogEntry(
-      namespace: 'main',
+      namespace: namespace,
       tablename: 'parent',
       optype: OpType.insert,
       newRow: '{"id":0}',
@@ -1590,9 +1592,8 @@ void processTests({
   test('apply shape data and persist subscription', () async {
     await runMigrations();
 
-    const namespace = 'main';
     const tablename = 'parent';
-    const qualified = QualifiedTablename(namespace, tablename);
+    final qualified = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1721,7 +1722,6 @@ void processTests({
   test('applied shape data will be acted upon correctly', () async {
     await runMigrations();
 
-    const namespace = 'main';
     const tablename = 'parent';
 
     // relations must be present at subscription delivery
@@ -1752,7 +1752,7 @@ void processTests({
         ),
       );
       expect(shadowRows.length, 1);
-      expect(shadowRows[0]['namespace'], 'main');
+      expect(shadowRows[0]['namespace'], namespace);
       expect(shadowRows[0]['tablename'], 'parent');
 
       await adapter
@@ -1856,7 +1856,6 @@ void processTests({
     await runMigrations();
 
     const tablename = 'child';
-    const namespace = 'main';
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -2163,7 +2162,6 @@ void processTests({
   test('snapshots: generated oplog entries have the correct tags', () async {
     await runMigrations();
 
-    const namespace = 'main';
     const tablename = 'parent';
 
     // relations must be present at subscription delivery
@@ -2182,7 +2180,7 @@ void processTests({
     final expectedTs = DateTime.now();
     final incoming = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       expectedTs.millisecondsSinceEpoch,
@@ -2217,7 +2215,7 @@ void processTests({
     );
     expect(shadowRows.length, 2);
 
-    expect(shadowRows[0]['namespace'], 'main');
+    expect(shadowRows[0]['namespace'], namespace);
     expect(shadowRows[0]['tablename'], 'parent');
 
     await adapter
@@ -2328,7 +2326,7 @@ void processTests({
     satellite.setAuthState(authState);
 
     satellite.updateDatabaseAdapter(
-      ReplaceTxDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+      ReplaceTxDatabaseAdapter(satellite.adapter),
     );
 
     const error = 'FAKE TRANSACTION';
@@ -2362,7 +2360,7 @@ void processTests({
     // delay termination of _performSnapshot
     satellite.updateDatabaseAdapter(
       SlowDatabaseAdapter(
-        (satellite.adapter as SqliteAdapter).db,
+        satellite.adapter,
         delay: const Duration(milliseconds: 500),
       ),
     );
@@ -2403,9 +2401,11 @@ void processTests({
   });
 }
 
-class SlowDatabaseAdapter extends SqliteAdapter {
+class SlowDatabaseAdapter extends DatabaseAdapter {
+  final DatabaseAdapter delegate;
+
   SlowDatabaseAdapter(
-    super.db, {
+    this.delegate, {
     this.delay = const Duration(milliseconds: 100),
   });
 
@@ -2414,35 +2414,62 @@ class SlowDatabaseAdapter extends SqliteAdapter {
   @override
   Future<RunResult> run(Statement statement) async {
     await Future<void>.delayed(delay);
-    return super.run(statement);
+    return delegate.run(statement);
   }
 
   @override
   Future<T> transaction<T>(
-    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+    void Function(DbTransaction tx, void Function(T res) setResult) f,
   ) async {
     await Future<void>.delayed(delay);
-    return super.transaction(f);
+    return delegate.transaction<T>(f);
+  }
+
+  @override
+  Future<List<Row>> query(Statement statement) async {
+    await Future<void>.delayed(delay);
+    return delegate.query(statement);
+  }
+
+  @override
+  Future<RunResult> runInTransaction(List<Statement> statements) async {
+    await Future<void>.delayed(delay);
+    return delegate.runInTransaction(statements);
   }
 }
 
 typedef _TxFun<T> = Future<T> Function(
-  void Function(adp.Transaction tx, void Function(T res) setResult) f,
+  void Function(DbTransaction tx, void Function(T res) setResult) f,
 );
 
-class ReplaceTxDatabaseAdapter extends SqliteAdapter {
-  ReplaceTxDatabaseAdapter(
-    super.db,
-  );
+class ReplaceTxDatabaseAdapter extends DatabaseAdapter {
+  final DatabaseAdapter delegate;
+
+  ReplaceTxDatabaseAdapter(this.delegate);
 
   _TxFun<dynamic>? customTxFun;
 
   @override
+  Future<RunResult> run(Statement statement) async {
+    return delegate.run(statement);
+  }
+
+  @override
   Future<T> transaction<T>(
-    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+    void Function(DbTransaction tx, void Function(T res) setResult) f,
   ) {
     return customTxFun != null
         ? (customTxFun! as _TxFun<T>).call(f)
-        : super.transaction(f);
+        : delegate.transaction(f);
+  }
+
+  @override
+  Future<List<Row>> query(Statement statement) async {
+    return delegate.query(statement);
+  }
+
+  @override
+  Future<RunResult> runInTransaction(List<Statement> statements) async {
+    return delegate.runInTransaction(statements);
   }
 }

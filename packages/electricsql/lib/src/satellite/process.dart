@@ -1542,12 +1542,12 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     );
     String pos(int i) => builder.makePositionalParam(i);
     int i = 1;
-    final tablesOr = tables
+    String tablesOr() => tables
         .map((_) => '(namespace = ${pos(i++)} AND tablename = ${pos(i++)})')
         .join(' OR ');
     return [
       Statement(
-        'UPDATE $triggers SET flag = ${pos(i++)} WHERE $tablesOr',
+        'UPDATE $triggers SET flag = ${pos(i++)} WHERE ${tablesOr()}',
         [if (flag) 1 else 0, ...namespacesAndTableNames],
       ),
     ];
