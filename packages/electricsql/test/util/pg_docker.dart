@@ -56,9 +56,9 @@ class PostgresServer {
         _pgPassword = pgPassword,
         _databaseName = databaseName ?? 'postgres';
 
-  Future<Endpoint> endpoint() async => Endpoint(
+  Future<Endpoint> endpoint({String? dbName}) async => Endpoint(
         host: 'localhost',
-        database: _databaseName,
+        database: dbName ?? _databaseName,
         username: _pgUser ?? 'postgres',
         password: _pgPassword ?? 'postgres',
         port: await port,

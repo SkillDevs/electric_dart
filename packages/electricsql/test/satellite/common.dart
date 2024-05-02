@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnectionUser;
-import 'package:drift_postgres/drift_postgres.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
@@ -20,9 +19,7 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:postgres/postgres.dart' as pg;
 
-import '../drivers/drift_test.dart';
 import '../support/migrations.dart';
 import '../support/pg_migrations.dart';
 import '../support/postgres.dart';
@@ -290,15 +287,15 @@ Future<SatelliteTestContext> makeContext(
 }
 
 Future<SatelliteTestContext> makePgContext(
-  int port,
+  EmbeddedPostgresDb pgEmbedded,
   String namespace, {
   SatelliteOpts? options,
 }) async {
   final dbName = 'test-${randomValue()}.db';
-  final pgEmbedded = await makePgDatabase(dbName, port);
-  final db = pgEmbedded.db;
 
-  final adapter = DriftAdapter(db);
+  final scopedDb = await initScopedPostgresDatabase(pgEmbedded, dbName);
+
+  final adapter = DriftAdapter(scopedDb.db);
   final migrator =
       PgBundleMigrator(adapter: adapter, migrations: kTestPostgresMigrations);
 
@@ -308,7 +305,7 @@ Future<SatelliteTestContext> makePgContext(
     migrator: migrator,
     namespace: namespace,
     options: options,
-    stop: () async => await pgEmbedded.dispose(),
+    stop: () async => await scopedDb.dispose(),
   );
 }
 

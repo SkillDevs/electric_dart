@@ -26,6 +26,7 @@ import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:electricsql/src/util/types.dart' as t;
 import 'package:fixnum/fixnum.dart';
+import 'package:meta/meta.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
@@ -96,6 +97,7 @@ Object? dialectValue(
   return pgValue;
 }
 
+@isTestGroup
 void processTests({
   required SatelliteTestContext Function() getContext,
   required String namespace,

@@ -10,18 +10,28 @@ import '../serialization.dart';
 
 int port = 4800;
 
-void main() {
+Future<void> main() async {
+  late EmbeddedPostgresDb pgEmbedded;
+
+  setUpAll(() async {
+    pgEmbedded = await makePgDatabase('serialization-tests', port);
+  });
+
+  tearDownAll(() async {
+    await pgEmbedded.dispose();
+  });
+
   serializationTests(
     dialect: Dialect.postgres,
     typeEncoder: kPostgresTypeEncoder,
     typeDecoder: kPostgresTypeDecoder,
     setup: () async {
       final dbName = 'serialization-test-${randomValue()}';
-      final pgEmbedded = await makePgDatabase(dbName, port++);
-      addTearDown(() => pgEmbedded.dispose());
-      final db = pgEmbedded.db;
+      final scopedDb = await initScopedPostgresDatabase(pgEmbedded, dbName);
+      addTearDown(() => scopedDb.dispose());
+
       const namespace = 'public';
-      final adapter = DriftAdapter(db);
+      final adapter = DriftAdapter(scopedDb.db);
 
       return [adapter, kPostgresQueryBuilder, opts(namespace)];
     },
