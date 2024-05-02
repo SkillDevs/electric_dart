@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electricsql/drivers/sqlite3.dart';
+import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -10,10 +11,12 @@ import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
+import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/util.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:test/test.dart';
 
+import '../support/postgres.dart';
 import '../util/sqlite.dart';
 import 'common.dart';
 
@@ -109,10 +112,24 @@ void main() {
     return [SqliteAdapter(db), kSqliteQueryBuilder, namespace, defaults];
   }
 
+  int port = 4800;
+  Future<List<dynamic>> setupPostgres() async {
+    final pgEmbedded = await makePgDatabase('merge-tests', port++);
+    final dbName = 'merge-test-${randomValue()}';
+    final scopedDb = await initScopedPostgresDatabase(pgEmbedded, dbName);
+    final db = scopedDb.db;
+    addTearDown(() async {
+      await scopedDb.dispose();
+      await pgEmbedded.dispose();
+    });
+    const namespace = 'public';
+    final defaults = satelliteDefaults(namespace);
+    return [DriftAdapter(db), kPostgresQueryBuilder, namespace, defaults];
+  }
+
   final envs = <(Dialect dialect, Future<List<dynamic>> Function() setup)>[
     (Dialect.sqlite, setupSqlite),
-    // TODO: IMplement
-    // (Dialect.postgres, setupPostgres),
+    (Dialect.postgres, setupPostgres),
   ];
 
   for (final env in envs) {

@@ -27,7 +27,7 @@ import 'package:test/test.dart';
 
 import '../support/matchers.dart';
 import '../support/satellite_helpers.dart';
-import '../util/sqlite_errors.dart';
+import '../util/db_errors.dart';
 import 'common.dart';
 
 late SatelliteTestContext context;
@@ -70,15 +70,6 @@ Future<({Future<void> connectionFuture})> startSatellite(
   await satellite.start(authConfig);
   satellite.setToken(token);
   final connectionFuture = satellite.connectWithBackoff();
-  // TODO(dart): Is this necessary?
-  /*   .catchError((Object e) {
-        print(e);
-    if (e.toString() == 'terminating connection due to administrator command') {
-      // This is to be expected as we stop Postgres at the end of the test
-      return null;
-    }
-    return e;
-  }); */
   return (connectionFuture: connectionFuture);
 }
 
@@ -203,7 +194,7 @@ void processTests({
         isADbExceptionWithCode(
           builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_TRIGGER,
-          'P0001',
+          PostgresErrors.PG_CONSTRAINT_TRIGGER,
         ),
       ),
     );
@@ -1093,8 +1084,7 @@ void processTests({
         isADbExceptionWithCode(
           builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
-          // TODO(dart): Refactor postgres codes
-          '23503',
+          PostgresErrors.PG_CONSTRAINT_FOREIGNKEY,
         ),
       ),
     );
@@ -1147,8 +1137,7 @@ void processTests({
         isADbExceptionWithCode(
           builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
-          // TODO(dart): Refactor postgres codes
-          '23503',
+          PostgresErrors.PG_CONSTRAINT_FOREIGNKEY,
         ),
       ),
     );
@@ -1289,8 +1278,7 @@ void processTests({
         isADbExceptionWithCode(
           builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
-          // TODO(dart): Refactor postgres codes
-          '23503',
+          PostgresErrors.PG_CONSTRAINT_FOREIGNKEY,
         ),
       ),
     );
@@ -2190,8 +2178,6 @@ void processTests({
     await satellite.performSnapshot();
     expect(await satellite.getEntries(since: 0), <OplogEntry>[]);
   });
-
-  
 
   test('snapshots: generated oplog entries have the correct tags', () async {
     await runMigrations();

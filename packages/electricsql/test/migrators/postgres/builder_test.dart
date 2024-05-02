@@ -50,8 +50,10 @@ WHERE table_name = 'stars';
 ''',
           ),
         )
-        .then((columns) =>
-            columns.map((column) => column['column_name']! as String));
+        .then(
+          (columns) =>
+              columns.map((column) => column['column_name']! as String),
+        );
 
     expect(columns, ['id', 'avatar_url', 'name', 'starred_at', 'username']);
   });

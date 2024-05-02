@@ -10,6 +10,7 @@ import 'package:test/test.dart';
 import '../../drivers/drift_test.dart';
 import '../../support/pg_migrations.dart';
 import '../../support/postgres.dart';
+import '../../util/db_errors.dart';
 
 const port = 2934;
 
@@ -57,7 +58,7 @@ void main() {
       fail('should not occur');
     } catch (err) {
       final errPg = err as pg.ServerException;
-      expect(errPg.code, '23505');
+      expect(errPg.code, PostgresErrors.PG_CONSTRAINT_PRIMARYKEY);
       expect(errPg.detail, 'Key (key)=(key) already exists.');
     }
   });

@@ -30,7 +30,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   final dbDescription = DBSchemaDrift(
     db: db,
     migrations: migrations,
-    // TODO: pgMigrations
+    // TODO(dart): pgMigrations
     pgMigrations: [],
   );
   
