@@ -38,7 +38,7 @@ int i = 1;
 
 void main() {
   setUpAll(() async {
-    pgEmbedded = await makePgDatabase('bundle-migrator-tests', port);
+    pgEmbedded = await makePgDatabase('triggers-tests', port);
   });
 
   tearDownAll(() async {
