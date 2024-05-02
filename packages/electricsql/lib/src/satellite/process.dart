@@ -1267,7 +1267,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       DELETE FROM $shadowTable
       WHERE namespace = ${pos(1)} AND
             tablename = ${pos(2)} AND
-            primaryKey = ${pos(3)};
+            "primaryKey" = ${pos(3)};
     ''';
     return Statement(
       deleteRow,

@@ -56,7 +56,7 @@ void processTagsTests({
 
     await adapter.run(
       Statement(
-        "UPDATE parent SET value = 'local1', other = 'other1' WHERE id = 1",
+        "UPDATE parent SET value = 'local1', other = 3 WHERE id = 1",
       ),
     );
 
@@ -67,7 +67,7 @@ void processTagsTests({
 
     await adapter.run(
       Statement(
-        "UPDATE parent SET value = 'local2', other = 'other2' WHERE id = 1",
+        "UPDATE parent SET value = 'local2', other = 4 WHERE id = 1",
       ),
     );
 
@@ -149,7 +149,7 @@ void processTagsTests({
     // the timestamp in the oplog is not yet set
     final insertEntry = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 1',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 1',
       ),
     );
     expect(insertEntry[0]['timestamp'], null);
@@ -163,7 +163,7 @@ void processTagsTests({
     // Now the timestamp is set
     final insertEntryAfterSnapshot = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 1',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 1',
       ),
     );
     expect(insertEntryAfterSnapshot[0]['timestamp'] != null, isTrue);
@@ -197,7 +197,7 @@ void processTagsTests({
     // their timestamp and clearTags should not be set
     final updateEntry = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 2',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 2',
       ),
     );
 
@@ -206,7 +206,7 @@ void processTagsTests({
 
     final deleteEntry = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 3',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 3',
       ),
     );
 
@@ -215,7 +215,7 @@ void processTagsTests({
 
     final reinsertEntry = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 4',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 4',
       ),
     );
 
@@ -230,7 +230,7 @@ void processTagsTests({
     // the original insert (i.e. clearTags must contain the timestamp of the insert)
     final updateEntryAfterSnapshot = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 2',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 2',
       ),
     );
 
@@ -247,7 +247,7 @@ void processTagsTests({
     // and should contain the tag of the TX in its clearTags
     final deleteEntryAfterSnapshot = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 3',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 3',
       ),
     );
 
@@ -261,7 +261,7 @@ void processTagsTests({
     // and should contain the tag of the TX in its clearTags
     final reinsertEntryAfterSnapshot = await adapter.query(
       Statement(
-        'SELECT timestamp, clearTags FROM _electric_oplog WHERE rowid = 4',
+        'SELECT timestamp, "clearTags" FROM _electric_oplog WHERE rowid = 4',
       ),
     );
 
@@ -280,8 +280,7 @@ void processTagsTests({
 
     // Local INSERT
     final stmts1 = Statement(
-      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?)',
-      <Object?>['1', 'local', null],
+      "INSERT INTO parent (id, value, other) VALUES ('1', 'local', null)",
     );
     await adapter.runInTransaction([stmts1]);
     final txDate1 = await satellite.performSnapshot();
@@ -300,8 +299,7 @@ void processTagsTests({
 
     // Local DELETE
     final stmts2 = Statement(
-      'DELETE FROM parent WHERE id=?',
-      ['1'],
+      "DELETE FROM parent WHERE id='1'",
     );
     await adapter.runInTransaction([stmts2]);
     final txDate2 = await satellite.performSnapshot();
@@ -323,8 +321,7 @@ void processTagsTests({
 
     // Local INSERT
     final stmts3 = Statement(
-      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?)',
-      <Object?>['1', 'local', null],
+      "INSERT INTO parent (id, value, other) VALUES ('1', 'local', null)",
     );
     await adapter.runInTransaction([stmts3]);
     final txDate3 = await satellite.performSnapshot();
@@ -346,7 +343,7 @@ void processTagsTests({
     // apply incomig operation (local operation ack)
     final ackEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       txDate1.millisecondsSinceEpoch,
@@ -392,16 +389,14 @@ void processTagsTests({
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['1', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('1', 'local', null);",
       ),
     );
     stmts.add(Statement('DELETE FROM parent WHERE id = 1'));
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['2', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('2', 'local', null);",
       ),
     );
     stmts.add(Statement('DELETE FROM parent WHERE id = 2'));
@@ -414,7 +409,7 @@ void processTagsTests({
 
     final prevEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       prevTs,
@@ -428,7 +423,7 @@ void processTagsTests({
     );
     final nextEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       nextTs,
@@ -465,7 +460,7 @@ void processTagsTests({
     final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":1}',
         tags: genEncodedTags(
@@ -474,7 +469,7 @@ void processTagsTests({
         ),
       ),
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":2}',
         tags: genEncodedTags(
@@ -511,14 +506,12 @@ void processTagsTests({
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['1', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('1', 'local', null);",
       ),
     );
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['2', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('2', 'local', null);",
       ),
     );
     await adapter.runInTransaction(stmts);
@@ -538,7 +531,7 @@ void processTagsTests({
 
     final prevEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       prevTs.millisecondsSinceEpoch,
@@ -552,7 +545,7 @@ void processTagsTests({
     );
     final nextEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       nextTs.millisecondsSinceEpoch,
@@ -589,13 +582,13 @@ void processTagsTests({
     final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":1}',
         tags: genEncodedTags('remote', [prevTs]),
       ),
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":2}',
         tags: genEncodedTags('remote', [nextTs]),
@@ -628,27 +621,23 @@ void processTagsTests({
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['1', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('1', 'local', null);",
       ),
     );
     stmts.add(
       Statement(
-        'UPDATE parent SET value = ?, other = ? WHERE id = 1',
-        ['local', 'not_null'],
+        "UPDATE parent SET value = 'local', other = 999 WHERE id = 1",
       ),
     );
     // For this key we will choose remote Tx, such that: Local TM < Remote TX
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['2', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('2', 'local', null);",
       ),
     );
     stmts.add(
       Statement(
-        'UPDATE parent SET value = ?, other = ? WHERE id = 1',
-        ['local', 'not_null'],
+        "UPDATE parent SET value = 'local', other = 999 WHERE id = 1",
       ),
     );
     await adapter.runInTransaction(stmts);
@@ -662,7 +651,7 @@ void processTagsTests({
 
     final prevEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       prevTs.millisecondsSinceEpoch,
@@ -677,7 +666,7 @@ void processTagsTests({
 
     final nextEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       nextTs.millisecondsSinceEpoch,
@@ -714,7 +703,7 @@ void processTagsTests({
     final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":1}',
         tags: encodeTags([
@@ -723,7 +712,7 @@ void processTagsTests({
         ]),
       ),
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":2}',
         tags: encodeTags([
@@ -750,7 +739,7 @@ void processTagsTests({
     // for id = 1 CR picks local data before delete, while
     // for id = 2 CR picks remote data
     final expectedUserTable = [
-      {'id': 1, 'value': 'local', 'other': 'not_null'},
+      {'id': 1, 'value': 'local', 'other': 999},
       {'id': 2, 'value': 'remote', 'other': 2},
     ];
     expect(expectedUserTable, userTable);
@@ -768,14 +757,12 @@ void processTagsTests({
     // For this key we will choose remote Tx, such that: Local TM > Remote TX
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['1', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('1', 'local', null);",
       ),
     );
     stmts.add(
       Statement(
-        'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-        ['2', 'local', null],
+        "INSERT INTO parent (id, value, other) VALUES ('2', 'local', null);",
       ),
     );
     await adapter.runInTransaction(stmts);
@@ -844,7 +831,7 @@ void processTagsTests({
     final shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":2}',
         tags: genEncodedTags('remote', [txDate1]),
@@ -867,7 +854,7 @@ void processTagsTests({
 
     final insertEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.update,
       txDate1.millisecondsSinceEpoch,
@@ -882,7 +869,7 @@ void processTagsTests({
     final deleteDate = txDate1.millisecondsSinceEpoch + 1;
     final deleteEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.delete,
       deleteDate,
@@ -909,7 +896,7 @@ void processTagsTests({
     var shadow = await getMatchingShadowEntries(adapter);
     final expectedShadow = [
       ShadowEntry(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKey: '{"id":1}',
         tags: genEncodedTags('remote', [txDate1]),
