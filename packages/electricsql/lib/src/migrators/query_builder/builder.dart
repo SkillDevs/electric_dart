@@ -164,7 +164,7 @@ abstract class QueryBuilder {
   }
 
   /// Modifies the trigger setting for the table identified by its tablename and namespace.
-  String setTriggerSetting(String tableName, bool value, String? namespace);
+  String setTriggerSetting(String tableName, int value, String? namespace);
 
   /// Create a trigger that logs operations into the oplog.
   List<String> createOplogTrigger(

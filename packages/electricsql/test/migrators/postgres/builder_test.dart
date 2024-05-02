@@ -40,7 +40,7 @@ WHERE table_schema = 'public' AND table_name = 'stars';''',
       ),
     );
 
-    final starIdx = tables.indexWhere((tbl) => tbl['name'] == 'stars');
+    final starIdx = tables.indexWhere((tbl) => tbl['table_name'] == 'stars');
     expect(starIdx, greaterThanOrEqualTo(0)); // must exist
 
     final columns = await adapter

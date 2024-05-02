@@ -260,14 +260,10 @@ END;''',
   }
 
   @override
-  String setTriggerSetting(
-    String tableName,
-    bool value,
-    String? namespace,
-  ) {
+  String setTriggerSetting(String tableName, int value, String? namespace) {
     namespace ??= defaultNamespace;
 
-    return "INSERT OR IGNORE INTO _electric_trigger_settings (namespace, tablename, flag) VALUES ('$namespace', '$tableName', ${value ? 1 : 0});";
+    return "INSERT OR IGNORE INTO _electric_trigger_settings (namespace, tablename, flag) VALUES ('$namespace', '$tableName', $value);";
   }
 
   @override

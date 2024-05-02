@@ -74,7 +74,7 @@ List<Statement> generateOplogTriggers(
 
   return <String>[
     // Toggles for turning the triggers on and off
-    builder.setTriggerSetting(tableName, true, namespace),
+    builder.setTriggerSetting(tableName, 1, namespace),
     // Triggers for table ${tableName}
     // ensures primary key is immutable
     dropFkTrigger,

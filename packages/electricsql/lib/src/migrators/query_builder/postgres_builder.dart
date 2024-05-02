@@ -203,7 +203,7 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
               VALUES (
                 '$namespace',
                 '$tableName',
-                '$opType',
+                '${opType.text}',
                 $pk,
                 $newRecord,
                 $oldRecord,
@@ -218,7 +218,7 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
       ''',
       '''
         CREATE TRIGGER ${opTypeLower}_${namespace}_${tableName}_into_oplog
-          AFTER $opType ON "$namespace"."$tableName"
+          AFTER ${opType.text} ON "$namespace"."$tableName"
             FOR EACH ROW
               EXECUTE FUNCTION ${opTypeLower}_${namespace}_${tableName}_into_oplog_function();
       ''',
@@ -443,7 +443,7 @@ IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
   }
 
   @override
-  String setTriggerSetting(String tableName, bool value, String? namespace) {
+  String setTriggerSetting(String tableName, int value, String? namespace) {
     namespace ??= defaultNamespace;
 
     return '''
