@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:electricsql/src/migrators/query_builder/builder.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
@@ -95,15 +96,58 @@ class PostgresBuilder extends QueryBuilder {
   }
 
   @override
-  Statement getLocalTableNames(List<String>? notIn) {
-    // TODO: implement getLocalTableNames
-    throw UnimplementedError();
+  Statement getLocalTableNames([List<String> notIn = const []]) {
+    String tables = '''
+      SELECT table_name AS name
+        FROM information_schema.tables
+        WHERE
+          table_type = 'BASE TABLE' AND
+          table_schema <> 'pg_catalog' AND
+          table_schema <> 'information_schema'
+    ''';
+    if (notIn.isNotEmpty) {
+      tables +=
+          ''' AND table_name NOT IN (${notIn.mapIndexed((i, _) => '\$${i + 1}').join(', ')})''';
+    }
+    return Statement(
+      tables,
+      [...notIn],
+    );
   }
 
   @override
   Statement getTableInfo(String tablename) {
-    // TODO: implement getTableInfo
-    throw UnimplementedError();
+    return Statement(
+      r'''
+        SELECT
+          c.column_name AS name,
+          UPPER(c.data_type) AS type,
+          CASE
+            WHEN c.is_nullable = 'YES' THEN 0
+            ELSE 1
+          END AS notnull,
+          c.column_default AS dflt_value,
+          (
+              SELECT CASE
+                       -- if the column is not part of the primary key
+                       -- then return 0
+                       WHEN NOT pg_attribute.attnum = ANY(pg_index.indkey) THEN 0
+                       -- else, return the position of the column in the primary key
+                       -- pg_index.indkey is indexed from 0 so we do + 1
+                       ELSE array_position(pg_index.indkey, pg_attribute.attnum) + 1
+                     END AS pk
+              FROM pg_class, pg_attribute, pg_index
+              WHERE pg_class.oid = pg_attribute.attrelid AND
+                  pg_class.oid = pg_index.indrelid AND
+                  pg_class.relname = $1 AND
+                  pg_attribute.attname = c.column_name
+            )
+        FROM information_schema.columns AS c
+        WHERE
+          c.table_name = $1;
+      ''',
+      [tablename],
+    );
   }
 
   @override

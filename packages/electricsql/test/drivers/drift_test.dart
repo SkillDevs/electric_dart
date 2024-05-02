@@ -58,7 +58,9 @@ class GenericDb extends GeneratedDatabase {
       // with no tables inside. We prefer to detect early if it is not valid, as it is very common to open an
       // already created database.
       // It also provides a chance for Drift to open the database on the first query that is run
-      await db.customSelect('PRAGMA schema_version').get();
+      if (db.connection.dialect == SqlDialect.sqlite) {
+        await db.customSelect('PRAGMA schema_version').get();
+      }
     } catch (e) {
       await db.close();
       rethrow;
@@ -81,6 +83,9 @@ class GenericDb extends GeneratedDatabase {
 class NoVersionDelegatedDatabase extends DelegatedDatabase {
   // ignore: unreachable_from_main
   final DelegatedDatabase db;
+
+  @override
+  SqlDialect get dialect => db.dialect;
 
   NoVersionDelegatedDatabase(
     this.db,

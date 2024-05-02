@@ -149,11 +149,10 @@ END;''',
   }
 
   @override
-  Statement getLocalTableNames(List<String>? notIn) {
+  Statement getLocalTableNames([List<String> notIn = const []]) {
     final ignore = [...metaTables];
-    if (notIn != null) {
-      ignore.addAll(notIn);
-    }
+    ignore.addAll(notIn);
+
     final tables = '''
       SELECT name FROM sqlite_master
         WHERE type = 'table' AND

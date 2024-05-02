@@ -296,14 +296,7 @@ Future<SatelliteTestContext> makePgContext(
 }) async {
   final dbName = 'test-${randomValue()}.db';
   final pgEmbedded = await makePgDatabase(dbName, port);
-
-  final endpoint = await pgEmbedded.server.endpoint();
-  final db = await GenericDb.open(
-    PgDatabase(
-      endpoint: endpoint,
-      settings: const pg.ConnectionSettings(sslMode: pg.SslMode.disable),
-    ),
-  );
+  final db = pgEmbedded.db;
 
   final adapter = DriftAdapter(db);
   final migrator =
@@ -315,7 +308,7 @@ Future<SatelliteTestContext> makePgContext(
     migrator: migrator,
     namespace: namespace,
     options: options,
-    stop: () async => await pgEmbedded.stop(),
+    stop: () async => await pgEmbedded.dispose(),
   );
 }
 

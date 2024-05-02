@@ -46,16 +46,19 @@ class PostgresServer {
   Future<int> get port => _port.future;
   final String? _pgUser;
   final String? _pgPassword;
+  final String _databaseName;
 
   PostgresServer({
     String? pgUser,
     String? pgPassword,
+    String? databaseName,
   })  : _pgUser = pgUser,
-        _pgPassword = pgPassword;
+        _pgPassword = pgPassword,
+        _databaseName = databaseName ?? 'postgres';
 
   Future<Endpoint> endpoint() async => Endpoint(
         host: 'localhost',
-        database: 'postgres',
+        database: _databaseName,
         username: _pgUser ?? 'postgres',
         password: _pgPassword ?? 'postgres',
         port: await port,
@@ -82,7 +85,7 @@ class PostgresServer {
   }
 }
 
-class EmbeddedPostgres {
+class EmbeddedPostgresServer {
   late final PostgresServer server;
   bool started = false;
   Directory? tempDir;
@@ -91,20 +94,24 @@ class EmbeddedPostgres {
   String? _pgHbaConfContent;
   int? _port;
   String? _name;
+  late String _databaseName;
   late bool _persistent;
 
-  EmbeddedPostgres({
+  EmbeddedPostgresServer({
     String? pgUser,
     String? pgPassword,
     Iterable<String>? initSqls,
     String? pgHbaConfContent,
     int? port,
     String? name,
+    String? databaseName,
     bool persistent = true,
   }) {
+    final effectiveDatabaseName = databaseName ?? 'postgres';
     server = PostgresServer(
       pgUser: pgUser,
       pgPassword: pgPassword,
+      databaseName: effectiveDatabaseName,
     );
 
     _initSqls = initSqls;
@@ -112,6 +119,7 @@ class EmbeddedPostgres {
     _port = port;
     _name = name;
     _persistent = persistent;
+    _databaseName = effectiveDatabaseName;
   }
 
   Future<void> start() async {
@@ -138,6 +146,7 @@ class EmbeddedPostgres {
         pgPassword: server._pgPassword,
         pgHbaConfPath: pgHbaConfPath,
         cleanup: !_persistent,
+        databaseName: _databaseName,
       );
 
       server._containerName.complete(containerName);
@@ -176,7 +185,7 @@ void withPostgresServer(
   String? pgHbaConfContent,
 }) {
   group(name, () {
-    final pg = EmbeddedPostgres(
+    final pg = EmbeddedPostgresServer(
       pgUser: pgUser,
       pgPassword: pgPassword,
       initSqls: initSqls,
@@ -210,6 +219,7 @@ Future<void> _startPostgresContainer({
   String? pgUser,
   String? pgPassword,
   String? pgHbaConfPath,
+  String? databaseName,
   bool cleanup = true,
 }) async {
   final isRunning = await _isPostgresContainerRunning(containerName);
@@ -223,7 +233,7 @@ Future<void> _startPostgresContainer({
     name: containerName,
     version: 'latest',
     pgPort: port,
-    pgDatabase: 'postgres',
+    pgDatabase: databaseName ?? 'postgres',
     pgUser: pgUser ?? 'postgres',
     pgPassword: pgPassword ?? 'postgres',
     cleanup: cleanup,

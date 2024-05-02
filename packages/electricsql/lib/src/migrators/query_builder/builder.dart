@@ -84,7 +84,7 @@ abstract class QueryBuilder {
   );
 
   /// Fetches the names of all tables that are not in `notIn`.
-  Statement getLocalTableNames(List<String>? notIn);
+  Statement getLocalTableNames([List<String> notIn = const []]);
 
   /// Fetches information about the columns of a table.
   /// The information includes all column names, their type,
