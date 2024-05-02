@@ -1,5 +1,4 @@
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
-import 'package:electricsql/src/util/tablename.dart';
 import 'package:test/test.dart';
 
 import '../../support/satellite_helpers.dart';
@@ -10,10 +9,6 @@ const QueryBuilder builder = kSqliteQueryBuilder;
 const String namespace = 'main';
 
 late SatelliteTestContext context;
-final qualifiedParentTableName = const QualifiedTablename(
-  namespace,
-  'parent',
-).toString();
 
 void main() {
   setUp(() async {
@@ -29,7 +24,6 @@ void main() {
     getContext: () => context,
     namespace: namespace,
     builder: builder,
-    qualifiedParentTableName: qualifiedParentTableName,
     getMatchingShadowEntries: getSQLiteMatchingShadowEntries,
   );
 }

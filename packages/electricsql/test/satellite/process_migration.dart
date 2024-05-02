@@ -81,7 +81,6 @@ void processMigrationTests({
   required SatelliteTestContext Function() getContext,
   required String namespace,
   required QueryBuilder builder,
-  required String qualifiedParentTableName,
   required GetMatchingShadowEntries getMatchingShadowEntries,
 }) {
   setUp(() async {
@@ -350,8 +349,7 @@ void processMigrationTests({
     await adapter.runInTransaction(
       [
         Statement(
-          'UPDATE parent SET value = ?, other = ? WHERE id = ?;',
-          ['still local', 5, 1],
+          "UPDATE parent SET value = 'still local', other = 5 WHERE id = 1;",
         ),
       ],
     );
@@ -538,7 +536,7 @@ void processMigrationTests({
     CREATE TABLE "test_items" (
       "id" TEXT NOT NULL,
       CONSTRAINT "test_items_pkey" PRIMARY KEY ("id")
-    ) WITHOUT ROWID;
+    );
     ''',
       table: SatOpMigrate_Table(
         name: 'test_items',
@@ -561,7 +559,7 @@ void processMigrationTests({
       "item_id" TEXT,
       -- CONSTRAINT "test_other_items_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "test_items" ("id"),
       CONSTRAINT "test_other_items_pkey" PRIMARY KEY ("id")
-    ) WITHOUT ROWID;
+    );
     ''',
       table: SatOpMigrate_Table(
         name: 'test_other_items',
@@ -615,14 +613,12 @@ Future<void> populateDB(SatelliteTestContext context) async {
 
   stmts.add(
     Statement(
-      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-      [1, 'local', null],
+      "INSERT INTO parent (id, value, other) VALUES (1, 'local', null);",
     ),
   );
   stmts.add(
     Statement(
-      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-      [2, 'local', null],
+      "INSERT INTO parent (id, value, other) VALUES (2, 'local', null);",
     ),
   );
   await adapter.runInTransaction(stmts);
