@@ -1,9 +1,6 @@
-
 import 'package:electricsql/drivers/drift.dart';
-import 'package:electricsql/drivers/sqlite3.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 import '../../support/postgres.dart';
@@ -53,7 +50,8 @@ WHERE table_name = 'stars';
 ''',
           ),
         )
-        .then((columns) => columns.map((column) => column['column_name']! as String));
+        .then((columns) =>
+            columns.map((column) => column['column_name']! as String));
 
     expect(columns, ['id', 'avatar_url', 'name', 'starred_at', 'username']);
   });
