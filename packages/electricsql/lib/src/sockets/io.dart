@@ -2,6 +2,11 @@ import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+/// The interval at which the client ping the server.
+/// Needed so that Electric doesn't close the connection
+/// https://socket.io/docs/v4/server-options/#pinginterval
+const _kSocketsPingInterval = Duration(seconds: 25);
+
 SocketFactory getDefaultSocketFactory() {
   return WebSocketIOFactory();
 }
@@ -18,6 +23,10 @@ class WebSocketIO extends WebSocketBase {
 
   @override
   WebSocketChannel createSocketChannel(String url) {
-    return IOWebSocketChannel.connect(url, protocols: [protocolVsn]);
+    return IOWebSocketChannel.connect(
+      url,
+      pingInterval: _kSocketsPingInterval,
+      protocols: [protocolVsn],
+    );
   }
 }
