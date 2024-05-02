@@ -7,12 +7,13 @@ import 'package:electricsql/src/util/types.dart';
 
 const kPostgresQueryBuilder = PostgresBuilder();
 
+String quote(String col) => '"$col"';
+
 class PostgresBuilder extends QueryBuilder {
   const PostgresBuilder();
 
   @override
-  // TODO: implement autoincrementPkType
-  String get autoincrementPkType => throw UnimplementedError();
+  String get autoincrementPkType => 'SERIAL PRIMARY KEY';
 
   @override
   List<Statement> batchedInsertOrReplace(
@@ -28,8 +29,7 @@ class PostgresBuilder extends QueryBuilder {
   }
 
   @override
-  // TODO: implement blobType
-  String get blobType => throw UnimplementedError();
+  String get blobType => 'TEXT'; // TODO(dart): Revisar
 
   @override
   Statement countTablesIn(String countName, List<String> tables) {
@@ -39,14 +39,18 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   List<String> createFkCompensationTrigger(
-      String opType,
-      String tableName,
-      String childKey,
-      String fkTableName,
-      String joinedFkPKs,
-      ForeignKey foreignKey,
-      String? namespace,
-      String? fkTableNamespace) {
+    String opType,
+    String tableName,
+    String childKey,
+    String fkTableName,
+    String joinedFkPKs,
+    ForeignKey foreignKey,
+    String? namespace,
+    String? fkTableNamespace,
+  ) {
+    namespace ??= defaultNamespace;
+    fkTableNamespace ??= defaultNamespace;
+
     // TODO: implement createFkCompensationTrigger
     throw UnimplementedError();
   }
@@ -54,43 +58,60 @@ class PostgresBuilder extends QueryBuilder {
   @override
   String createIndex(
       String indexName, QualifiedTablename onTable, List<String> columns) {
-    // TODO: implement createIndex
-    throw UnimplementedError();
+    final namespace = onTable.namespace;
+    final tablename = onTable.tablename;
+    return '''CREATE INDEX IF NOT EXISTS $indexName ON "$namespace"."$tablename" (${columns.map(quote).join(', ')})''';
   }
 
   @override
   List<String> createNoFkUpdateTrigger(
-      String tablename, List<String> pk, String? namespace) {
+    String tablename,
+    List<String> pk,
+    String? namespace,
+  ) {
+    namespace ??= defaultNamespace;
+
     // TODO: implement createNoFkUpdateTrigger
     throw UnimplementedError();
   }
 
   @override
-  List<String> createOplogTrigger(SqlOpType opType, String tableName,
-      String newPKs, String newRows, String oldRows, String? namespace) {
+  List<String> createOplogTrigger(
+    SqlOpType opType,
+    String tableName,
+    String newPKs,
+    String newRows,
+    String oldRows,
+    String? namespace,
+  ) {
+    namespace ??= defaultNamespace;
+
     // TODO: implement createOplogTrigger
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement defaultNamespace
-  String get defaultNamespace => throw UnimplementedError();
+  String get defaultNamespace => 'public';
 
   @override
-  // TODO: implement deferForeignKeys
-  String get deferForeignKeys => throw UnimplementedError();
+  String get deferForeignKeys => 'SET CONSTRAINTS ALL DEFERRED;';
 
   @override
-  // TODO: implement dialect
-  Dialect get dialect => throw UnimplementedError();
+  Dialect get dialect => Dialect.postgres;
 
+  /// **Disables** FKs for the duration of the transaction
   @override
-  // TODO: implement disableForeignKeys
-  String get disableForeignKeys => throw UnimplementedError();
+  String get disableForeignKeys =>
+      'SET LOCAL session_replication_role = replica;';
 
   @override
   String dropTriggerIfExists(
-      String triggerName, String tablename, String? namespace) {
+    String triggerName,
+    String tablename,
+    String? namespace,
+  ) {
+    namespace ??= defaultNamespace;
+
     // TODO: implement dropTriggerIfExists
     throw UnimplementedError();
   }
@@ -194,62 +215,100 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   String makePositionalParam(int i) {
-    // TODO: implement makePositionalParam
-    throw UnimplementedError();
+    return '$paramSign$i';
   }
 
   @override
-  // TODO: implement paramSign
-  String get paramSign => throw UnimplementedError();
+  String get paramSign => r'$';
 
   @override
   String pgOnly(String query) {
-    // TODO: implement pgOnly
-    throw UnimplementedError();
+    return query;
   }
 
   @override
   List<String> pgOnlyQuery(String query) {
-    // TODO: implement pgOnlyQuery
-    throw UnimplementedError();
+    return [query];
   }
 
   @override
   String removeDeletedShadowRows(
       QualifiedTablename oplogTable, QualifiedTablename shadowTable) {
-    // TODO: implement removeDeletedShadowRows
-    throw UnimplementedError();
+    final oplog = '"${oplogTable.namespace}"."${oplogTable.tablename}"';
+    final shadow = '"${shadowTable.namespace}"."${shadowTable.tablename}"';
+    // We do an inner join in a CTE instead of a `WHERE EXISTS (...)`
+    // since this is not reliant on re-executing a query
+    // for every row in the shadow table, but uses a PK join instead.
+    return '''
+      WITH 
+        _relevant_shadows AS (
+          SELECT DISTINCT ON (s.rowid)
+            s.rowid AS rowid,
+            op.optype AS last_optype
+          FROM $oplog AS op
+          INNER JOIN $shadow AS s
+          ON s.namespace = op.namespace
+            AND s.tablename = op.tablename
+            AND s."primaryKey"::jsonb = op."primaryKey"::jsonb
+          WHERE op.timestamp = \$1
+          ORDER BY s.rowid, op.rowid DESC
+        ),
+        _to_be_deleted AS (
+          SELECT rowid FROM _relevant_shadows WHERE last_optype = 'DELETE'
+        )
+      DELETE FROM $shadow
+      WHERE rowid IN (SELECT rowid FROM _to_be_deleted);
+    ''';
   }
 
   @override
   String setTagsForShadowRows(
-      QualifiedTablename oplogTable, QualifiedTablename shadowTable) {
-    // TODO: implement setTagsForShadowRows
-    throw UnimplementedError();
+    QualifiedTablename oplogTable,
+    QualifiedTablename shadowTable,
+  ) {
+    final oplog = '"${oplogTable.namespace}"."${oplogTable.tablename}"';
+    final shadow = '"${shadowTable.namespace}"."${shadowTable.tablename}"';
+    return '''
+      INSERT INTO $shadow (namespace, tablename, "primaryKey", tags)
+        SELECT DISTINCT namespace, tablename, "primaryKey", \$1
+          FROM $oplog AS op
+          WHERE
+            timestamp = \$2
+            AND optype != 'DELETE'
+          ON CONFLICT (namespace, tablename, "primaryKey")
+        DO UPDATE SET tags = EXCLUDED.tags;
+    ''';
   }
 
   @override
   String setTriggerSetting(String tableName, bool value, String? namespace) {
+    namespace ??= defaultNamespace;
+
     // TODO: implement setTriggerSetting
     throw UnimplementedError();
   }
 
   @override
   String sqliteOnly(String query) {
-    // TODO: implement sqliteOnly
-    throw UnimplementedError();
+    return '';
   }
 
   @override
   List<String> sqliteOnlyQuery(String query) {
-    // TODO: implement sqliteOnlyQuery
-    throw UnimplementedError();
+    return [];
   }
 
   @override
-  Statement tableExists(String tableName, String? namespace) {
-    // TODO: implement tableExists
-    throw UnimplementedError();
+  Statement tableExists(
+    String tableName,
+    String? namespace,
+  ) {
+    namespace ??= defaultNamespace;
+
+    return Statement(
+      r'SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2',
+      [namespace, tableName],
+    );
   }
 
   @override
