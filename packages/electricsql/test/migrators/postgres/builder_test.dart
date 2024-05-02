@@ -1,3 +1,6 @@
+@Tags(['postgres'])
+library;
+
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/util/types.dart';

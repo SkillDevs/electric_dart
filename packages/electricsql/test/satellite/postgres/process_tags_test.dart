@@ -1,3 +1,6 @@
+@Tags(['postgres'])
+library;
+
 import 'package:test/test.dart';
 
 import '../../support/postgres.dart';

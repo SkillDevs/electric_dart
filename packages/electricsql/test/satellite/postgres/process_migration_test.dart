@@ -1,3 +1,6 @@
+@Tags(['postgres'])
+library;
+
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:test/test.dart';
 

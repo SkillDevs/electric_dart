@@ -136,91 +136,98 @@ void main() {
     // ignore: unused_local_variable
     final dialect = env.$1;
     final setup = env.$2;
-    test('merge works on oplog entries', () async {
-      final [_adapter, _builder, _namespace, _defaults] = await setup();
+    test(
+      'merge works on oplog entries',
+      tags: [
+        if (dialect == Dialect.postgres) 'postgres',
+      ],
+      () async {
+        final [_adapter, _builder, _namespace, _defaults] = await setup();
 
-      final adapter = _adapter as DatabaseAdapter;
-      final builder = _builder as QueryBuilder;
-      final namespace = _namespace as String;
-      final defaults = _defaults as SatelliteOpts;
+        final adapter = _adapter as DatabaseAdapter;
+        final builder = _builder as QueryBuilder;
+        final namespace = _namespace as String;
+        final defaults = _defaults as SatelliteOpts;
 
-      // Migrate the DB with the necessary tables and triggers
-      final personTable = getPersonTable(namespace);
-      await migrateDb(adapter, personTable, builder);
+        // Migrate the DB with the necessary tables and triggers
+        final personTable = getPersonTable(namespace);
+        await migrateDb(adapter, personTable, builder);
 
-      // Insert a row in the table
-      final insertRowSQL =
-          '''INSERT INTO "${personTable.namespace}"."${personTable.tableName}" (id, name, age, bmi, int8, blob) VALUES (54321, 'John Doe', 30, 25.5, 7, ${builder.hexValue('0001ff')})''';
-      await adapter.run(Statement(insertRowSQL));
+        // Insert a row in the table
+        final insertRowSQL =
+            '''INSERT INTO "${personTable.namespace}"."${personTable.tableName}" (id, name, age, bmi, int8, blob) VALUES (54321, 'John Doe', 30, 25.5, 7, ${builder.hexValue('0001ff')})''';
+        await adapter.run(Statement(insertRowSQL));
 
-      // Fetch the oplog entry for the inserted row
-      final oplogTable =
-          '"${defaults.oplogTable.namespace}"."${defaults.oplogTable.tablename}"';
-      final oplogRows = await adapter.query(
-        Statement(
-          'SELECT * FROM $oplogTable',
-        ),
-      );
-
-      expect(oplogRows.length, 1);
-
-      final Map<String, Object?> opLogRowData = {...oplogRows.first};
-      // Manually set the timestamp so that it's not null
-      opLogRowData['timestamp'] =
-          DateTime.fromMillisecondsSinceEpoch(0).toISOStringUTC();
-      final oplogEntry = opLogEntryFromRow(opLogRowData);
-
-      // Define a transaction that happened concurrently
-      // and inserts a row with the same id but different values
-      final tx = DataTransaction(
-        lsn: kDefaultLogPos,
-        commitTimestamp: toCommitTimestamp('1970-01-02T03:46:42.000Z'),
-        changes: [
-          DataChange(
-            relation: kTestRelations[personTable.tableName]!,
-            type: DataChangeType.insert,
-            record: {
-              // fields must be ordered alphabetically to match the behavior of the triggers
-              'age': 30,
-              'blob': Uint8List.fromList([0, 1, 255]),
-              'bmi': 21.3,
-              'id': 54321,
-              'int8': '224', // Big ints are serialized as strings in the oplog
-              'name': 'John Doe',
-            },
-            tags: [],
+        // Fetch the oplog entry for the inserted row
+        final oplogTable =
+            '"${defaults.oplogTable.namespace}"."${defaults.oplogTable.tablename}"';
+        final oplogRows = await adapter.query(
+          Statement(
+            'SELECT * FROM $oplogTable',
           ),
-        ],
-      );
+        );
 
-      // Merge the oplog entry with the transaction
-      final merged = mergeEntries(
-        'local',
-        [oplogEntry],
-        'remote',
-        fromTransaction(tx, kTestRelations, namespace),
-        kTestRelations,
-      );
+        expect(oplogRows.length, 1);
 
-      final pk = primaryKeyToStr({'id': 54321});
+        final Map<String, Object?> opLogRowData = {...oplogRows.first};
+        // Manually set the timestamp so that it's not null
+        opLogRowData['timestamp'] =
+            DateTime.fromMillisecondsSinceEpoch(0).toISOStringUTC();
+        final oplogEntry = opLogEntryFromRow(opLogRowData);
 
-      // the incoming transaction wins
-      final qualifiedTableName =
-          QualifiedTablename(personTable.namespace, personTable.tableName)
-              .toString();
-      expect(
-        merged[qualifiedTableName]![pk]!.optype,
-        ChangesOpType.upsert,
-      );
-      expect(merged[qualifiedTableName]![pk]!.fullRow, {
-        'id': 54321,
-        'name': 'John Doe',
-        'age': 30,
-        'blob': Uint8List.fromList([0, 1, 255]),
-        'bmi': 21.3,
-        'int8': BigInt.parse('224'),
-      });
-    });
+        // Define a transaction that happened concurrently
+        // and inserts a row with the same id but different values
+        final tx = DataTransaction(
+          lsn: kDefaultLogPos,
+          commitTimestamp: toCommitTimestamp('1970-01-02T03:46:42.000Z'),
+          changes: [
+            DataChange(
+              relation: kTestRelations[personTable.tableName]!,
+              type: DataChangeType.insert,
+              record: {
+                // fields must be ordered alphabetically to match the behavior of the triggers
+                'age': 30,
+                'blob': Uint8List.fromList([0, 1, 255]),
+                'bmi': 21.3,
+                'id': 54321,
+                'int8':
+                    '224', // Big ints are serialized as strings in the oplog
+                'name': 'John Doe',
+              },
+              tags: [],
+            ),
+          ],
+        );
+
+        // Merge the oplog entry with the transaction
+        final merged = mergeEntries(
+          'local',
+          [oplogEntry],
+          'remote',
+          fromTransaction(tx, kTestRelations, namespace),
+          kTestRelations,
+        );
+
+        final pk = primaryKeyToStr({'id': 54321});
+
+        // the incoming transaction wins
+        final qualifiedTableName =
+            QualifiedTablename(personTable.namespace, personTable.tableName)
+                .toString();
+        expect(
+          merged[qualifiedTableName]![pk]!.optype,
+          ChangesOpType.upsert,
+        );
+        expect(merged[qualifiedTableName]![pk]!.fullRow, {
+          'id': 54321,
+          'name': 'John Doe',
+          'age': 30,
+          'blob': Uint8List.fromList([0, 1, 255]),
+          'bmi': 21.3,
+          'int8': BigInt.parse('224'),
+        });
+      },
+    );
   }
 }
 

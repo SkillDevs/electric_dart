@@ -46,6 +46,14 @@ scripts:
     packageFilters:
       scope: 'electricsql'
 
+  # Doesn't run the postgres tests
+  test_electric_fast:
+    run: |
+      melos exec -- \
+        "dart test -x postgres"
+    packageFilters:
+      scope: 'electricsql'
+
   deps_downgrade:
     run: |
       melos exec -c 1 -- \
