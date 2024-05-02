@@ -35,9 +35,9 @@ String get dbName => context.dbName;
 
 late String clientId;
 late DateTime txDate;
+late QueryBuilder globalBuilder;
 
 class ColumnInfo with EquatableMixin {
-  int cid;
   String name;
   String type;
   int notnull;
@@ -45,7 +45,6 @@ class ColumnInfo with EquatableMixin {
   int pk;
 
   ColumnInfo({
-    required this.cid,
     required this.name,
     required this.type,
     required this.notnull,
@@ -54,7 +53,7 @@ class ColumnInfo with EquatableMixin {
   });
 
   @override
-  List<Object?> get props => [cid, name, type, notnull, dfltValue, pk];
+  List<Object?> get props => [name, type, notnull, dfltValue, pk];
 }
 
 Future<void> commonSetup(SatelliteTestContext context) async {
@@ -85,6 +84,7 @@ void processMigrationTests({
 }) {
   setUp(() async {
     context = getContext();
+    globalBuilder = builder;
   });
 
   test('setup populates DB', () async {
@@ -322,7 +322,7 @@ void processMigrationTests({
     // Check the row that was inserted in the new table
     final newTableRows = await adapter.query(
       Statement(
-        'SELECT * FROM NewTable',
+        'SELECT * FROM "NewTable"',
       ),
     );
 
@@ -625,14 +625,10 @@ Future<void> populateDB(SatelliteTestContext context) async {
 }
 
 Future<void> assertDbHasTables(List<String> tables) async {
-  final schemaRows = await adapter.query(
-    Statement(
-      "SELECT tbl_name FROM sqlite_schema WHERE type = 'table'",
-    ),
-  );
+  final schemaRows = await adapter.query(globalBuilder.getLocalTableNames());
 
   final tableNames = Set<String>.from(
-    schemaRows.map((r) => r['tbl_name']! as String),
+    schemaRows.map((r) => r['name']! as String),
   );
   for (final tbl in tables) {
     expect(tableNames, contains(tbl));
@@ -640,15 +636,10 @@ Future<void> assertDbHasTables(List<String> tables) async {
 }
 
 Future<List<ColumnInfo>> getTableInfo(String table) async {
-  final rows = await adapter.query(
-    Statement(
-      'pragma table_info($table);',
-    ),
-  );
+  final rows = await adapter.query(globalBuilder.getTableInfo(table));
 
   return rows.map((r) {
     return ColumnInfo(
-      cid: r['cid']! as int,
       name: r['name']! as String,
       type: r['type']! as String,
       notnull: r['notnull']! as int,
@@ -683,7 +674,7 @@ final createTable = SchemaChange(
   ),
   migrationType: SatOpMigrate_Type.CREATE_TABLE,
   sql: '''
-    CREATE TABLE NewTable(
+    CREATE TABLE "NewTable"(
          id TEXT NOT NULL,
          foo INTEGER,
          bar TEXT,
@@ -787,10 +778,9 @@ Future<void> checkMigrationIsApplied() async {
 
   final newTableInfo = await getTableInfo('NewTable');
 
-  expect(newTableInfo, [
+  expect(newTableInfo.toSet(), {
     // id, foo, bar
     ColumnInfo(
-      cid: 0,
       name: 'id',
       type: 'TEXT',
       notnull: 1,
@@ -798,7 +788,6 @@ Future<void> checkMigrationIsApplied() async {
       pk: 1,
     ),
     ColumnInfo(
-      cid: 1,
       name: 'foo',
       type: 'INTEGER',
       notnull: 0,
@@ -806,14 +795,13 @@ Future<void> checkMigrationIsApplied() async {
       pk: 0,
     ),
     ColumnInfo(
-      cid: 2,
       name: 'bar',
       type: 'TEXT',
       notnull: 0,
       dfltValue: null,
       pk: 0,
     ),
-  ]);
+  });
 
   final parentTableInfo = await getTableInfo('parent');
   final parentTableHasColumn = parentTableInfo.any((col) {
