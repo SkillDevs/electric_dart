@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:electricsql/src/migrators/query_builder/builder.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -17,15 +16,35 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   List<Statement> batchedInsertOrReplace(
-      String table,
-      List<String> columns,
-      List<Map<String, Object?>> records,
-      List<String> conflictCols,
-      List<String> updateCols,
-      int maxSqlParameters,
-      String? schema) {
-    // TODO: implement batchedInsertOrReplace
-    throw UnimplementedError();
+    String table,
+    List<String> columns,
+    List<Map<String, Object?>> records,
+    List<String> conflictCols,
+    List<String> updateCols,
+    int maxSqlParameters,
+    String? schema,
+  ) {
+    schema ??= defaultNamespace;
+    final baseSql =
+        '''INSERT INTO "$schema"."$table" (${columns.map(quote).join(', ')}) VALUES ''';
+    final statements = prepareInsertBatchedStatements(
+      baseSql,
+      columns,
+      records,
+      maxSqlParameters,
+    );
+    return statements
+        .map(
+          (stmt) => Statement(
+            '''
+        ${stmt.sql}
+        ON CONFLICT (${conflictCols.map(quote).join(', ')}) DO UPDATE
+        SET ${updateCols.map((col) => '${quote(col)} = EXCLUDED.${quote(col)}').join(', ')};
+      ''',
+            stmt.args,
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -60,13 +79,55 @@ class PostgresBuilder extends QueryBuilder {
     namespace ??= defaultNamespace;
     fkTableNamespace ??= defaultNamespace;
 
-    // TODO: implement createFkCompensationTrigger
-    throw UnimplementedError();
+    final opTypeLower = opType.toLowerCase();
+
+    return [
+      '''
+        CREATE OR REPLACE FUNCTION compensation_${opTypeLower}_${namespace}_${tableName}_${childKey}_into_oplog_function()
+        RETURNS TRIGGER AS \$\$
+        BEGIN
+          DECLARE
+            flag_value INTEGER;
+            meta_value INTEGER;
+          BEGIN
+            SELECT flag INTO flag_value FROM "$namespace"._electric_trigger_settings WHERE namespace = '$namespace' AND tablename = '$tableName';
+    
+            SELECT value INTO meta_value FROM "$namespace"._electric_meta WHERE key = 'compensations';
+    
+            IF flag_value = 1 AND meta_value = 1 THEN
+              INSERT INTO "$namespace"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
+              SELECT
+                '$fkTableNamespace',
+                '$fkTableName',
+                'COMPENSATION',
+                ${removeSpaceAndNullValuesFromJson(createPKJsonObject(joinedFkPKs))},
+                jsonb_build_object($joinedFkPKs),
+                NULL,
+                NULL
+              FROM "$fkTableNamespace"."$fkTableName"
+              WHERE "${foreignKey.parentKey}" = NEW."${foreignKey.childKey}";
+            END IF;
+    
+            RETURN NEW;
+          END;
+        END;
+        \$\$ LANGUAGE plpgsql;
+        ''',
+      '''
+          CREATE TRIGGER compensation_${opTypeLower}_${namespace}_${tableName}_${childKey}_into_oplog
+            AFTER $opType ON "$namespace"."$tableName"
+              FOR EACH ROW
+                EXECUTE FUNCTION compensation_${opTypeLower}_${namespace}_${tableName}_${childKey}_into_oplog_function();
+        ''',
+    ];
   }
 
   @override
   String createIndex(
-      String indexName, QualifiedTablename onTable, List<String> columns) {
+    String indexName,
+    QualifiedTablename onTable,
+    List<String> columns,
+  ) {
     final namespace = onTable.namespace;
     final tablename = onTable.tablename;
     return '''CREATE INDEX IF NOT EXISTS $indexName ON "$namespace"."$tablename" (${columns.map(quote).join(', ')})''';
@@ -80,8 +141,28 @@ class PostgresBuilder extends QueryBuilder {
   ) {
     namespace ??= defaultNamespace;
 
-    // TODO: implement createNoFkUpdateTrigger
-    throw UnimplementedError();
+    return [
+      '''
+        CREATE OR REPLACE FUNCTION update_ensure_${namespace}_${tablename}_primarykey_function()
+        RETURNS TRIGGER AS \$\$
+        BEGIN
+          ${pk.map(
+            (col) => '''
+IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
+  RAISE EXCEPTION 'Cannot change the value of column $col as it belongs to the primary key';
+END IF;''',
+          ).join('\n')}
+          RETURN NEW;
+        END;
+        \$\$ LANGUAGE plpgsql;
+      ''',
+      '''
+      CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
+        BEFORE UPDATE ON "$namespace"."$tablename"
+          FOR EACH ROW
+            EXECUTE FUNCTION update_ensure_${namespace}_${tablename}_primarykey_function();
+      ''',
+    ];
   }
 
   @override
@@ -95,8 +176,53 @@ class PostgresBuilder extends QueryBuilder {
   ) {
     namespace ??= defaultNamespace;
 
-    // TODO: implement createOplogTrigger
-    throw UnimplementedError();
+    final opTypeLower = opType.text.toLowerCase();
+    final pk = createPKJsonObject(newPKs);
+    // Update has both the old and the new row
+    // Delete only has the old row
+    final newRecord =
+        opType == SqlOpType.delete ? 'NULL' : createJsonbObject(newRows);
+    // Insert only has the new row
+    final oldRecord =
+        opType == SqlOpType.insert ? 'NULL' : createJsonbObject(oldRows);
+
+    return [
+      '''
+        CREATE OR REPLACE FUNCTION ${opTypeLower}_${namespace}_${tableName}_into_oplog_function()
+        RETURNS TRIGGER AS \$\$
+        BEGIN
+          DECLARE
+            flag_value INTEGER;
+          BEGIN
+            -- Get the flag value from _electric_trigger_settings
+            SELECT flag INTO flag_value FROM "$namespace"._electric_trigger_settings WHERE namespace = '$namespace' AND tablename = '$tableName';
+    
+            IF flag_value = 1 THEN
+              -- Insert into _electric_oplog
+              INSERT INTO "$namespace"._electric_oplog (namespace, tablename, optype, "primaryKey", "newRow", "oldRow", timestamp)
+              VALUES (
+                '$namespace',
+                '$tableName',
+                '$opType',
+                $pk,
+                $newRecord,
+                $oldRecord,
+                NULL
+              );
+            END IF;
+    
+            RETURN NEW;
+          END;
+        END;
+        \$\$ LANGUAGE plpgsql;
+      ''',
+      '''
+        CREATE TRIGGER ${opTypeLower}_${namespace}_${tableName}_into_oplog
+          AFTER $opType ON "$namespace"."$tableName"
+            FOR EACH ROW
+              EXECUTE FUNCTION ${opTypeLower}_${namespace}_${tableName}_into_oplog_function();
+      ''',
+    ];
   }
 
   @override
@@ -120,9 +246,7 @@ class PostgresBuilder extends QueryBuilder {
     String? namespace,
   ) {
     namespace ??= defaultNamespace;
-
-    // TODO: implement dropTriggerIfExists
-    throw UnimplementedError();
+    return 'DROP TRIGGER IF EXISTS $triggerName ON "$namespace"."$tablename";';
   }
 
   @override
@@ -181,8 +305,7 @@ class PostgresBuilder extends QueryBuilder {
   }
 
   @override
-  // TODO: implement getVersion
-  String get getVersion => throw UnimplementedError();
+  String get getVersion => 'SELECT version();';
 
   @override
   String hexValue(String hexString) {
@@ -270,7 +393,9 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   String removeDeletedShadowRows(
-      QualifiedTablename oplogTable, QualifiedTablename shadowTable) {
+    QualifiedTablename oplogTable,
+    QualifiedTablename shadowTable,
+  ) {
     final oplog = '"${oplogTable.namespace}"."${oplogTable.tablename}"';
     final shadow = '"${shadowTable.namespace}"."${shadowTable.tablename}"';
     // We do an inner join in a CTE instead of a `WHERE EXISTS (...)`
@@ -321,8 +446,11 @@ class PostgresBuilder extends QueryBuilder {
   String setTriggerSetting(String tableName, bool value, String? namespace) {
     namespace ??= defaultNamespace;
 
-    // TODO: implement setTriggerSetting
-    throw UnimplementedError();
+    return '''
+INSERT INTO "$namespace"."_electric_trigger_settings" ("namespace", "tablename", "flag")
+VALUES ('$namespace', '$tableName', $value)
+ON CONFLICT DO NOTHING;
+''';
   }
 
   @override
@@ -350,7 +478,34 @@ class PostgresBuilder extends QueryBuilder {
 
   @override
   String toHex(String column) {
-    // TODO: implement toHex
-    throw UnimplementedError();
+    return "encode($column::bytea, 'hex')";
+  }
+
+  // This creates a JSON object that is equivalent
+  // to the JSON objects created by SQLite
+  // in that it does not re-order the keys
+  // and removes whitespaces between keys and values.
+  String createPKJsonObject(String rows) {
+    // `json_build_object` introduces whitespaces
+    // e.g. `{"a" : 5, "b" : 6}`
+    // But the json produced by SQLite is `{"a":5,"b":6}`.
+    // So this may lead to problems because we use this JSON string
+    // of the primary key to compare local and remote entries.
+    // But the changes for the same PK would be considered to be different PKs
+    // if e.g. the local change is PG and the remote change is SQLite.
+    // We use `json_strip_nulls` on the PK as it removes the whitespaces.
+    // It also removes `null` values from the PK. Therefore, it is important
+    // that the SQLite oplog triggers also remove `null` values from the PK.
+    return 'json_strip_nulls(json_build_object($rows))';
+  }
+
+  String createJsonbObject(String rows) {
+    return 'jsonb_build_object($rows)';
+  }
+
+  // removes null values from the json object
+  // but most importantly also removes whitespaces introduced by `jsonb_build_object`
+  String removeSpaceAndNullValuesFromJson(String j) {
+    return 'json_strip_nulls($j)';
   }
 }
