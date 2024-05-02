@@ -149,18 +149,18 @@ class PostgresBuilder extends QueryBuilder {
           ${pk.map(
             (col) => '''
 IF OLD."$col" IS DISTINCT FROM NEW."$col" THEN
-  RAISE EXCEPTION 'Cannot change the value of column $col as it belongs to the primary key';
-END IF;''',
+            RAISE EXCEPTION 'Cannot change the value of column $col as it belongs to the primary key';
+          END IF;''',
           ).join('\n')}
           RETURN NEW;
         END;
         \$\$ LANGUAGE plpgsql;
       ''',
       '''
-      CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
-        BEFORE UPDATE ON "$namespace"."$tablename"
-          FOR EACH ROW
-            EXECUTE FUNCTION update_ensure_${namespace}_${tablename}_primarykey_function();
+        CREATE TRIGGER update_ensure_${namespace}_${tablename}_primarykey
+          BEFORE UPDATE ON "$namespace"."$tablename"
+            FOR EACH ROW
+              EXECUTE FUNCTION update_ensure_${namespace}_${tablename}_primarykey_function();
       ''',
     ];
   }

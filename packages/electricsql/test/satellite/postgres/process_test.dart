@@ -1,8 +1,5 @@
-import 'package:drift/drift.dart';
-import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/util/tablename.dart';
-import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
 import '../../support/postgres.dart';

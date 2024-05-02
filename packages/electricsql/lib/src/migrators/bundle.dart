@@ -155,7 +155,6 @@ abstract class BundleMigratorBase implements Migrator {
         '''
 INSERT INTO "$namespace"."$tableName" (version, applied_at)
 VALUES (${queryBuilder.makePositionalParam(1)}, ${queryBuilder.makePositionalParam(2)});''',
-        // TODO: Why in the official client it does .toString()
         [version, DateTime.now().millisecondsSinceEpoch],
       ),
     ]);
