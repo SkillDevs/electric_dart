@@ -1,10 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:drift/drift.dart';
+import 'package:drift_postgres/drift_postgres.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/util.dart';
+import 'package:postgres/postgres.dart' as pg;
 import 'package:satellite_dart_client/drift/database.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
@@ -13,15 +17,35 @@ import 'package:satellite_dart_client/util/json.dart';
 import 'package:satellite_dart_client/util/pretty_output.dart';
 
 late String dbName;
+late QueryBuilder builder;
 int? tokenExpirationMillis;
 
 typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
 Future<ClientDatabase> makeDb(String dbPath) async {
-  final db = ClientDatabase(NativeDatabase(File(dbPath)));
-  await db.customSelect('PRAGMA foreign_keys = ON;').get();
   dbName = dbPath;
+  final dialectEnv = Platform.environment['DIALECT'];
+  print("DIALECT: $dialectEnv");
+
+  ClientDatabase db;
+  if (dialectEnv == 'Postgres') {
+    builder = kPostgresQueryBuilder;
+    db = ClientDatabase(PgDatabase(endpoint: makePgEndpoint(dbName)));
+  } else {
+    builder = kSqliteQueryBuilder;
+    db = ClientDatabase(NativeDatabase(File(dbPath)));
+    await db.customSelect('PRAGMA foreign_keys = ON;').get();
+  }
   return db;
+}
+
+pg.Endpoint makePgEndpoint(String dbName) {
+  return pg.Endpoint(
+    host: 'pg_1',
+    database: dbName,
+    username: 'postgres',
+    password: 'password',
+  );
 }
 
 Future<MyDriftElectricClient> electrifyDb(
@@ -39,10 +63,21 @@ Future<MyDriftElectricClient> electrifyDb(
 
   final migrations = migrationsFromJson(migrationsJ);
 
+  final List<Migration> sqliteMigrations;
+  final List<Migration> pgMigrations;
+  if (Platform.environment['DIALECT'] == 'Postgres') {
+    sqliteMigrations = [];
+    pgMigrations = migrations;
+  } else {
+    sqliteMigrations = migrations;
+    pgMigrations = [];
+  }
+
   final result = await electrify<ClientDatabase>(
     dbName: dbName,
     db: db,
-    migrations: migrations,
+    migrations: sqliteMigrations,
+    pgMigrations: pgMigrations,
     config: config,
   );
 
@@ -134,18 +169,13 @@ Future<void> lowLevelSubscribe(
 }
 
 Future<Rows> getTables(DriftElectricClient electric) async {
-  final rows = await electric.db
-      .customSelect("SELECT name FROM sqlite_master WHERE type='table';")
-      .get();
-  return _toRows(rows);
+  final rows = await electric.adapter.query(builder.getLocalTableNames());
+  return Rows(rows);
 }
 
 Future<Rows> getColumns(DriftElectricClient electric, String table) async {
-  final rows = await electric.db.customSelect(
-    "SELECT * FROM pragma_table_info(?);",
-    variables: [Variable.withString(table)],
-  ).get();
-  return _toRows(rows);
+  final rows = await electric.adapter.query(builder.getTableInfo(table));
+  return Rows(rows);
 }
 
 Future<Rows> getRows(DriftElectricClient electric, String table) async {
@@ -358,7 +388,7 @@ Future<SingleRow> writeFloat(
 
 Future<String?> getJsonRaw(MyDriftElectricClient electric, String id) async {
   final res = await electric.db.customSelect(
-    'SELECT js FROM jsons WHERE id = ?;',
+    'SELECT js FROM jsons WHERE id = ${builder.makePositionalParam(1)};',
     variables: [Variable(id)],
   ).get();
   return res[0].read<String?>('js');
@@ -366,10 +396,18 @@ Future<String?> getJsonRaw(MyDriftElectricClient electric, String id) async {
 
 Future<String?> getJsonbRaw(MyDriftElectricClient electric, String id) async {
   final res = await electric.db.customSelect(
-    'SELECT jsb FROM jsons WHERE id = ?;',
+    'SELECT jsb FROM jsons WHERE id = ${builder.makePositionalParam(1)};',
     variables: [Variable(id)],
   ).get();
-  return res[0].read<String?>('jsb');
+
+  final Object? j = res[0].read<Object?>('jsb');
+
+  if (builder.dialect == Dialect.postgres) {
+    // Postgres stores JSON so we turn it into a string for the CLI
+    return jsonEncode(j);
+  } else {
+    return j as String?;
+  }
 }
 
 Future<SingleRow> getJson(MyDriftElectricClient electric, String id) async {
@@ -498,7 +536,9 @@ Future<void> insertExtendedInto(
 
   final columns = colToVal.keys.toList();
   final columnNames = columns.join(", ");
-  final placeholders = columns.map((_) => "?").join(", ");
+  final placeholders = columns
+      .mapIndexed((i, _) => builder.makePositionalParam(i + 1))
+      .join(", ");
 
   final args = colToVal.values.toList();
 

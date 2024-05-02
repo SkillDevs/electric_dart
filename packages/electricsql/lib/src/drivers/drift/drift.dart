@@ -21,6 +21,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   required String dbName,
   required DB db,
   required List<Migration> migrations,
+  required List<Migration> pgMigrations,
   required ElectricConfig config,
   ElectrifyOptions? opts,
 }) async {
@@ -30,8 +31,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   final dbDescription = DBSchemaDrift(
     db: db,
     migrations: migrations,
-    // TODO(dart): pgMigrations
-    pgMigrations: [],
+    pgMigrations: pgMigrations,
   );
   
   final driftDialect = db.typeMapping.dialect;
