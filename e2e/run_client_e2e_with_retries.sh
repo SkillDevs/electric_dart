@@ -3,7 +3,7 @@
 set -x
 
 ATTEMPTS=3
-MAKE_COMMAND=test_client_only
+MAKE_COMMAND=test-satellite-only
 
 for i in $(seq 1 $ATTEMPTS); do
     echo "Attempt $i"
