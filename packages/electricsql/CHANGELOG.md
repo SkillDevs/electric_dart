@@ -2,6 +2,7 @@
 
 * Add a escape hatch method `syncTableRaw` to allow creating a shape subscription manually, without the `drift` API. Using `syncTable` is still recommended.
 * Fix error when the websocket close code or reason are null.
+* Send websocket pings to avoid the Electric service closing the connection.
 
 
 ## 0.6.0
