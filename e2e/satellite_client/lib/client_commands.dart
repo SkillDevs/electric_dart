@@ -193,7 +193,7 @@ Future<Rows> getColumns(DriftElectricClient electric, String table) async {
 Future<Rows> getRows(DriftElectricClient electric, String table) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM $table;",
+        'SELECT * FROM "$table";',
       )
       .get();
   return _toRows(rows);
@@ -311,7 +311,7 @@ Future<void> getDatetimes(MyDriftElectricClient electric) async {
 Future<Rows> getItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM items;",
+        'SELECT * FROM "items";',
       )
       .get();
   return _toRows(rows);
@@ -320,7 +320,7 @@ Future<Rows> getItems(MyDriftElectricClient electric) async {
 Future<Rows> getItemIds(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT id FROM items;",
+        'SELECT id FROM "items";',
       )
       .get();
   return _toRows(rows);
@@ -345,7 +345,7 @@ Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
 Future<Rows> getUUIDs(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM Uuids;",
+        'SELECT * FROM "Uuids";',
       )
       .get();
   return _toRows(rows);
@@ -502,7 +502,7 @@ Future<Rows> getItemColumns(
     MyDriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT $column FROM $table;",
+        'SELECT $column FROM "$table";',
       )
       .get();
   return _toRows(rows);
@@ -512,12 +512,9 @@ Future<void> insertItem(
     MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
-      await electric.db.customInsert(
-        "INSERT INTO items(id, content) VALUES (?,?);",
-        variables: [
-          Variable.withString(genUUID()),
-          Variable.withString(key),
-        ],
+      await electric.db.customStatement(
+        'INSERT INTO "items"(id, content) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)});',
+        [genUUID(), key],
       );
     }
   });
@@ -554,9 +551,9 @@ Future<void> insertExtendedInto(
 
   final args = colToVal.values.toList();
 
-  await electric.db.customInsert(
-    "INSERT INTO $table($columnNames) VALUES ($placeholders) RETURNING *;",
-    variables: dynamicArgsToVariables(args),
+  await electric.db.customStatement(
+    'INSERT INTO "$table"($columnNames) VALUES ($placeholders) RETURNING *;',
+    args,
   );
 }
 
@@ -566,7 +563,7 @@ Future<void> deleteItem(
 ) async {
   for (final key in keys) {
     await electric.db.customUpdate(
-      "DELETE FROM items WHERE content = ?;",
+      'DELETE FROM "items" WHERE content = ${builder.makePositionalParam(1)};',
       variables: [Variable.withString(key)],
     );
   }
@@ -575,7 +572,7 @@ Future<void> deleteItem(
 Future<Rows> getOtherItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM other_items;",
+        'SELECT * FROM "other_items";',
       )
       .get();
   return _toRows(rows);
@@ -585,12 +582,9 @@ Future<void> insertOtherItem(
     MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
-      await electric.db.customInsert(
-        "INSERT INTO other_items(id, content) VALUES (?,?);",
-        variables: [
-          Variable.withString(genUUID()),
-          Variable.withString(key),
-        ],
+      await electric.db.customStatement(
+        'INSERT INTO "other_items"(id, content) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)});',
+        [genUUID(), key],
       );
     }
   });
