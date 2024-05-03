@@ -375,9 +375,9 @@ Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int? i2,
     final item = await electric.db.ints.insertReturning(
       IntsCompanion.insert(
         id: id,
-      i2: Value(i2),
-      i4: Value(i4),
-      i8: Value(i8),
+        i2: Value(i2),
+        i4: Value(i4),
+        i8: Value(i8),
       ),
     );
     return SingleRow.fromItem(item);
@@ -424,14 +424,17 @@ Future<String?> getJsonbRaw(MyDriftElectricClient electric, String id) async {
     variables: [Variable(id)],
   ).get();
 
-  final Object? j = res[0].read<Object?>('jsb');
+  final Object? j = res[0].data['jsb'];
 
+  final Object? effectiveJ;
   if (builder.dialect == Dialect.postgres) {
-    // Postgres stores JSON so we turn it into a string for the CLI
-    return jsonEncode(j);
+    // Postgres stores JSON so we just use that one
+    effectiveJ = j;
   } else {
-    return j as String?;
+    final jStr = j as String;
+    effectiveJ = jsonDecode(jStr);
   }
+  return valueToPrettyStr(effectiveJ);
 }
 
 Future<SingleRow> getJson(MyDriftElectricClient electric, String id) async {
