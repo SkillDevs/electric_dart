@@ -5,8 +5,6 @@ import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/util/proto.dart';
 
-const _kPort = 30002;
-
 typedef RpcResponse = List<Object>;
 
 typedef RegularExpectation = ({SatMsgType msgType, Object responses});
@@ -17,8 +15,8 @@ class SatelliteWSServerStub {
   final Map<String, List<Object>> rpcResponses = {};
   late final WebSocket socket;
 
-  Future<void> start() async {
-    server = await HttpServer.bind(InternetAddress.loopbackIPv4, _kPort);
+  Future<int> start() async {
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     // print('Listening on localhost:${server.port}');
 
     WebSocket? _socketClient;
@@ -50,6 +48,8 @@ class SatelliteWSServerStub {
         await request.response.close();
       }
     });
+
+    return server.port;
   }
 
   Future<void> _handleMessage(Uint8List data) async {

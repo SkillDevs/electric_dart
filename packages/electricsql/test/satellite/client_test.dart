@@ -31,14 +31,14 @@ late String token;
 void main() {
   setUp(() async {
     server = SatelliteWSServerStub();
-    await server.start();
+    final port = await server.start();
 
     client = SatelliteClient(
       dbDescription: kTestDbDescription,
       socketFactory: WebSocketIOFactory(),
       opts: SatelliteClientOpts(
         host: '127.0.0.1',
-        port: 30002,
+        port: port,
         timeout: 10000,
         ssl: false,
         pushPeriod: 100,

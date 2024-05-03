@@ -112,7 +112,7 @@ void main() {
     return [SqliteAdapter(db), kSqliteQueryBuilder, namespace, defaults];
   }
 
-  int port = 4800;
+  int port = 4700;
   Future<List<dynamic>> setupPostgres() async {
     final pgEmbedded = await makePgDatabase('merge-tests', port++);
     final dbName = 'merge-test-${randomValue()}';
