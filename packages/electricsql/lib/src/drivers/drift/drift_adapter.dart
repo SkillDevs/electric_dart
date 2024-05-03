@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class DriftAdapter implements DatabaseAdapter {
@@ -11,23 +12,13 @@ class DriftAdapter implements DatabaseAdapter {
 
   @override
   Future<List<Row>> query(Statement statement) async {
-    final rows = await db
-        .customSelect(
-          statement.sql,
-          variables: _dynamicArgsToVariables(statement.args),
-        )
-        .get();
-
+    final rows = await _wrapQuery(db, statement);
     return rows.map((e) => e.data).toList();
   }
 
   @override
   Future<RunResult> run(Statement statement) async {
-    final numChanges = await db.customUpdate(
-      statement.sql,
-      variables: _dynamicArgsToVariables(statement.args),
-    );
-
+    final numChanges = await _wrapUpdate(db, statement);
     return RunResult(rowsAffected: numChanges);
   }
 
@@ -36,10 +27,7 @@ class DriftAdapter implements DatabaseAdapter {
     return db.transaction(() async {
       int rowsAffected = 0;
       for (final statement in statements) {
-        final changes = await db.customUpdate(
-          statement.sql,
-          variables: _dynamicArgsToVariables(statement.args),
-        );
+        final changes = await _wrapUpdate(db, statement);
         rowsAffected += changes;
       }
       return RunResult(rowsAffected: rowsAffected);
@@ -82,13 +70,7 @@ class Transaction implements DbTransaction {
     void Function(DbTransaction tx, List<Row> res) successCallback, [
     void Function(Object error)? errorCallback,
   ]) {
-    adapter.db
-        .customSelect(
-          statement.sql,
-          variables: _dynamicArgsToVariables(statement.args),
-        )
-        .get()
-        .then((rows) {
+    _wrapQuery(adapter.db, statement).then((rows) {
       successCallback(
         this,
         rows.map((e) => e.data).toList(),
@@ -105,12 +87,7 @@ class Transaction implements DbTransaction {
     void Function(DbTransaction tx, RunResult result)? successCallback, [
     void Function(Object error)? errorCallback,
   ]) {
-    adapter.db
-        .customUpdate(
-      statement.sql,
-      variables: _dynamicArgsToVariables(statement.args),
-    )
-        .then((rowsAffected) {
+    _wrapUpdate(adapter.db, statement).then((rowsAffected) {
       successCallback?.call(
         this,
         RunResult(
@@ -122,6 +99,38 @@ class Transaction implements DbTransaction {
       signalFailure(e);
     });
   }
+}
+
+Future<List<QueryRow>> _wrapQuery(
+  DatabaseConnectionUser db,
+  Statement stmt,
+) async {
+  try {
+    // print("STATEMENT: ${_statementToString(stmt)}");
+    final variables = _dynamicArgsToVariables(stmt.args);
+    return await db.customSelect(stmt.sql, variables: variables).get();
+  } catch (e) {
+    logger.error('Query error: $e\n\tStatement: ${_statementToString(stmt)}');
+    rethrow;
+  }
+}
+
+Future<int> _wrapUpdate(
+  DatabaseConnectionUser db,
+  Statement stmt,
+) async {
+  try {
+    // print("STATEMENT: ${_statementToString(stmt)}");
+    final variables = _dynamicArgsToVariables(stmt.args);
+    return await db.customUpdate(stmt.sql, variables: variables);
+  } catch (e) {
+    logger.error('Query error: $e\n\tStatement: ${_statementToString(stmt)}');
+    rethrow;
+  }
+}
+
+String _statementToString(Statement stmt) {
+  return '${stmt.sql} - args: ${stmt.args?.map((a) => '$a - ${a.runtimeType}').toList()}';
 }
 
 List<Variable> _dynamicArgsToVariables(List<Object?>? args) {

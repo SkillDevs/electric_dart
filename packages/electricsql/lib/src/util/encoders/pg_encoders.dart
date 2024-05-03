@@ -32,6 +32,11 @@ class PostgresTypeDecoder extends SqliteTypeDecoder {
   Object boolean(List<int> bytes) {
     return bytesToBool(bytes);
   }
+
+  @override
+  Object float(List<int> bytes) {
+    return bytesToFloat(bytes);
+  }
 }
 
 List<int> boolToBytes(bool b) {
@@ -44,4 +49,14 @@ bool bytesToBool(List<int> bs) {
   }
 
   throw Exception('Invalid binary-encoded boolean value: $bs');
+}
+
+// TODO(dart): Report to official
+Object bytesToFloat(List<int> bytes) {
+  final text = kPostgresTypeDecoder.text(bytes);
+  if (text == 'NaN') {
+    return double.nan;
+  } else {
+    return num.parse(text);
+  }
 }

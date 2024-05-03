@@ -10,6 +10,8 @@ import '../../support/satellite_helpers.dart';
 import '../common.dart';
 import '../process.dart';
 
+// TODO(dart): Drift Uppercase tables not escaped correctly with Dart API
+
 const QueryBuilder builder = kPostgresQueryBuilder;
 const String namespace = 'public';
 

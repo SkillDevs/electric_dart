@@ -73,7 +73,7 @@ Future<MyDriftElectricClient> electrifyDb(
 
   final List<Migration> sqliteMigrations;
   final List<Migration> pgMigrations;
-  if (Platform.environment['DIALECT'] == 'Postgres') {
+  if (builder.dialect == Dialect.postgres) {
     sqliteMigrations = [];
     pgMigrations = migrations;
   } else {
