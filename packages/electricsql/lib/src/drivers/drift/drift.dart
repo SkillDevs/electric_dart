@@ -10,7 +10,6 @@ import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
-import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';

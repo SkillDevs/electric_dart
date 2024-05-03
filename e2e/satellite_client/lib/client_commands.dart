@@ -529,7 +529,7 @@ Future<void> insertItem(
     for (final key in keys) {
       await electric.db.customStatement(
         'INSERT INTO "items"(id, content) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)});',
-        [genUUID(), key],
+        _createRawArgs([genUUID(), key]),
       );
     }
   });
@@ -568,7 +568,7 @@ Future<void> insertExtendedInto(
 
   await electric.db.customStatement(
     'INSERT INTO "$table"($columnNames) VALUES ($placeholders) RETURNING *;',
-    args,
+    _createRawArgs(args),
   );
 }
 
@@ -599,7 +599,7 @@ Future<void> insertOtherItem(
     for (final key in keys) {
       await electric.db.customStatement(
         'INSERT INTO "other_items"(id, content) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)});',
-        [genUUID(), key],
+        _createRawArgs([genUUID(), key]),
       );
     }
   });
@@ -656,6 +656,18 @@ Future<void> custom0325SyncItems(MyDriftElectricClient electric) async {
 }
 
 /////////////////////////////////
+
+/// On postgres, let the type inference do its job,
+/// instead of doing strict casts via drift_postgres
+/// https://github.com/simolus3/drift/issues/2986
+List<Object?> _createRawArgs(List<Object?> args) {
+  if (builder.dialect == Dialect.postgres) {
+    // Allow Postgres to infer the types
+    return args.map((arg) => pg.TypedValue(pg.Type.unspecified, arg)).toList();
+  } else {
+    return args;
+  }
+}
 
 // It has a custom toString to match Lux expects
 Rows _toRows(List<QueryRow> rows) {
