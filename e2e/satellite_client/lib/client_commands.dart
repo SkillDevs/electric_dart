@@ -176,7 +176,11 @@ Future<Rows> getTables(DriftElectricClient electric) async {
 }
 
 Future<Rows> getColumns(DriftElectricClient electric, String table) async {
-  final rows = await electric.adapter.query(builder.getTableInfo(table));
+  final namespace = builder.defaultNamespace;
+  final qualifiedTablename = QualifiedTablename(namespace, table);
+  final rows = await electric.adapter.query(
+    builder.getTableInfo(qualifiedTablename),
+  );
   return Rows(rows);
 }
 

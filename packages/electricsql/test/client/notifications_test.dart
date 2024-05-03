@@ -20,6 +20,7 @@ Future<void> main() async {
     dbName: 'tests_db',
     db: db,
     migrations: [],
+    pgMigrations: [],
     config: config,
     opts: ElectrifyOptions(
       registry: MockRegistry(),

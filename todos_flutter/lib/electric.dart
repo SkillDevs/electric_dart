@@ -29,6 +29,8 @@ Future<ElectricClient<AppDatabase>> startElectricDrift(
     dbName: dbName,
     db: db,
     migrations: kElectricMigrations,
+    // TODO(dart): Better generation?
+    pgMigrations: [],
     config: ElectricConfig(
       url: electricURL,
       logger: LoggerConfig(
