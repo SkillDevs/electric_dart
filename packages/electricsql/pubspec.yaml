@@ -18,7 +18,7 @@ dependencies:
   logging: ^1.0.0
   meta: ^1.0.0
   platform_info: ^4.0.2
-  postgres: ^3.1.0
+  postgres: ^3.2.0
   protobuf: ^3.0.0
   rate_limiter: ^1.0.0
   retry: ^3.0.0
