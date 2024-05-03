@@ -1,13 +1,11 @@
 [global node=>]
 
-[macro connect_to_electric host port migrations connectToElectric]
+[macro connect_to_electric host port migrations connectToElectric satellite_number]
     # !migrations = await client.read_migrations(process.env.MIGRATION_DIRS + "/index.js")
     # ?$node
     !migrations = $migrations
     ??$node
-    !shell_db_path = get_shell_db_path "$LUX_SHELLNAME"
-    ??$node
-    !originalDb = make_db shell_db_path
+    !originalDb = make_db 'e2e_client_${satellite_number}_db'
     ??$node
     [invoke electrify_db "originalDb" $host $port $migrations $connectToElectric]
     ??(in electrify_db) config:
@@ -21,7 +19,7 @@
     [invoke start_satellite $satellite_number]
     -$fail_pattern
     ??$node
-    [invoke connect_to_electric $electric $port $migrations $connectToElectric]
+    [invoke connect_to_electric $electric $port $migrations $connectToElectric $satellite_number]
 [endmacro]
 
 [macro client_disconnect]
@@ -116,6 +114,12 @@
     ??$node
 [endmacro]
 
+[macro node_get_jsonb_regex id expected_jsonb]
+    !get_jsonb db '${id}'
+    ?\{ id: '${id}', jsb: ${expected_jsonb} \}
+    ??$node
+[endmacro]
+
 [macro node_get_enum id expected_enum]
     !get_enum db '${id}'
     ??{ id: '${id}', c: ${expected_enum} }
@@ -170,11 +174,11 @@
 [endmacro]
 
 [macro node_await_table match]
-    [invoke wait-for "get_tables db" "${match}" 10 $node]
+    [invoke wait-for "get_tables db" "name: '${match}'" 10 $node]
 [endmacro]
 
 [macro node_await_column table column]
-    [invoke wait-for "get_columns db '${table}'" "${column}" 10 $node]
+    [invoke wait-for "get_columns db '${table}'" "name: '${column}'" 10 $node]
 [endmacro]
 
 [macro node_await_column_value table column value]

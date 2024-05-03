@@ -33,16 +33,6 @@ Future<void> start() async {
         await processCommand<String>(state, command, () async {
           return "var=$variable  type=${variable.runtimeType}";
         });
-      } else if (name == "get_shell_db_path") {
-        await processCommand1Param<String, String>(
-          state,
-          command,
-          (luxShellName) {
-            final dbPath =
-                "${Platform.environment["SATELLITE_DB_PATH"]!}/$luxShellName";
-            return dbPath;
-          },
-        );
       } else if (name == "make_db") {
         await processCommand1Param<String, ClientDatabase>(
           state,

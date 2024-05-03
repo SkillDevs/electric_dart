@@ -1,6 +1,7 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide Migrator;
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
@@ -42,6 +43,15 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     _ => throw ArgumentError('Unsupported dialect for Electric: $driftDialect'),
   };
 
+  Migrator migrator;
+  if (opts?.migrator != null) {
+    migrator = opts!.migrator!;
+  } else {
+    migrator = dialect == Dialect.sqlite
+        ? SqliteBundleMigrator(adapter: adapter, migrations: migrations)
+        : PgBundleMigrator(adapter: adapter, migrations: pgMigrations);
+  }
+
   final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
     dbDescription: dbDescription,
@@ -52,7 +62,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     adapter: adapter,
     socketFactory: socketFactory,
     opts: ElectrifyBaseOptions(
-      migrator: opts?.migrator,
+      migrator: migrator,
       notifier: opts?.notifier,
       registry: opts?.registry,
       // In postgres, we don't want to run the default prepare function

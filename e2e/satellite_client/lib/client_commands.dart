@@ -22,20 +22,26 @@ int? tokenExpirationMillis;
 
 typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
-Future<ClientDatabase> makeDb(String dbPath) async {
-  dbName = dbPath;
+Future<ClientDatabase> makeDb(String name) async {
+  dbName = name;
   final dialectEnv = Platform.environment['DIALECT'];
   print("DIALECT: $dialectEnv");
 
   ClientDatabase db;
   if (dialectEnv == 'Postgres') {
     builder = kPostgresQueryBuilder;
-    final endpoint = makePgEndpoint(dbPath);
-    db = ClientDatabase(PgDatabase(endpoint: endpoint));
+    final endpoint = makePgEndpoint(name);
+    db = ClientDatabase(
+      PgDatabase(
+        endpoint: endpoint,
+        settings: pg.ConnectionSettings(sslMode: pg.SslMode.disable),
+        enableMigrations: false,
+      ),
+    );
     dbName = '${endpoint.host}:${endpoint.port}/${endpoint.database}';
   } else {
     builder = kSqliteQueryBuilder;
-    db = ClientDatabase(NativeDatabase(File(dbPath)));
+    db = ClientDatabase(NativeDatabase(File(name)));
     await db.customSelect('PRAGMA foreign_keys = ON;').get();
   }
   return db;
