@@ -162,10 +162,29 @@ Object? _mapVariable(SqlDialect dialect, Object? value) {
       }
     } else if (value is List<int>) {
       return pg.TypedValue(pg.Type.byteArray, value);
+    } else if (value is BigInt) {
+      return pg.TypedValue(pg.Type.bigInteger, value.rangeCheckedToInt());
     }
 
     return pg.TypedValue(pg.Type.unspecified, value);
   }
 
   return value;
+}
+
+extension on BigInt {
+  static final _bigIntMinValue64 = BigInt.from(-9223372036854775808);
+  static final _bigIntMaxValue64 = BigInt.from(9223372036854775807);
+
+  int rangeCheckedToInt() {
+    if (this < _bigIntMinValue64 || this > _bigIntMaxValue64) {
+      throw ArgumentError.value(
+        this,
+        'this',
+        'BigInt value exceeds the range of 64 bits',
+      );
+    }
+
+    return toInt();
+  }
 }

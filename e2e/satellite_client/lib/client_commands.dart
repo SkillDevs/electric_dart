@@ -20,6 +20,9 @@ late String dbName;
 late QueryBuilder builder;
 int? tokenExpirationMillis;
 
+// TODO(dart): Remove git dependency to drift_postgres once this launches
+// https://github.com/simolus3/drift/commit/6ba049e5df7f2a3aff50c02ffdd326f596f53452
+
 typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
 Future<ClientDatabase> makeDb(String name) async {
@@ -368,15 +371,24 @@ Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
 
 Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int? i2,
     int? i4, BigInt? i8) async {
-  final item = await electric.db.ints.insertReturning(
-    IntsCompanion.insert(
-      id: id,
+  try {
+    final item = await electric.db.ints.insertReturning(
+      IntsCompanion.insert(
+        id: id,
       i2: Value(i2),
       i4: Value(i4),
       i8: Value(i8),
-    ),
-  );
-  return SingleRow.fromItem(item);
+      ),
+    );
+    return SingleRow.fromItem(item);
+  } catch (e) {
+    final eStr = e.toString();
+    if (eStr
+        .contains("Invalid argument (this): Should be in signed 64bit range")) {
+      throw Exception("BigInt value exceeds the range of 64 bits");
+    }
+    rethrow;
+  }
 }
 
 Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
