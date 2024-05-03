@@ -27,3 +27,7 @@ String mapToSqlLiteral(
 Object mapToUser(PgType? type, Object sqlValue, Codec<Object, Object> codec) {
   throw UnsupportedError('Needs to be run in a dart:io environment.');
 }
+
+Object toImplicitlyCastedValue(Object value) {
+  throw UnsupportedError('Needs to be run in a dart:io environment.');
+}

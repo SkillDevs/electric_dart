@@ -1,12 +1,11 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/client/conversions/postgres/mapping.dart'
+    as pg_mapping;
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/types.dart';
-
-// TODO(dart):: Conditional import
-import 'package:postgres/postgres.dart' as pg;
 
 class DriftAdapter implements DatabaseAdapter {
   final DatabaseConnectionUser db;
@@ -156,35 +155,14 @@ Object? _mapVariable(SqlDialect dialect, Object? value) {
   }
 
   if (dialect == SqlDialect.postgres) {
-    if (value is double) {
-      if (value.isNaN || value.isInfinite) {
-        return pg.TypedValue(pg.Type.double, value);
-      }
-    } else if (value is List<int>) {
-      return pg.TypedValue(pg.Type.byteArray, value);
-    } else if (value is BigInt) {
-      return pg.TypedValue(pg.Type.bigInteger, value.rangeCheckedToInt());
-    }
-
-    return pg.TypedValue(pg.Type.unspecified, value);
+    // This is expected to be a pg.TypedValue so that we can
+    // take control over how the types are associated to each param.
+    // We want to be able to use implicit casting, as that's how the official
+    // Electric client works.
+    // For example, this allows sending a string to a int8 column, to handle bigInts
+    final typedValue = pg_mapping.toImplicitlyCastedValue(value);
+    return typedValue;
   }
 
   return value;
-}
-
-extension on BigInt {
-  static final _bigIntMinValue64 = BigInt.from(-9223372036854775808);
-  static final _bigIntMaxValue64 = BigInt.from(9223372036854775807);
-
-  int rangeCheckedToInt() {
-    if (this < _bigIntMinValue64 || this > _bigIntMaxValue64) {
-      throw ArgumentError.value(
-        this,
-        'this',
-        'BigInt value exceeds the range of 64 bits',
-      );
-    }
-
-    return toInt();
-  }
 }
