@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - feat/*
   pull_request:
     paths-ignore:
       # Root files
