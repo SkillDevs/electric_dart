@@ -91,7 +91,7 @@ String generateMigrationsDartCode(
 
   // Migrations
   final List<Expression> migrationExpressions = migrations.map((m) {
-    final stmts = m.statements.map((stmt) => literal(stmt)).toList();
+    final stmts = m.statements.map((stmt) => literal(stmt.replaceAll(r'$', r'\$'))).toList();
     final stmtsList = literalList(stmts);
     return migrationReference.newInstance([], {
       'statements': stmtsList,

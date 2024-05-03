@@ -4,6 +4,7 @@ import 'package:todos_electrified/database/drift/database.dart';
 
 import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:todos_electrified/generated/electric/migrations.dart';
+import 'package:todos_electrified/generated/electric/pg_migrations.dart';
 
 final Provider<ElectricClient<AppDatabase>> electricClientProvider =
     Provider((ref) => throw UnimplementedError());
@@ -30,7 +31,7 @@ Future<ElectricClient<AppDatabase>> startElectricDrift(
     db: db,
     migrations: kElectricMigrations,
     // TODO(dart): Better generation?
-    pgMigrations: [],
+    pgMigrations: kElectricPostgresMigrations,
     config: ElectricConfig(
       url: electricURL,
       logger: LoggerConfig(
