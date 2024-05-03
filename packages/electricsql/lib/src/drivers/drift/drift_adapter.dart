@@ -5,6 +5,9 @@ import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/types.dart';
 
+// TODO(dart):: Conditional import
+import 'package:postgres/postgres.dart' as pg;
+
 class DriftAdapter implements DatabaseAdapter {
   final DatabaseConnectionUser db;
 
@@ -107,7 +110,8 @@ Future<List<QueryRow>> _wrapQuery(
 ) async {
   try {
     // print("STATEMENT: ${_statementToString(stmt)}");
-    final variables = _dynamicArgsToVariables(stmt.args);
+    final variables =
+        _dynamicArgsToVariables(db.typeMapping.dialect, stmt.args);
     return await db.customSelect(stmt.sql, variables: variables).get();
   } catch (e) {
     logger.error('Query error: $e\n\tStatement: ${_statementToString(stmt)}');
@@ -121,7 +125,8 @@ Future<int> _wrapUpdate(
 ) async {
   try {
     // print("STATEMENT: ${_statementToString(stmt)}");
-    final variables = _dynamicArgsToVariables(stmt.args);
+    final variables =
+        _dynamicArgsToVariables(db.typeMapping.dialect, stmt.args);
     return await db.customUpdate(stmt.sql, variables: variables);
   } catch (e) {
     logger.error('Query error: $e\n\tStatement: ${_statementToString(stmt)}');
@@ -133,31 +138,34 @@ String _statementToString(Statement stmt) {
   return '${stmt.sql} - args: ${stmt.args?.map((a) => '$a - ${a.runtimeType}').toList()}';
 }
 
-List<Variable> _dynamicArgsToVariables(List<Object?>? args) {
+List<Variable> _dynamicArgsToVariables(
+  SqlDialect dialect,
+  List<Object?>? args,
+) {
   return (args ?? const [])
       .map((Object? arg) {
-        if (arg == null) {
-          return const Variable<Object>(null);
-        }
-        if (arg is bool) {
-          return Variable.withBool(arg);
-        } else if (arg is int) {
-          return Variable.withInt(arg);
-        } else if (arg is String) {
-          return Variable.withString(arg);
-        } else if (arg is double) {
-          return Variable.withReal(arg);
-        } else if (arg is DateTime) {
-          return Variable.withDateTime(arg);
-        } else if (arg is Uint8List) {
-          return Variable.withBlob(arg);
-        } else if (arg is Variable) {
-          return arg;
-        } else {
-          assert(false, 'unknown type $arg');
-          return Variable<Object>(arg);
-        }
+        return Variable(_mapVariable(dialect, arg));
       })
       .cast<Variable>()
       .toList();
+}
+
+Object? _mapVariable(SqlDialect dialect, Object? value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (dialect == SqlDialect.postgres) {
+    if (value is double) {
+      if (value.isNaN || value.isInfinite) {
+        return pg.TypedValue(pg.Type.double, value);
+      }
+    } else if (value is List<int>) {
+      return pg.TypedValue(pg.Type.byteArray, value);
+    }
+
+    return pg.TypedValue(pg.Type.unspecified, value);
+  }
+
+  return value;
 }

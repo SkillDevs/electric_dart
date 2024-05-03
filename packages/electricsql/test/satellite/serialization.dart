@@ -181,11 +181,19 @@ void serializationTests({
     );
     final dRow2 = deserializeRow(sRow2, rel, dbDescription, typeDecoder);
 
-    expect(dRow2, {
+    final expected2 = {
       ...record2,
-      // SQLite does not support NaN so we deserialise it into the string 'NaN'
-      'float1': 'NaN',
-    });
+      if (dialect == Dialect.sqlite)
+        // SQLite does not support NaN so we deserialise it into the string 'NaN'
+        'float1': 'NaN',
+    };
+    if (dialect == Dialect.postgres) {
+      dRow2!.remove('float1');
+      final float1 = expected2.remove('float1');
+      expect(float1, isNaN);
+    }
+
+    expect(dRow2, expected2);
   });
 
   test('Null mask uses bits as if they were a list', () {
