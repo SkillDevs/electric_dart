@@ -73,4 +73,9 @@ class DriftRepository implements m.TodosRepository {
         )
         .watch();
   }
+
+  @override
+  Future<void> removeAllTodos() {
+    return db.todo.delete().go();
+  }
 }
