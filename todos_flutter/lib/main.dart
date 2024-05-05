@@ -17,6 +17,7 @@ import 'package:todos_electrified/features/todos.dart';
 import 'package:animated_emoji/animated_emoji.dart';
 import 'package:todos_electrified/features/delete_local_db.dart';
 import 'package:todos_electrified/features/electric_connection.dart';
+import 'package:todos_electrified/presentation/util/input_text_dialog.dart';
 import 'package:todos_electrified/presentation/util/platform.dart';
 
 const kListId = "LIST-ID-SAMPLE";
@@ -201,6 +202,8 @@ class _TodosLoaded extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final textController = useTextEditingController();
 
+    final doneTodos = todos.where((t) => t.completed).length;
+
     return Align(
       alignment: Alignment.topCenter,
       child: Card(
@@ -211,6 +214,14 @@ class _TodosLoaded extends HookConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Symbols.check_circle_outline, size: 16),
+                    const SizedBox(width: 5),
+                    Text("$doneTodos / ${todos.length}"),
+                  ],
+                ),
                 TextField(
                   controller: textController,
                   decoration: const InputDecoration(
@@ -258,6 +269,23 @@ class _TodosLoaded extends HookConsumerWidget {
                           itemCount: todos.length,
                         ),
                 ),
+                const SizedBox(
+                  height: 15,
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    onPressed: () async {
+                      final db = ref.read(todosDatabaseProvider);
+                      await db.removeAllTodos();
+                    },
+                    icon: const Icon(Symbols.delete),
+                    label: const Text("Delete all todos"),
+                  ),
+                )
               ],
             ),
           ),
@@ -297,13 +325,41 @@ class TodoTile extends ConsumerWidget {
         "Last edited: ${DateFormat.yMMMd().add_jm().format(todo.editedAt)}",
         style: Theme.of(context).textTheme.bodySmall,
       ),
-      trailing: IconButton(
-        onPressed: () async {
-          final db = ref.read(todosDatabaseProvider);
-          await db.removeTodo(todo.id);
-        },
-        icon: const Icon(Symbols.delete),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: () => _onEdit(ref),
+            icon: const Icon(Symbols.edit),
+          ),
+          IconButton(
+            onPressed: () async {
+              final db = ref.read(todosDatabaseProvider);
+              await db.removeTodo(todo.id);
+            },
+            icon: const Icon(Symbols.delete),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _onEdit(WidgetRef ref) async {
+    final newText = await showDialog<String>(
+      context: ref.context,
+      builder: (context) {
+        return InputTextDialog(
+          title: "Edit todo",
+          initialValue: todo.text,
+          hint: "Todo",
+          action: "Save",
+        );
+      },
+    );
+
+    if (newText == null) return;
+
+    final db = ref.read(todosDatabaseProvider);
+    await db.updateTodo(todo.copyWith(text: newText));
   }
 }

@@ -23,6 +23,10 @@ class TodosDatabase {
   Future<void> removeTodo(String id) async {
     return todosRepo.removeTodo(id);
   }
+
+  Future<void> removeAllTodos() async {
+    return todosRepo.removeAllTodos();
+  }
 }
 
 class Todo {
@@ -61,5 +65,6 @@ abstract class TodosRepository {
   Future<void> updateTodo(Todo todo);
   Future<void> removeTodo(String id);
   Future<void> insertTodo(Todo todo);
+  Future<void> removeAllTodos();
   Future<void> close();
 }
