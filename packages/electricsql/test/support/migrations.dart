@@ -8,7 +8,7 @@
 
 import 'package:electricsql/src/migrators/migrators.dart';
 
-final kTestSqliteMigrations = [
+const kTestSqliteMigrations = [
   Migration(
     statements: [
       'DROP TABLE IF EXISTS _electric_trigger_settings;',

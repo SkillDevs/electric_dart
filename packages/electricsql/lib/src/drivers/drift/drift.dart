@@ -20,17 +20,19 @@ import 'package:meta/meta.dart';
 Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   required String dbName,
   required DB db,
-  required List<Migration> migrations,
-  required List<Migration> pgMigrations,
+  required ElectricMigrations migrations,
   required ElectricConfig config,
   ElectrifyOptions? opts,
 }) async {
   final adapter = opts?.adapter ?? DriftAdapter(db);
   final socketFactory = opts?.socketFactory ?? getDefaultSocketFactory();
 
+  final sqliteMigrations = migrations.sqliteMigrations;
+  final pgMigrations = migrations.pgMigrations;
+
   final dbDescription = DBSchemaDrift(
     db: db,
-    migrations: migrations,
+    migrations: sqliteMigrations,
     pgMigrations: pgMigrations,
   );
 
@@ -47,7 +49,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     migrator = opts!.migrator!;
   } else {
     migrator = dialect == Dialect.sqlite
-        ? SqliteBundleMigrator(adapter: adapter, migrations: migrations)
+        ? SqliteBundleMigrator(adapter: adapter, migrations: sqliteMigrations)
         : PgBundleMigrator(adapter: adapter, migrations: pgMigrations);
   }
 

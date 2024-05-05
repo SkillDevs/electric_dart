@@ -87,8 +87,10 @@ Future<MyDriftElectricClient> electrifyDb(
   final result = await electrify<ClientDatabase>(
     dbName: dbName,
     db: db,
-    migrations: sqliteMigrations,
-    pgMigrations: pgMigrations,
+    migrations: ElectricMigrations(
+      sqliteMigrations: sqliteMigrations,
+      pgMigrations: pgMigrations,
+    ),
     config: config,
   );
 

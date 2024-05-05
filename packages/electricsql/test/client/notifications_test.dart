@@ -19,8 +19,10 @@ Future<void> main() async {
   final electricClient = await electrify<TestsDatabase>(
     dbName: 'tests_db',
     db: db,
-    migrations: [],
-    pgMigrations: [],
+    migrations: const ElectricMigrations(
+      sqliteMigrations: [],
+      pgMigrations: [],
+    ),
     config: config,
     opts: ElectrifyOptions(
       registry: MockRegistry(),

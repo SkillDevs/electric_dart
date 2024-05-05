@@ -11,8 +11,10 @@ Future<ElectricClient<TestsDatabase>> electrifyTestDatabase(
   final electric = await electrify(
     dbName: 'test-db',
     db: db,
-    migrations: [],
-    pgMigrations: [],
+    migrations: const ElectricMigrations(
+      sqliteMigrations: [],
+      pgMigrations: [],
+    ),
     config: ElectricConfig(),
     opts: ElectrifyOptions(
       registry: MockRegistry(),

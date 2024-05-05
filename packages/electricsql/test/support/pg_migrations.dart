@@ -1,6 +1,6 @@
 import 'package:electricsql/src/migrators/migrators.dart';
 
-final kTestPostgresMigrations = [
+const kTestPostgresMigrations = [
   Migration(
     statements: [
       'DROP TABLE IF EXISTS public._electric_trigger_settings;',

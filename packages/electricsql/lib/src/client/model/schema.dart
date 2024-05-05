@@ -13,6 +13,16 @@ mixin ElectricTableMixin on Table {
   TableRelations? get $relations => null;
 }
 
+class ElectricMigrations {
+  final List<Migration> sqliteMigrations;
+  final List<Migration> pgMigrations;
+
+  const ElectricMigrations({
+    required this.sqliteMigrations,
+    required this.pgMigrations,
+  });
+}
+
 abstract class DBSchema {
   final Map<String, Fields> _fieldsByTable;
   final List<Migration> _migrations;

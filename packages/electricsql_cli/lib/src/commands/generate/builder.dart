@@ -101,30 +101,16 @@ String generateMigrationsDartCode(
     });
   }).toList();
 
-  // UnmodifiableListView<Migration>
-  final unmodifListReference = _getUnmodifiedableListRef(migrationReference);
-
-  // global final immutable field for the migrations
+  // global const immutable field for the migrations
   final electricMigrationsField = Field(
     (b) => b
       ..name = constantName
-      ..modifier = FieldModifier.final$
-      ..assignment = unmodifListReference.newInstance([
-        literalList(migrationExpressions, migrationReference),
-      ]).code,
+      ..modifier = FieldModifier.constant
+      ..assignment = literalList(migrationExpressions, migrationReference).code,
   );
 
   return _buildLibCode(
     (b) => b..body.add(electricMigrationsField),
-  );
-}
-
-TypeReference _getUnmodifiedableListRef(Reference genericRef) {
-  return TypeReference(
-    (b) => b
-      ..url = 'dart:collection'
-      ..symbol = 'UnmodifiableListView'
-      ..types.add(genericRef.type),
   );
 }
 
@@ -134,6 +120,7 @@ String _buildLibCode(void Function(LibraryBuilder b) updateLib) {
       b
         ..comments.add('GENERATED CODE - DO NOT MODIFY BY HAND')
         ..ignoreForFile.addAll([
+          'always_use_package_imports',
           'depend_on_referenced_packages',
           'prefer_double_quotes',
         ]);
@@ -177,6 +164,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
     (b) => b
       ..body.addAll(
         [
+          _getElectricMigrationsField(),
           _getElectrifiedTablesField(tableClasses),
           ...tableClasses,
           if (electricEnums.isNotEmpty) ...[
@@ -272,6 +260,31 @@ Field _getElectrifiedTablesField(List<Class> tableClasses) {
       ..assignment =
           // List of table types
           literalList(tableClasses.map((e) => refer(e.name))).code,
+  );
+}
+
+Field _getElectricMigrationsField() {
+  /*
+  const kElectricMigrations = ElectricMigrations(
+    sqliteMigrations: kSqliteMigrations,
+    pgMigrations: kPostgresMigrations,
+  );
+  */
+
+  final electricMigrationsRef = refer('ElectricMigrations', kElectricSqlImport);
+  final sqliteMigrationsRef =
+      refer('kSqliteMigrations', './$kSqliteMigrationsFileName');
+  final pgMigrationsRef =
+      refer('kPostgresMigrations', './$kPostgresMigrationsFileName');
+
+  return Field(
+    (b) => b
+      ..name = 'kElectricMigrations'
+      ..modifier = FieldModifier.constant
+      ..assignment = electricMigrationsRef.newInstance([], {
+        'sqliteMigrations': sqliteMigrationsRef,
+        'pgMigrations': pgMigrationsRef,
+      }).code,
   );
 }
 

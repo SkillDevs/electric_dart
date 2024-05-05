@@ -5,7 +5,7 @@ class Migration {
   final List<String> statements;
   final String version;
 
-  Migration({
+  const Migration({
     required this.statements,
     required this.version,
   });

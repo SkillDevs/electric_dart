@@ -1,12 +1,11 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-// ignore_for_file: depend_on_referenced_packages, prefer_double_quotes
-
-import 'dart:collection';
+// ignore_for_file: always_use_package_imports, depend_on_referenced_packages
+// ignore_for_file: prefer_double_quotes
 
 import 'package:electricsql/electricsql.dart';
 
-final kElectricMigrations = UnmodifiableListView<Migration>(<Migration>[
+const kSqliteMigrations = <Migration>[
   Migration(
     statements: [
       'CREATE TABLE "todolist" (\n  "id" TEXT NOT NULL,\n  "filter" TEXT,\n  "editing" TEXT,\n  CONSTRAINT "todolist_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
@@ -41,4 +40,4 @@ final kElectricMigrations = UnmodifiableListView<Migration>(<Migration>[
     ],
     version: '20230924100404',
   ),
-]);
+];

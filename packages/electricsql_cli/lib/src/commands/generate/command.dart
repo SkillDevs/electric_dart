@@ -10,6 +10,7 @@ import 'package:electricsql_cli/src/commands/docker_commands/command_start.dart'
 import 'package:electricsql_cli/src/commands/docker_commands/command_stop.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/precheck.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:electricsql_cli/src/config.dart';
@@ -20,8 +21,6 @@ import 'package:electricsql_cli/src/util.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
-const sqliteMigrationsFileName = 'migrations.dart';
-const pgMigrationsFileName = 'pg_migrations.dart';
 const String defaultDriftSchemaFileName = 'drift_schema.dart';
 const bool _defaultDebug = false;
 
@@ -405,8 +404,8 @@ Future<Future<void> Function()> bundleMigrationsFor(
       migrationsFile,
       builder,
       constantName: dialect == Dialect.sqlite
-          ? 'kElectricMigrations'
-          : 'kElectricPostgresMigrations',
+          ? 'kSqliteMigrations'
+          : 'kPostgresMigrations',
     );
   };
 }
@@ -435,8 +434,8 @@ File _migrationsFilePath(_GeneratorOpts opts, Dialect dialect) {
 
 File resolveMigrationsFile(String outFolder, Dialect dialect) {
   final migrationsFileName = dialect == Dialect.sqlite
-      ? sqliteMigrationsFileName
-      : pgMigrationsFileName;
+      ? kSqliteMigrationsFileName
+      : kPostgresMigrationsFileName;
   return File(
     path.join(outFolder, migrationsFileName),
   ).absolute;
