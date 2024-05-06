@@ -1,6 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-// ignore_for_file: depend_on_referenced_packages, prefer_double_quotes
+// ignore_for_file: always_use_package_imports, depend_on_referenced_packages
+// ignore_for_file: prefer_double_quotes
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
@@ -8,6 +9,13 @@ import 'package:electricsql/electricsql.dart';
 import 'package:myapp/base_model.dart';
 import 'package:myapp/custom_row_class.dart';
 
+import './migrations.dart';
+import './pg_migrations.dart';
+
+const kElectricMigrations = ElectricMigrations(
+  sqliteMigrations: kSqliteMigrations,
+  pgMigrations: kPostgresMigrations,
+);
 const kElectrifiedTables = [
   Project,
   Membership,
