@@ -20,9 +20,6 @@ late String dbName;
 late QueryBuilder builder;
 int? tokenExpirationMillis;
 
-// TODO(dart): Remove git dependency to drift_postgres once this launches
-// https://github.com/simolus3/drift/commit/6ba049e5df7f2a3aff50c02ffdd326f596f53452
-
 typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
 Future<ClientDatabase> makeDb(String name) async {

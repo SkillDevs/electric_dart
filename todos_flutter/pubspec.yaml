@@ -35,7 +35,7 @@ dependencies:
   # THese are only used for the backend example, they are not needed to use Electric
   # in Flutter apps.
   postgres: ^3.0.8
-  drift_postgres: ^1.1.0
+  drift_postgres: ^1.2.3
   shelf: ^1.4.1
   shelf_router: ^1.1.4
 

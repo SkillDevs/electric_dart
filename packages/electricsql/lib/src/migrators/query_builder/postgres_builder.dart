@@ -46,7 +46,7 @@ class PostgresBuilder extends QueryBuilder {
   }
 
   @override
-  String get blobType => 'TEXT'; // TODO(dart): Revisar
+  String get blobType => 'TEXT';
 
   @override
   Statement countTablesIn(List<String> tableNames) {
