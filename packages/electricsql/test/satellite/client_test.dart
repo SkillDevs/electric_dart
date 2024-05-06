@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/config.dart';
@@ -13,7 +14,7 @@ import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/io.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
-import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/proto.dart';
 import 'package:electricsql/util.dart';
 import 'package:fixnum/fixnum.dart';
@@ -30,17 +31,18 @@ late String token;
 void main() {
   setUp(() async {
     server = SatelliteWSServerStub();
-    await server.start();
+    final port = await server.start();
 
     client = SatelliteClient(
       dbDescription: kTestDbDescription,
       socketFactory: WebSocketIOFactory(),
       opts: SatelliteClientOpts(
         host: '127.0.0.1',
-        port: 30002,
+        port: port,
         timeout: 10000,
         ssl: false,
         pushPeriod: 100,
+        dialect: Dialect.sqlite,
       ),
     );
     clientId = '91eba0c8-28ba-4a86-a6e8-42731c2c6694';
@@ -277,6 +279,7 @@ void main() {
         },
       },
       migrations: [],
+      pgMigrations: [],
     );
 
     client.debugSetDbDescription(dbDescription);
@@ -309,8 +312,12 @@ void main() {
 
     final insertOp = SatOpInsert(
       relationId: 1,
-      rowData:
-          serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel, dbDescription),
+      rowData: serializeRow(
+        {'name1': 'Foo', 'name2': 'Bar'},
+        rel,
+        dbDescription,
+        kSqliteTypeEncoder,
+      ),
     );
 
     final updateOp = SatOpUpdate(
@@ -319,11 +326,13 @@ void main() {
         {'name1': 'Hello', 'name2': 'World!'},
         rel,
         dbDescription,
+        kSqliteTypeEncoder,
       ),
       oldRowData: serializeRow(
         {'name1': '', 'name2': ''},
         rel,
         dbDescription,
+        kSqliteTypeEncoder,
       ),
     );
     final deleteOp = SatOpDelete(
@@ -332,6 +341,7 @@ void main() {
         {'name1': 'Hello', 'name2': 'World!'},
         rel,
         dbDescription,
+        kSqliteTypeEncoder,
       ),
     );
 
@@ -713,6 +723,7 @@ void main() {
         'Items': tblFields,
       },
       migrations: [],
+      pgMigrations: [],
     );
     client.debugSetDbDescription(dbDescription);
 
@@ -729,6 +740,7 @@ void main() {
         },
         rel,
         dbDescription,
+        kSqliteTypeEncoder,
       ),
     );
 
@@ -797,7 +809,12 @@ void main() {
       ],
     );
 
-    final record = deserializeRow(serializedRow, rel, dbDescription);
+    final record = deserializeRow(
+      serializedRow,
+      rel,
+      dbDescription,
+      kSqliteTypeDecoder,
+    );
 
     final firstOpLogMessage = SatOpLog(
       ops: [
@@ -1082,6 +1099,7 @@ void main() {
         tablename: tblFields,
       },
       migrations: [],
+      pgMigrations: [],
     );
     client.debugSetDbDescription(dbDescription);
 
@@ -1147,6 +1165,7 @@ void main() {
         {'name1': 'Foo', 'name2': 'Bar'},
         rel,
         dbDescription,
+        kSqliteTypeEncoder,
       ),
     );
 
@@ -1184,6 +1203,7 @@ void main() {
         },
       },
       migrations: [],
+      pgMigrations: [],
     );
 
     client.debugSetDbDescription(dbDescription);
@@ -1227,14 +1247,22 @@ void main() {
 
     final insertOp = SatOpInsert(
       relationId: 1,
-      rowData:
-          serializeRow({'name1': 'Foo', 'name2': 'Bar'}, rel, dbDescription),
+      rowData: serializeRow(
+        {'name1': 'Foo', 'name2': 'Bar'},
+        rel,
+        dbDescription,
+        kSqliteTypeEncoder,
+      ),
     );
 
     final secondInsertOp = SatOpInsert(
       relationId: 1,
-      rowData:
-          serializeRow({'name1': 'More', 'name2': 'Data'}, rel, dbDescription),
+      rowData: serializeRow(
+        {'name1': 'More', 'name2': 'Data'},
+        rel,
+        dbDescription,
+        kSqliteTypeEncoder,
+      ),
     );
 
     final firstOpLogMessage = SatOpLog(
@@ -1387,6 +1415,7 @@ void main() {
             satOpLog[1].insert.rowData,
             kTestRelations['parent']!,
             kTestDbDescription,
+            kSqliteTypeDecoder,
           ),
           {
             'id': 1,
@@ -1399,6 +1428,7 @@ void main() {
             satOpLog[2].update.rowData,
             kTestRelations['parent']!,
             kTestDbDescription,
+            kSqliteTypeDecoder,
           ),
           {
             'id': 1,
@@ -1411,6 +1441,7 @@ void main() {
             satOpLog[2].update.oldRowData,
             kTestRelations['parent']!,
             kTestDbDescription,
+            kSqliteTypeDecoder,
           ),
           {
             'id': 1,
@@ -1423,6 +1454,7 @@ void main() {
             satOpLog[3].delete.oldRowData,
             kTestRelations['parent']!,
             kTestDbDescription,
+            kSqliteTypeDecoder,
           ),
           {
             'id': 1,
@@ -1499,6 +1531,7 @@ void main() {
         },
         kTestRelations['parent']!,
         kTestDbDescription,
+        kSqliteTypeEncoder,
       ),
     );
 
@@ -1512,6 +1545,7 @@ void main() {
         },
         kTestRelations['parent']!,
         kTestDbDescription,
+        kSqliteTypeEncoder,
       ),
       oldRowData: serializeRow(
         {
@@ -1521,6 +1555,7 @@ void main() {
         },
         kTestRelations['parent']!,
         kTestDbDescription,
+        kSqliteTypeEncoder,
       ),
     );
 
@@ -1534,6 +1569,7 @@ void main() {
         },
         kTestRelations['parent']!,
         kTestDbDescription,
+        kSqliteTypeEncoder,
       ),
     );
 
@@ -1632,6 +1668,7 @@ void main() {
             data.ops[1].insert.rowData,
             kTestRelations['parent']!,
             kTestDbDescription,
+            kSqliteTypeDecoder,
           ),
           {
             ...change.record!,
@@ -1646,6 +1683,7 @@ void main() {
             data.ops[1].insert.rowData,
             kTestRelations['parent']!,
             kTestDbDescription,
+            kSqliteTypeDecoder,
           ),
           {
             ...change.record!,
@@ -1660,6 +1698,7 @@ void main() {
           data.ops[1].insert.rowData,
           kTestRelations['parent']!,
           kTestDbDescription,
+          kSqliteTypeDecoder,
         ),
         change.record,
       );
@@ -1828,6 +1867,7 @@ void main() {
         },
         kTestRelations['parent']!,
         kTestDbDescription,
+        kSqliteTypeEncoder,
       ),
     );
 

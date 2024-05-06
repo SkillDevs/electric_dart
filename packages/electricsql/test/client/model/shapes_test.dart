@@ -332,7 +332,9 @@ Future<void> makeContext() async {
   client = MockSatelliteClient();
   final adapter = DriftAdapter(db);
   final migrations = <Migration>[];
-  migrator = BundleMigrator(adapter: adapter, migrations: migrations);
+  final pgMigrations = <Migration>[];
+
+  migrator = SqliteBundleMigrator(adapter: adapter, migrations: migrations);
   dbName = '.tmp/test-${randomValue()}.db';
   final notifier = MockNotifier(dbName);
   final registry = MockRegistry();
@@ -343,12 +345,13 @@ Future<void> makeContext() async {
     migrator: migrator,
     notifier: notifier,
     client: client,
-    opts: kSatelliteDefaults,
+    opts: satelliteDefaults(migrator.queryBuilder.defaultNamespace),
   );
 
   final dbSchema = DBSchemaDrift(
     db: db,
     migrations: migrations,
+    pgMigrations: pgMigrations,
   );
 
   final baseElectricClient = ElectricClientImpl.create(
@@ -358,6 +361,7 @@ Future<void> makeContext() async {
     satellite: satellite,
     dbDescription: dbSchema,
     registry: registry,
+    dialect: Dialect.sqlite,
   );
   electric = DriftElectricClient(baseElectricClient, db);
 

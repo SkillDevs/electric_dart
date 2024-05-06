@@ -7,15 +7,21 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/util/types.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 import '../support/satellite_helpers.dart';
 import 'common.dart';
 
+/*
+ * This file defines the tests for the process timing of Satellite.
+ * These tests are common to both SQLite and Postgres.
+ * Only their context differs.
+ * Therefore, the SQLite and Postgres test files
+ * setup their context and then call the tests from this file.
+ */
+
 late SatelliteTestContext context;
 
-Database get db => context.db;
 DatabaseAdapter get adapter => context.adapter;
 Migrator get migrator => context.migrator;
 MockNotifier get notifier => context.notifier;
@@ -24,19 +30,18 @@ DateTime get timestamp => context.timestamp;
 SatelliteProcess get satellite => context.satellite;
 MockSatelliteClient get client => context.client;
 String get dbName => context.dbName;
+String get namespace => context.namespace;
 
-final opts = kSatelliteDefaults.copyWith(
-  minSnapshotWindow: const Duration(milliseconds: 80),
-  pollingInterval: const Duration(milliseconds: 500),
-);
+SatelliteOpts opts(String namespace) => satelliteDefaults(namespace).copyWith(
+      minSnapshotWindow: const Duration(milliseconds: 80),
+      pollingInterval: const Duration(milliseconds: 500),
+    );
 
-void main() {
+void processTimingTests({
+  required SatelliteTestContext Function() getContext,
+}) {
   setUp(() async {
-    context = await makeContext(options: opts);
-  });
-
-  tearDown(() async {
-    await context.clean();
+    context = getContext();
   });
 
   test('throttled snapshot respects window', () async {
@@ -52,7 +57,7 @@ void main() {
 
     expect(notifier.notifications.length, numNotifications);
 
-    await Future<void>.delayed(opts.minSnapshotWindow);
+    await Future<void>.delayed(opts(namespace).minSnapshotWindow);
 
     expect(notifier.notifications.length, numNotifications + 1);
   });

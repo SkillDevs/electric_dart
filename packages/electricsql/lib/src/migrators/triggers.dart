@@ -1,3 +1,5 @@
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
+import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class ForeignKey {
@@ -13,22 +15,18 @@ class ForeignKey {
 }
 
 typedef ColumnName = String;
-typedef SQLiteType = String;
-typedef PgTypeStr = String;
-typedef ColumnType = ({SQLiteType sqliteType, PgTypeStr pgType});
+typedef ColumnType = String;
 typedef ColumnTypes = Map<ColumnName, ColumnType>;
 
 class Table {
-  String tableName;
-  String namespace;
+  QualifiedTablename qualifiedTableName;
   List<ColumnName> columns;
   List<ColumnName> primary;
   List<ForeignKey> foreignKeys;
   ColumnTypes columnTypes;
 
   Table({
-    required this.tableName,
-    required this.namespace,
+    required this.qualifiedTableName,
     required this.columns,
     required this.primary,
     required this.foreignKeys,
@@ -41,7 +39,6 @@ typedef Tables = Map<TableFullName, Table>;
 
 /// Generates the triggers Satellite needs for the given table.
 /// Assumes that the necessary meta tables already exist.
-/// @param tableFullName - Full name of the table for which to generate triggers.
 /// @param table - A new or existing table for which to create/update the triggers.
 /// @returns An array of SQLite statements that add the necessary oplog triggers.
 ///
@@ -49,86 +46,51 @@ typedef Tables = Map<TableFullName, Table>;
 /// We return an array of SQL statements because the DB drivers
 /// do not accept queries containing more than one SQL statement.
 List<Statement> generateOplogTriggers(
-  TableFullName tableFullName,
   Table table,
+  QueryBuilder builder,
 ) {
-  final tableName = table.tableName;
+  final qualifiedTableName = table.qualifiedTableName;
   final primary = table.primary;
   final columns = table.columns;
-  final namespace = table.namespace;
   final columnTypes = table.columnTypes;
 
-  final newPKs = joinColsForJSON(primary, columnTypes, 'new');
-  final oldPKs = joinColsForJSON(primary, columnTypes, 'old');
-  final newRows = joinColsForJSON(columns, columnTypes, 'new');
-  final oldRows = joinColsForJSON(columns, columnTypes, 'old');
+  final newPKs = joinColsForJSON(primary, columnTypes, builder, 'new');
+  final oldPKs = joinColsForJSON(primary, columnTypes, builder, 'old');
+  final newRows = joinColsForJSON(columns, columnTypes, builder, 'new');
+  final oldRows = joinColsForJSON(columns, columnTypes, builder, 'old');
+
+  final [dropFkTrigger, ...createFkTrigger] =
+      builder.createOrReplaceNoFkUpdateTrigger(qualifiedTableName, primary);
+  final [dropInsertTrigger, ...createInsertTrigger] =
+      builder.createOrReplaceInsertTrigger(
+    qualifiedTableName,
+    newPKs,
+    newRows,
+    oldRows,
+  );
 
   return <String>[
     // Toggles for turning the triggers on and off
-    '''
-
-    INSERT OR IGNORE INTO _electric_trigger_settings(tablename,flag) VALUES ('$tableFullName', 1);
-    ''',
-    // Triggers for table $tableName
+    builder.setTriggerSetting(qualifiedTableName, 1),
+    // Triggers for table ${tableName}
     // ensures primary key is immutable
-    '''
-
-    DROP TRIGGER IF EXISTS update_ensure_${namespace}_${tableName}_primarykey;
-    ''',
-    '''
-
-    CREATE TRIGGER update_ensure_${namespace}_${tableName}_primarykey
-      BEFORE UPDATE ON "$namespace"."$tableName"
-    BEGIN
-      SELECT
-        CASE
-          ${primary.map((col) => "WHEN old.\"$col\" != new.\"$col\" THEN\n\t\tRAISE (ABORT, 'cannot change the value of column $col as it belongs to the primary key')").join('\n')}
-        END;
-    END;
-    ''',
+    dropFkTrigger,
+    ...createFkTrigger,
     // Triggers that add INSERT, UPDATE, DELETE operation to the _opslog table
-    '''
-
-    DROP TRIGGER IF EXISTS insert_${namespace}_${tableName}_into_oplog;
-    ''',
-    '''
-
-    CREATE TRIGGER insert_${namespace}_${tableName}_into_oplog
-       AFTER INSERT ON "$namespace"."$tableName"
-       WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
-    BEGIN
-      INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-      VALUES ('$namespace', '$tableName', 'INSERT', json_object($newPKs), json_object($newRows), NULL, NULL);
-    END;
-    ''',
-    '''
-
-    DROP TRIGGER IF EXISTS update_${namespace}_${tableName}_into_oplog;
-    ''',
-    '''
-
-    CREATE TRIGGER update_${namespace}_${tableName}_into_oplog
-       AFTER UPDATE ON "$namespace"."$tableName"
-       WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
-    BEGIN
-      INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-      VALUES ('$namespace', '$tableName', 'UPDATE', json_object($newPKs), json_object($newRows), json_object($oldRows), NULL);
-    END;
-    ''',
-    '''
-
-    DROP TRIGGER IF EXISTS delete_${namespace}_${tableName}_into_oplog;
-    ''',
-    '''
-
-    CREATE TRIGGER delete_${namespace}_${tableName}_into_oplog
-       AFTER DELETE ON "$namespace"."$tableName"
-       WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$tableFullName')
-    BEGIN
-      INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-      VALUES ('$namespace', '$tableName', 'DELETE', json_object($oldPKs), NULL, json_object($oldRows), NULL);
-    END;
-    ''',
+    dropInsertTrigger,
+    ...createInsertTrigger,
+    ...builder.createOrReplaceUpdateTrigger(
+      qualifiedTableName,
+      newPKs,
+      newRows,
+      oldRows,
+    ),
+    ...builder.createOrReplaceDeleteTrigger(
+      qualifiedTableName,
+      oldPKs,
+      newRows,
+      oldRows,
+    ),
   ].map(Statement.new).toList();
 }
 
@@ -144,20 +106,23 @@ List<Statement> generateOplogTriggers(
 /// @param table The corresponding table.
 /// @param tables Map of all tables (needed to look up the tables that are pointed at by FKs).
 /// @returns An array of SQLite statements that add the necessary compensation triggers.
-List<Statement> generateCompensationTriggers(Table table) {
-  final tableName = table.tableName;
-  final namespace = table.namespace;
+List<Statement> generateCompensationTriggers(
+  Table table,
+  QueryBuilder builder,
+) {
+  final qualifiedTableName = table.qualifiedTableName;
   final foreignKeys = table.foreignKeys;
   final columnTypes = table.columnTypes;
 
   List<Statement> makeTriggers(ForeignKey foreignKey) {
     final childKey = foreignKey.childKey;
 
-    const fkTableNamespace =
-        'main'; // currently, Electric always uses the 'main' namespace
+    final fkTableNamespace = builder
+        .defaultNamespace; // currently, Electric always uses the DB's default namespace
     final fkTableName = foreignKey.table;
     final fkTablePK =
         foreignKey.parentKey; // primary key of the table pointed at by the FK.
+    final qualifiedFkTable = QualifiedTablename(fkTableNamespace, fkTableName);
 
     // This table's `childKey` points to the parent's table `parentKey`.
     // `joinColsForJSON` looks up the type of the `parentKey` column in the provided `colTypes` object.
@@ -170,40 +135,33 @@ List<Statement> generateCompensationTriggers(Table table) {
       {
         fkTablePK: columnTypes[foreignKey.childKey]!,
       },
+      builder,
       null,
     );
 
+    final [dropInsertTrigger, ...createInsertTrigger] =
+        builder.createOrReplaceInsertCompensationTrigger(
+      qualifiedTableName,
+      childKey,
+      qualifiedFkTable,
+      joinedFkPKs,
+      foreignKey,
+    );
+
     return <String>[
-      // Triggers for foreign key compensations
-      '''
-      DROP TRIGGER IF EXISTS compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog;''',
       // The compensation trigger inserts a row in `_electric_oplog` if the row pointed at by the FK exists
       // The way how this works is that the values for the row are passed to the nested SELECT
       // which will return those values for every record that matches the query
       // which can be at most once since we filter on the foreign key which is also the primary key and thus is unique.
-      '''
-      CREATE TRIGGER compensation_insert_${namespace}_${tableName}_${childKey}_into_oplog
-        AFTER INSERT ON "$namespace"."$tableName"
-        WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$fkTableNamespace.$fkTableName') AND
-             1 == (SELECT value from _electric_meta WHERE key == 'compensations')
-      BEGIN
-        INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-        SELECT '$fkTableNamespace', '$fkTableName', 'COMPENSATION', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
-        FROM "$fkTableNamespace"."$fkTableName" WHERE "${foreignKey.parentKey}" = new."${foreignKey.childKey}";
-      END;
-      ''',
-      'DROP TRIGGER IF EXISTS compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog;',
-      '''
-      CREATE TRIGGER compensation_update_${namespace}_${tableName}_${foreignKey.childKey}_into_oplog
-         AFTER UPDATE ON "$namespace"."$tableName"
-         WHEN 1 == (SELECT flag from _electric_trigger_settings WHERE tablename == '$fkTableNamespace.$fkTableName') AND
-              1 == (SELECT value from _electric_meta WHERE key == 'compensations')
-      BEGIN
-        INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-        SELECT '$fkTableNamespace', '$fkTableName', 'COMPENSATION', json_object($joinedFkPKs), json_object($joinedFkPKs), NULL, NULL
-        FROM "$fkTableNamespace"."$fkTableName" WHERE "${foreignKey.parentKey}" = new."${foreignKey.childKey}";
-      END;
-      ''',
+      dropInsertTrigger,
+      ...createInsertTrigger,
+      ...builder.createOrReplaceUpdateCompensationTrigger(
+        qualifiedTableName,
+        foreignKey.childKey,
+        qualifiedFkTable,
+        joinedFkPKs,
+        foreignKey,
+      ),
     ].map(Statement.new).toList();
   }
 
@@ -217,28 +175,33 @@ List<Statement> generateCompensationTriggers(Table table) {
 /// @param tables - Dictionary mapping full table names to the corresponding tables.
 /// @returns An array of SQLite statements that add the necessary oplog and compensation triggers.
 List<Statement> generateTableTriggers(
-  TableFullName tableFullName,
   Table table,
+  QueryBuilder builder,
 ) {
-  final oplogTriggers = generateOplogTriggers(tableFullName, table);
-  final fkTriggers = generateCompensationTriggers(table);
+  final oplogTriggers = generateOplogTriggers(table, builder);
+  final fkTriggers = generateCompensationTriggers(table, builder);
   return [...oplogTriggers, ...fkTriggers];
 }
 
 /// Generates triggers for all the provided tables.
 /// @param tables - Dictionary mapping full table names to the corresponding tables.
 /// @returns An array of SQLite statements that add the necessary oplog and compensation triggers for all tables.
-List<Statement> generateTriggers(Tables tables) {
+List<Statement> generateTriggers(
+  Tables tables,
+  QueryBuilder builder,
+) {
   final List<Statement> tableTriggers = [];
   tables.forEach((tableFullName, table) {
-    final triggers = generateTableTriggers(tableFullName, table);
+    final triggers = generateTableTriggers(table, builder);
     tableTriggers.addAll(triggers);
   });
 
   final List<Statement> stmts = [
-    Statement('DROP TABLE IF EXISTS _electric_trigger_settings;'),
     Statement(
-      'CREATE TABLE _electric_trigger_settings(tablename TEXT PRIMARY KEY, flag INTEGER);',
+      'DROP TABLE IF EXISTS "${builder.defaultNamespace}"._electric_trigger_settings;',
+    ),
+    Statement(
+      'CREATE TABLE "${builder.defaultNamespace}"._electric_trigger_settings(namespace TEXT, tablename TEXT, flag INTEGER, PRIMARY KEY(namespace, tablename));',
     ),
     ...tableTriggers,
   ];
@@ -293,25 +256,31 @@ List<Statement> generateTriggers(Tables tables) {
 String joinColsForJSON(
   List<String> cols,
   ColumnTypes colTypes,
+  QueryBuilder builder,
   String? target,
 ) {
   // Perform transformations on some columns to ensure consistent
   // serializability into JSON
   String transformIfNeeded(String col, String targetedCol) {
-    final tpes = colTypes[col]!;
-    final sqliteType = tpes.sqliteType;
-    final pgType = tpes.pgType;
+    final colType = colTypes[col]!;
 
-    // cast REALs, INT8s, BIGINTs to TEXT to work around SQLite's `json_object` bug
-    if (sqliteType == 'REAL' || pgType == 'INT8' || pgType == 'BIGINT') {
-      return 'cast($targetedCol as TEXT)';
-    }
+    switch (colType) {
+      case 'FLOAT4':
+      case 'REAL':
+      case 'DOUBLE PRECISION':
+      case 'FLOAT8':
+      case 'INT8':
+      case 'BIGINT':
+        // cast REALs, INT8s, BIGINTs to TEXT to work around SQLite's `json_object` bug
+        return 'cast($targetedCol as TEXT)';
 
-    // transform blobs/bytestrings into hexadecimal strings for JSON encoding
-    if (sqliteType == 'BLOB' || pgType == 'BYTEA') {
-      return 'CASE WHEN $targetedCol IS NOT NULL THEN hex($targetedCol) ELSE NULL END';
+      case 'BYTEA':
+        // transform blobs/bytestrings into hexadecimal strings for JSON encoding
+        return 'CASE WHEN $targetedCol IS NOT NULL THEN ${builder.toHex(targetedCol)} ELSE NULL END';
+
+      default:
+        return targetedCol;
     }
-    return targetedCol;
   }
 
   if (target == null) {

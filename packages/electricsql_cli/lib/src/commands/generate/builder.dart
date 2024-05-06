@@ -15,21 +15,27 @@ import 'package:path/path.dart' as path;
 Future<void> buildMigrations(
   Directory migrationsFolder,
   File migrationsFile,
-) async {
-  final migrations = await loadMigrations(migrationsFolder);
+  QueryBuilder builder, {
+  required String constantName,
+}) async {
+  final migrations = await loadMigrations(migrationsFolder, builder);
 
   final outParent = migrationsFile.parent;
   if (!outParent.existsSync()) {
     await outParent.create(recursive: true);
   }
 
-  final contents = generateMigrationsDartCode(migrations);
+  final contents =
+      generateMigrationsDartCode(migrations, constantName: constantName);
 
   // Update the configuration file
   await migrationsFile.writeAsString(contents);
 }
 
-Future<List<Migration>> loadMigrations(Directory migrationsFolder) async {
+Future<List<Migration>> loadMigrations(
+  Directory migrationsFolder,
+  QueryBuilder builder,
+) async {
   final migrationDirNames = await getMigrationNames(migrationsFolder);
   final migrationFiles = migrationDirNames.map(
     (dirName) =>
@@ -38,7 +44,9 @@ Future<List<Migration>> loadMigrations(Directory migrationsFolder) async {
   final migrationsMetadatas = await Future.wait(
     migrationFiles.map(_readMetadataFile),
   );
-  return migrationsMetadatas.map(makeMigration).toList();
+  return migrationsMetadatas
+      .map((data) => makeMigration(data, builder))
+      .toList();
 }
 
 /// Reads the specified metadata file.
@@ -75,12 +83,17 @@ Future<List<String>> getMigrationNames(Directory migrationsFolder) async {
   return dirNames;
 }
 
-String generateMigrationsDartCode(List<Migration> migrations) {
+String generateMigrationsDartCode(
+  List<Migration> migrations, {
+  required String constantName,
+}) {
   final migrationReference = refer('Migration', kElectricSqlImport);
 
   // Migrations
   final List<Expression> migrationExpressions = migrations.map((m) {
-    final stmts = m.statements.map((stmt) => literal(stmt)).toList();
+    final stmts = m.statements
+        .map((stmt) => literal(stmt.replaceAll(r'$', r'\$')))
+        .toList();
     final stmtsList = literalList(stmts);
     return migrationReference.newInstance([], {
       'statements': stmtsList,
@@ -88,30 +101,16 @@ String generateMigrationsDartCode(List<Migration> migrations) {
     });
   }).toList();
 
-  // UnmodifiableListView<Migration>
-  final unmodifListReference = _getUnmodifiedableListRef(migrationReference);
-
-  // global final immutable field for the migrations
+  // global const immutable field for the migrations
   final electricMigrationsField = Field(
     (b) => b
-      ..name = 'kElectricMigrations'
-      ..modifier = FieldModifier.final$
-      ..assignment = unmodifListReference.newInstance([
-        literalList(migrationExpressions, migrationReference),
-      ]).code,
+      ..name = constantName
+      ..modifier = FieldModifier.constant
+      ..assignment = literalList(migrationExpressions, migrationReference).code,
   );
 
   return _buildLibCode(
     (b) => b..body.add(electricMigrationsField),
-  );
-}
-
-TypeReference _getUnmodifiedableListRef(Reference genericRef) {
-  return TypeReference(
-    (b) => b
-      ..url = 'dart:collection'
-      ..symbol = 'UnmodifiableListView'
-      ..types.add(genericRef.type),
   );
 }
 
@@ -121,6 +120,7 @@ String _buildLibCode(void Function(LibraryBuilder b) updateLib) {
       b
         ..comments.add('GENERATED CODE - DO NOT MODIFY BY HAND')
         ..ignoreForFile.addAll([
+          'always_use_package_imports',
           'depend_on_referenced_packages',
           'prefer_double_quotes',
         ]);
@@ -164,6 +164,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
     (b) => b
       ..body.addAll(
         [
+          _getElectricMigrationsField(),
           _getElectrifiedTablesField(tableClasses),
           ...tableClasses,
           if (electricEnums.isNotEmpty) ...[
@@ -259,6 +260,31 @@ Field _getElectrifiedTablesField(List<Class> tableClasses) {
       ..assignment =
           // List of table types
           literalList(tableClasses.map((e) => refer(e.name))).code,
+  );
+}
+
+Field _getElectricMigrationsField() {
+  /*
+  const kElectricMigrations = ElectricMigrations(
+    sqliteMigrations: kSqliteMigrations,
+    pgMigrations: kPostgresMigrations,
+  );
+  */
+
+  final electricMigrationsRef = refer('ElectricMigrations', kElectricSqlImport);
+  final sqliteMigrationsRef =
+      refer('kSqliteMigrations', './$kSqliteMigrationsFileName');
+  final pgMigrationsRef =
+      refer('kPostgresMigrations', './$kPostgresMigrationsFileName');
+
+  return Field(
+    (b) => b
+      ..name = 'kElectricMigrations'
+      ..modifier = FieldModifier.constant
+      ..assignment = electricMigrationsRef.newInstance([], {
+        'sqliteMigrations': sqliteMigrationsRef,
+        'pgMigrations': pgMigrationsRef,
+      }).code,
   );
 }
 

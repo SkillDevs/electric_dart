@@ -1,29 +1,35 @@
 import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
-import 'package:electricsql/src/util/types.dart';
+import 'package:electricsql/util.dart';
 
 // TODO: Improve this code once with Migrator and consider simplifying oplog.
-Future<RelationsCache> inferRelationsFromSQLite(
+Future<RelationsCache> inferRelationsFromDb(
   DatabaseAdapter adapter,
   SatelliteOpts opts,
+  QueryBuilder builder,
 ) async {
-  final tableNames = await _getLocalTableNames(adapter, opts);
+  final tableNames = await _getLocalTableNames(adapter, opts, builder);
   final RelationsCache relations = {};
 
   int id = 0;
-  const schema = 'public'; // TODO
   for (final table in tableNames) {
     final tableName = table.name;
-    const sql = 'SELECT * FROM pragma_table_info(?)';
-    final args = [tableName];
-    final columnsForTable = await adapter.query(Statement(sql, args));
+    final columnsForTable = await adapter.query(
+      builder.getTableInfo(
+        QualifiedTablename(builder.defaultNamespace, tableName),
+      ),
+    );
     if (columnsForTable.isEmpty) {
       continue;
     }
     final Relation relation = Relation(
       id: id++,
-      schema: schema,
+      // schema needs to be 'public' because these relations are used
+      // by the Satellite process and client to replicate changes to Electric
+      // and merge incoming changes from Electric, and those use the 'public' namespace.
+      schema: 'public',
       table: tableName,
       tableType: SatRelation_RelationType.TABLE,
       columns: [],
@@ -48,6 +54,7 @@ Future<RelationsCache> inferRelationsFromSQLite(
 Future<List<({String name})>> _getLocalTableNames(
   DatabaseAdapter adapter,
   SatelliteOpts opts,
+  QueryBuilder builder,
 ) async {
   final notIn = <String>[
     opts.metaTable.tablename,
@@ -55,16 +62,8 @@ Future<List<({String name})>> _getLocalTableNames(
     opts.oplogTable.tablename,
     opts.triggersTable.tablename,
     opts.shadowTable.tablename,
-    'sqlite_schema',
-    'sqlite_sequence',
-    'sqlite_temp_schema',
   ];
 
-  final tables = '''
-      SELECT name FROM sqlite_master
-        WHERE type = 'table'
-          AND name NOT IN (${notIn.map((_) => '?').join(',')})
-    ''';
-  final tableNames = await adapter.query(Statement(tables, notIn));
-  return tableNames.map((row) => (name: row['name']! as String)).toList();
+  final rows = await adapter.query(builder.getLocalTableNames(notIn));
+  return rows.map((row) => (name: row['name']! as String)).toList();
 }

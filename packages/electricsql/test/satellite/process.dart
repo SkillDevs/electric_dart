@@ -5,13 +5,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart'
-    show SqliteAdapter;
-import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart' as adp
-    show Transaction;
 import 'package:electricsql/src/migrators/migrators.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
+import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
@@ -19,15 +17,17 @@ import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/satellite/shapes/manager.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:electricsql/src/util/types.dart' as t;
 import 'package:fixnum/fixnum.dart';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
+import '../support/matchers.dart';
 import '../support/satellite_helpers.dart';
-import '../util/sqlite_errors.dart';
+import '../util/db_errors.dart';
 import 'common.dart';
 
 late SatelliteTestContext context;
@@ -36,7 +36,6 @@ Future<void> runMigrations() async {
   await context.runMigrations();
 }
 
-Database get db => context.db;
 DatabaseAdapter get adapter => context.adapter;
 Migrator get migrator => context.migrator;
 MockNotifier get notifier => context.notifier;
@@ -48,6 +47,9 @@ String get dbName => context.dbName;
 AuthState get authState => context.authState;
 AuthConfig get authConfig => context.authConfig;
 String get token => context.token;
+SatelliteOpts get opts => context.opts;
+
+late QueryBuilder _globalBuilder;
 
 const parentRecord = <String, Object?>{
   'id': 1,
@@ -71,20 +73,33 @@ Future<({Future<void> connectionFuture})> startSatellite(
   return (connectionFuture: connectionFuture);
 }
 
-void main() {
-  setUp(() async {
-    context = await makeContext();
-  });
+Object? dialectValue(
+  Object? sqliteValue,
+  Object? pgValue,
+) {
+  if (_globalBuilder.dialect == Dialect.sqlite) {
+    return sqliteValue;
+  }
+  return pgValue;
+}
 
-  tearDown(() async {
-    await context.cleanAndStopSatellite();
+@isTestGroup
+void processTests({
+  required SatelliteTestContext Function() getContext,
+  required String namespace,
+  required QueryBuilder builder,
+  required String qualifiedParentTableName,
+  required GetMatchingShadowEntries getMatchingShadowEntries,
+}) {
+  setUp(() {
+    context = getContext();
+    _globalBuilder = builder;
   });
 
   test('start creates system tables', () async {
-    await satellite.start(context.authConfig);
+    await satellite.start(authConfig);
 
-    const sql = "select name from sqlite_master where type = 'table'";
-    final rows = await adapter.query(Statement(sql));
+    final rows = await adapter.query(builder.getLocalTableNames());
     final names = rows.map((row) => row['name']! as String).toList();
 
     expect(names, contains('_electric_oplog'));
@@ -93,9 +108,9 @@ void main() {
   test('load metadata', () async {
     await runMigrations();
 
-    final meta = await loadSatelliteMetaTable(adapter);
+    final meta = await loadSatelliteMetaTable(adapter, namespace);
     expect(meta, {
-      'compensations': 1,
+      'compensations': dialectValue(1, '1'),
       'lsn': '',
       'clientId': '',
       'subscriptions': '',
@@ -176,10 +191,10 @@ void main() {
     await expectLater(
       adapter.run(Statement("UPDATE parent SET id='3' WHERE id = '1'")),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_TRIGGER,
+          PostgresErrors.PG_CONSTRAINT_TRIGGER,
         ),
       ),
     );
@@ -208,7 +223,7 @@ void main() {
 
     final changes = (notifier.notifications[0] as ChangeNotification).changes;
     final expectedChange = Change(
-      qualifiedTablename: const QualifiedTablename('main', 'parent'),
+      qualifiedTablename: QualifiedTablename(namespace, 'parent'),
       rowids: [1, 2],
       recordChanges: [
         RecordChange(
@@ -230,7 +245,7 @@ void main() {
     satellite.setAuthState(authState);
 
     satellite.updateDatabaseAdapter(
-      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+      SlowDatabaseAdapter(satellite.adapter),
     );
 
     await expectLater(
@@ -258,7 +273,7 @@ void main() {
 
     // delay termination of _performSnapshot
     satellite.updateDatabaseAdapter(
-      SlowDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+      SlowDatabaseAdapter(satellite.adapter),
     );
 
     final p1 = satellite.throttledSnapshot();
@@ -322,6 +337,40 @@ void main() {
     expect(notifier.notifications.length, 1);
   });
 
+  test('snapshot of INSERT with blob/Uint8Array', () async {
+    await runMigrations();
+
+    final blob = Uint8List.fromList([1, 2, 255, 244, 160, 1]);
+
+    await adapter.run(
+      Statement(
+        'INSERT INTO "blobTable"(value) VALUES (${builder.makePositionalParam(1)})',
+        [blob],
+      ),
+    );
+
+    satellite.setAuthState(authState);
+    await satellite.performSnapshot();
+    final entries = await satellite.getEntries();
+    final clientId = satellite.authState!.clientId;
+
+    final merged = localOperationsToTableChanges(
+      entries,
+      (timestamp) {
+        return generateTag(clientId, timestamp);
+      },
+      kTestRelations,
+    );
+    final qualifiedTableName =
+        QualifiedTablename(namespace, 'blobTable').toString();
+
+    final opLogTableChange =
+        merged[qualifiedTableName]!['{"value":"${blobToHexString(blob)}"}']!;
+    final keyChanges = opLogTableChange.oplogEntryChanges;
+    final resultingValue = keyChanges.changes['value']!.value;
+    expect(resultingValue, blob);
+  });
+
   // INSERT after DELETE shall nullify all non explicitly set columns
 // If last operation is a DELETE, concurrent INSERT shall resurrect deleted
 // values as in 'INSERT wins over DELETE and restored deleted values'
@@ -348,7 +397,7 @@ void main() {
       },
       kTestRelations,
     );
-    final opLogTableChange = merged['main.parent']!['{"id":1}']!;
+    final opLogTableChange = merged[qualifiedParentTableName]!['{"id":1}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, null);
@@ -359,7 +408,7 @@ void main() {
 
     await adapter.run(
       Statement(
-        'INSERT INTO bigIntTable(value) VALUES (1)',
+        'INSERT INTO "bigIntTable"(value) VALUES (1)',
       ),
     );
 
@@ -375,42 +424,12 @@ void main() {
       },
       kTestRelations,
     );
-    final opLogTableChange = merged['main.bigIntTable']!['{"value":"1"}']!;
+    final qualifiedTableName =
+        QualifiedTablename(namespace, 'bigIntTable').toString();
+    final opLogTableChange = merged[qualifiedTableName]!['{"value":"1"}']!;
     final keyChanges = opLogTableChange.oplogEntryChanges;
     final resultingValue = keyChanges.changes['value']!.value;
     expect(resultingValue, BigInt.from(1));
-  });
-
-  test('snapshot of INSERT with blob/Uint8Array', () async {
-    await runMigrations();
-
-    final blob = Uint8List.fromList([1, 2, 255, 244, 160, 1]);
-
-    await adapter.run(
-      Statement(
-        'INSERT INTO blobTable(value) VALUES (?)',
-        [blob],
-      ),
-    );
-
-    satellite.setAuthState(authState);
-    await satellite.performSnapshot();
-    final entries = await satellite.getEntries();
-    final clientId = satellite.authState!.clientId;
-
-    final merged = localOperationsToTableChanges(
-      entries,
-      (timestamp) {
-        return generateTag(clientId, timestamp);
-      },
-      kTestRelations,
-    );
-
-    final opLogTableChange =
-        merged['main.blobTable']!['{"value":"${blobToHexString(blob)}"}']!;
-    final keyChanges = opLogTableChange.oplogEntryChanges;
-    final resultingValue = keyChanges.changes['value']!.value;
-    expect(resultingValue, blob);
   });
 
   test('take snapshot and merge local wins', () async {
@@ -419,7 +438,7 @@ void main() {
     final incomingTs = DateTime.now().millisecondsSinceEpoch - 1;
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs,
@@ -452,12 +471,12 @@ void main() {
       [incomingEntry],
       kTestRelations,
     );
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -504,7 +523,7 @@ void main() {
 
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -523,12 +542,12 @@ void main() {
       [incomingEntry],
       kTestRelations,
     );
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -583,7 +602,7 @@ void main() {
     final incomingTs = offlineTimestamp.add(const Duration(milliseconds: 1));
     final firstIncomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.update,
       incomingTs.millisecondsSinceEpoch,
@@ -614,7 +633,7 @@ void main() {
     // And after the offline transaction was sent, the resolved no-op transaction comes in
     final secondIncomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.update,
       offlineTimestamp.millisecondsSinceEpoch,
@@ -662,7 +681,7 @@ void main() {
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -717,7 +736,7 @@ void main() {
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.delete,
       incomingTs.millisecondsSinceEpoch,
@@ -758,7 +777,7 @@ void main() {
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -785,7 +804,7 @@ void main() {
     );
     await satellite.applyTransaction(incomingTx);
 
-    const sql = "SELECT * from main.parent WHERE value='incoming'";
+    const sql = "SELECT * from parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
 
     expect(rows[0]['other'], null);
@@ -797,7 +816,7 @@ void main() {
     final incomingTs = DateTime.now();
     final incomingEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       incomingTs.millisecondsSinceEpoch,
@@ -823,7 +842,7 @@ void main() {
     );
     await satellite.applyTransaction(incomingTx);
 
-    const sql = "SELECT * from main.parent WHERE value='incoming'";
+    const sql = "SELECT * from parent WHERE value='incoming'";
     final rows = await adapter.query(Statement(sql));
 
     expect(rows[0]['other'], 0);
@@ -840,7 +859,7 @@ void main() {
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.insert,
         incomingTs.millisecondsSinceEpoch,
@@ -853,7 +872,7 @@ void main() {
       ),
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.delete,
         incomingTs.millisecondsSinceEpoch,
@@ -868,7 +887,7 @@ void main() {
     final local = [
       generateLocalOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.insert,
         localTs.millisecondsSinceEpoch,
@@ -883,12 +902,12 @@ void main() {
 
     final merged =
         mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -921,7 +940,7 @@ void main() {
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.update,
         incomingTs,
@@ -945,7 +964,7 @@ void main() {
     final local = [
       generateLocalOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.update,
         localTs,
@@ -968,7 +987,7 @@ void main() {
 
     final merged =
         mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
-    final item = merged['main.parent']!['{"id":1}']!;
+    final item = merged[qualifiedParentTableName]!['{"id":1}']!;
 
     // The incoming entry modified the value of the `value` column to `'remote'`
     // The local entry concurrently modified the value of the `other` column to 1.
@@ -976,7 +995,7 @@ void main() {
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -1011,7 +1030,7 @@ void main() {
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.insert,
         incomingTs.millisecondsSinceEpoch,
@@ -1026,12 +1045,12 @@ void main() {
     final local = <OplogEntry>[];
     final merged =
         mergeEntries(clientId, local, 'remote', incoming, kTestRelations);
-    final item = merged['main.parent']!['{"id":1}'];
+    final item = merged[qualifiedParentTableName]!['{"id":1}'];
 
     expect(
       item,
       ShadowEntryChanges(
-        namespace: 'main',
+        namespace: namespace,
         tablename: 'parent',
         primaryKeyCols: {'id': 1},
         optype: ChangesOpType.upsert,
@@ -1049,22 +1068,23 @@ void main() {
   test('compensations: referential integrity is enforced', () async {
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
     await satellite.setMeta('compensations', 0);
     await adapter.run(
       Statement(
-        "INSERT INTO main.parent(id, value) VALUES (1, '1')",
+        "INSERT INTO parent(id, value) VALUES (1, '1')",
       ),
     );
 
     await expectLater(
-      adapter
-          .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 2)')),
+      adapter.run(Statement('INSERT INTO child(id, parent) VALUES (1, 2)')),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+          PostgresErrors.PG_CONSTRAINT_FOREIGNKEY,
         ),
       ),
     );
@@ -1072,6 +1092,13 @@ void main() {
 
   test('compensations: incoming operation breaks referential integrity',
       () async {
+    if (builder.dialect == Dialect.postgres) {
+      // Ignore this unit test for Postgres
+      // because we don't defer FK checks
+      // but completely disable them for incoming transactions
+      return;
+    }
+
     await runMigrations();
 
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
@@ -1080,7 +1107,7 @@ void main() {
 
     final incoming = generateLocalOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'child',
       OpType.insert,
       timestamp.millisecondsSinceEpoch,
@@ -1107,10 +1134,10 @@ void main() {
     await expectLater(
       satellite.applyTransaction(incomingTx),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+          PostgresErrors.PG_CONSTRAINT_FOREIGNKEY,
         ),
       ),
     );
@@ -1121,14 +1148,16 @@ void main() {
       () async {
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
+    }
     await satellite.setMeta('compensations', 0);
     satellite.setAuthState(authState);
     final clientId = satellite.authState!.clientId;
 
     final childInsertEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'child',
       OpType.insert,
       timestamp.millisecondsSinceEpoch,
@@ -1141,7 +1170,7 @@ void main() {
 
     final parentInsertEntry = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       timestamp.millisecondsSinceEpoch,
@@ -1153,10 +1182,10 @@ void main() {
 
     await adapter.run(
       Statement(
-        "INSERT INTO main.parent(id, value) VALUES (1, '1')",
+        "INSERT INTO parent(id, value) VALUES (1, '1')",
       ),
     );
-    await adapter.run(Statement('DELETE FROM main.parent WHERE id=1'));
+    await adapter.run(Statement('DELETE FROM parent WHERE id=1'));
 
     await satellite.performSnapshot();
 
@@ -1179,7 +1208,7 @@ void main() {
 
     final rows = await adapter.query(
       Statement(
-        'SELECT * from main.parent WHERE id=1',
+        'SELECT * from parent WHERE id=1',
       ),
     );
 
@@ -1191,26 +1220,38 @@ void main() {
   });
 
   test('compensations: using triggers with flag 0', () async {
+    // since this test disables compensations
+    // by putting the flag on 0
+    // it is expecting a FK violation
+    if (builder.dialect == Dialect.postgres) {
+      // if we're running Postgres
+      // we are not deferring FK checks
+      // but completely disabling them for incoming transactions
+      // so the FK violation will not occur
+      return;
+    }
+
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
     await satellite.setMeta('compensations', 0);
 
     await adapter.run(
-      Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
+      Statement("INSERT INTO parent(id, value) VALUES (1, '1')"),
     );
     satellite.setAuthState(authState);
     final ts = await satellite.performSnapshot();
     await satellite.garbageCollectOplog(ts);
 
-    await adapter
-        .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
+    await adapter.run(Statement('INSERT INTO child(id, parent) VALUES (1, 1)'));
     await satellite.performSnapshot();
 
     final timestamp = DateTime.now();
     final incoming = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.delete,
       timestamp.millisecondsSinceEpoch,
@@ -1234,10 +1275,10 @@ void main() {
     await expectLater(
       satellite.applyTransaction(incomingTx),
       throwsA(
-        isA<SqliteException>().having(
-          (SqliteException e) => e.extendedResultCode,
-          'code',
+        isADbExceptionWithCode(
+          builder.dialect,
           SqliteErrors.SQLITE_CONSTRAINT_FOREIGNKEY,
+          PostgresErrors.PG_CONSTRAINT_FOREIGNKEY,
         ),
       ),
     );
@@ -1246,25 +1287,26 @@ void main() {
   test('compensations: using triggers with flag 1', () async {
     await runMigrations();
 
-    await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    if (builder.dialect == Dialect.sqlite) {
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
     await satellite.setMeta('compensations', 1);
 
     await adapter.run(
-      Statement("INSERT INTO main.parent(id, value) VALUES (1, '1')"),
+      Statement("INSERT INTO parent(id, value) VALUES (1, '1')"),
     );
     satellite.setAuthState(authState);
     final ts = await satellite.performSnapshot();
     await satellite.garbageCollectOplog(ts);
 
-    await adapter
-        .run(Statement('INSERT INTO main.child(id, parent) VALUES (1, 1)'));
+    await adapter.run(Statement('INSERT INTO child(id, parent) VALUES (1, 1)'));
     await satellite.performSnapshot();
 
     final timestamp = DateTime.now();
     final incoming = [
       generateRemoteOplogEntry(
         tableInfo,
-        'main',
+        namespace,
         'parent',
         OpType.delete,
         timestamp.millisecondsSinceEpoch,
@@ -1301,7 +1343,7 @@ void main() {
     );
 
     final expected = OplogEntry(
-      namespace: 'main',
+      namespace: namespace,
       tablename: 'parent',
       optype: OpType.insert,
       newRow: '{"id":0}',
@@ -1312,7 +1354,7 @@ void main() {
       clearTags: encodeTags([]),
     );
 
-    final opLog = fromTransaction(transaction, relations);
+    final opLog = fromTransaction(transaction, relations, namespace);
     expect(opLog[0], expected);
   });
 
@@ -1557,9 +1599,8 @@ void main() {
   test('apply shape data and persist subscription', () async {
     await runMigrations();
 
-    const namespace = 'main';
     const tablename = 'parent';
-    const qualified = QualifiedTablename(namespace, tablename);
+    final qualifiedTableName = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1582,7 +1623,7 @@ void main() {
     expect(
       changeNotification.changes[0],
       Change(
-        qualifiedTablename: qualified,
+        qualifiedTablename: qualifiedTableName,
         rowids: [],
         recordChanges: [
           RecordChange(
@@ -1597,7 +1638,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM $qualifiedTableName',
         ),
       );
       expect(row.length, 1);
@@ -1688,9 +1729,8 @@ void main() {
   test('applied shape data will be acted upon correctly', () async {
     await runMigrations();
 
-    const namespace = 'main';
     const tablename = 'parent';
-    final qualified = const QualifiedTablename(namespace, tablename).toString();
+    final qualified = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1720,7 +1760,7 @@ void main() {
         ),
       );
       expect(shadowRows.length, 1);
-      expect(shadowRows[0]['namespace'], 'main');
+      expect(shadowRows[0]['namespace'], namespace);
       expect(shadowRows[0]['tablename'], 'parent');
 
       await adapter.run(Statement('DELETE FROM $qualified WHERE id = 1'));
@@ -1768,7 +1808,7 @@ void main() {
 
     final [result] = await adapter.query(
       Statement(
-        'SELECT * FROM main.parent WHERE id = 100',
+        'SELECT * FROM parent WHERE id = 100',
       ),
     );
     expect(result, {'id': 100, 'value': 'new_value', 'other': null});
@@ -1811,7 +1851,7 @@ void main() {
 
     final results = await adapter.query(
       Statement(
-        'SELECT * FROM main.parent',
+        'SELECT * FROM parent',
       ),
     );
     expect(results, <dynamic>[]);
@@ -1820,11 +1860,16 @@ void main() {
   test(
       'a subscription that failed to apply because of FK constraint triggers GC',
       () async {
+    if (builder.dialect == Dialect.postgres) {
+      // Ignore this unit test for Postgres
+      // because we don't defer FK checks
+      // but completely disable them for incoming transactions
+      return;
+    }
+
     await runMigrations();
 
     const tablename = 'child';
-    const namespace = 'main';
-    final qualified = const QualifiedTablename(namespace, tablename).toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1843,7 +1888,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
 
@@ -1857,7 +1902,6 @@ void main() {
     await runMigrations();
 
     const tablename = 'child';
-    final qualified = const QualifiedTablename('main', tablename).toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1879,7 +1923,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
       expect(row.length, 1);
@@ -1901,8 +1945,6 @@ void main() {
 
   test('a single subscribe with multiple tables with FKs', () async {
     await runMigrations();
-
-    final qualifiedChild = const QualifiedTablename('main', 'child').toString();
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -1928,7 +1970,7 @@ void main() {
           try {
             final row = await adapter.query(
               Statement(
-                'SELECT id FROM $qualifiedChild',
+                'SELECT id FROM "$namespace"."child"',
               ),
             );
             expect(row.length, 1);
@@ -1972,9 +2014,9 @@ void main() {
     final ShapeSubscription(synced: synced1) =
         await satellite.subscribe([shapeDef1]);
     await synced1;
-    final row = await adapter.query(Statement('SELECT id FROM main.parent'));
+    final row = await adapter.query(Statement('SELECT id FROM parent'));
     expect(row.length, 1);
-    final row1 = await adapter.query(Statement('SELECT id FROM main.child'));
+    final row1 = await adapter.query(Statement('SELECT id FROM child'));
     expect(row1.length, 1);
     final ShapeSubscription(synced: synced) =
         await satellite.subscribe([shapeDef2]);
@@ -1987,11 +2029,11 @@ void main() {
 
       try {
         final row = await adapter.query(
-          Statement('SELECT id FROM main.parent'),
+          Statement('SELECT id FROM parent'),
         );
         expect(row.length, 0);
         final row1 = await adapter.query(
-          Statement('SELECT id FROM main.child'),
+          Statement('SELECT id FROM child'),
         );
         expect(row1.length, 0);
 
@@ -2019,7 +2061,6 @@ void main() {
 
     // relations must be present at subscription delivery
     const tablename = 'parent';
-    final qualified = const QualifiedTablename('main', tablename).toString();
     client.setRelations(kTestRelations);
     client.setRelationData(tablename, parentRecord);
 
@@ -2038,7 +2079,7 @@ void main() {
     try {
       final row = await adapter.query(
         Statement(
-          'SELECT id FROM $qualified',
+          'SELECT id FROM "$namespace"."$tablename"',
         ),
       );
       expect(row.length, 1);
@@ -2056,9 +2097,34 @@ void main() {
     }
   });
 
+  test("snapshot while not fully connected doesn't throw", () async {
+    client.setStartReplicationDelay(const Duration(milliseconds: 100));
+
+    await runMigrations();
+
+    // Add log entry while offline
+    await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
+
+    final conn = await startSatellite(satellite, authConfig, token);
+
+    // Performing a snapshot while the replication connection has not been stablished
+    // should not throw
+    await satellite.performSnapshot();
+
+    await conn.connectionFuture;
+
+    await satellite.performSnapshot();
+  });
+
   test('unsubscribing all subscriptions does not trigger FK violations',
       () async {
     await runMigrations(); // because the meta tables need to exist for shape GC
+
+    unawaited(
+      satellite.garbageCollectShapeHandler(
+        [ShapeDefinition(uuid: '', definition: Shape(tablename: 'parent'))],
+      ),
+    );
 
     final subsManager = MockSubscriptionsManager(
       satellite.garbageCollectShapeHandler,
@@ -2070,7 +2136,7 @@ void main() {
     await satellite.adapter.runInTransaction([
       Statement('CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT)'),
       Statement(
-        'CREATE TABLE posts (id TEXT PRIMARY KEY, title TEXT, author_id TEXT, FOREIGN KEY(author_id) REFERENCES users(id))',
+        'CREATE TABLE posts (id TEXT PRIMARY KEY, title TEXT, author_id TEXT, FOREIGN KEY(author_id) REFERENCES users(id) ${builder.pgOnly('DEFERRABLE INITIALLY IMMEDIATE')})',
       ),
       Statement("INSERT INTO users (id, name) VALUES ('u1', 'user1')"),
       Statement(
@@ -2113,31 +2179,11 @@ void main() {
     expect(await satellite.getEntries(since: 0), <OplogEntry>[]);
   });
 
-  test("snapshot while not fully connected doesn't throw", () async {
-    client.setStartReplicationDelay(const Duration(milliseconds: 100));
-
-    await runMigrations();
-
-    // Add log entry while offline
-    await adapter.run(Statement("INSERT INTO parent(id) VALUES ('1'),('2')"));
-
-    final conn = await startSatellite(satellite, authConfig, token);
-
-    // Performing a snapshot while the replication connection has not been stablished
-    // should not throw
-    await satellite.performSnapshot();
-
-    await conn.connectionFuture;
-
-    await satellite.performSnapshot();
-  });
-
   test('snapshots: generated oplog entries have the correct tags', () async {
     await runMigrations();
 
-    const namespace = 'main';
     const tablename = 'parent';
-    final qualified = const QualifiedTablename(namespace, tablename).toString();
+    final qualified = QualifiedTablename(namespace, tablename);
 
     // relations must be present at subscription delivery
     client.setRelations(kTestRelations);
@@ -2155,7 +2201,7 @@ void main() {
     final expectedTs = DateTime.now();
     final incoming = generateRemoteOplogEntry(
       tableInfo,
-      'main',
+      namespace,
       'parent',
       OpType.insert,
       expectedTs.millisecondsSinceEpoch,
@@ -2190,7 +2236,7 @@ void main() {
     );
     expect(shadowRows.length, 2);
 
-    expect(shadowRows[0]['namespace'], 'main');
+    expect(shadowRows[0]['namespace'], namespace);
     expect(shadowRows[0]['tablename'], 'parent');
 
     await adapter.run(Statement('DELETE FROM $qualified WHERE id = 2'));
@@ -2300,7 +2346,7 @@ void main() {
     satellite.setAuthState(authState);
 
     satellite.updateDatabaseAdapter(
-      ReplaceTxDatabaseAdapter((satellite.adapter as SqliteAdapter).db),
+      ReplaceTxDatabaseAdapter(satellite.adapter),
     );
 
     const error = 'FAKE TRANSACTION';
@@ -2334,7 +2380,7 @@ void main() {
     // delay termination of _performSnapshot
     satellite.updateDatabaseAdapter(
       SlowDatabaseAdapter(
-        (satellite.adapter as SqliteAdapter).db,
+        satellite.adapter,
         delay: const Duration(milliseconds: 500),
       ),
     );
@@ -2375,9 +2421,11 @@ void main() {
   });
 }
 
-class SlowDatabaseAdapter extends SqliteAdapter {
+class SlowDatabaseAdapter extends DatabaseAdapter {
+  final DatabaseAdapter delegate;
+
   SlowDatabaseAdapter(
-    super.db, {
+    this.delegate, {
     this.delay = const Duration(milliseconds: 100),
   });
 
@@ -2386,35 +2434,62 @@ class SlowDatabaseAdapter extends SqliteAdapter {
   @override
   Future<RunResult> run(Statement statement) async {
     await Future<void>.delayed(delay);
-    return super.run(statement);
+    return delegate.run(statement);
   }
 
   @override
   Future<T> transaction<T>(
-    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+    void Function(DbTransaction tx, void Function(T res) setResult) f,
   ) async {
     await Future<void>.delayed(delay);
-    return super.transaction(f);
+    return delegate.transaction<T>(f);
+  }
+
+  @override
+  Future<List<Row>> query(Statement statement) async {
+    await Future<void>.delayed(delay);
+    return delegate.query(statement);
+  }
+
+  @override
+  Future<RunResult> runInTransaction(List<Statement> statements) async {
+    await Future<void>.delayed(delay);
+    return delegate.runInTransaction(statements);
   }
 }
 
 typedef _TxFun<T> = Future<T> Function(
-  void Function(adp.Transaction tx, void Function(T res) setResult) f,
+  void Function(DbTransaction tx, void Function(T res) setResult) f,
 );
 
-class ReplaceTxDatabaseAdapter extends SqliteAdapter {
-  ReplaceTxDatabaseAdapter(
-    super.db,
-  );
+class ReplaceTxDatabaseAdapter extends DatabaseAdapter {
+  final DatabaseAdapter delegate;
+
+  ReplaceTxDatabaseAdapter(this.delegate);
 
   _TxFun<dynamic>? customTxFun;
 
   @override
+  Future<RunResult> run(Statement statement) async {
+    return delegate.run(statement);
+  }
+
+  @override
   Future<T> transaction<T>(
-    void Function(adp.Transaction tx, void Function(T res) setResult) f,
+    void Function(DbTransaction tx, void Function(T res) setResult) f,
   ) {
     return customTxFun != null
         ? (customTxFun! as _TxFun<T>).call(f)
-        : super.transaction(f);
+        : delegate.transaction(f);
+  }
+
+  @override
+  Future<List<Row>> query(Statement statement) async {
+    return delegate.query(statement);
+  }
+
+  @override
+  Future<RunResult> runInTransaction(List<Statement> statements) async {
+    return delegate.runInTransaction(statements);
   }
 }

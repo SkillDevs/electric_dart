@@ -18,7 +18,7 @@ class Statement with EquatableMixin {
 
   @override
   String toString() {
-    return 'Statement($sql, $args)';
+    return 'Statement(sql: $sql, args: $args)';
   }
 
   @override
@@ -253,7 +253,7 @@ enum DataChangeType {
   gone,
 }
 
-typedef Record = Map<String, Object?>;
+typedef DbRecord = Map<String, Object?>;
 
 typedef Tag = String;
 
@@ -284,8 +284,8 @@ class SchemaChange extends Change with EquatableMixin {
 class DataChange extends Change with EquatableMixin {
   final Relation relation;
   final DataChangeType type;
-  final Record? record;
-  final Record? oldRecord;
+  final DbRecord? record;
+  final DbRecord? oldRecord;
   final List<Tag> tags;
 
   DataChange({
@@ -308,8 +308,8 @@ class DataChange extends Change with EquatableMixin {
   DataChange copyWith({
     Relation? relation,
     DataChangeType? type,
-    Record? Function()? record,
-    Record? Function()? oldRecord,
+    DbRecord? Function()? record,
+    DbRecord? Function()? oldRecord,
     List<Tag>? tags,
   }) {
     return DataChange(

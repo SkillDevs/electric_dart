@@ -1,13 +1,11 @@
-// export { BundleMigrator } from './bundle'
-// export { MockMigrator } from './mock'
-
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class Migration {
   final List<String> statements;
   final String version;
 
-  Migration({
+  const Migration({
     required this.statements,
     required this.version,
   });
@@ -39,14 +37,12 @@ StmtMigration makeStmtMigration(Migration migration) {
 }
 
 abstract class Migrator {
+  const Migrator();
+
+  abstract final QueryBuilder queryBuilder;
+
   Future<int> up();
   Future<void> apply(StmtMigration migration);
   Future<bool> applyIfNotAlready(StmtMigration migration);
   Future<String?> querySchemaVersion();
-}
-
-class MigratorOptions {
-  final String tableName;
-
-  MigratorOptions({required this.tableName});
 }

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/sets.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -141,6 +141,7 @@ OpType opTypeStrToOpType(String str) {
 List<OplogEntry> fromTransaction(
   DataTransaction transaction,
   RelationsCache relations,
+  String namespace,
 ) {
   return transaction.changes.map((t) {
     final columnValues = t.record ?? t.oldRecord!;
@@ -154,7 +155,7 @@ List<OplogEntry> fromTransaction(
     );
 
     return OplogEntry(
-      namespace: 'main', // TODO: how?
+      namespace: namespace,
       tablename: t.relation.table,
       primaryKey: pk,
       rowid: -1, // Not required

@@ -4,6 +4,7 @@ import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/electric/mock.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/mock.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
@@ -15,13 +16,14 @@ import 'package:test/test.dart';
 const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
-final DBSchema dbDescription = DBSchemaRaw(fields: {}, migrations: []);
-final Migrator migrator = MockMigrator();
+final DBSchema dbDescription =
+    DBSchemaRaw(fields: {}, migrations: [], pgMigrations: []);
+final Migrator migrator = MockMigrator(queryBuilder: kSqliteQueryBuilder);
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
 
 final HydratedConfig config = hydrateConfig(
-  ElectricConfig(),
+  ElectricConfigWithDialect.from(config: ElectricConfig()),
 );
 
 void main() {

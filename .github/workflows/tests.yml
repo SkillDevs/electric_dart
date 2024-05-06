@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - master
+      - feat/*
   pull_request:
 
 jobs:

@@ -5,7 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/bitmask_helpers.dart';
-import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:protobuf/protobuf.dart';
 
@@ -382,7 +382,7 @@ String rowToString(SatOpRow row) {
   return row.values
       .mapIndexed(
         (i, x) => getMaskBit(row.nullsBitmask, i) == 0
-            ? json.encode(TypeDecoder.text(x, allowMalformed: true))
+            ? json.encode(kSqliteTypeDecoder.text(x, allowMalformed: true))
             : '∅',
       )
       .join(', ');

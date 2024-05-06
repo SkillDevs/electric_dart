@@ -7,10 +7,10 @@ import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
-import '../support/migrations.dart';
-import '../util/io.dart';
-import '../util/sqlite.dart';
-import '../util/sqlite_errors.dart';
+import '../../support/migrations.dart';
+import '../../util/db_errors.dart';
+import '../../util/io.dart';
+import '../../util/sqlite.dart';
 
 void main() {
   late Database db;
@@ -29,19 +29,22 @@ void main() {
   });
 
   test('check schema keys are unique', () async {
-    final migrator =
-        BundleMigrator(adapter: adapter, migrations: kTestMigrations);
+    final migrator = SqliteBundleMigrator(
+      adapter: adapter,
+      migrations: kTestSqliteMigrations,
+    );
     await migrator.up();
-
+    final defaults = satelliteDefaults(migrator.queryBuilder.defaultNamespace);
+    final metaTable = '${defaults.metaTable}';
     await adapter.run(
       Statement(
-        "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
+        "INSERT INTO $metaTable (key, value) values ('key', 'value')",
       ),
     );
     try {
       await adapter.run(
         Statement(
-          "INSERT INTO ${kSatelliteDefaults.metaTable}(key, value) values ('key', 'value')",
+          "INSERT INTO $metaTable (key, value) values ('key', 'value')",
         ),
       );
       fail('should not occur');

@@ -30,7 +30,7 @@ RecordChangeType recordChangeTypeFromOpType(OpType opType) {
 }
 
 class RecordChange with EquatableMixin {
-  final Record primaryKey;
+  final DbRecord primaryKey;
   final RecordChangeType type;
 
   RecordChange({required this.primaryKey, required this.type});

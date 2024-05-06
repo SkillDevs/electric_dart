@@ -1,10 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:drift/drift.dart';
+import 'package:drift_postgres/drift_postgres.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/util.dart';
+import 'package:postgres/postgres.dart' as pg;
 import 'package:satellite_dart_client/drift/database.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
@@ -13,15 +17,46 @@ import 'package:satellite_dart_client/util/json.dart';
 import 'package:satellite_dart_client/util/pretty_output.dart';
 
 late String dbName;
+late QueryBuilder builder;
 int? tokenExpirationMillis;
+
+// TODO(dart): Remove git dependency to drift_postgres once this launches
+// https://github.com/simolus3/drift/commit/6ba049e5df7f2a3aff50c02ffdd326f596f53452
 
 typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
-Future<ClientDatabase> makeDb(String dbPath) async {
-  final db = ClientDatabase(NativeDatabase(File(dbPath)));
-  await db.customSelect('PRAGMA foreign_keys = ON;').get();
-  dbName = dbPath;
+Future<ClientDatabase> makeDb(String name) async {
+  dbName = name;
+  final dialectEnv = Platform.environment['DIALECT'];
+  print("DIALECT: $dialectEnv");
+
+  ClientDatabase db;
+  if (dialectEnv == 'Postgres') {
+    builder = kPostgresQueryBuilder;
+    final endpoint = makePgEndpoint(name);
+    db = ClientDatabase(
+      PgDatabase(
+        endpoint: endpoint,
+        settings: pg.ConnectionSettings(sslMode: pg.SslMode.disable),
+        enableMigrations: false,
+      ),
+    );
+    dbName = '${endpoint.host}:${endpoint.port}/${endpoint.database}';
+  } else {
+    builder = kSqliteQueryBuilder;
+    db = ClientDatabase(NativeDatabase(File(name)));
+    await db.customSelect('PRAGMA foreign_keys = ON;').get();
+  }
   return db;
+}
+
+pg.Endpoint makePgEndpoint(String dbName) {
+  return pg.Endpoint(
+    host: 'pg_1',
+    database: dbName,
+    username: 'postgres',
+    password: 'password',
+  );
 }
 
 Future<MyDriftElectricClient> electrifyDb(
@@ -39,10 +74,23 @@ Future<MyDriftElectricClient> electrifyDb(
 
   final migrations = migrationsFromJson(migrationsJ);
 
+  final List<Migration> sqliteMigrations;
+  final List<Migration> pgMigrations;
+  if (builder.dialect == Dialect.postgres) {
+    sqliteMigrations = [];
+    pgMigrations = migrations;
+  } else {
+    sqliteMigrations = migrations;
+    pgMigrations = [];
+  }
+
   final result = await electrify<ClientDatabase>(
     dbName: dbName,
     db: db,
-    migrations: migrations,
+    migrations: ElectricMigrations(
+      sqliteMigrations: sqliteMigrations,
+      pgMigrations: pgMigrations,
+    ),
     config: config,
   );
 
@@ -134,24 +182,23 @@ Future<void> lowLevelSubscribe(
 }
 
 Future<Rows> getTables(DriftElectricClient electric) async {
-  final rows = await electric.db
-      .customSelect("SELECT name FROM sqlite_master WHERE type='table';")
-      .get();
-  return _toRows(rows);
+  final rows = await electric.adapter.query(builder.getLocalTableNames());
+  return Rows(rows);
 }
 
 Future<Rows> getColumns(DriftElectricClient electric, String table) async {
-  final rows = await electric.db.customSelect(
-    "SELECT * FROM pragma_table_info(?);",
-    variables: [Variable.withString(table)],
-  ).get();
-  return _toRows(rows);
+  final namespace = builder.defaultNamespace;
+  final qualifiedTablename = QualifiedTablename(namespace, table);
+  final rows = await electric.adapter.query(
+    builder.getTableInfo(qualifiedTablename),
+  );
+  return Rows(rows);
 }
 
 Future<Rows> getRows(DriftElectricClient electric, String table) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM $table;",
+        'SELECT * FROM "$table";',
       )
       .get();
   return _toRows(rows);
@@ -269,7 +316,7 @@ Future<void> getDatetimes(MyDriftElectricClient electric) async {
 Future<Rows> getItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM items;",
+        'SELECT * FROM "items";',
       )
       .get();
   return _toRows(rows);
@@ -278,7 +325,7 @@ Future<Rows> getItems(MyDriftElectricClient electric) async {
 Future<Rows> getItemIds(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT id FROM items;",
+        'SELECT id FROM "items";',
       )
       .get();
   return _toRows(rows);
@@ -303,7 +350,7 @@ Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
 Future<Rows> getUUIDs(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM Uuids;",
+        'SELECT * FROM "Uuids";',
       )
       .get();
   return _toRows(rows);
@@ -326,15 +373,24 @@ Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
 
 Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int? i2,
     int? i4, BigInt? i8) async {
-  final item = await electric.db.ints.insertReturning(
-    IntsCompanion.insert(
-      id: id,
-      i2: Value(i2),
-      i4: Value(i4),
-      i8: Value(i8),
-    ),
-  );
-  return SingleRow.fromItem(item);
+  try {
+    final item = await electric.db.ints.insertReturning(
+      IntsCompanion.insert(
+        id: id,
+        i2: Value(i2),
+        i4: Value(i4),
+        i8: Value(i8),
+      ),
+    );
+    return SingleRow.fromItem(item);
+  } catch (e) {
+    final eStr = e.toString();
+    if (eStr
+        .contains("Invalid argument (this): Should be in signed 64bit range")) {
+      throw Exception("BigInt value exceeds the range of 64 bits");
+    }
+    rethrow;
+  }
 }
 
 Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
@@ -358,7 +414,7 @@ Future<SingleRow> writeFloat(
 
 Future<String?> getJsonRaw(MyDriftElectricClient electric, String id) async {
   final res = await electric.db.customSelect(
-    'SELECT js FROM jsons WHERE id = ?;',
+    'SELECT js FROM jsons WHERE id = ${builder.makePositionalParam(1)};',
     variables: [Variable(id)],
   ).get();
   return res[0].read<String?>('js');
@@ -366,10 +422,21 @@ Future<String?> getJsonRaw(MyDriftElectricClient electric, String id) async {
 
 Future<String?> getJsonbRaw(MyDriftElectricClient electric, String id) async {
   final res = await electric.db.customSelect(
-    'SELECT jsb FROM jsons WHERE id = ?;',
+    'SELECT jsb FROM jsons WHERE id = ${builder.makePositionalParam(1)};',
     variables: [Variable(id)],
   ).get();
-  return res[0].read<String?>('jsb');
+
+  final Object? j = res[0].data['jsb'];
+
+  final Object? effectiveJ;
+  if (builder.dialect == Dialect.postgres) {
+    // Postgres stores JSON so we just use that one
+    effectiveJ = j;
+  } else {
+    final jStr = j as String;
+    effectiveJ = jsonDecode(jStr);
+  }
+  return valueToPrettyStr(effectiveJ);
 }
 
 Future<SingleRow> getJson(MyDriftElectricClient electric, String id) async {
@@ -452,7 +519,7 @@ Future<Rows> getItemColumns(
     MyDriftElectricClient electric, String table, String column) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT $column FROM $table;",
+        'SELECT $column FROM "$table";',
       )
       .get();
   return _toRows(rows);
@@ -462,12 +529,9 @@ Future<void> insertItem(
     MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
-      await electric.db.customInsert(
-        "INSERT INTO items(id, content) VALUES (?,?);",
-        variables: [
-          Variable.withString(genUUID()),
-          Variable.withString(key),
-        ],
+      await electric.db.customStatement(
+        'INSERT INTO "items"(id, content) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)});',
+        _createRawArgs([genUUID(), key]),
       );
     }
   });
@@ -498,13 +562,15 @@ Future<void> insertExtendedInto(
 
   final columns = colToVal.keys.toList();
   final columnNames = columns.join(", ");
-  final placeholders = columns.map((_) => "?").join(", ");
+  final placeholders = columns
+      .mapIndexed((i, _) => builder.makePositionalParam(i + 1))
+      .join(", ");
 
   final args = colToVal.values.toList();
 
-  await electric.db.customInsert(
-    "INSERT INTO $table($columnNames) VALUES ($placeholders) RETURNING *;",
-    variables: dynamicArgsToVariables(args),
+  await electric.db.customStatement(
+    'INSERT INTO "$table"($columnNames) VALUES ($placeholders) RETURNING *;',
+    _createRawArgs(args),
   );
 }
 
@@ -514,7 +580,7 @@ Future<void> deleteItem(
 ) async {
   for (final key in keys) {
     await electric.db.customUpdate(
-      "DELETE FROM items WHERE content = ?;",
+      'DELETE FROM "items" WHERE content = ${builder.makePositionalParam(1)};',
       variables: [Variable.withString(key)],
     );
   }
@@ -523,7 +589,7 @@ Future<void> deleteItem(
 Future<Rows> getOtherItems(MyDriftElectricClient electric) async {
   final rows = await electric.db
       .customSelect(
-        "SELECT * FROM other_items;",
+        'SELECT * FROM "other_items";',
       )
       .get();
   return _toRows(rows);
@@ -533,12 +599,9 @@ Future<void> insertOtherItem(
     MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
-      await electric.db.customInsert(
-        "INSERT INTO other_items(id, content) VALUES (?,?);",
-        variables: [
-          Variable.withString(genUUID()),
-          Variable.withString(key),
-        ],
+      await electric.db.customStatement(
+        'INSERT INTO "other_items"(id, content) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)});',
+        _createRawArgs([genUUID(), key]),
       );
     }
   });
@@ -595,6 +658,18 @@ Future<void> custom0325SyncItems(MyDriftElectricClient electric) async {
 }
 
 /////////////////////////////////
+
+/// On postgres, let the type inference do its job,
+/// instead of doing strict casts via drift_postgres
+/// https://github.com/simolus3/drift/issues/2986
+List<Object?> _createRawArgs(List<Object?> args) {
+  if (builder.dialect == Dialect.postgres) {
+    // Allow Postgres to infer the types
+    return args.map((arg) => pg.TypedValue(pg.Type.unspecified, arg)).toList();
+  } else {
+    return args;
+  }
+}
 
 // It has a custom toString to match Lux expects
 Rows _toRows(List<QueryRow> rows) {

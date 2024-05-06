@@ -46,16 +46,19 @@ class PostgresServer {
   Future<int> get port => _port.future;
   final String? _pgUser;
   final String? _pgPassword;
+  final String _databaseName;
 
   PostgresServer({
     String? pgUser,
     String? pgPassword,
+    String? databaseName,
   })  : _pgUser = pgUser,
-        _pgPassword = pgPassword;
+        _pgPassword = pgPassword,
+        _databaseName = databaseName ?? 'postgres';
 
-  Future<Endpoint> endpoint() async => Endpoint(
+  Future<Endpoint> endpoint({String? dbName}) async => Endpoint(
         host: 'localhost',
-        database: 'postgres',
+        database: dbName ?? _databaseName,
         username: _pgUser ?? 'postgres',
         password: _pgPassword ?? 'postgres',
         port: await port,
@@ -82,6 +85,96 @@ class PostgresServer {
   }
 }
 
+class EmbeddedPostgresServer {
+  late final PostgresServer server;
+  bool started = false;
+  Directory? tempDir;
+
+  Iterable<String>? _initSqls;
+  String? _pgHbaConfContent;
+  int? _port;
+  String? _name;
+  late String _databaseName;
+  late bool _persistent;
+
+  EmbeddedPostgresServer({
+    String? pgUser,
+    String? pgPassword,
+    Iterable<String>? initSqls,
+    String? pgHbaConfContent,
+    int? port,
+    String? name,
+    String? databaseName,
+    bool persistent = true,
+  }) {
+    final effectiveDatabaseName = databaseName ?? 'postgres';
+    server = PostgresServer(
+      pgUser: pgUser,
+      pgPassword: pgPassword,
+      databaseName: effectiveDatabaseName,
+    );
+
+    _initSqls = initSqls;
+    _pgHbaConfContent = pgHbaConfContent;
+    _port = port;
+    _name = name;
+    _persistent = persistent;
+    _databaseName = effectiveDatabaseName;
+  }
+
+  Future<void> start() async {
+    Directory? tempDir;
+
+    try {
+      final port = _port ?? await selectFreePort();
+
+      final containerName = _name ?? 'postgres-dart-test-$port';
+
+      String? pgHbaConfPath;
+      if (_pgHbaConfContent != null) {
+        tempDir = await Directory.systemTemp.createTemp(containerName);
+        pgHbaConfPath = p.join(tempDir.path, 'pg_hba.conf');
+        await File(pgHbaConfPath).writeAsString(_pgHbaConfContent!);
+      }
+      this.tempDir = tempDir;
+
+      await _startPostgresContainer(
+        port: port,
+        containerName: containerName,
+        initSqls: _initSqls ?? const <String>[],
+        pgUser: server._pgUser,
+        pgPassword: server._pgPassword,
+        pgHbaConfPath: pgHbaConfPath,
+        cleanup: !_persistent,
+        databaseName: _databaseName,
+      );
+
+      server._containerName.complete(containerName);
+      server._port.complete(port);
+      started = true;
+    } catch (e, st) {
+      server._containerName.completeError(e, st);
+      server._port.completeError(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> stop() async {
+    if (!started) {
+      return;
+    }
+
+    final containerName = await server._containerName.future;
+    await Process.run('docker', ['stop', containerName]);
+
+    if (!_persistent) {
+      await Process.run('docker', ['kill', containerName]);
+      await tempDir?.delete(recursive: true);
+    }
+    started = false;
+  }
+}
+
 @isTestGroup
 void withPostgresServer(
   String name,
@@ -92,50 +185,23 @@ void withPostgresServer(
   String? pgHbaConfContent,
 }) {
   group(name, () {
-    final server = PostgresServer(
+    final pg = EmbeddedPostgresServer(
       pgUser: pgUser,
       pgPassword: pgPassword,
+      initSqls: initSqls,
+      pgHbaConfContent: pgHbaConfContent,
+      persistent: false,
     );
-    Directory? tempDir;
 
     setUpAll(() async {
-      try {
-        final port = await selectFreePort();
-        String? pgHbaConfPath;
-        if (pgHbaConfContent != null) {
-          tempDir =
-              await Directory.systemTemp.createTemp('postgres-dart-test-$port');
-          pgHbaConfPath = p.join(tempDir!.path, 'pg_hba.conf');
-          await File(pgHbaConfPath).writeAsString(pgHbaConfContent);
-        }
-
-        final containerName = 'postgres-dart-test-$port';
-        await _startPostgresContainer(
-          port: port,
-          containerName: containerName,
-          initSqls: initSqls ?? const <String>[],
-          pgUser: pgUser,
-          pgPassword: pgPassword,
-          pgHbaConfPath: pgHbaConfPath,
-        );
-
-        server._containerName.complete(containerName);
-        server._port.complete(port);
-      } catch (e, st) {
-        server._containerName.completeError(e, st);
-        server._port.completeError(e, st);
-        rethrow;
-      }
+      await pg.start();
     });
 
     tearDownAll(() async {
-      final containerName = await server._containerName.future;
-      await Process.run('docker', ['stop', containerName]);
-      await Process.run('docker', ['kill', containerName]);
-      await tempDir?.delete(recursive: true);
+      await pg.stop();
     });
 
-    fn(server);
+    fn(pg.server);
   });
 }
 
@@ -153,6 +219,8 @@ Future<void> _startPostgresContainer({
   String? pgUser,
   String? pgPassword,
   String? pgHbaConfPath,
+  String? databaseName,
+  bool cleanup = true,
 }) async {
   final isRunning = await _isPostgresContainerRunning(containerName);
   if (isRunning) {
@@ -165,10 +233,10 @@ Future<void> _startPostgresContainer({
     name: containerName,
     version: 'latest',
     pgPort: port,
-    pgDatabase: 'postgres',
+    pgDatabase: databaseName ?? 'postgres',
     pgUser: pgUser ?? 'postgres',
     pgPassword: pgPassword ?? 'postgres',
-    cleanup: true,
+    cleanup: cleanup,
     configurations: [
       // SSL settings
       'ssl=on',

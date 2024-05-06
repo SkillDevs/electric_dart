@@ -5,3 +5,6 @@ const kElectricSqlDriftImport = 'package:electricsql/drivers/drift.dart';
 const kElectricEnumTypesClassName = 'ElectricEnumTypes';
 const kElectricTableMixin = 'ElectricTableMixin';
 const kTableRelationsInterfaceName = 'TableRelations';
+
+const kSqliteMigrationsFileName = 'migrations.dart';
+const kPostgresMigrationsFileName = 'pg_migrations.dart';

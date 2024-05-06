@@ -6,7 +6,7 @@ import 'package:electricsql/util.dart';
 abstract class IReplicationTransformManager {
   void setTableTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   );
 
   void clearTableTransform(QualifiedTablename tableName);
@@ -20,7 +20,7 @@ class ReplicationTransformManager implements IReplicationTransformManager {
   @override
   void setTableTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   ) {
     satellite.setReplicationTransform(tableName, transform);
   }
@@ -40,7 +40,8 @@ class ReplicationTransformManager implements IReplicationTransformManager {
 /// @param schema schema to parse/validate raw record to record of type {@link T}
 /// @param immutableFields - fields that cannot be modified by {@link transformRow}
 /// @return the transformed raw record
-Insertable<D> transformTableRecord<TableDsl extends Table, D, T extends Record>(
+Insertable<D>
+    transformTableRecord<TableDsl extends Table, D, T extends DbRecord>(
   TableInfo<TableDsl, D> table,
   D record,
   Insertable<D> Function(D) transformRow,

@@ -612,6 +612,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? subscriptionIds,
     $core.String? schemaVersion,
     $core.Iterable<$fixnum.Int64>? observedTransactionData,
+    SatInStartReplicationReq_Dialect? sqlDialect,
   }) {
     final $result = create();
     if (lsn != null) {
@@ -628,6 +629,9 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     }
     if (observedTransactionData != null) {
       $result.observedTransactionData.addAll(observedTransactionData);
+    }
+    if (sqlDialect != null) {
+      $result.sqlDialect = sqlDialect;
     }
     return $result;
   }
@@ -655,6 +659,11 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     ..aOS(5, _omitFieldNames ? '' : 'schemaVersion')
     ..p<$fixnum.Int64>(6, _omitFieldNames ? '' : 'observedTransactionData',
         $pb.PbFieldType.KU6)
+    ..e<SatInStartReplicationReq_Dialect>(
+        7, _omitFieldNames ? '' : 'sqlDialect', $pb.PbFieldType.OE,
+        defaultOrMaker: SatInStartReplicationReq_Dialect.SQLITE,
+        valueOf: SatInStartReplicationReq_Dialect.valueOf,
+        enumValues: SatInStartReplicationReq_Dialect.values)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -720,6 +729,21 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
   ///  observed additional data before disconnect
   @$pb.TagNumber(6)
   $core.List<$fixnum.Int64> get observedTransactionData => $_getList(4);
+
+  /// *
+  ///  The SQL dialect used by the client
+  ///  Defaults to SQLite if not specified
+  @$pb.TagNumber(7)
+  SatInStartReplicationReq_Dialect get sqlDialect => $_getN(5);
+  @$pb.TagNumber(7)
+  set sqlDialect(SatInStartReplicationReq_Dialect v) {
+    setField(7, v);
+  }
+
+  @$pb.TagNumber(7)
+  $core.bool hasSqlDialect() => $_has(5);
+  @$pb.TagNumber(7)
+  void clearSqlDialect() => clearField(7);
 }
 
 /// Error returned by the Producer when replication fails to start
@@ -2901,6 +2925,9 @@ class SatOpMigrate_Column extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearName() => clearField(1);
 
+  /// deprecated
+  /// leaving it here to avoid breaking TypeScript tests that have hard-coded,
+  /// base64-encoded SatOpMigrate messages.
   @$pb.TagNumber(2)
   $core.String get sqliteType => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -3101,6 +3128,80 @@ class SatOpMigrate_Table extends $pb.GeneratedMessage {
   $core.List<$core.String> get pks => $_getList(3);
 }
 
+class SatOpMigrate_EnumType extends $pb.GeneratedMessage {
+  factory SatOpMigrate_EnumType({
+    $core.String? name,
+    $core.Iterable<$core.String>? values,
+  }) {
+    final $result = create();
+    if (name != null) {
+      $result.name = name;
+    }
+    if (values != null) {
+      $result.values.addAll(values);
+    }
+    return $result;
+  }
+  SatOpMigrate_EnumType._() : super();
+  factory SatOpMigrate_EnumType.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatOpMigrate_EnumType.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatOpMigrate.EnumType',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..pPS(2, _omitFieldNames ? '' : 'values')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_EnumType clone() =>
+      SatOpMigrate_EnumType()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatOpMigrate_EnumType copyWith(
+          void Function(SatOpMigrate_EnumType) updates) =>
+      super.copyWith((message) => updates(message as SatOpMigrate_EnumType))
+          as SatOpMigrate_EnumType;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_EnumType create() => SatOpMigrate_EnumType._();
+  SatOpMigrate_EnumType createEmptyInstance() => create();
+  static $pb.PbList<SatOpMigrate_EnumType> createRepeated() =>
+      $pb.PbList<SatOpMigrate_EnumType>();
+  @$core.pragma('dart2js:noInline')
+  static SatOpMigrate_EnumType getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatOpMigrate_EnumType>(create);
+  static SatOpMigrate_EnumType? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.String> get values => $_getList(1);
+}
+
+enum SatOpMigrate_AffectedEntity { table, enumType, notSet }
+
 ///  A migration message, originating in Postgres, captured via event triggers,
 ///  propagated to electric, converted from postgres to the equivalent sqlite
 ///  statement and inserted into the replication stream
@@ -3113,6 +3214,7 @@ class SatOpMigrate extends $pb.GeneratedMessage {
     $core.String? version,
     $core.Iterable<SatOpMigrate_Stmt>? stmts,
     SatOpMigrate_Table? table,
+    SatOpMigrate_EnumType? enumType,
   }) {
     final $result = create();
     if (version != null) {
@@ -3124,6 +3226,9 @@ class SatOpMigrate extends $pb.GeneratedMessage {
     if (table != null) {
       $result.table = table;
     }
+    if (enumType != null) {
+      $result.enumType = enumType;
+    }
     return $result;
   }
   SatOpMigrate._() : super();
@@ -3134,17 +3239,26 @@ class SatOpMigrate extends $pb.GeneratedMessage {
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
 
+  static const $core.Map<$core.int, SatOpMigrate_AffectedEntity>
+      _SatOpMigrate_AffectedEntityByTag = {
+    3: SatOpMigrate_AffectedEntity.table,
+    4: SatOpMigrate_AffectedEntity.enumType,
+    0: SatOpMigrate_AffectedEntity.notSet
+  };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'SatOpMigrate',
       package:
           const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
       createEmptyInstance: create)
+    ..oo(0, [3, 4])
     ..aOS(1, _omitFieldNames ? '' : 'version')
     ..pc<SatOpMigrate_Stmt>(
         2, _omitFieldNames ? '' : 'stmts', $pb.PbFieldType.PM,
         subBuilder: SatOpMigrate_Stmt.create)
     ..aOM<SatOpMigrate_Table>(3, _omitFieldNames ? '' : 'table',
         subBuilder: SatOpMigrate_Table.create)
+    ..aOM<SatOpMigrate_EnumType>(4, _omitFieldNames ? '' : 'enumType',
+        subBuilder: SatOpMigrate_EnumType.create)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -3170,6 +3284,10 @@ class SatOpMigrate extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<SatOpMigrate>(create);
   static SatOpMigrate? _defaultInstance;
 
+  SatOpMigrate_AffectedEntity whichAffectedEntity() =>
+      _SatOpMigrate_AffectedEntityByTag[$_whichOneof(0)]!;
+  void clearAffectedEntity() => clearField($_whichOneof(0));
+
   /// the migration version as specified by the developer and put into
   /// the postgresql migration as an electric function call
   @$pb.TagNumber(1)
@@ -3184,10 +3302,15 @@ class SatOpMigrate extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearVersion() => clearField(1);
 
-  /// a list of sql ddl statements to apply, converted from the pg originals
-  /// The migration machinery converts an `ALTER TABLE action1, action2, action3;`
-  /// query into a set of 3: `ALTER TABLE action1; ALTER TABLE action2,` etc
-  /// so we need to support 1+ statements for every migration event.
+  ///  A list of SQL DDL statements to apply, translated from Postgres to SQLite dialect.
+  ///
+  ///  The migration machinery converts an `ALTER TABLE action1, action2, action3;`
+  ///  query into a set of 3: `ALTER TABLE action1; ALTER TABLE action2,` etc
+  ///  so we need to support 1+ statements for every migration event.
+  ///
+  ///  There is an exception for enum types. Since SQLite does not have a matching concept,
+  ///  the original Postgres DDL statement `CREATE TYPE ... AS ENUM (...)` is included as is,
+  ///  without translation.
   @$pb.TagNumber(2)
   $core.List<SatOpMigrate_Stmt> get stmts => $_getList(1);
 
@@ -3206,6 +3329,21 @@ class SatOpMigrate extends $pb.GeneratedMessage {
   void clearTable() => clearField(3);
   @$pb.TagNumber(3)
   SatOpMigrate_Table ensureTable() => $_ensure(2);
+
+  /// This field is set if stmts includes a single item which is an enum type definition.
+  @$pb.TagNumber(4)
+  SatOpMigrate_EnumType get enumType => $_getN(3);
+  @$pb.TagNumber(4)
+  set enumType(SatOpMigrate_EnumType v) {
+    setField(4, v);
+  }
+
+  @$pb.TagNumber(4)
+  $core.bool hasEnumType() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEnumType() => clearField(4);
+  @$pb.TagNumber(4)
+  SatOpMigrate_EnumType ensureEnumType() => $_ensure(3);
 }
 
 /// (Consumer) Request for new subscriptions

@@ -1,10 +1,12 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide Migrator;
 import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/transform.dart';
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
 import 'package:electricsql/src/electric/electric.dart';
@@ -18,28 +20,55 @@ import 'package:meta/meta.dart';
 Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   required String dbName,
   required DB db,
-  required List<Migration> migrations,
+  required ElectricMigrations migrations,
   required ElectricConfig config,
   ElectrifyOptions? opts,
 }) async {
   final adapter = opts?.adapter ?? DriftAdapter(db);
   final socketFactory = opts?.socketFactory ?? getDefaultSocketFactory();
 
+  final sqliteMigrations = migrations.sqliteMigrations;
+  final pgMigrations = migrations.pgMigrations;
+
   final dbDescription = DBSchemaDrift(
     db: db,
-    migrations: migrations,
+    migrations: sqliteMigrations,
+    pgMigrations: pgMigrations,
   );
+
+  final driftDialect = db.typeMapping.dialect;
+
+  final Dialect dialect = switch (driftDialect) {
+    SqlDialect.sqlite => Dialect.sqlite,
+    SqlDialect.postgres => Dialect.postgres,
+    _ => throw ArgumentError('Unsupported dialect for Electric: $driftDialect'),
+  };
+
+  Migrator migrator;
+  if (opts?.migrator != null) {
+    migrator = opts!.migrator!;
+  } else {
+    migrator = dialect == Dialect.sqlite
+        ? SqliteBundleMigrator(adapter: adapter, migrations: sqliteMigrations)
+        : PgBundleMigrator(adapter: adapter, migrations: pgMigrations);
+  }
 
   final namespace = await electrify_lib.electrifyBase(
     dbName: dbName,
     dbDescription: dbDescription,
-    config: config,
+    config: ElectricConfigWithDialect.from(
+      config: config,
+      dialect: dialect,
+    ),
     adapter: adapter,
     socketFactory: socketFactory,
     opts: ElectrifyBaseOptions(
-      migrator: opts?.migrator,
+      migrator: migrator,
       notifier: opts?.notifier,
       registry: opts?.registry,
+      // In postgres, we don't want to run the default prepare function
+      // that enables FK constraints, as Postgres already has them enabled.
+      prepare: dialect == Dialect.postgres ? (_) async {} : null,
     ),
   );
 
@@ -253,9 +282,9 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     _baseClient.replicationTransformManager.setTableTransform(
       qualifiedTableName,
       ReplicatedRowTransformer(
-        transformInbound: (Record record) {
+        transformInbound: (DbRecord record) {
           final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, Record>(
+          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
             table,
             dataClass,
             transformInbound,
@@ -266,9 +295,9 @@ class DriftElectricClient<DB extends GeneratedDatabase>
               .toColumns(false)
               .map((key, val) => MapEntry(key, expressionToValue(val)));
         },
-        transformOutbound: (Record record) {
+        transformOutbound: (DbRecord record) {
           final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, Record>(
+          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
             table,
             dataClass,
             transformOutbound,

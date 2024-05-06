@@ -1,6 +1,8 @@
-import 'package:electricsql/src/util/statements.dart';
+import 'package:electricsql/src/migrators/query_builder/sqlite_builder.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:test/test.dart';
+
+const builder = kSqliteQueryBuilder;
 
 void main() {
   test('prepareInsertBatchedStatements correctly splits up data in batches',
@@ -10,7 +12,7 @@ void main() {
       {'a': 3, 'b': 4},
       {'a': 5, 'b': 6},
     ];
-    final stmts = prepareInsertBatchedStatements(
+    final stmts = builder.prepareInsertBatchedStatements(
       'INSERT INTO test (a, b) VALUES',
       ['a', 'b'],
       data,
@@ -32,7 +34,7 @@ void main() {
       {'a': 3, 'b': 4},
       {'a': 5, 'b': 6},
     ];
-    final stmts = prepareInsertBatchedStatements(
+    final stmts = builder.prepareInsertBatchedStatements(
       'INSERT INTO test (a, b) VALUES',
       ['b', 'a'],
       data,

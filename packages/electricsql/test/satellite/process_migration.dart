@@ -1,20 +1,19 @@
-// ignore_for_file: unreachable_from_main
-
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
+import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:equatable/equatable.dart';
 import 'package:fixnum/fixnum.dart';
-import 'package:sqlite3/sqlite3.dart' hide Row;
 import 'package:test/test.dart';
 
 import '../support/satellite_helpers.dart';
@@ -26,7 +25,6 @@ Future<void> runMigrations() async {
   await context.runMigrations();
 }
 
-Database get db => context.db;
 DatabaseAdapter get adapter => context.adapter;
 Migrator get migrator => context.migrator;
 MockNotifier get notifier => context.notifier;
@@ -38,9 +36,10 @@ String get dbName => context.dbName;
 
 late String clientId;
 late DateTime txDate;
+late QueryBuilder globalBuilder;
+late String globalNamespace;
 
 class ColumnInfo with EquatableMixin {
-  int cid;
   String name;
   String type;
   int notnull;
@@ -48,7 +47,6 @@ class ColumnInfo with EquatableMixin {
   int pk;
 
   ColumnInfo({
-    required this.cid,
     required this.name,
     required this.type,
     required this.notnull,
@@ -57,34 +55,39 @@ class ColumnInfo with EquatableMixin {
   });
 
   @override
-  List<Object?> get props => [cid, name, type, notnull, dfltValue, pk];
+  List<Object?> get props => [name, type, notnull, dfltValue, pk];
 }
 
-void main() {
+Future<void> commonSetup(SatelliteTestContext context) async {
+  final satellite = context.satellite;
+  await satellite.start(context.authConfig);
+  satellite.setToken(context.token);
+  await satellite.connectWithBackoff();
+  clientId = satellite.authState!.clientId; // store clientId in the context
+  await populateDB(context);
+  txDate = await satellite.performSnapshot();
+  // Mimic Electric sending our own operations back
+  // which serves as an acknowledgement (even though there is a separate ack also)
+  // and leads to GC of the oplog
+  final ackTx = Transaction(
+    origin: satellite.authState!.clientId,
+    commitTimestamp: Int64(txDate.millisecondsSinceEpoch),
+    changes: [], // doesn't matter, only the origin and timestamp matter for GC of the oplog
+    lsn: [],
+  );
+  await satellite.applyTransaction(ackTx);
+}
+
+void processMigrationTests({
+  required SatelliteTestContext Function() getContext,
+  required String namespace,
+  required QueryBuilder builder,
+  required GetMatchingShadowEntries getMatchingShadowEntries,
+}) {
   setUp(() async {
-    context = await makeContext();
-
-    final satellite = context.satellite;
-    await satellite.start(context.authConfig);
-    satellite.setToken(context.token);
-    await satellite.connectWithBackoff();
-    clientId = satellite.authState!.clientId; // store clientId in the context
-    await populateDB(context);
-    txDate = await satellite.performSnapshot();
-    // Mimic Electric sending our own operations back
-    // which serves as an acknowledgement (even though there is a separate ack also)
-    // and leads to GC of the oplog
-    final ackTx = Transaction(
-      origin: satellite.authState!.clientId,
-      commitTimestamp: Int64(txDate.millisecondsSinceEpoch),
-      changes: [], // doesn't matter, only the origin and timestamp matter for GC of the oplog
-      lsn: [],
-    );
-    await satellite.applyTransaction(ackTx);
-  });
-
-  tearDown(() async {
-    await context.cleanAndStopSatellite();
+    context = getContext();
+    globalBuilder = builder;
+    globalNamespace = namespace;
   });
 
   test('setup populates DB', () async {
@@ -322,7 +325,7 @@ void main() {
     // Check the row that was inserted in the new table
     final newTableRows = await adapter.query(
       Statement(
-        'SELECT * FROM NewTable',
+        'SELECT * FROM "NewTable"',
       ),
     );
 
@@ -349,8 +352,7 @@ void main() {
     await adapter.runInTransaction(
       [
         Statement(
-          'UPDATE parent SET value = ?, other = ? WHERE id = ?;',
-          ['still local', 5, 1],
+          "UPDATE parent SET value = 'still local', other = 5 WHERE id = 1;",
         ),
       ],
     );
@@ -537,7 +539,7 @@ void main() {
     CREATE TABLE "test_items" (
       "id" TEXT NOT NULL,
       CONSTRAINT "test_items_pkey" PRIMARY KEY ("id")
-    ) WITHOUT ROWID;
+    );
     ''',
       table: SatOpMigrate_Table(
         name: 'test_items',
@@ -560,7 +562,7 @@ void main() {
       "item_id" TEXT,
       -- CONSTRAINT "test_other_items_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "test_items" ("id"),
       CONSTRAINT "test_other_items_pkey" PRIMARY KEY ("id")
-    ) WITHOUT ROWID;
+    );
     ''',
       table: SatOpMigrate_Table(
         name: 'test_other_items',
@@ -614,44 +616,33 @@ Future<void> populateDB(SatelliteTestContext context) async {
 
   stmts.add(
     Statement(
-      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-      [1, 'local', null],
+      "INSERT INTO parent (id, value, other) VALUES (1, 'local', null);",
     ),
   );
   stmts.add(
     Statement(
-      'INSERT INTO parent (id, value, other) VALUES (?, ?, ?);',
-      [2, 'local', null],
+      "INSERT INTO parent (id, value, other) VALUES (2, 'local', null);",
     ),
   );
   await adapter.runInTransaction(stmts);
 }
 
 Future<void> assertDbHasTables(List<String> tables) async {
-  final schemaRows = await adapter.query(
-    Statement(
-      "SELECT tbl_name FROM sqlite_schema WHERE type = 'table'",
-    ),
-  );
+  final schemaRows = await adapter.query(globalBuilder.getLocalTableNames());
 
   final tableNames = Set<String>.from(
-    schemaRows.map((r) => r['tbl_name']! as String),
+    schemaRows.map((r) => r['name']! as String),
   );
   for (final tbl in tables) {
     expect(tableNames, contains(tbl));
   }
 }
 
-Future<List<ColumnInfo>> getTableInfo(String table) async {
-  final rows = await adapter.query(
-    Statement(
-      'pragma table_info($table);',
-    ),
-  );
+Future<List<ColumnInfo>> getTableInfo(QualifiedTablename table) async {
+  final rows = await adapter.query(globalBuilder.getTableInfo(table));
 
   return rows.map((r) {
     return ColumnInfo(
-      cid: r['cid']! as int,
       name: r['name']! as String,
       type: r['type']! as String,
       notnull: r['notnull']! as int,
@@ -686,7 +677,7 @@ final createTable = SchemaChange(
   ),
   migrationType: SatOpMigrate_Type.CREATE_TABLE,
   sql: '''
-    CREATE TABLE NewTable(
+    CREATE TABLE "NewTable"(
          id TEXT NOT NULL,
          foo INTEGER,
          bar TEXT,
@@ -788,12 +779,12 @@ final newTableRelation = Relation(
 Future<void> checkMigrationIsApplied() async {
   await assertDbHasTables(['parent', 'child', 'NewTable']);
 
-  final newTableInfo = await getTableInfo('NewTable');
+  final newTableInfo =
+      await getTableInfo(QualifiedTablename(globalNamespace, 'NewTable'));
 
-  expect(newTableInfo, [
+  expect(newTableInfo.toSet(), {
     // id, foo, bar
     ColumnInfo(
-      cid: 0,
       name: 'id',
       type: 'TEXT',
       notnull: 1,
@@ -801,7 +792,6 @@ Future<void> checkMigrationIsApplied() async {
       pk: 1,
     ),
     ColumnInfo(
-      cid: 1,
       name: 'foo',
       type: 'INTEGER',
       notnull: 0,
@@ -809,16 +799,16 @@ Future<void> checkMigrationIsApplied() async {
       pk: 0,
     ),
     ColumnInfo(
-      cid: 2,
       name: 'bar',
       type: 'TEXT',
       notnull: 0,
       dfltValue: null,
       pk: 0,
     ),
-  ]);
+  });
 
-  final parentTableInfo = await getTableInfo('parent');
+  final parentTableInfo =
+      await getTableInfo(QualifiedTablename(globalNamespace, 'parent'));
   final parentTableHasColumn = parentTableInfo.any((col) {
     return col.name == 'baz' &&
         col.type == 'TEXT' &&

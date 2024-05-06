@@ -1,14 +1,8 @@
 import 'dart:convert';
 
-import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
-import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/drivers/sqlite3/sqlite3.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
-import 'package:electricsql/src/sockets/mock.dart';
 import 'package:electricsql/src/util/proto.dart';
-import 'package:electricsql/src/util/types.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 String encodeSatOpMigrateMsg(SatOpMigrate request) {
@@ -16,8 +10,8 @@ String encodeSatOpMigrateMsg(SatOpMigrate request) {
   return base64.encode(msgEncoded);
 }
 
-void main() {
-  final MetaData metaData = MetaData(
+MetaData makeMigrationMetaData(QueryBuilder builder) {
+  return MetaData(
     format: 'SatOpMigrate',
     ops: [
       SatOpMigrate(
@@ -26,7 +20,7 @@ void main() {
           SatOpMigrate_Stmt(
             type: SatOpMigrate_Type.CREATE_TABLE,
             sql:
-                'CREATE TABLE "stars" (\n  "id" TEXT NOT NULL,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL,\n  CONSTRAINT "stars_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+                'CREATE TABLE "${builder.defaultNamespace}"."stars" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL\n)${builder.sqliteOnly(' WITHOUT ROWID')};\n',
           ),
         ],
         table: SatOpMigrate_Table(
@@ -86,18 +80,45 @@ void main() {
     protocolVersion: 'Electric.Satellite',
     version: '20230613112725_814',
   );
+}
 
+void builderTests({
+  required MetaData migrationMetaData,
+  required QueryBuilder builder,
+}) {
   test('generate migration from meta data', () {
-    final migration = makeMigration(metaData);
-    expect(migration.version, metaData.version);
+    final migration = makeMigration(migrationMetaData, builder);
+    expect(migration.version, migrationMetaData.version);
     expect(
       migration.statements[0],
-      'CREATE TABLE "stars" (\n  "id" TEXT NOT NULL,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL,\n  CONSTRAINT "stars_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+      'CREATE TABLE "${builder.defaultNamespace}"."stars" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL\n)${builder.sqliteOnly(' WITHOUT ROWID')};\n',
     );
-    expect(
-      migration.statements[3],
-      "\n    CREATE TRIGGER update_ensure_main_stars_primarykey\n      BEFORE UPDATE ON \"main\".\"stars\"\n    BEGIN\n      SELECT\n        CASE\n          WHEN old.\"id\" != new.\"id\" THEN\n\t\tRAISE (ABORT, 'cannot change the value of column id as it belongs to the primary key')\n        END;\n    END;\n    ",
-    );
+    if (builder.dialect == Dialect.sqlite) {
+      expect(
+        migration.statements[3],
+        '''CREATE TRIGGER update_ensure_${builder.defaultNamespace}_stars_primarykey\n  BEFORE UPDATE ON "${builder.defaultNamespace}"."stars"\nBEGIN\n  SELECT\n    CASE\n      WHEN old."id" != new."id" THEN\n      \t\tRAISE (ABORT, 'cannot change the value of column id as it belongs to the primary key')\n    END;\nEND;''',
+      );
+    } else {
+      // Postgres
+      expect(migration.statements[3], '''
+        CREATE OR REPLACE FUNCTION update_ensure_${builder.defaultNamespace}_stars_primarykey_function()
+        RETURNS TRIGGER AS \$\$
+        BEGIN
+          IF OLD."id" IS DISTINCT FROM NEW."id" THEN
+            RAISE EXCEPTION 'Cannot change the value of column id as it belongs to the primary key';
+          END IF;
+          RETURN NEW;
+        END;
+        \$\$ LANGUAGE plpgsql;
+      ''');
+
+      expect(migration.statements[4], '''
+        CREATE TRIGGER update_ensure_${builder.defaultNamespace}_stars_primarykey
+          BEFORE UPDATE ON "${builder.defaultNamespace}"."stars"
+            FOR EACH ROW
+              EXECUTE FUNCTION update_ensure_${builder.defaultNamespace}_stars_primarykey_function();
+      ''');
+    }
   });
 
   test('make migration for table with FKs', () async {
@@ -111,7 +132,7 @@ void main() {
               SatOpMigrate_Stmt(
                 type: SatOpMigrate_Type.CREATE_TABLE,
                 sql:
-                    'CREATE TABLE "tenants" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+                    'CREATE TABLE "${builder.defaultNamespace}"."tenants" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
               ),
             ],
             table: SatOpMigrate_Table(
@@ -148,7 +169,7 @@ void main() {
               SatOpMigrate_Stmt(
                 type: SatOpMigrate_Type.CREATE_TABLE,
                 sql:
-                    'CREATE TABLE "users" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  "email" TEXT NOT NULL,\n  "password_hash" TEXT NOT NULL,\n  CONSTRAINT "users_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+                    'CREATE TABLE "${builder.defaultNamespace}"."users" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  "email" TEXT NOT NULL,\n  "password_hash" TEXT NOT NULL,\n  CONSTRAINT "users_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
               ),
             ],
             table: SatOpMigrate_Table(
@@ -203,7 +224,7 @@ void main() {
               SatOpMigrate_Stmt(
                 type: SatOpMigrate_Type.CREATE_TABLE,
                 sql:
-                    'CREATE TABLE "tenant_users" (\n  "tenant_id" TEXT NOT NULL,\n  "user_id" TEXT NOT NULL,\n  CONSTRAINT "tenant_users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_pkey" PRIMARY KEY ("tenant_id", "user_id")\n) WITHOUT ROWID;\n',
+                    'CREATE TABLE "${builder.defaultNamespace}"."tenant_users" (\n  "tenant_id" TEXT NOT NULL,\n  "user_id" TEXT NOT NULL,\n  CONSTRAINT "tenant_users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_pkey" PRIMARY KEY ("tenant_id", "user_id")\n) WITHOUT ROWID;\n',
               ),
             ],
             table: SatOpMigrate_Table(
@@ -251,7 +272,7 @@ void main() {
 
     //const migrateMetaData = JSON.parse(`{"format":"SatOpMigrate","ops":["GjcKB3RlbmFudHMSEgoCaWQSBFRFWFQaBgoEdXVpZBIUCgRuYW1lEgRURVhUGgYKBHRleHQiAmlkCgExEooBEocBQ1JFQVRFIFRBQkxFICJ0ZW5hbnRzIiAoCiAgImlkIiBURVhUIE5PVCBOVUxMLAogICJuYW1lIiBURVhUIE5PVCBOVUxMLAogIENPTlNUUkFJTlQgInRlbmFudHNfcGtleSIgUFJJTUFSWSBLRVkgKCJpZCIpCikgV0lUSE9VVCBST1dJRDsK","GmsKBXVzZXJzEhIKAmlkEgRURVhUGgYKBHV1aWQSFAoEbmFtZRIEVEVYVBoGCgR0ZXh0EhUKBWVtYWlsEgRURVhUGgYKBHRleHQSHQoNcGFzc3dvcmRfaGFzaBIEVEVYVBoGCgR0ZXh0IgJpZAoBMRLAARK9AUNSRUFURSBUQUJMRSAidXNlcnMiICgKICAiaWQiIFRFWFQgTk9UIE5VTEwsCiAgIm5hbWUiIFRFWFQgTk9UIE5VTEwsCiAgImVtYWlsIiBURVhUIE5PVCBOVUxMLAogICJwYXNzd29yZF9oYXNoIiBURVhUIE5PVCBOVUxMLAogIENPTlNUUkFJTlQgInVzZXJzX3BrZXkiIFBSSU1BUlkgS0VZICgiaWQiKQopIFdJVEhPVVQgUk9XSUQ7Cg==","GoYBCgx0ZW5hbnRfdXNlcnMSGQoJdGVuYW50X2lkEgRURVhUGgYKBHV1aWQSFwoHdXNlcl9pZBIEVEVYVBoGCgR1dWlkGhgKCXRlbmFudF9pZBIHdGVuYW50cxoCaWQaFAoHdXNlcl9pZBIFdXNlcnMaAmlkIgl0ZW5hbnRfaWQiB3VzZXJfaWQKATESkgMSjwNDUkVBVEUgVEFCTEUgInRlbmFudF91c2VycyIgKAogICJ0ZW5hbnRfaWQiIFRFWFQgTk9UIE5VTEwsCiAgInVzZXJfaWQiIFRFWFQgTk9UIE5VTEwsCiAgQ09OU1RSQUlOVCAidGVuYW50X3VzZXJzX3RlbmFudF9pZF9ma2V5IiBGT1JFSUdOIEtFWSAoInRlbmFudF9pZCIpIFJFRkVSRU5DRVMgInRlbmFudHMiICgiaWQiKSBPTiBERUxFVEUgQ0FTQ0FERSwKICBDT05TVFJBSU5UICJ0ZW5hbnRfdXNlcnNfdXNlcl9pZF9ma2V5IiBGT1JFSUdOIEtFWSAoInVzZXJfaWQiKSBSRUZFUkVOQ0VTICJ1c2VycyIgKCJpZCIpIE9OIERFTEVURSBDQVNDQURFLAogIENPTlNUUkFJTlQgInRlbmFudF91c2Vyc19wa2V5IiBQUklNQVJZIEtFWSAoInRlbmFudF9pZCIsICJ1c2VyX2lkIikKKSBXSVRIT1VUIFJPV0lEOwo="],"protocol_version":"Electric.Satellite","version":"1"}`)
     final metaData = parseMetadata(migration);
-    makeMigration(metaData);
+    makeMigration(metaData, builder);
     // don't throw
   });
 
@@ -274,43 +295,10 @@ void main() {
       'protocol_version': 'Electric.Satellite',
       'version': '20230613112725_814',
     });
-    final migration = makeMigration(metaData);
+    final migration = makeMigration(metaData, builder);
     expect(migration.version == metaData.version, isTrue);
     expect(migration.statements, [
       'CREATE INDEX idx_stars_username ON stars(username);',
     ]);
-  });
-
-  test('load migration from meta data', () async {
-    const dbName = 'memory';
-    final db = sqlite3.openInMemory();
-    final migration = makeMigration(metaData);
-    final electric = await electrify(
-      db: db,
-      dbName: dbName,
-      dbDescription: DBSchemaRaw(fields: {}, migrations: [migration]),
-      config: ElectricConfig(),
-      opts: ElectrifyOptions(socketFactory: MockSocketFactory()),
-    );
-
-    // Check that the DB is initialized with the stars table
-    final tables = await electric.adapter.query(
-      Statement(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='stars';",
-      ),
-    );
-
-    final starIdx = tables.indexWhere((tbl) => tbl['name'] == 'stars');
-    expect(starIdx, greaterThanOrEqualTo(0)); // must exist
-
-    final columns = await electric.adapter
-        .query(
-          Statement(
-            'PRAGMA table_info(stars);',
-          ),
-        )
-        .then((columns) => columns.map((column) => column['name']! as String));
-
-    expect(columns, ['id', 'avatar_url', 'name', 'starred_at', 'username']);
   });
 }

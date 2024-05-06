@@ -9,9 +9,17 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  collection: ^1.18.0
   drift: ^2.17.0
+  # drift_postgres: ^1.2.1
+  drift_postgres: 
+    git:
+      url: https://github.com/simolus3/drift
+      path: extras/drift_postgres
+      ref: 6ba049e5df7f2a3aff50c02ffdd326f596f53452
   electricsql: any
   electricsql_cli: any
+  postgres: ^3.1.0
 
 dependency_overrides:
   electricsql:

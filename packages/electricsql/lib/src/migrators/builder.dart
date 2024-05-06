@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/util/proto.dart';
@@ -59,7 +60,7 @@ MetaData parseMetadata(Map<String, Object?> data) {
 /// as well as the necessary triggers.
 /// `migration` The migration's meta data.
 /// @returns The corresponding migration.
-Migration makeMigration(MetaData migration) {
+Migration makeMigration(MetaData migration, QueryBuilder builder) {
   final statements = migration.ops
       .map((op) => op.stmts.map((stmt) => stmt.sql))
       .expand((l) => l);
@@ -77,7 +78,7 @@ Migration makeMigration(MetaData migration) {
   });
 
   final triggers = tables
-      .map(generateTriggersForTable)
+      .map((tbl) => generateTriggersForTable(tbl, builder))
       .expand((l) => l)
       .map((stmt) => stmt.sql);
 

@@ -60,6 +60,7 @@ class TestsDatabase extends _$TestsDatabase {
       PgDatabase(
         endpoint: endpoint,
         settings: settings,
+        enableMigrations: false,
         // logStatements: true,
       ),
     );

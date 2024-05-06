@@ -55,7 +55,7 @@ abstract class Satellite {
 
   void setReplicationTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   );
   void clearReplicationTransform(QualifiedTablename tableName);
 }
@@ -102,7 +102,7 @@ abstract class Client {
 
   void setReplicationTransform(
     QualifiedTablename tableName,
-    ReplicatedRowTransformer<Record> transform,
+    ReplicatedRowTransformer<DbRecord> transform,
   );
   void clearReplicationTransform(QualifiedTablename tableName);
 }

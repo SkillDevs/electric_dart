@@ -3,12 +3,14 @@ import 'dart:math';
 
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/configure/command_with_config.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/command_start.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/command_stop.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/precheck.dart';
 import 'package:electricsql_cli/src/commands/generate/builder.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:electricsql_cli/src/config.dart';
@@ -19,7 +21,6 @@ import 'package:electricsql_cli/src/util.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
-const String defaultMigrationsFileName = 'migrations.dart';
 const String defaultDriftSchemaFileName = 'drift_schema.dart';
 const bool _defaultDebug = false;
 
@@ -308,6 +309,18 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
     // Fetch the migrations from Electric endpoint and write them into tmpDir
     await fetchMigrations(migrationEndpoint, migrationsDir, tmpDir);
 
+    final buildSqliteMigrations = await bundleMigrationsFor(
+      Dialect.sqlite,
+      opts,
+      tmpDir: tmpDir,
+    );
+
+    final buildPgMigrations = await bundleMigrationsFor(
+      Dialect.postgres,
+      opts,
+      tmpDir: tmpDir,
+    );
+
     final prismaCLIDir =
         await Directory(path.join(tmpDir.path, 'prisma-cli')).create();
     final prismaCLI = PrismaCLI(logger: logger, folder: prismaCLIDir);
@@ -342,10 +355,12 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       completeMsg: 'Drift DB schema generated',
     );
 
-    final migrationsFile = resolveMigrationsFile(outFolder);
     await wrapWithProgress(
       logger,
-      () => buildMigrations(migrationsDir, migrationsFile),
+      () async {
+        await buildSqliteMigrations();
+        await buildPgMigrations();
+      },
       progressMsg: 'Generating bundled migrations',
       completeMsg: 'Bundled migrations generated',
     );
@@ -358,6 +373,41 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
       await tmpDir.delete(recursive: true);
     }
   }
+}
+
+Future<Future<void> Function()> bundleMigrationsFor(
+  Dialect dialect,
+  _GeneratorOpts opts, {
+  required Directory tmpDir,
+}) async {
+  final config = opts.config;
+  final folder = dialect == Dialect.sqlite ? 'migrations' : 'pg-migrations';
+  final migrationsPath = path.join(tmpDir.path, folder);
+  final migrationsDir = await Directory(migrationsPath).create();
+
+  final service = removeTrailingSlash(config.read<String>('SERVICE'));
+  final dialectParam = dialect == Dialect.sqlite ? 'sqlite' : 'postgresql';
+  final migrationEndpoint = '$service/api/migrations?dialect=$dialectParam';
+
+  final migrationsFile = _migrationsFilePath(opts, dialect);
+
+  // Fetch the migrations from Electric endpoint and write them into `tmpFolder`
+  await fetchMigrations(migrationEndpoint, migrationsDir, tmpDir);
+
+  // Build the migrations
+  final builder =
+      dialect == Dialect.sqlite ? kSqliteQueryBuilder : kPostgresQueryBuilder;
+
+  return () async {
+    await buildMigrations(
+      migrationsDir,
+      migrationsFile,
+      builder,
+      constantName: dialect == Dialect.sqlite
+          ? 'kSqliteMigrations'
+          : 'kPostgresMigrations',
+    );
+  };
 }
 
 Future<void> _generateClient(
@@ -376,9 +426,18 @@ Future<void> _generateClient(
   await buildDriftSchemaDartFile(schemaInfo, driftSchemaFile);
 }
 
-File resolveMigrationsFile(String outFolder) {
+File _migrationsFilePath(_GeneratorOpts opts, Dialect dialect) {
+  final outFolder = opts.config.read<String>('CLIENT_PATH');
+  final migrationsFile = resolveMigrationsFile(outFolder, dialect);
+  return migrationsFile;
+}
+
+File resolveMigrationsFile(String outFolder, Dialect dialect) {
+  final migrationsFileName = dialect == Dialect.sqlite
+      ? kSqliteMigrationsFileName
+      : kPostgresMigrationsFileName;
   return File(
-    path.join(outFolder, defaultMigrationsFileName),
+    path.join(outFolder, migrationsFileName),
   ).absolute;
 }
 

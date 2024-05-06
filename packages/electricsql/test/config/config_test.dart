@@ -11,7 +11,7 @@ void main() {
 
   test('hydrateConfig adds expected defaults', () {
     final hydrated = hydrateConfig(
-      ElectricConfig(),
+      ElectricConfigWithDialect.from(config: ElectricConfig()),
     );
 
     expect(hydrated.replication.host, 'localhost');
@@ -26,12 +26,14 @@ void main() {
 
   test('hydrateConfig custom config', () {
     final hydrated = hydrateConfig(
-      ElectricConfig(
-        auth: const AuthConfig(
-          clientId: 'some-id',
+      ElectricConfigWithDialect.from(
+        config: ElectricConfig(
+          auth: const AuthConfig(
+            clientId: 'some-id',
+          ),
+          url: 'https://192.169.2.10',
+          //debug: true,
         ),
-        url: 'https://192.169.2.10',
-        //debug: true,
       ),
     );
 
@@ -72,8 +74,10 @@ void main() {
       final expected = expectations[scheme]!;
 
       final config = hydrateConfig(
-        ElectricConfig(
-          url: '$scheme://1.1.1.1',
+        ElectricConfigWithDialect.from(
+          config: ElectricConfig(
+            url: '$scheme://1.1.1.1',
+          ),
         ),
       );
       expect(config.replication.port, expected.port);
@@ -83,8 +87,10 @@ void main() {
 
   test('hydrateConfig ssl', () {
     final httpsConfig = hydrateConfig(
-      ElectricConfig(
-        url: 'http://1.1.1.1?ssl=true',
+      ElectricConfigWithDialect.from(
+        config: ElectricConfig(
+          url: 'http://1.1.1.1?ssl=true',
+        ),
       ),
     );
 
@@ -99,8 +105,10 @@ void main() {
 
       expect(
         () => hydrateConfig(
-          ElectricConfig(
-            url: url,
+          ElectricConfigWithDialect.from(
+            config: ElectricConfig(
+              url: url,
+            ),
           ),
         ),
         throwsA(
@@ -140,8 +148,10 @@ void main() {
           " An URL like 'http(s)://<host>:<port>' is expected.";
 
       hydrateConfig(
-        ElectricConfig(
-          url: url,
+        ElectricConfigWithDialect.from(
+          config: ElectricConfig(
+            url: url,
+          ),
         ),
       );
 

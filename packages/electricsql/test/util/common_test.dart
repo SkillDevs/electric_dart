@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:electricsql/src/util/common.dart';
+import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:test/test.dart';
 

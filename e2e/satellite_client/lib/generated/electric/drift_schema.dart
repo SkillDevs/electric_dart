@@ -199,7 +199,7 @@ class Enums extends Table {
       customType(ElectricEnumTypes.color).named('c').nullable()();
 
   @override
-  String? get tableName => 'Enums';
+  String? get tableName => 'enums';
 
   @override
   Set<Column<Object>>? get primaryKey => {id};

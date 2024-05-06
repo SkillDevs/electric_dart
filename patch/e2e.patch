@@ -50,19 +50,22 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/Makefile dart/Makefile
  	make -C satellite_client build
  	make -C elixir_client build
  	make -C prisma_example build
-@@ -8,6 +9,12 @@
+@@ -11,6 +12,15 @@
  test_only:
  	${LUX} --junit tests
  
-+test_client_only:
-+	${LUX} --junit tests/03*.lux
++test-no-satellite:
++	find tests -type f -maxdepth 1 -name "*.lux" -and -not -name "03.*.lux" | sort -h | xargs ${LUX} --junit
++
++test-satellite-only:
++	${LUX} --junit tests/03.*.lux
 +
 +test_only_custom:
 +	${LUX} --junit ${TEST}
 +
  test: deps pull test_only
  
- pull:
+ test-no-satellite:
 Only in dart: run_client_e2e_with_retries.sh
 diff -x lux -x satellite_client -x lux_logs -ur electric/services_templates.yaml dart/services_templates.yaml
 --- electric/services_templates.yaml	2024-01-01 00:00:00.000000000 +0000
@@ -442,7 +445,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.18_node_satell
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satellite_can_sync_json.lux dart/tests/03.19_node_satellite_can_sync_json.lux
 --- electric/tests/03.19_node_satellite_can_sync_json.lux	2024-01-01 00:00:00.000000000 +0000
 +++ dart/tests/03.19_node_satellite_can_sync_json.lux	2024-01-01 00:00:00.000000000 +0000
-@@ -60,7 +60,7 @@
+@@ -63,7 +63,7 @@
      # [invoke node_get_json "row5" "'bar'"]
      [invoke node_get_jsonb "row5" "[ 1, { a: 'foo' }, true ]"]
  
@@ -450,7 +453,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satell
 +    [invoke node_write_json "row6" "null" "[\"it's \\u26A1\", {}, \"\\u2603 under \\u2602\"]"]
      [invoke node_get_jsonb "row6" "[ \"it's ⚡\", {}, '☃ under ☂' ]"]
  
-     # Even though JSON can encode the NUL code point and unpaired surrogates, those will fail Postgres' jsonb validation.
+     # Write JSON string "null"
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux dart/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux
 --- electric/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux	2024-01-01 00:00:00.000000000 +0000
 +++ dart/tests/03.21_node_satellite_correctly_handles_move_in_move_out.lux	2024-01-01 00:00:00.000000000 +0000
@@ -580,24 +583,9 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.24_node_satell
  
  [cleanup]
    [invoke teardown]
-diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.25_node_satellite_can_resume_replication_after_server_restart.lux dart/tests/03.25_node_satellite_can_resume_replication_after_server_restart.lux
---- electric/tests/03.25_node_satellite_can_resume_replication_after_server_restart.lux	2024-01-01 00:00:00.000000000 +0000
-+++ dart/tests/03.25_node_satellite_can_resume_replication_after_server_restart.lux	2024-01-01 00:00:00.000000000 +0000
-@@ -73,10 +73,7 @@
- 
- [shell satellite_2]
-     # Subscribe to "items" and include "other_items"
--    !const { synced } = await db.db.items.sync({ \
--       where: "this.content like 'items-_-'", \
--       include: { other_items: true } \
--     }); await synced
-+     !custom_03_25_sync_items db
- 
-     ?send: #SatSubsReq\{id: ([a-f0-9-]{36})
-     [global client_2_subs_id=$1]
-diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux dart/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux
---- electric/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux	2024-01-01 00:00:00.000000000 +0000
-+++ dart/tests/03.26_node_pk_position_does_not_matter_for_compensations.lux	2024-01-01 00:00:00.000000000 +0000
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.25_node_pk_position_does_not_matter_for_compensations.lux dart/tests/03.25_node_pk_position_does_not_matter_for_compensations.lux
+--- electric/tests/03.25_node_pk_position_does_not_matter_for_compensations.lux	2024-01-01 00:00:00.000000000 +0000
++++ dart/tests/03.25_node_pk_position_does_not_matter_for_compensations.lux	2024-01-01 00:00:00.000000000 +0000
 @@ -35,18 +35,12 @@
      ??[proto] recv: #SatSubsDataEnd
      ?$node
@@ -642,23 +630,40 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.26_node_pk_pos
      ??[proto] send: #SatOpLog
      ??[proto] recv: #SatOpLog
  
+diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.26_node_satellite_can_resume_replication_after_server_restart.lux dart/tests/03.26_node_satellite_can_resume_replication_after_server_restart.lux
+--- electric/tests/03.26_node_satellite_can_resume_replication_after_server_restart.lux	2024-01-01 00:00:00.000000000 +0000
++++ dart/tests/03.26_node_satellite_can_resume_replication_after_server_restart.lux	2024-01-01 00:00:00.000000000 +0000
+@@ -73,10 +73,7 @@
+ 
+ [shell satellite_2]
+     # Subscribe to "items" and include "other_items"
+-    !const { synced } = await db.db.items.sync({ \
+-       where: "this.content like 'items-_-'", \
+-       include: { other_items: true } \
+-     }); await synced
++     !custom_03_25_sync_items db
+ 
+     ?send: #SatSubsReq\{id: ([a-f0-9-]{36})
+     [global client_2_subs_id=$1]
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros.luxinc dart/tests/_satellite_macros.luxinc
 --- electric/tests/_satellite_macros.luxinc	2024-01-01 00:00:00.000000000 +0000
 +++ dart/tests/_satellite_macros.luxinc	2024-01-01 00:00:00.000000000 +0000
-@@ -1,30 +1,20 @@
+@@ -1,37 +1,18 @@
  [global node=>]
  
- [macro connect_to_electric host port migrations connectToElectric]
+ [macro connect_to_electric host port migrations connectToElectric satellite_number]
 -    !client = await import('./dist/client.js')
 -    ??$node
      # !migrations = await client.read_migrations(process.env.MIGRATION_DIRS + "/index.js")
      # ?$node
      !migrations = $migrations
      ??$node
--    !originalDb = client.make_db(process.env.SATELLITE_DB_PATH + "/$LUX_SHELLNAME")
-+    !shell_db_path = get_shell_db_path "$LUX_SHELLNAME"
-+    ??$node
-+    !originalDb = make_db shell_db_path
+-    # Adds a 2nd expression that just returns 0
+-    # otherwise Node will print the result of the assignment
+-    # but that Database object contains the word "error"
+-    # which would match the fail pattern!
+-    !originalDb = await client.make_db('e2e_client_${satellite_number}_db'); 0
++    !originalDb = make_db 'e2e_client_${satellite_number}_db'
      ??$node
      [invoke electrify_db "originalDb" $host $port $migrations $connectToElectric]
      ??(in electrify_db) config:
@@ -669,18 +674,21 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
 -     # when trying to read `exp` when calling `electrify_db`
 -     !if (typeof exp === 'undefined') { var exp = undefined }
 -     ??$node
--
+-     # Adds a 2nd expression that just returns 0
+-     # otherwise Node will print the result of the assignment
+-     # but that Database object contains the word "error"
+-     # which would match the fail pattern!
 -     !db = await client.electrify_db(originalDb, \
 -                                     "$host", \
 -                                     $port, \
 -                                     $migrations, \
 -                                     $connectToElectric, \
--                                     exp)
+-                                     exp); 0
 +     !db = electrify_db originalDb "$host" $port $migrations $connectToElectric
  [endmacro]
  
  [macro setup_client_with_migrations satellite_number electric port migrations connectToElectric]
-@@ -35,12 +25,12 @@
+@@ -42,12 +23,12 @@
  [endmacro]
  
  [macro client_disconnect]
@@ -695,7 +703,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [endmacro]
  
  [macro setup_client satellite_number electric port]
-@@ -48,112 +38,113 @@
+@@ -55,118 +36,119 @@
  [endmacro]
  
  [macro node_await_get match]
@@ -793,6 +801,13 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
      ??$node
  [endmacro]
  
+ [macro node_get_jsonb_regex id expected_jsonb]
+-    !await client.get_jsonb(db, '${id}')
++    !get_jsonb db '${id}'
+     ?\{ id: '${id}', jsb: ${expected_jsonb} \}
+     ??$node
+ [endmacro]
+ 
  [macro node_get_enum id expected_enum]
 -    !await client.get_enum(db, '${id}')
 +    !get_enum db '${id}'
@@ -830,7 +845,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
      #??{ id: '${id}', js: ${json_value}, jsb: ${jsonb_value} }
      # ??{ id: '${id}', jsb: ${jsonb_value} }
      ??$node
-@@ -161,74 +152,74 @@
+@@ -174,74 +156,74 @@
  
  [macro node_write_blob id value]
      # Can write valid blobs to the DB
@@ -856,13 +871,13 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [endmacro]
  
  [macro node_await_table match]
--    [invoke wait-for "await client.get_tables(db)" "${match}" 10 $node]
-+    [invoke wait-for "get_tables db" "${match}" 10 $node]
+-    [invoke wait-for "await client.get_tables(db)" "name: '${match}'" 10 $node]
++    [invoke wait-for "get_tables db" "name: '${match}'" 10 $node]
  [endmacro]
  
  [macro node_await_column table column]
 -    [invoke wait-for "await client.get_columns(db, '${table}')" "${column}" 10 $node]
-+    [invoke wait-for "get_columns db '${table}'" "${column}" 10 $node]
++    [invoke wait-for "get_columns db '${table}'" "name: '${column}'" 10 $node]
  [endmacro]
  
  [macro node_await_column_value table column value]
@@ -921,7 +936,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [endmacro]
  
  # Makes both satellites and PG write rows
-@@ -256,17 +247,17 @@
+@@ -269,17 +251,17 @@
      
      [invoke log "Verify that satellite inserts reached each other"]
      [shell satellite_1]

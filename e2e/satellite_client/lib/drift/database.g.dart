@@ -1985,7 +1985,7 @@ class $EnumsTable extends Enums with TableInfo<$EnumsTable, Enum> {
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'Enums';
+  static const String $name = 'enums';
   @override
   VerificationContext validateIntegrity(Insertable<Enum> instance,
       {bool isInserting = false}) {

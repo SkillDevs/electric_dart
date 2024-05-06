@@ -8,47 +8,18 @@ import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
-import '../../util/pg_docker.dart';
-import '../drift/client_test_util.dart';
 import '../drift/database.dart';
 import '../drift/generated/electric/drift_schema.dart';
 
-Future<void> main() async {
-  group('SQLite', () {
-    late TestsDatabase db;
-
-    setUpAll(() async {
-      db = TestsDatabase.memory();
-      addTearDown(() => db.close());
-
-      await electrifyTestDatabase(db);
-    });
-
-    typeTests(() => db);
-  });
-
-  withPostgresServer('postgres', (server) {
-    late TestsDatabase db;
-
-    setUpAll(() async {
-      final endpoint = await server.endpoint();
-      db = TestsDatabase.postgres(endpoint);
-      addTearDown(() => db.close());
-
-      await db.customSelect('SELECT 1').getSingle();
-    });
-
-    typeTests(() => db, isPostgres: true);
-  });
-}
-
 @isTestGroup
-void typeTests(TestsDatabase Function() getDb, {bool isPostgres = false}) {
+void dataTypeTests({
+  required TestsDatabase Function() getDb,
+  bool isPostgres = false,
+}) {
   late TestsDatabase db;
 
   setUp(() async {
     db = getDb();
-    await initClientTestsDb(db);
   });
 
   group('date', () {
@@ -590,14 +561,24 @@ void typeTests(TestsDatabase Function() getDb, {bool isPostgres = false}) {
 
     test(
       'null',
-      skip: isPostgres,
       () async {
         // final rwos = await db.customSelect('''SELECT null as c1, 'null'::jsonb as c2, '"null"'::jsonb as c3''').get();
         // for (final row in rwos) {
         //   print(row.data.map((key, value) => MapEntry(key, '$value ${value.runtimeType}')));
         // }
 
-        await _testJson(db, kJsonNull);
+        if (isPostgres) {
+          // Currently can't store top-level JSON null values when using PG
+          // they are automatically transformed to DB NULL
+          await _testJson(
+            db,
+            kJsonNull,
+            expected: null,
+            forceProvidedExpected: true,
+          );
+        } else {
+          await _testJson(db, kJsonNull);
+        }
       },
     );
 
@@ -864,7 +845,12 @@ Future<void> _testFloat4(
   );
 }
 
-Future<void> _testJson(TestsDatabase db, Object value) async {
+Future<void> _testJson(
+  TestsDatabase db,
+  Object value, {
+  Object? expected,
+  bool forceProvidedExpected = false,
+}) async {
   await _testCustomType(
     db,
     value: value,
@@ -873,6 +859,8 @@ Future<void> _testJson(TestsDatabase db, Object value) async {
       json: Value(v),
     ),
     customT: ElectricTypes.jsonb,
+    expected: expected,
+    forceProvidedExpected: forceProvidedExpected,
   );
 
   // await _testCustomType(
@@ -920,7 +908,14 @@ Future<void> _testCustomType<DartT extends Object>(
       insertCol,
   DartT? expected,
   List<DartT>? alternativeInputs,
+  bool forceProvidedExpected = false,
 }) async {
+  final effectiveExpected = _getEffectiveExpected(
+    value: value,
+    expected: expected,
+    forceProvidedExpected: forceProvidedExpected,
+  );
+
   final driftValue = await _insertAndFetchFromDataTypes(
     db,
     value: value,
@@ -928,32 +923,47 @@ Future<void> _testCustomType<DartT extends Object>(
     insertCol: insertCol,
     customT: customT,
     alternativeInputs: alternativeInputs,
+    expected: effectiveExpected,
   );
 
-  _expectCorrectValue(
+  _expectCorrectValue<DartT>(
     db,
     columnDriftValue: driftValue,
     value: value,
     customT: customT,
-    expected: expected,
+    expected: effectiveExpected,
   );
 }
 
 void _expectCorrectValue<DartT extends Object>(
   TestsDatabase db, {
-  required DartT columnDriftValue,
+  required DartT? columnDriftValue,
   required DartT value,
   required DialectAwareSqlType<DartT>? customT,
-  DartT? expected,
+  required DartT? expected,
 }) {
   if (value is double && value.isNaN) {
     expect(columnDriftValue, isNaN);
   } else {
-    expect(columnDriftValue, expected ?? value);
+    expect(columnDriftValue, expected);
   }
 }
 
-Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
+DartT? _getEffectiveExpected<DartT extends Object>({
+  required DartT value,
+  required DartT? expected,
+  required bool forceProvidedExpected,
+}) {
+  final DartT? effectiveExpected;
+  if (forceProvidedExpected) {
+    effectiveExpected = expected;
+  } else {
+    effectiveExpected = expected ?? value;
+  }
+  return effectiveExpected;
+}
+
+Future<DartT?> _insertAndFetchFromDataTypes<DartT extends Object>(
   TestsDatabase db, {
   required DartT value,
   required GeneratedColumn<DartT> column,
@@ -961,6 +971,7 @@ Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
       insertCol,
   required DialectAwareSqlType<DartT>? customT,
   List<DartT>? alternativeInputs,
+  required DartT? expected,
 }) async {
   final baseCompanion = DataTypesCompanion.insert(
     id: 97,
@@ -995,7 +1006,11 @@ Future<DartT> _insertAndFetchFromDataTypes<DartT extends Object>(
   }
 
   final columns = res.toColumns(false);
-  final columnDriftValue = (columns[column.name]! as Variable<DartT>).value!;
+  final columnDriftValue = (columns[column.name]! as Variable<DartT>).value;
+
+  if (expected != null) {
+    expect(columnDriftValue != null, isTrue);
+  }
   return columnDriftValue;
 }
 
@@ -1037,6 +1052,12 @@ Future<void> _testCustomTypeExtra<DartT extends Object>(
   required ExtraCompanion Function(ExtraCompanion, DartT value) insertCol,
   DartT? expected,
 }) async {
+  final effectiveExpected = _getEffectiveExpected(
+    value: value,
+    expected: expected,
+    forceProvidedExpected: false,
+  );
+
   final driftValue = await _insertAndFetchFromExtra(
     db,
     value: value,
@@ -1050,6 +1071,6 @@ Future<void> _testCustomTypeExtra<DartT extends Object>(
     columnDriftValue: driftValue,
     value: value,
     customT: customT,
-    expected: expected,
+    expected: effectiveExpected,
   );
 }

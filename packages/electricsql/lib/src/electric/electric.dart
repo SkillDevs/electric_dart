@@ -26,6 +26,7 @@ class ElectrifyOptions extends ElectrifyBaseOptions {
 }
 
 class ElectrifyBaseOptions {
+  /// Defaults to the migrator for SQLite.
   final Migrator? migrator;
   final Notifier? notifier;
   final Registry? registry;
@@ -56,7 +57,7 @@ Future<void> defaultPrepare(DatabaseAdapter connection) async {
 Future<ElectricClientRaw> electrifyBase<DB extends DBSchema>({
   required DbName dbName,
   required DB dbDescription,
-  required ElectricConfig config,
+  required ElectricConfigWithDialect config,
   required DatabaseAdapter adapter,
   required SocketFactory socketFactory,
   required ElectrifyBaseOptions opts,
@@ -73,7 +74,10 @@ Future<ElectricClientRaw> electrifyBase<DB extends DBSchema>({
 
   final configWithDefaults = hydrateConfig(config);
   final migrator = opts.migrator ??
-      BundleMigrator(adapter: adapter, migrations: dbDescription.migrations);
+      SqliteBundleMigrator(
+        adapter: adapter,
+        migrations: dbDescription.migrations,
+      );
   final notifier = opts.notifier ?? EventNotifier(dbName: dbName);
   final registry = opts.registry ?? globalRegistry;
 
@@ -87,6 +91,7 @@ Future<ElectricClientRaw> electrifyBase<DB extends DBSchema>({
     config: configWithDefaults,
   );
 
+  final dialect = configWithDefaults.replication.dialect;
   final electric = ElectricClientImpl.create(
     dbName: dbName,
     adapter: adapter,
@@ -94,6 +99,7 @@ Future<ElectricClientRaw> electrifyBase<DB extends DBSchema>({
     satellite: satellite,
     dbDescription: dbDescription,
     registry: registry,
+    dialect: dialect,
   );
 
   if (satellite.connectivityState != null) {

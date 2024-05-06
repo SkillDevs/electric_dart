@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -14,17 +15,17 @@ class TableSchema {
   TableSchema({required this.primaryKey, required this.columns});
 }
 
-TableInfo initTableInfo() {
+TableInfo initTableInfo(String namespace) {
   return {
-    'main.parent': TableSchema(
+    '$namespace.parent': TableSchema(
       primaryKey: ['id'],
       columns: ['id', 'value', 'other'],
     ),
-    'main.child': TableSchema(
+    '$namespace.child': TableSchema(
       primaryKey: ['id'],
       columns: ['id', 'parent'],
     ),
-    'main.Items': TableSchema(
+    '$namespace.Items': TableSchema(
       primaryKey: ['value'],
       columns: ['value', 'other'],
     ),
@@ -32,12 +33,13 @@ TableInfo initTableInfo() {
 }
 
 Future<Row> loadSatelliteMetaTable(
-  DatabaseAdapter db, {
+  DatabaseAdapter db,
+  String namespace, {
   String metaTableName = '_electric_meta',
 }) async {
   final rows = await db.query(
     Statement(
-      'SELECT key, value FROM $metaTableName',
+      'SELECT key, value FROM "$namespace"."$metaTableName"',
     ),
   );
   final entries = rows
@@ -170,20 +172,33 @@ String genEncodedTags(
   return encodeTags(tags);
 }
 
-/// List all shadow entires, or get just one if an `oplog` parameter is provided
+typedef GetMatchingShadowEntries = Future<List<ShadowEntry>> Function(
+  DatabaseAdapter adapter, {
+  OplogEntry? oplog,
+  String namespace,
+  String? shadowTable,
+});
+
+/// List all shadow entries, or get just one if an `oplog` parameter is provided
 Future<List<ShadowEntry>> getMatchingShadowEntries(
   DatabaseAdapter adapter, {
   OplogEntry? oplog,
-  String shadowTable = 'main._electric_shadow',
+  QueryBuilder builder = kSqliteQueryBuilder,
+  String? namespace,
+  String? shadowTable,
 }) async {
+  namespace ??= builder.defaultNamespace;
+  shadowTable ??= '"$namespace"._electric_shadow';
+
   final Statement query;
-  String selectTags = 'SELECT * FROM $shadowTable';
+  String selectTags =
+      'SELECT namespace, tablename, "primaryKey", tags FROM $shadowTable';
   if (oplog != null) {
     selectTags = '''
 $selectTags WHERE
-namespace = ? AND
-tablename = ? AND
-primaryKey = ?
+namespace = ${builder.makePositionalParam(1)} AND
+tablename = ${builder.makePositionalParam(2)} AND
+"primaryKey" = ${builder.makePositionalParam(3)}
 ''';
     final args = <Object?>[
       oplog.namespace,
@@ -205,4 +220,34 @@ primaryKey = ?
       tags: e['tags']! as String,
     );
   }).toList();
+}
+
+Future<List<ShadowEntry>> getSQLiteMatchingShadowEntries(
+  DatabaseAdapter adapter, {
+  OplogEntry? oplog,
+  String namespace = 'main',
+  String? shadowTable,
+}) async {
+  return getMatchingShadowEntries(
+    adapter,
+    oplog: oplog,
+    builder: kSqliteQueryBuilder,
+    namespace: namespace,
+    shadowTable: shadowTable,
+  );
+}
+
+Future<List<ShadowEntry>> getPgMatchingShadowEntries(
+  DatabaseAdapter adapter, {
+  OplogEntry? oplog,
+  String namespace = 'public',
+  String? shadowTable,
+}) async {
+  return getMatchingShadowEntries(
+    adapter,
+    oplog: oplog,
+    builder: kPostgresQueryBuilder,
+    namespace: namespace,
+    shadowTable: shadowTable,
+  );
 }

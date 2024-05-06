@@ -138,7 +138,7 @@ The last step would be to `electrify` the database. This will configure the loca
 ```dart
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql_flutter/drivers/drift.dart';
-import 'package:myapp/generated/electric/migrations.dart';
+import 'package:myapp/generated/electric/drift_schema.dart';
 
 // This would be the Drift database
 AppDatabase db;

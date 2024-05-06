@@ -21,7 +21,7 @@ Future<void> main() async {
   });
 
   test('transformTableRecord should validate the input', () {
-    void liftedTransform(PostData r, {Record Function(Record)? update}) {
+    void liftedTransform(PostData r, {DbRecord Function(DbRecord)? update}) {
       final origCols = r.toColumns(false);
 
       transformTableRecord(

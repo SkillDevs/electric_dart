@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - feat/*
   pull_request:
     paths-ignore:
       # Root files
@@ -25,15 +26,19 @@ env:
 #   cancel-in-progress: false
 
 jobs:
-  e2e_tests:
-    name: E2E tests
+  e2e_satellite_tests:
+    name: E2E Satellite tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dialect: [SQLite, Postgres]
     defaults:
       run:
         working-directory: e2e
     env:
     #   BUILDKITE_ANALYTICS_TOKEN: ${{ secrets.BUILDKITE_TEST_ANALYTICS_E2E }}
       ELECTRIC_REPO: e2e/electric_repo
+      DIALECT: ${{ matrix.dialect }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -91,7 +96,7 @@ jobs:
 
       - run: make lux
       - run: make deps pull
-      # - run: make test_only
+      # - run: make test-satellite-only
       
       # Avoid e2e flakiness by running only the Dart client e2e tests
       # We assume that the electric service e2e tests work on upstream
@@ -108,7 +113,7 @@ jobs:
         if: ${{ failure() && steps.tests.outcome == 'failure'  }}
         with:
           name: lux_logs
-          path: e2e/lux_logs/run_*
+          path: e2e/**/lux_logs/run_*
       # - name: Upload test results to Buildkite analytics
       #   if: ${{ !cancelled() && steps.tests.outcome != 'skipped' && env.BUILDKITE_ANALYTICS_TOKEN != '' }}
       #   working-directory: e2e/lux_logs/latest_run
