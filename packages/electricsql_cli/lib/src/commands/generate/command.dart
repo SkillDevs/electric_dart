@@ -300,15 +300,6 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
   bool generationFailed = false;
 
   try {
-    final migrationsPath = path.join(tmpDir.path, 'migrations');
-    final migrationsDir = await Directory(migrationsPath).create();
-
-    final service = removeTrailingSlash(config.read<String>('SERVICE'));
-    final migrationEndpoint = '$service/api/migrations?dialect=sqlite';
-
-    // Fetch the migrations from Electric endpoint and write them into tmpDir
-    await fetchMigrations(migrationEndpoint, migrationsDir, tmpDir);
-
     final buildSqliteMigrations = await bundleMigrationsFor(
       Dialect.sqlite,
       opts,
@@ -459,19 +450,17 @@ Future<bool> fetchMigrations(
   Future<bool> gotNewMigrationsFun() async {
     final response = await http.get(Uri.parse(endpoint));
 
-    if (response.statusCode >= 400) {
-      throw Exception(
-        'Error while fetching migrations from $endpoint: '
-        '${response.statusCode} ${response.reasonPhrase}',
-      );
-    }
-
     if (response.statusCode == 204) {
       // No new migrations
       return false;
-    } else {
+    } else if (response.statusCode == 200) {
       await zipFile.writeAsBytes(response.bodyBytes);
       return true;
+    } else {
+      throw Exception(
+        "Failed to fetch migrations from Electric at '$endpoint': "
+        '${response.statusCode} ${response.reasonPhrase}',
+      );
     }
   }
 
