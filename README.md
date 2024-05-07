@@ -1,5 +1,5 @@
-![Tests](https://github.com/SkillDevs/electric_dart/actions/workflows/tests.yml/badge.svg)
-![E2E](https://github.com/SkillDevs/electric_dart/actions/workflows/e2e.yml/badge.svg)
+![Tests](https://github.com/SkillDevs/electric_dart/actions/workflows/tests.yml/badge.svg?branch=master)
+![E2E](https://github.com/SkillDevs/electric_dart/actions/workflows/e2e.yml/badge.svg?branch=master)
 
 [![pub package](https://img.shields.io/pub/v/electricsql.svg?label=electricsql&color=blue)](https://pub.dartlang.org/packages/electricsql)
 [![pub package](https://img.shields.io/pub/v/electricsql_flutter.svg?label=electricsql_flutter&color=blue)](https://pub.dartlang.org/packages/electricsql_flutter)
