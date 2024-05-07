@@ -247,14 +247,14 @@ final configOptions = <String, ConfigOption<Object>>{
   'AUTH_JWT_ISS': ConfigOption<String>(
     valueTypeName: 'iss',
     doc:
-        'This optional setting allows you to specificy the "issuer" that will be matched '
+        'This optional setting allows you to specify the "issuer" that will be matched '
         'against the iss claim extracted from auth tokens.',
     groups: ['electric'],
   ),
   'AUTH_JWT_AUD': ConfigOption<String>(
     valueTypeName: 'aud',
     doc:
-        'This optional setting allows you to specificy the "audience" that will be matched '
+        'This optional setting allows you to specify the "audience" that will be matched '
         'against the aud claim extracted from auth tokens.',
     groups: ['electric'],
   ),

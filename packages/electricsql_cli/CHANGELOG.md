@@ -1,5 +1,6 @@
-## Next
+## 0.7.0
 
+* Code based on official Typescript client [v0.11.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.0).
 * Fix schema generation when it contains self-referenced foreign keys
 
 
