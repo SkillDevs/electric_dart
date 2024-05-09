@@ -48,12 +48,12 @@ void processTimingTests({
     await context.runMigrations();
 
     satellite.setAuthState(context.authState);
-    await satellite.throttledSnapshot();
+    await satellite.throttledSnapshot?.call();
     final numNotifications = notifier.notifications.length;
 
     const sql = "INSERT INTO parent(id) VALUES ('1'),('2')";
     await adapter.run(Statement(sql));
-    await satellite.throttledSnapshot();
+    await satellite.throttledSnapshot?.call();
 
     expect(notifier.notifications.length, numNotifications);
 
