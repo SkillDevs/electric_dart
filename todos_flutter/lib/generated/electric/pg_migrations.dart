@@ -8,7 +8,7 @@ import 'package:electricsql/electricsql.dart';
 const kPostgresMigrations = <Migration>[
   Migration(
     statements: [
-      'CREATE TABLE todolist (\n    id text NOT NULL,\n    filter text,\n    editing text,\n    CONSTRAINT todolist_pkey PRIMARY KEY (id)\n);\n\n\n',
+      'CREATE TABLE todolist (\n    id text NOT NULL,\n    filter text,\n    editing text,\n    CONSTRAINT todolist_pkey PRIMARY KEY (id)\n)',
       'INSERT INTO "public"."_electric_trigger_settings" ("namespace", "tablename", "flag")\nVALUES (\'public\', \'todolist\', 1)\nON CONFLICT DO NOTHING;\n',
       'DROP TRIGGER IF EXISTS update_ensure_public_todolist_primarykey ON "public"."todolist";',
       '        CREATE OR REPLACE FUNCTION update_ensure_public_todolist_primarykey_function()\n        RETURNS TRIGGER AS \$\$\n        BEGIN\n          IF OLD."id" IS DISTINCT FROM NEW."id" THEN\n            RAISE EXCEPTION \'Cannot change the value of column id as it belongs to the primary key\';\n          END IF;\n          RETURN NEW;\n        END;\n        \$\$ LANGUAGE plpgsql;\n      ',
@@ -27,7 +27,7 @@ const kPostgresMigrations = <Migration>[
   ),
   Migration(
     statements: [
-      'CREATE TABLE todo (\n    id text NOT NULL,\n    listid text,\n    text text,\n    completed boolean NOT NULL,\n    edited_at timestamp with time zone NOT NULL,\n    CONSTRAINT todo_pkey PRIMARY KEY (id),\n    CONSTRAINT todo_listid_fkey FOREIGN KEY (listid) REFERENCES todolist(id)\n);\n\n\n',
+      'CREATE TABLE todo (\n    id text NOT NULL,\n    listid text,\n    text text,\n    completed boolean NOT NULL,\n    edited_at timestamp with time zone NOT NULL,\n    CONSTRAINT todo_pkey PRIMARY KEY (id),\n    CONSTRAINT todo_listid_fkey FOREIGN KEY (listid) REFERENCES todolist(id)\n)',
       'INSERT INTO "public"."_electric_trigger_settings" ("namespace", "tablename", "flag")\nVALUES (\'public\', \'todo\', 1)\nON CONFLICT DO NOTHING;\n',
       'DROP TRIGGER IF EXISTS update_ensure_public_todo_primarykey ON "public"."todo";',
       '        CREATE OR REPLACE FUNCTION update_ensure_public_todo_primarykey_function()\n        RETURNS TRIGGER AS \$\$\n        BEGIN\n          IF OLD."id" IS DISTINCT FROM NEW."id" THEN\n            RAISE EXCEPTION \'Cannot change the value of column id as it belongs to the primary key\';\n          END IF;\n          RETURN NEW;\n        END;\n        \$\$ LANGUAGE plpgsql;\n      ',

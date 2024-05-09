@@ -1689,7 +1689,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
         qualifiedTableName,
         columnNames,
         columnValues,
-        ['id'],
+        primaryKeyCols.keys.toList(),
         updateColumnStmts,
         updateColumnStmts.map((col) => fullRow[col]).toList(),
       );

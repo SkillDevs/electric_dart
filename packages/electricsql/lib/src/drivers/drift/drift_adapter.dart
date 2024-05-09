@@ -134,7 +134,7 @@ Future<int> _wrapUpdate(
 }
 
 String _statementToString(Statement stmt) {
-  return '${stmt.sql} - args: ${stmt.args?.map((a) => '$a - ${a.runtimeType}').toList()}';
+  return "'${stmt.sql}' - args: ${stmt.args?.map((a) => '$a - ${a.runtimeType}').toList()}";
 }
 
 List<Variable> _dynamicArgsToVariables(
