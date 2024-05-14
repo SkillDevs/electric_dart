@@ -4,7 +4,7 @@ A new Flutter project.
 
 ## Prerequisites
 
-* Flutter 3.16.x
+* Flutter 3.22.x
 * Postgres migrations tool - [dbmate](https://github.com/amacneil/dbmate/releases)
 * Docker Compose - In order to run Electric locally
 
