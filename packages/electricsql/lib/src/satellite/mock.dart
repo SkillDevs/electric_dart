@@ -177,6 +177,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   void Function(Relation relation)? relationsCb;
   TransactionCallback? transactionsCb;
   AdditionalDataCallback? additionalDataCb;
+  OutboundStartedCallback? outboundStartedCallback;
 
   Map<String, List<DataRecord>> relationData = {};
 
@@ -484,7 +485,12 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   void Function() subscribeToOutboundStarted(
     OutboundStartedCallback callback,
   ) {
-    return _on<void>('outbound_started', callback);
+    outboundStartedCallback = callback;
+    final clean = _on<void>('outbound_started', callback);
+    return () {
+      clean();
+      outboundStartedCallback = null;
+    };
   }
 
   void sendErrorAfterTimeout(String subscriptionId, int timeoutMillis) {

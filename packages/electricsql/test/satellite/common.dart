@@ -277,12 +277,23 @@ Future<SatelliteTestContext> makeContext(
   // So we call it explicitly
   await adapter.run(Statement('PRAGMA foreign_keys = ON'));
 
+  Future<void>? stopDb;
+
   return makeContextInternal(
     dbName: dbName,
     adapter: adapter,
     migrator: migrator,
     namespace: namespace,
     options: options,
+    stop: () async {
+      if (stopDb != null) {
+        return stopDb;
+      }
+      stopDb = (() async {
+        db.dispose();
+      })();
+      await stopDb;
+    },
   );
 }
 
@@ -299,13 +310,23 @@ Future<SatelliteTestContext> makePgContext(
   final migrator =
       PgBundleMigrator(adapter: adapter, migrations: kTestPostgresMigrations);
 
+  Future<void>? stopDb;
+
   return makeContextInternal(
     dbName: dbName,
     adapter: adapter,
     migrator: migrator,
     namespace: namespace,
     options: options,
-    stop: () async => await scopedDb.dispose(),
+    stop: () async {
+      if (stopDb != null) {
+        return stopDb;
+      }
+      stopDb = (() async {
+        await scopedDb.dispose();
+      })();
+      await stopDb;
+    },
   );
 }
 
@@ -347,13 +368,16 @@ class SatelliteTestContext {
     await migrator.up();
   }
 
-  Future<void> clean() async {
-    await cleanDb(dbName);
+  Future<void> cleanAndStopDb() async {
+    await cleanDb(dbName, stop);
   }
 
   Future<void> cleanAndStopSatellite() async {
-    await cleanAndStopSatelliteRaw(dbName: dbName, satellite: satellite);
-    await stop?.call();
+    await cleanAndStopSatelliteRaw(
+      dbName: dbName,
+      satellite: satellite,
+      stopDb: stop,
+    );
   }
 }
 
@@ -401,12 +425,14 @@ Future<ElectricClientRaw> mockElectricClient(
 Future<void> cleanAndStopSatelliteRaw({
   required DbName dbName,
   required SatelliteProcess satellite,
+  required Future<void> Function()? stopDb,
 }) async {
   await satellite.stop();
-  await cleanDb(dbName);
+  await cleanDb(dbName, stopDb);
 }
 
-Future<void> cleanDb(DbName dbName) async {
+Future<void> cleanDb(DbName dbName, Future<void> Function()? stopDb) async {
+  await stopDb?.call();
   await removeFile(dbName);
   await removeFile('$dbName-journal');
 }

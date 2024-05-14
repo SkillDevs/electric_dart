@@ -114,6 +114,8 @@ class SatelliteProcess implements Satellite {
   late ConnectRetryHandler connectRetryHandler;
   Waiter? initializing;
 
+  void Function()? _removeClientListeners;
+
   SatelliteProcess({
     required this.dbName,
     required this.client,
@@ -135,8 +137,6 @@ class SatelliteProcess implements Satellite {
     shapeRequestIdGenerator = subscriptionIdGenerator;
 
     connectRetryHandler = defaultConnectRetryHandler;
-
-    setClientListeners();
   }
 
   /// Perform a snapshot while taking out a mutex to avoid concurrent calls.
@@ -165,6 +165,8 @@ class SatelliteProcess implements Satellite {
     if (opts.debug) {
       await _logDatabaseVersion();
     }
+
+    setClientListeners();
 
     await migrator.up();
 
@@ -201,6 +203,7 @@ This means there is a notifier subscription leak.`''');
         notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
     // Start polling to request a snapshot every `pollingInterval` ms.
+    _pollingInterval?.cancel();
     _pollingInterval = Timer.periodic(
       opts.pollingInterval,
       (_) => throttledSnapshot(),
@@ -272,17 +275,38 @@ This means there is a notifier subscription leak.`''');
     await adapter.runInTransaction(stmtsWithTriggers);
   }
 
+  // Adds all the necessary listeners to the satellite client
+  // They can be cleared up by calling the function `_removeClientListeners`
   void setClientListeners() {
-    client.subscribeToError(_handleClientError);
-    client.subscribeToRelations(updateRelations);
-    client.subscribeToTransactions(applyTransaction);
-    client.subscribeToAdditionalData(_applyAdditionalData);
-    client.subscribeToOutboundStarted((_) => throttledSnapshot());
+    // Remove any existing listeners
+    if (_removeClientListeners != null) {
+      _removeClientListeners?.call();
+      _removeClientListeners = null;
+    }
 
-    client.subscribeToSubscriptionEvents(
+    final unsubError = client.subscribeToError(_handleClientError);
+    final unsubRelations = client.subscribeToRelations(_handleClientRelations);
+    final unsubTransactions =
+        client.subscribeToTransactions(_handleClientTransactions);
+    final unsubAdditionalData =
+        client.subscribeToAdditionalData(_handleClientAdditionalData);
+    final unsubOutboundStarted =
+        client.subscribeToOutboundStarted(_handleClientOutboundStarted);
+
+    final subscriptionsListeners = client.subscribeToSubscriptionEvents(
       _handleSubscriptionData,
       _handleSubscriptionError,
     );
+
+    // Keep a way to remove the client listeners
+    _removeClientListeners = () {
+      unsubError();
+      unsubRelations();
+      unsubTransactions();
+      unsubAdditionalData();
+      unsubOutboundStarted();
+      subscriptionsListeners.removeListeners();
+    };
   }
 
   @override
@@ -291,13 +315,7 @@ This means there is a notifier subscription leak.`''');
   }
 
   Future<void> _stop({bool? shutdown}) async {
-    // Stop snapshotting and polling for changes.
-    throttledSnapshot.cancel();
-
-    // Ensure that no snapshot is left running in the background
-    // by acquiring the mutex and releasing it immediately.
-    await _snapshotLock.synchronized(() => null);
-
+    // Stop snapshot polling
     if (_pollingInterval != null) {
       _pollingInterval!.cancel();
       _pollingInterval = null;
@@ -318,11 +336,27 @@ This means there is a notifier subscription leak.`''');
       _unsubscribeFromPotentialDataChanges = null;
     }
 
+    _removeClientListeners?.call();
+    _removeClientListeners = null;
+
+    // Cancel the snapshot throttle
+    throttledSnapshot.cancel();
+
+    // Make sure no snapshot is running after we stop the process, otherwise we might be trying to
+    // interact with a closed database connection
+    await _waitForActiveSnapshots();
+
     disconnect(null);
 
     if (shutdown == true) {
       client.shutdown();
     }
+  }
+
+  // Ensure that no snapshot is left running in the background
+  // by acquiring the mutex and releasing it immediately.
+  Future<void> _waitForActiveSnapshots() async {
+    await _snapshotLock.synchronized(() => null);
   }
 
   @override
@@ -663,6 +697,22 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
         resettingStackTrace ?? satelliteStackTrace,
       );
     }
+  }
+
+  void _handleClientRelations(Relation relation) {
+    updateRelations(relation);
+  }
+
+  Future<void> _handleClientTransactions(ServerTransaction tx) async {
+    await applyTransaction(tx);
+  }
+
+  Future<void> _handleClientAdditionalData(AdditionalData data) async {
+    await _applyAdditionalData(data);
+  }
+
+  Future<void> _handleClientOutboundStarted(void _) async {
+    await throttledSnapshot();
   }
 
   // handles async client errors: can be a socket error or a server error message

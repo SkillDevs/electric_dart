@@ -126,8 +126,11 @@ void main() {
   });
 
   tearDown(() async {
-    await cleanAndStopSatelliteRaw(dbName: dbName, satellite: satellite);
-    await db.close();
+    await cleanAndStopSatelliteRaw(
+      dbName: dbName,
+      satellite: satellite,
+      stopDb: () => db.close(),
+    );
   });
 
   test('promise resolves when subscription starts loading', () async {

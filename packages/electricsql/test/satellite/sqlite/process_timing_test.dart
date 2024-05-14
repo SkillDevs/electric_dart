@@ -11,7 +11,7 @@ void main() {
   });
 
   tearDown(() async {
-    await context.clean();
+    await context.cleanAndStopDb();
   });
 
   processTimingTests(

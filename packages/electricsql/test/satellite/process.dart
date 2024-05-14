@@ -124,7 +124,8 @@ void processTests({
     await conn.connectionFuture;
     await satellite.stop();
 
-    await startSatellite(satellite, authConfig, token);
+    final conn2 = await startSatellite(satellite, authConfig, token);
+    await conn2.connectionFuture;
 
     final clientId2 = satellite.authState!.clientId;
 
@@ -136,20 +137,22 @@ void processTests({
 
   test('can use user_id in JWT', () async {
     // Doesn't throw
-    await startSatellite(
+    final conn = await startSatellite(
       satellite,
       authConfig,
       insecureAuthToken({'user_id': 'test-userA'}),
     );
+    await conn.connectionFuture;
   });
 
   test('can use sub in JWT', () async {
     // Doesn't throw
-    await startSatellite(
+    final conn = await startSatellite(
       satellite,
       authConfig,
       insecureAuthToken({'sub': 'test-userB'}),
     );
+    await conn.connectionFuture;
   });
 
   test('require user_id or sub in JWT', () async {
@@ -170,7 +173,7 @@ void processTests({
   });
 
   test('cannot update user id', () async {
-    await startSatellite(satellite, authConfig, token);
+    final conn = await startSatellite(satellite, authConfig, token);
     expect(
       () => satellite.setToken(insecureAuthToken({'sub': 'test-user2'})),
       throwsA(
@@ -181,6 +184,7 @@ void processTests({
         ),
       ),
     );
+    await conn.connectionFuture;
   });
 
   test('cannot UPDATE primary key', () async {
@@ -1486,7 +1490,8 @@ void processTests({
     await Future<void>.delayed(const Duration(milliseconds: 100));
 
     bool hasListened = false;
-    notifier.subscribeToConnectivityStateChanges((notification) {
+    final unsubConnectivityChanges =
+        notifier.subscribeToConnectivityStateChanges((notification) {
       if (hasListened) {
         return;
       }
@@ -1503,6 +1508,7 @@ void processTests({
 
       hasListened = true;
     });
+    addTearDown(() => unsubConnectivityChanges());
 
     // mock JWT expiration
     client.emitSocketClosedError(SocketCloseReason.authExpired);
@@ -2398,7 +2404,7 @@ void processTests({
     await satellite.stop();
 
     // Remove/close the database connection
-    await cleanDb(dbName);
+    await context.cleanAndStopDb();
 
     // Wait for the snapshot to finish to consider the test successful
     await snapshotFuture;
@@ -2418,6 +2424,38 @@ void processTests({
 
     // wait some time to see that mutexSnapshot is not called
     await Future<void>.delayed(const Duration(milliseconds: 50));
+  });
+
+  test(
+      "don't schedule snapshots from polling interval when closing satellite process",
+      () async {
+    await runMigrations();
+
+    // Replace the snapshot function to simulate a slow snapshot
+    // that access the database after closing
+    satellite.debugSetPerformSnapshot(() async {
+      try {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await adapter.query(builder.getLocalTableNames());
+        return DateTime.now();
+      } catch (e) {
+        fail('should not fail');
+      }
+    });
+
+    final conn = await startSatellite(satellite, authConfig, token);
+    await conn.connectionFuture;
+
+    // Let the process schedule a snapshot
+    await Future<void>.delayed(opts.pollingInterval * 2);
+
+    await satellite.stop();
+
+    // Remove/close the database connection
+    await context.cleanAndStopDb();
+
+    // Wait for the snapshot to finish to consider the test successful
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
   });
 }
 
