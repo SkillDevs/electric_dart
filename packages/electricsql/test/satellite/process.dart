@@ -276,12 +276,12 @@ void processTests({
       SlowDatabaseAdapter(satellite.adapter),
     );
 
-    final p1 = satellite.throttledSnapshot?.call();
+    final p1 = satellite.throttledSnapshot();
 
     final completer = Completer<void>();
     Timer(const Duration(milliseconds: 50), () async {
       // call snapshot after throttle time has expired
-      await satellite.throttledSnapshot?.call();
+      await satellite.throttledSnapshot();
       completer.complete();
     });
     final p2 = completer.future;

@@ -87,7 +87,7 @@ class SatelliteProcess implements Satellite {
 
   Timer? _pollingInterval;
   UnsubscribeFunction? _unsubscribeFromPotentialDataChanges;
-  Throttle<DateTime>? throttledSnapshot;
+  late final Throttle<DateTime> throttledSnapshot;
 
   LSN? _lsn;
 
@@ -126,12 +126,17 @@ class SatelliteProcess implements Satellite {
     subscriptions = InMemorySubscriptionsManager(
       garbageCollectShapeHandler,
     );
-    throttledSnapshot = _createThrottledSnapshotFun();
+    throttledSnapshot = Throttle(
+      mutexSnapshot,
+      opts.minSnapshotWindow,
+    );
 
     subscriptionIdGenerator = () => genUUID();
     shapeRequestIdGenerator = subscriptionIdGenerator;
 
     connectRetryHandler = defaultConnectRetryHandler;
+
+    setClientListeners();
   }
 
   /// Perform a snapshot while taking out a mutex to avoid concurrent calls.
@@ -160,9 +165,6 @@ class SatelliteProcess implements Satellite {
     if (opts.debug) {
       await _logDatabaseVersion();
     }
-
-    throttledSnapshot ??= _createThrottledSnapshotFun();
-    setClientListeners();
 
     await migrator.up();
 
@@ -195,17 +197,17 @@ This means there is a notifier subscription leak.`''');
         notifier.subscribeToAuthStateChanges(_updateAuthState);
 
     // Request a snapshot whenever the data in our database potentially changes.
-    _unsubscribeFromPotentialDataChanges = notifier
-        .subscribeToPotentialDataChanges((_) => throttledSnapshot?.call());
+    _unsubscribeFromPotentialDataChanges =
+        notifier.subscribeToPotentialDataChanges((_) => throttledSnapshot());
 
     // Start polling to request a snapshot every `pollingInterval` ms.
     _pollingInterval = Timer.periodic(
       opts.pollingInterval,
-      (_) => throttledSnapshot?.call(),
+      (_) => throttledSnapshot(),
     );
 
     // Starting now!
-    await throttledSnapshot?.call();
+    await throttledSnapshot();
 
     // Need to reload primary keys after schema migration
     relations = await getLocalRelations();
@@ -223,13 +225,6 @@ This means there is a notifier subscription leak.`''');
     if (subscriptionsState.isNotEmpty) {
       subscriptions.setState(subscriptionsState);
     }
-  }
-
-  Throttle<DateTime> _createThrottledSnapshotFun() {
-    return Throttle(
-      mutexSnapshot,
-      opts.minSnapshotWindow,
-    );
   }
 
   Future<void> _logDatabaseVersion() async {
@@ -282,7 +277,7 @@ This means there is a notifier subscription leak.`''');
     client.subscribeToRelations(updateRelations);
     client.subscribeToTransactions(applyTransaction);
     client.subscribeToAdditionalData(_applyAdditionalData);
-    client.subscribeToOutboundStarted((_) => throttledSnapshot?.call());
+    client.subscribeToOutboundStarted((_) => throttledSnapshot());
 
     client.subscribeToSubscriptionEvents(
       _handleSubscriptionData,
@@ -297,8 +292,7 @@ This means there is a notifier subscription leak.`''');
 
   Future<void> _stop({bool? shutdown}) async {
     // Stop snapshotting and polling for changes.
-    throttledSnapshot?.cancel();
-    throttledSnapshot = null;
+    throttledSnapshot.cancel();
 
     // Ensure that no snapshot is left running in the background
     // by acquiring the mutex and releasing it immediately.
