@@ -316,25 +316,17 @@ This means there is a notifier subscription leak.`''');
 
   Future<void> _stop({bool? shutdown}) async {
     // Stop snapshot polling
-    if (_pollingInterval != null) {
-      _pollingInterval!.cancel();
-      _pollingInterval = null;
-    }
+    _pollingInterval?.cancel();
+    _pollingInterval = null;
 
-    if (_unsubscribeFromAuthState != null) {
-      _unsubscribeFromAuthState?.call();
-      _unsubscribeFromAuthState = null;
-    }
+    _unsubscribeFromAuthState?.call();
+    _unsubscribeFromAuthState = null;
 
-    if (_unsubscribeFromConnectivityChanges != null) {
-      _unsubscribeFromConnectivityChanges?.call();
-      _unsubscribeFromConnectivityChanges = null;
-    }
+    _unsubscribeFromConnectivityChanges?.call();
+    _unsubscribeFromConnectivityChanges = null;
 
-    if (_unsubscribeFromPotentialDataChanges != null) {
-      _unsubscribeFromPotentialDataChanges?.call();
-      _unsubscribeFromPotentialDataChanges = null;
-    }
+    _unsubscribeFromPotentialDataChanges?.call();
+    _unsubscribeFromPotentialDataChanges = null;
 
     _removeClientListeners?.call();
     _removeClientListeners = null;
