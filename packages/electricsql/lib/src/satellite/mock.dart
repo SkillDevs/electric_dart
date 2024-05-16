@@ -58,11 +58,14 @@ class MockSatelliteProcess implements Satellite {
   Future<ShapeSubscription> subscribe(
     List<Shape> shapeDefinitions,
   ) async {
-    return ShapeSubscription(synced: Future.value());
+    return ShapeSubscription(
+      id: 'test',
+      synced: Future.value(),
+    );
   }
 
   @override
-  Future<void> unsubscribe(String shapeUuid) async {
+  Future<void> unsubscribe(List<String> shapeUuids) async {
     throw UnimplementedError();
   }
 
@@ -180,6 +183,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   OutboundStartedCallback? outboundStartedCallback;
 
   Map<String, List<DataRecord>> relationData = {};
+  Map<String, List<DataChange>> goneBatches = {};
 
   bool deliverFirst = false;
 
@@ -207,6 +211,22 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     final data = relationData[tablename]!;
 
     data.add(record);
+  }
+
+  void setGoneBatch(
+    String subscriptionId,
+    List<({String tablename, Map<String, Object?> record})> batch,
+  ) {
+    goneBatches[subscriptionId] = batch
+        .map(
+          (x) => DataChange(
+            type: DataChangeType.gone,
+            tags: [],
+            relation: relations[x.tablename]!,
+            oldRecord: x.record,
+          ),
+        )
+        .toList();
   }
 
   void enableDeliverFirst() {
@@ -296,7 +316,27 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   }
 
   @override
-  Future<UnsubscribeResponse> unsubscribe(List<String> _subIds) async {
+  Future<UnsubscribeResponse> unsubscribe(List<String> subIds) async {
+    final gone = <DataChange>[];
+
+    for (final id in subIds) {
+      gone.addAll(goneBatches[id] ?? []);
+      goneBatches.remove(id);
+    }
+
+    Timer(
+      const Duration(milliseconds: 1),
+      () => enqueueEmit(
+        'goneBatch',
+        GoneBatch(
+          lsn: base64.decode(
+            base64.encode(utf8.encode('124')),
+          ),
+          subscriptionIds: subIds,
+          changes: gone,
+        ),
+      ),
+    );
     return UnsubscribeResponse();
   }
 
@@ -319,6 +359,11 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   @override
   void unsubscribeToSubscriptionEvents(SubscriptionEventListeners listeners) {
     listeners.removeListeners();
+  }
+
+  @override
+  void Function() subscribeToGoneBatch(GoneBatchCallback callback) {
+    return _on('goneBatch', callback);
   }
 
   @override

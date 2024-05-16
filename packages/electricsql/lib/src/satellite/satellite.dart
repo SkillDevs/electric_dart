@@ -51,7 +51,7 @@ abstract class Satellite {
   Future<ShapeSubscription> subscribe(
     List<Shape> shapeDefinitions,
   );
-  Future<void> unsubscribe(String shapeUuid);
+  Future<void> unsubscribe(List<String> shapeUuids);
 
   void setReplicationTransform(
     QualifiedTablename tableName,
@@ -79,6 +79,7 @@ abstract class Client {
   void Function() subscribeToRelations(RelationCallback callback);
   void Function() subscribeToTransactions(TransactionCallback callback);
   void Function() subscribeToAdditionalData(AdditionalDataCallback callback);
+  void Function() subscribeToGoneBatch(GoneBatchCallback callback);
   void enqueueTransaction(
     DataTransaction transaction,
   );

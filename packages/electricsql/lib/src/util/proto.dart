@@ -24,7 +24,9 @@ enum SatMsgType {
   shapeDataEnd(code: 18),
   rpcRequest(code: 21),
   rpcResponse(code: 22),
-  opLogAck(code: 23);
+  opLogAck(code: 23),
+  unsubsDataBegin(code: 24),
+  unsubsDataEnd(code: 25);
 
   const SatMsgType({
     required this.code,
@@ -63,6 +65,10 @@ Object decodeMessage(Uint8List data, SatMsgType type) {
       return SatRpcResponse.fromBuffer(data);
     case SatMsgType.opLogAck:
       return SatOpLogAck.fromBuffer(data);
+    case SatMsgType.unsubsDataBegin:
+      return SatUnsubsDataBegin.fromBuffer(data);
+    case SatMsgType.unsubsDataEnd:
+      return SatUnsubsDataEnd.fromBuffer(data);
   }
 }
 
@@ -89,6 +95,10 @@ SatMsgType? getTypeFromSatObject(Object object) {
     return SatMsgType.rpcResponse;
   } else if (object is SatOpLogAck) {
     return SatMsgType.opLogAck;
+  } else if (object is SatUnsubsDataBegin) {
+    return SatMsgType.unsubsDataBegin;
+  } else if (object is SatUnsubsDataEnd) {
+    return SatMsgType.unsubsDataEnd;
   }
 
   return null;
@@ -340,6 +350,11 @@ String msgToString(Object message) {
     return '#SatRpcResponse{method: ${message.method}, requestId: ${message.requestId}${message.hasError() ? ', error: ${msgToString(message.error)}' : ''}}';
   } else if (message is SatOpLogAck) {
     return '#SatOpLogAck{lsn: ${base64.encode(message.lsn)}, txid: ${message.transactionId}}';
+  } else if (message is SatUnsubsDataBegin) {
+    // TODO(dart): JS client uses SatSat (typo)
+    return '#SatUnsubsDataBegin{lsn: ${base64.encode(message.lsn)}, ${message.subscriptionIds}}';
+  } else if (message is SatUnsubsDataEnd) {
+    return '#SatUnsubsDataEnd{}';
   }
 
   assert(false, "Can't convert ${message.runtimeType} to string");

@@ -35,13 +35,16 @@ abstract class SubscriptionsManager {
 
   /// Deletes the subscription(s) from the manager.
   /// @param An array of subscription identifiers for the subscription
-  Future<List<SubscriptionId>> unsubscribe(List<SubscriptionId> subIds);
+  void unsubscribe(List<SubscriptionId> subIds);
+
+  /// Delete the subscriptions from the manager and call a GC function
+  Future<void> unsubscribeAndGC(List<SubscriptionId> subIds);
 
   /// Deletes all subscriptions from the manager. Useful to
-  /// reset the state of the manager.
+  /// reset the state of the manager. Calls the configured GC.
   /// Returns the subscription identifiers of all subscriptions
   /// that were deleted.
-  Future<List<SubscriptionId>> unsubscribeAll();
+  Future<List<SubscriptionId>> unsubscribeAllAndGC();
 
   /// Converts the state of the manager to a string format that
   /// can be used to persist it

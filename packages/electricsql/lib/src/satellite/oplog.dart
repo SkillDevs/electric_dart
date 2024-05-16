@@ -72,6 +72,20 @@ class OplogEntry with EquatableMixin {
     this.oldRow,
   });
 
+  Map<String, Object?> toRow() {
+    return {
+      'namespace': namespace,
+      'tablename': tablename,
+      'primaryKey': primaryKey,
+      'rowid': rowid,
+      'optype': opTypeToRowValue(optype),
+      'timestamp': timestamp,
+      'newRow': newRow,
+      'oldRow': oldRow,
+      'clearTags': clearTags,
+    };
+  }
+
   @override
   String toString() {
     return '$optype $namespace.$tablename $primaryKey - $newRow';
@@ -138,26 +152,43 @@ OpType opTypeStrToOpType(String str) {
   throw Exception('Unknown opType: $str');
 }
 
+String opTypeToRowValue(OpType optype) {
+  switch (optype) {
+    case OpType.delete:
+      return 'DELETE';
+    case OpType.insert:
+      return 'INSERT';
+    case OpType.update:
+      return 'UPDATE';
+    case OpType.compensation:
+      return 'COMPENSATION';
+    case OpType.gone:
+      return 'GONE';
+  }
+}
+
+String extractPK(DataChange c) {
+  final columnValues = c.record ?? c.oldRecord!;
+
+  return primaryKeyToStr(
+    Map.fromEntries(
+      c.relation.columns
+          .where((c) => c.primaryKey != null && c.primaryKey != 0)
+          .map((col) => MapEntry(col.name, columnValues[col.name]!)),
+    ),
+  );
+}
+
 List<OplogEntry> fromTransaction(
   DataTransaction transaction,
   RelationsCache relations,
   String namespace,
 ) {
   return transaction.changes.map((t) {
-    final columnValues = t.record ?? t.oldRecord!;
-    final pk = primaryKeyToStr(
-      Map.fromEntries(
-        relations[t.relation.table]!
-            .columns
-            .where((c) => c.primaryKey != null && c.primaryKey != 0)
-            .map((col) => MapEntry(col.name, columnValues[col.name]!)),
-      ),
-    );
-
     return OplogEntry(
       namespace: namespace,
       tablename: t.relation.table,
-      primaryKey: pk,
+      primaryKey: extractPK(t),
       rowid: -1, // Not required
       optype: changeTypeToOpType(t.type),
       timestamp: DateTime.fromMillisecondsSinceEpoch(

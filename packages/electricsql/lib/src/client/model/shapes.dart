@@ -36,6 +36,7 @@ class ShapeManager extends BaseShapeManager {
     });
 
     return ShapeSubscription(
+      id: sub.id,
       synced: dataReceivedProm,
     );
   }
@@ -55,6 +56,7 @@ class ShapeManagerMock extends BaseShapeManager {
     }
 
     return ShapeSubscription(
+      id: 'unknown',
       synced: Future.value(),
     );
   }

@@ -613,6 +613,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     $core.String? schemaVersion,
     $core.Iterable<$fixnum.Int64>? observedTransactionData,
     SatInStartReplicationReq_Dialect? sqlDialect,
+    $core.Iterable<$core.String>? observedGoneBatch,
   }) {
     final $result = create();
     if (lsn != null) {
@@ -632,6 +633,9 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
     }
     if (sqlDialect != null) {
       $result.sqlDialect = sqlDialect;
+    }
+    if (observedGoneBatch != null) {
+      $result.observedGoneBatch.addAll(observedGoneBatch);
     }
     return $result;
   }
@@ -664,6 +668,7 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
         defaultOrMaker: SatInStartReplicationReq_Dialect.SQLITE,
         valueOf: SatInStartReplicationReq_Dialect.valueOf,
         enumValues: SatInStartReplicationReq_Dialect.values)
+    ..pPS(8, _omitFieldNames ? '' : 'observedGoneBatch')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -744,6 +749,10 @@ class SatInStartReplicationReq extends $pb.GeneratedMessage {
   $core.bool hasSqlDialect() => $_has(5);
   @$pb.TagNumber(7)
   void clearSqlDialect() => clearField(7);
+
+  /// * List of subscription IDs for which the client observed a GONE batch after unsubscribing
+  @$pb.TagNumber(8)
+  $core.List<$core.String> get observedGoneBatch => $_getList(6);
 }
 
 /// Error returned by the Producer when replication fails to start
@@ -1332,6 +1341,7 @@ class SatOpLogAck extends $pb.GeneratedMessage {
     $fixnum.Int64? transactionId,
     $core.Iterable<$core.String>? subscriptionIds,
     $core.Iterable<$fixnum.Int64>? additionalDataSourceIds,
+    $core.Iterable<$core.String>? goneSubscriptionIds,
   }) {
     final $result = create();
     if (ackTimestamp != null) {
@@ -1348,6 +1358,9 @@ class SatOpLogAck extends $pb.GeneratedMessage {
     }
     if (additionalDataSourceIds != null) {
       $result.additionalDataSourceIds.addAll(additionalDataSourceIds);
+    }
+    if (goneSubscriptionIds != null) {
+      $result.goneSubscriptionIds.addAll(goneSubscriptionIds);
     }
     return $result;
   }
@@ -1375,6 +1388,7 @@ class SatOpLogAck extends $pb.GeneratedMessage {
     ..pPS(4, _omitFieldNames ? '' : 'subscriptionIds')
     ..p<$fixnum.Int64>(5, _omitFieldNames ? '' : 'additionalDataSourceIds',
         $pb.PbFieldType.KU6)
+    ..pPS(6, _omitFieldNames ? '' : 'goneSubscriptionIds')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1445,6 +1459,10 @@ class SatOpLogAck extends $pb.GeneratedMessage {
   /// * Transaction IDs for which additional data was received immediately after this transaction
   @$pb.TagNumber(5)
   $core.List<$fixnum.Int64> get additionalDataSourceIds => $_getList(4);
+
+  /// * Subscription IDs for GONE batches received at this LSN
+  @$pb.TagNumber(6)
+  $core.List<$core.String> get goneSubscriptionIds => $_getList(5);
 }
 
 enum SatTransOp_Op {
@@ -4465,6 +4483,122 @@ class SatSubsDataEnd extends $pb.GeneratedMessage {
   static SatSubsDataEnd getDefault() => _defaultInstance ??=
       $pb.GeneratedMessage.$_defaultFor<SatSubsDataEnd>(create);
   static SatSubsDataEnd? _defaultInstance;
+}
+
+/// Begin delimiter for the incoming subscription data
+class SatUnsubsDataBegin extends $pb.GeneratedMessage {
+  factory SatUnsubsDataBegin({
+    $core.Iterable<$core.String>? subscriptionIds,
+    $core.List<$core.int>? lsn,
+  }) {
+    final $result = create();
+    if (subscriptionIds != null) {
+      $result.subscriptionIds.addAll(subscriptionIds);
+    }
+    if (lsn != null) {
+      $result.lsn = lsn;
+    }
+    return $result;
+  }
+  SatUnsubsDataBegin._() : super();
+  factory SatUnsubsDataBegin.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatUnsubsDataBegin.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatUnsubsDataBegin',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..pPS(1, _omitFieldNames ? '' : 'subscriptionIds')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'lsn', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatUnsubsDataBegin clone() => SatUnsubsDataBegin()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatUnsubsDataBegin copyWith(void Function(SatUnsubsDataBegin) updates) =>
+      super.copyWith((message) => updates(message as SatUnsubsDataBegin))
+          as SatUnsubsDataBegin;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsDataBegin create() => SatUnsubsDataBegin._();
+  SatUnsubsDataBegin createEmptyInstance() => create();
+  static $pb.PbList<SatUnsubsDataBegin> createRepeated() =>
+      $pb.PbList<SatUnsubsDataBegin>();
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsDataBegin getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatUnsubsDataBegin>(create);
+  static SatUnsubsDataBegin? _defaultInstance;
+
+  /// Identifier of the subscriptions that were handled as unsubbed
+  @$pb.TagNumber(1)
+  $core.List<$core.String> get subscriptionIds => $_getList(0);
+
+  /// LSN at which this data is being sent. May be a duplicate of a transaction that was sent immediately before.
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get lsn => $_getN(1);
+  @$pb.TagNumber(2)
+  set lsn($core.List<$core.int> v) {
+    $_setBytes(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasLsn() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLsn() => clearField(2);
+}
+
+/// End delimiter for the incoming subscription data
+class SatUnsubsDataEnd extends $pb.GeneratedMessage {
+  factory SatUnsubsDataEnd() => create();
+  SatUnsubsDataEnd._() : super();
+  factory SatUnsubsDataEnd.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory SatUnsubsDataEnd.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SatUnsubsDataEnd',
+      package:
+          const $pb.PackageName(_omitMessageNames ? '' : 'Electric.Satellite'),
+      createEmptyInstance: create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  SatUnsubsDataEnd clone() => SatUnsubsDataEnd()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  SatUnsubsDataEnd copyWith(void Function(SatUnsubsDataEnd) updates) =>
+      super.copyWith((message) => updates(message as SatUnsubsDataEnd))
+          as SatUnsubsDataEnd;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsDataEnd create() => SatUnsubsDataEnd._();
+  SatUnsubsDataEnd createEmptyInstance() => create();
+  static $pb.PbList<SatUnsubsDataEnd> createRepeated() =>
+      $pb.PbList<SatUnsubsDataEnd>();
+  @$core.pragma('dart2js:noInline')
+  static SatUnsubsDataEnd getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SatUnsubsDataEnd>(create);
+  static SatUnsubsDataEnd? _defaultInstance;
 }
 
 /// Begin delimiter for the initial shape data

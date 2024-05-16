@@ -120,9 +120,14 @@ class InMemorySubscriptionsManager extends EventEmitter
   /// Unsubscribes from one or more subscriptions.
   /// @param subId A subscription ID or an array of subscription IDs.
   @override
-  Future<List<SubscriptionId>> unsubscribe(List<SubscriptionId> subIds) async {
-    final ids = subIds;
-    final List<ShapeDefinition> shapes = ids
+  void unsubscribe(List<SubscriptionId> subIds) {
+    // remove all subscriptions from memory
+    _gcSubscriptions(subIds);
+  }
+
+  @override
+  Future<void> unsubscribeAndGC(List<SubscriptionId> subIds) async {
+    final List<ShapeDefinition> shapes = subIds
         .expand(
           (id) => shapesForActiveSubscription(id) ?? <ShapeDefinition>[],
         )
@@ -133,14 +138,14 @@ class InMemorySubscriptionsManager extends EventEmitter
       await _gcHandler!(shapes);
     }
     // also remove all subscriptions from memory
-    _gcSubscriptions(ids);
-    return ids;
+    unsubscribe(subIds);
   }
 
   @override
-  Future<List<SubscriptionId>> unsubscribeAll() {
+  Future<List<SubscriptionId>> unsubscribeAllAndGC() async {
     final ids = _fulfilledSubscriptions.keys.toList();
-    return unsubscribe(ids);
+    await unsubscribeAndGC(ids);
+    return ids;
   }
 
   @override

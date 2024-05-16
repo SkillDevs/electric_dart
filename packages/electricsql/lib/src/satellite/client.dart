@@ -53,16 +53,17 @@ abstract interface class SafeEventEmitter {
   void Function() onError(ErrorCallback callback);
   void Function() onRelation(RelationCallback callback);
   void Function() onTransaction(
-    IncomingTransactionCallback callback,
+    EmitterTransactionCallback callback,
   );
   void Function() onAdditionalData(
-    IncomingAdditionalDataCallback callback,
+    EmitterAdditionalDataCallback callback,
   );
   void Function() onOutboundStarted(OutboundStartedCallback callback);
   void Function() onSubscriptionDelivered(
     SubscriptionDeliveredCallback callback,
   );
   void Function() onSubscriptionError(SubscriptionErrorCallback callback);
+  void Function() onGoneBatch(EmitterGoneBatchCallback callback);
 
   void enqueueEmitError(SatelliteException error, StackTrace stackTrace);
   void enqueueEmitSubscriptionDelivered(SubscriptionData data);
@@ -71,6 +72,7 @@ abstract interface class SafeEventEmitter {
   void enqueueEmitTransaction(TransactionEvent transactionEvent);
   void enqueueEmitOutboundStarted(LSN lsn);
   void enqueueEmitAdditionalData(AdditionalDataEvent additionalDataEvent);
+  void enqueueEmitGoneBatch(GoneBatchEvent goneBatchEvent);
 
   void removeAllListeners();
 
@@ -199,10 +201,13 @@ class SatelliteClient implements Client {
         () => maybeSendAck('timeout'),
       ),
       additionalData: [],
+      goneBatch: [],
+      receivingUnsubsBatch: [],
       unseenAdditionalDataRefs: {},
       seenAdditionalDataSinceLastTx: SeenAdditionalDataInfo(
         dataRefs: [],
         subscriptions: [],
+        gone: [],
       ),
     );
   }
@@ -231,6 +236,10 @@ class SatelliteClient implements Client {
         return (v) => handleRpcRequest(v! as SatRpcRequest);
       case SatMsgType.opLogAck:
         return (v) {}; // Server doesn't send that
+      case SatMsgType.unsubsDataBegin:
+        return (v) => handleUnsubsDataBegin(v! as SatUnsubsDataBegin);
+      case SatMsgType.unsubsDataEnd:
+        return (v) => handleUnsubsDataEnd(v! as SatUnsubsDataEnd);
     }
   }
 
@@ -402,7 +411,7 @@ class SatelliteClient implements Client {
     TransactionCallback callback,
   ) {
     return _emitter.onTransaction((txnEvent) async {
-      await callback(txnEvent.transaction);
+      await callback(txnEvent.data);
       txnEvent.ackCb();
     });
   }
@@ -412,7 +421,7 @@ class SatelliteClient implements Client {
     AdditionalDataCallback callback,
   ) {
     return _emitter.onAdditionalData((dataEvent) async {
-      await callback(dataEvent.additionalData);
+      await callback(dataEvent.data);
       dataEvent.ackCb();
     });
   }
@@ -422,6 +431,16 @@ class SatelliteClient implements Client {
     RelationCallback callback,
   ) {
     return _emitter.onRelation(callback);
+  }
+
+  @override
+  void Function() subscribeToGoneBatch(
+    GoneBatchCallback callback,
+  ) {
+    return _emitter.onGoneBatch((goneEvent) async {
+      await callback(goneEvent.data);
+      goneEvent.ackCb();
+    });
   }
 
   @override
@@ -891,6 +910,8 @@ class SatelliteClient implements Client {
   void handleTransaction(SatOpLog message) {
     if (!_subscriptionsDataCache.isDelivering()) {
       processOpLogMessage(message);
+    } else if (inbound.receivingUnsubsBatch.isNotEmpty) {
+      processUnsubsDataMessage(message);
     } else {
       try {
         _subscriptionsDataCache.transaction(message.ops);
@@ -947,6 +968,41 @@ class SatelliteClient implements Client {
     return UnsubscribeResponse();
   }
 
+  void handleUnsubsDataBegin(SatUnsubsDataBegin msg) {
+    inbound.receivingUnsubsBatch = msg.subscriptionIds;
+    inbound.lastLsn = msg.lsn;
+  }
+
+  void handleUnsubsDataEnd(SatUnsubsDataEnd _msg) {
+    if (inbound.receivingUnsubsBatch.isEmpty) {
+      throw SatelliteException(
+        SatelliteErrorCode.protocolViolation,
+        'Received a `SatUnsubsDataEnd` message but not the begin message',
+      );
+    }
+
+    // We need to copy the value here so that the callback we're building 8 lines down
+    // will make a closure over array value instead of over `this` and will use current
+    // value instead of whatever is the value of `this.inbound.receivingUnsubsBatch` in
+    // the future.
+    final subscriptionIds = [...inbound.receivingUnsubsBatch];
+
+    emitter.enqueueEmitGoneBatch(
+      GoneBatchEvent(
+          GoneBatch(
+            lsn: inbound.lastLsn!,
+            subscriptionIds: subscriptionIds,
+            changes: inbound.goneBatch,
+          ), () {
+        inbound.seenAdditionalDataSinceLastTx.gone.addAll(subscriptionIds);
+        maybeSendAck('additionalData');
+      }),
+    );
+
+    inbound.receivingUnsubsBatch = [];
+    inbound.goneBatch = [];
+  }
+
   Relation _getRelation(int relationId) {
     final rel = inbound.relations[relationId];
     if (rel == null) {
@@ -956,6 +1012,32 @@ class SatelliteClient implements Client {
       );
     }
     return rel;
+  }
+
+  void processUnsubsDataMessage(SatOpLog msg) {
+    for (final op in msg.ops) {
+      if (!op.hasGone()) {
+        throw SatelliteException(
+          SatelliteErrorCode.protocolViolation,
+          'Expected to see only GONE messages in unsubscription data',
+        );
+      }
+
+      final rel = _getRelation(op.gone.relationId);
+      inbound.goneBatch.add(
+        DataChange(
+          relation: rel,
+          type: DataChangeType.gone,
+          oldRecord: deserializeRow(
+            op.gone.pkData,
+            rel,
+            _dbDescription,
+            _decoder,
+          ),
+          tags: [],
+        ),
+      );
+    }
   }
 
   void processOpLogMessage(SatOpLog opLogMessage) {
@@ -1021,6 +1103,7 @@ class SatelliteClient implements Client {
             inbound.seenAdditionalDataSinceLastTx = SeenAdditionalDataInfo(
               dataRefs: [],
               subscriptions: [],
+              gone: [],
             );
             maybeSendAck(null);
           }),
@@ -1279,6 +1362,7 @@ class SatelliteClient implements Client {
         transactionId: inbound.lastTxId,
         subscriptionIds: inbound.seenAdditionalDataSinceLastTx.subscriptions,
         additionalDataSourceIds: inbound.seenAdditionalDataSinceLastTx.dataRefs,
+        goneSubscriptionIds: inbound.seenAdditionalDataSinceLastTx.gone,
       );
 
       sendMessage(msg);
@@ -1572,6 +1656,11 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
   }
 
   @override
+  void enqueueEmitGoneBatch(GoneBatchEvent goneBatchEvent) {
+    return _enqueueEmit('goneBatch', goneBatchEvent);
+  }
+
+  @override
   void Function() onError(ErrorCallback callback) {
     return _on('error', callback);
   }
@@ -1583,7 +1672,7 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
 
   @override
   void Function() onTransaction(
-    IncomingTransactionCallback callback,
+    EmitterTransactionCallback callback,
   ) {
     return _on('transaction', callback);
   }
@@ -1594,7 +1683,7 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
   }
 
   @override
-  void Function() onAdditionalData(IncomingAdditionalDataCallback callback) {
+  void Function() onAdditionalData(EmitterAdditionalDataCallback callback) {
     return _on('additionalData', callback);
   }
 
@@ -1608,6 +1697,11 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
   @override
   void Function() onSubscriptionError(SubscriptionErrorCallback callback) {
     return _on(kSubscriptionError, callback);
+  }
+
+  @override
+  void Function() onGoneBatch(EmitterGoneBatchCallback callback) {
+    return _on('goneBatch', callback);
   }
 
   @override

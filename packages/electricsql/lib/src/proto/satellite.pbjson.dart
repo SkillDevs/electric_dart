@@ -230,6 +230,13 @@ const SatInStartReplicationReq$json = {
       '10': 'sqlDialect',
       '17': true
     },
+    {
+      '1': 'observed_gone_batch',
+      '3': 8,
+      '4': 3,
+      '5': 9,
+      '10': 'observedGoneBatch'
+    },
   ],
   '4': [
     SatInStartReplicationReq_Option$json,
@@ -275,9 +282,10 @@ final $typed_data.Uint8List satInStartReplicationReqDescriptor = $convert.base64
     'IqCg5zY2hlbWFfdmVyc2lvbhgFIAEoCUgAUg1zY2hlbWFWZXJzaW9uiAEBEjoKGW9ic2VydmVk'
     'X3RyYW5zYWN0aW9uX2RhdGEYBiADKARSF29ic2VydmVkVHJhbnNhY3Rpb25EYXRhEloKC3NxbF'
     '9kaWFsZWN0GAcgASgOMjQuRWxlY3RyaWMuU2F0ZWxsaXRlLlNhdEluU3RhcnRSZXBsaWNhdGlv'
-    'blJlcS5EaWFsZWN0SAFSCnNxbERpYWxlY3SIAQEiKgoGT3B0aW9uEggKBE5PTkUQACIECAEQAS'
-    'IECAIQAiIECAMQAyIECAQQBCIjCgdEaWFsZWN0EgoKBlNRTElURRAAEgwKCFBPU1RHUkVTEAFC'
-    'EQoPX3NjaGVtYV92ZXJzaW9uQg4KDF9zcWxfZGlhbGVjdEoECAMQBA==');
+    'blJlcS5EaWFsZWN0SAFSCnNxbERpYWxlY3SIAQESLgoTb2JzZXJ2ZWRfZ29uZV9iYXRjaBgIIA'
+    'MoCVIRb2JzZXJ2ZWRHb25lQmF0Y2giKgoGT3B0aW9uEggKBE5PTkUQACIECAEQASIECAIQAiIE'
+    'CAMQAyIECAQQBCIjCgdEaWFsZWN0EgoKBlNRTElURRAAEgwKCFBPU1RHUkVTEAFCEQoPX3NjaG'
+    'VtYV92ZXJzaW9uQg4KDF9zcWxfZGlhbGVjdEoECAMQBA==');
 
 @$core.Deprecated('Use satInStartReplicationRespDescriptor instead')
 const SatInStartReplicationResp$json = {
@@ -470,6 +478,13 @@ const SatOpLogAck$json = {
       '5': 4,
       '10': 'additionalDataSourceIds'
     },
+    {
+      '1': 'gone_subscription_ids',
+      '3': 6,
+      '4': 3,
+      '5': 9,
+      '10': 'goneSubscriptionIds'
+    },
   ],
 };
 
@@ -478,7 +493,8 @@ final $typed_data.Uint8List satOpLogAckDescriptor = $convert.base64Decode(
     'CgtTYXRPcExvZ0FjaxIjCg1hY2tfdGltZXN0YW1wGAEgASgEUgxhY2tUaW1lc3RhbXASEAoDbH'
     'NuGAIgASgMUgNsc24SJQoOdHJhbnNhY3Rpb25faWQYAyABKARSDXRyYW5zYWN0aW9uSWQSKQoQ'
     'c3Vic2NyaXB0aW9uX2lkcxgEIAMoCVIPc3Vic2NyaXB0aW9uSWRzEjsKGmFkZGl0aW9uYWxfZG'
-    'F0YV9zb3VyY2VfaWRzGAUgAygEUhdhZGRpdGlvbmFsRGF0YVNvdXJjZUlkcw==');
+    'F0YV9zb3VyY2VfaWRzGAUgAygEUhdhZGRpdGlvbmFsRGF0YVNvdXJjZUlkcxIyChVnb25lX3N1'
+    'YnNjcmlwdGlvbl9pZHMYBiADKAlSE2dvbmVTdWJzY3JpcHRpb25JZHM=');
 
 @$core.Deprecated('Use satTransOpDescriptor instead')
 const SatTransOp$json = {
@@ -1331,6 +1347,29 @@ const SatSubsDataEnd$json = {
 /// Descriptor for `SatSubsDataEnd`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List satSubsDataEndDescriptor =
     $convert.base64Decode('Cg5TYXRTdWJzRGF0YUVuZA==');
+
+@$core.Deprecated('Use satUnsubsDataBeginDescriptor instead')
+const SatUnsubsDataBegin$json = {
+  '1': 'SatUnsubsDataBegin',
+  '2': [
+    {'1': 'subscription_ids', '3': 1, '4': 3, '5': 9, '10': 'subscriptionIds'},
+    {'1': 'lsn', '3': 2, '4': 1, '5': 12, '10': 'lsn'},
+  ],
+};
+
+/// Descriptor for `SatUnsubsDataBegin`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List satUnsubsDataBeginDescriptor = $convert.base64Decode(
+    'ChJTYXRVbnN1YnNEYXRhQmVnaW4SKQoQc3Vic2NyaXB0aW9uX2lkcxgBIAMoCVIPc3Vic2NyaX'
+    'B0aW9uSWRzEhAKA2xzbhgCIAEoDFIDbHNu');
+
+@$core.Deprecated('Use satUnsubsDataEndDescriptor instead')
+const SatUnsubsDataEnd$json = {
+  '1': 'SatUnsubsDataEnd',
+};
+
+/// Descriptor for `SatUnsubsDataEnd`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List satUnsubsDataEndDescriptor =
+    $convert.base64Decode('ChBTYXRVbnN1YnNEYXRhRW5k');
 
 @$core.Deprecated('Use satShapeDataBeginDescriptor instead')
 const SatShapeDataBegin$json = {

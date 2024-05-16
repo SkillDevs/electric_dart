@@ -339,13 +339,16 @@ abstract class QueryBuilder {
     int positionalParam = 1;
     String pos(int i) => makePositionalParam(i);
     String makeInsertPattern() {
-      return ' (${List.generate(columnCount, (_) => pos(positionalParam++)).join(', ')})';
+      final insertRow = List.generate(
+        columnCount,
+        (_) => pos(positionalParam++),
+      );
+
+      return " (${insertRow.join(', ')})";
     }
 
-    // Largest number below maxSqlParamers that evenly divides by column count,
-    // divided by columnCount, giving the amount of rows we can insert at once
-    final int batchMaxSize =
-        (maxParameters - (maxParameters % columnCount)) ~/ columnCount;
+    // Amount of rows we can insert at once
+    final batchMaxSize = (maxParameters / columnCount).floor();
     while (processed < recordCount) {
       positionalParam = 1; // start counting parameters from 1 again
       final currentInsertCount = min(recordCount - processed, batchMaxSize);
@@ -366,5 +369,68 @@ abstract class QueryBuilder {
       stmts.add(Statement(sql, args));
     }
     return stmts;
+  }
+
+  /// Prepare multiple batched DELETE statements for an array of records.
+  ///
+  /// Since SQLite only supports a limited amount of positional `?` parameters,
+  /// we generate multiple delete statements with each one being filled as much
+  /// as possible from the given data. This function only supports column equality checks
+  ///
+  /// @param baseSql base SQL string to which inserts should be appended
+  /// @param columns columns that describe records
+  /// @param records records to be inserted
+  /// @param maxParameters max parameters this SQLite can accept - determines batching factor
+  /// @param suffixSql optional SQL string to append to each insert statement
+  /// @returns array of statements ready to be executed by the adapter
+  List<Statement> prepareDeleteBatchedStatements(
+    String baseSql,
+    List<String> columns,
+    List<Map<String, Object?>> records,
+    int maxParameters, {
+    String suffixSql = '',
+  }) {
+    final stmts = <Statement>[];
+    final columnCount = columns.length;
+    final recordCount = records.length;
+    int processed = 0;
+    int positionalParam = 1;
+    String pos(int i) => makePositionalParam(i);
+    String makeWherePattern() {
+      final columnComparisons = List.generate(
+        columnCount,
+        (i) => '"${columns[i]}" = ${pos(positionalParam++)}',
+      );
+
+      return " (${columnComparisons.join(' AND ')})";
+    }
+
+    // Amount of rows we can delete at once
+    final batchMaxSize = (maxParameters / columnCount).floor();
+    while (processed < recordCount) {
+      positionalParam = 1; // start counting parameters from 1 again
+      final currentDeleteCount = min(recordCount - processed, batchMaxSize);
+      String sql = baseSql +
+          List.generate(currentDeleteCount, (_) => makeWherePattern()).join(
+            ' OR ',
+          );
+
+      if (suffixSql != '') {
+        sql += ' $suffixSql';
+      }
+
+      final args = records
+          .slice(processed, processed + currentDeleteCount)
+          .expand((record) => columns.map((col) => record[col]))
+          .toList();
+
+      processed += currentDeleteCount;
+      stmts.add(Statement(sql, args));
+    }
+    return stmts;
+  }
+
+  QualifiedTablename makeQT(String tablename) {
+    return QualifiedTablename(defaultNamespace, tablename);
   }
 }

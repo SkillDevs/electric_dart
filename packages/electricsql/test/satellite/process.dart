@@ -1863,6 +1863,58 @@ void processTests({
     expect(results, <dynamic>[]);
   });
 
+  test('GONE batch is applied as DELETEs', () async {
+    await runMigrations();
+    const tablename = 'parent';
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData(tablename, parentRecord);
+    client.setRelationData(tablename, {...parentRecord, 'id': 2});
+
+    await startSatellite(satellite, authConfig, token);
+
+    satellite.relations = kTestRelations;
+    final ShapeSubscription(:synced, :id) =
+        await satellite.subscribe([Shape(tablename: tablename)]);
+    await synced;
+    await satellite.performSnapshot();
+
+    final completer = Completer<ChangeNotification>();
+    satellite.notifier.subscribeToDataChanges((d) {
+      if (!completer.isCompleted) {
+        completer.complete(d);
+      }
+    });
+
+    client.setGoneBatch(id, [
+      (tablename: tablename, record: {'id': 1}),
+      (tablename: tablename, record: {'id': 2}),
+    ]);
+    // Send additional data
+    await satellite.unsubscribe([id]);
+
+    final change = await completer.future;
+    expect(change.changes.length, 1);
+    expect(change.changes[0].recordChanges, [
+      RecordChange(
+        primaryKey: {'id': 1},
+        type: RecordChangeType.gone,
+      ),
+      RecordChange(
+        primaryKey: {'id': 2},
+        type: RecordChangeType.gone,
+      ),
+    ]);
+
+    final results = await adapter.query(
+      Statement(
+        'SELECT * FROM parent',
+      ),
+    );
+    expect(results, <Map<String, Object?>>[]);
+  });
+
   test(
       'a subscription that failed to apply because of FK constraint triggers GC',
       () async {
@@ -2150,7 +2202,7 @@ void processTests({
       ),
     ]);
 
-    await subsManager.unsubscribeAll();
+    await subsManager.unsubscribeAllAndGC();
     // if we reach here, the FKs were not violated
 
     // Check that everything was deleted

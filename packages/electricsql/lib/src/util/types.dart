@@ -157,8 +157,13 @@ enum IncompletionType { transaction, additionalData }
 class SeenAdditionalDataInfo {
   final List<String> subscriptions;
   final List<Int64> dataRefs;
+  final List<String> gone;
 
-  SeenAdditionalDataInfo({required this.subscriptions, required this.dataRefs});
+  SeenAdditionalDataInfo({
+    required this.subscriptions,
+    required this.dataRefs,
+    required this.gone,
+  });
 }
 
 class InboundReplication extends Replication<ServerTransaction> {
@@ -171,6 +176,8 @@ class InboundReplication extends Replication<ServerTransaction> {
   List<AdditionalData> additionalData;
   Set<String> unseenAdditionalDataRefs;
   IncompletionType? incomplete;
+  List<DataChange> goneBatch;
+  List<String> receivingUnsubsBatch;
   SeenAdditionalDataInfo seenAdditionalDataSinceLastTx;
 
   InboundReplication({
@@ -188,6 +195,8 @@ class InboundReplication extends Replication<ServerTransaction> {
     required this.additionalData,
     required this.unseenAdditionalDataRefs,
     this.incomplete,
+    required this.goneBatch,
+    required this.receivingUnsubsBatch,
     required this.seenAdditionalDataSinceLastTx,
   });
 }
@@ -257,6 +266,21 @@ class AdditionalData {
   }) : assert(
           changes.every((element) => element.type == DataChangeType.insert),
           'AdditionalData changes must be of type insert',
+        );
+}
+
+class GoneBatch {
+  final LSN lsn;
+  final List<String> subscriptionIds;
+  final List<DataChange> changes;
+
+  GoneBatch({
+    required this.lsn,
+    required this.subscriptionIds,
+    required this.changes,
+  }) : assert(
+          changes.every((element) => element.type == DataChangeType.gone),
+          'GoneBatch changes must be of type gone',
         );
 }
 
@@ -411,9 +435,13 @@ typedef ErrorCallback = EventCallbackCall<(SatelliteException, StackTrace)>;
 typedef RelationCallback = EventCallbackCall<Relation>;
 typedef AdditionalDataCallback = Future<void> Function(AdditionalData);
 typedef TransactionCallback = Future<void> Function(ServerTransaction);
-typedef IncomingTransactionCallback = EventCallbackCall<TransactionEvent>;
-typedef IncomingAdditionalDataCallback = EventCallbackCall<AdditionalDataEvent>;
 typedef OutboundStartedCallback = EventCallbackCall<void>;
+typedef GoneBatchCallback = Future<void> Function(GoneBatch);
+
+// Used in the event emitter
+typedef EmitterTransactionCallback = EventCallbackCall<TransactionEvent>;
+typedef EmitterAdditionalDataCallback = EventCallbackCall<AdditionalDataEvent>;
+typedef EmitterGoneBatchCallback = EventCallbackCall<GoneBatchEvent>;
 
 // class Relation {
 //   final int id;
@@ -475,18 +503,23 @@ class StopReplicationResponse {
   );
 }
 
-class TransactionEvent {
-  final ServerTransaction transaction;
+abstract class EventWithAck<T> {
+  final T data;
   final void Function() ackCb;
 
-  TransactionEvent(this.transaction, this.ackCb);
+  EventWithAck(this.data, this.ackCb);
 }
 
-class AdditionalDataEvent {
-  final AdditionalData additionalData;
-  final void Function() ackCb;
+class TransactionEvent extends EventWithAck<ServerTransaction> {
+  TransactionEvent(super.data, super.ackCb);
+}
 
-  AdditionalDataEvent(this.additionalData, this.ackCb);
+class AdditionalDataEvent extends EventWithAck<AdditionalData> {
+  AdditionalDataEvent(super.data, super.ackCb);
+}
+
+class GoneBatchEvent extends EventWithAck<GoneBatch> {
+  GoneBatchEvent(super.data, super.ackCb);
 }
 
 enum ConnectivityStatus {

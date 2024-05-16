@@ -39,9 +39,10 @@ typedef Uuid = String;
 typedef ChangeAccumulator = Map<String, Change>;
 
 class ShapeSubscription {
+  final String id;
   final Future<void> synced;
 
-  ShapeSubscription({required this.synced});
+  ShapeSubscription({required this.id, required this.synced});
 }
 
 typedef SubscriptionNotifier = ({
@@ -292,6 +293,7 @@ This means there is a notifier subscription leak.`''');
         client.subscribeToAdditionalData(_handleClientAdditionalData);
     final unsubOutboundStarted =
         client.subscribeToOutboundStarted(_handleClientOutboundStarted);
+    final unsubGoneBatch = client.subscribeToGoneBatch(_applyGoneBatch);
 
     final subscriptionsListeners = client.subscribeToSubscriptionEvents(
       _handleSubscriptionData,
@@ -305,6 +307,7 @@ This means there is a notifier subscription leak.`''');
       unsubTransactions();
       unsubAdditionalData();
       unsubOutboundStarted();
+      unsubGoneBatch();
       subscriptionsListeners.removeListeners();
     };
   }
@@ -364,11 +367,13 @@ This means there is a notifier subscription leak.`''');
     if (existingSubscription != null &&
         existingSubscription is DuplicatingSubInFlight) {
       return ShapeSubscription(
+        id: existingSubscription.inFlight,
         synced: subscriptionNotifiers[existingSubscription.inFlight]!.future,
       );
     } else if (existingSubscription != null &&
         existingSubscription is DuplicatingSubFulfilled) {
       return ShapeSubscription(
+        id: existingSubscription.fulfilled,
         synced: Future.value(),
       );
     }
@@ -425,6 +430,7 @@ This means there is a notifier subscription leak.`''');
         clearSubAndThrow(error);
       } else {
         return ShapeSubscription(
+          id: subId,
           synced: subProm,
         );
       }
@@ -434,12 +440,17 @@ This means there is a notifier subscription leak.`''');
   }
 
   @override
-  Future<void> unsubscribe(String _subscriptionId) async {
-    throw SatelliteException(
-      SatelliteErrorCode.internal,
-      'unsubscribe shape not supported',
+  Future<void> unsubscribe(List<String> subscriptionIds) async {
+    await client.unsubscribe(subscriptionIds);
+
+    // If the server didn't send an error, we persist the fact the subscription was deleted.
+    subscriptions.unsubscribe(subscriptionIds);
+    await adapter.run(
+      _setMetaStatement(
+        'subscriptions',
+        subscriptions.serialize(),
+      ),
     );
-    // return this.subscriptions.unsubscribe(subscriptionId)
   }
 
   Future<void> _handleSubscriptionData(SubscriptionData subsData) async {
@@ -645,7 +656,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     // TODO: this is obviously too conservative
     // we should also work on updating subscriptions
     // atomically on unsubscribe()
-    await subscriptions.unsubscribeAll();
+    await subscriptions.unsubscribeAllAndGC();
 
     await adapter.runInTransaction([
       _setMetaStatement('lsn', null),
@@ -1385,7 +1396,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
     // update lsn.
     stmts.add(updateLsnStmt(lsn));
-    stmts.add(_resetSeenAdditionalDataStmt());
+    stmts.add(_resetAllSeenStmt());
 
     Future<void> processDML(List<DataChange> changes) async {
       final tx = DataTransaction(
@@ -1524,6 +1535,75 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     );
   }
 
+  Future<void> _applyGoneBatch(GoneBatch goneBatch) async {
+    final lsn = goneBatch.lsn;
+    final allGone = goneBatch.changes;
+
+    final fakeOplogEntries = allGone
+        .map(
+          (x) => OplogEntry(
+            namespace: builder.defaultNamespace,
+            tablename: x.relation.table,
+            primaryKey: extractPK(x),
+            optype: OpType.gone,
+            // Fields below don't matter here.
+            rowid: -1,
+            timestamp: '',
+            clearTags: '',
+          ),
+        )
+        .toList();
+
+    // Batch-delete shadow entries
+    final stmts = builder.prepareDeleteBatchedStatements(
+      'DELETE FROM ${opts.shadowTable} WHERE ',
+      ['namespace', 'tablename', 'primaryKey'],
+      fakeOplogEntries.map((e) => e.toRow()).toList(),
+      maxSqlParameters,
+    );
+
+    final groupedChanges = groupBy(allGone, (x) => x.relation.table);
+    final affectedTables = groupedChanges.keys
+        .map(
+          (x) => builder.makeQT(x),
+        )
+        .toList();
+
+    // Batch-delete affected rows per table
+    for (final entry in groupedChanges.entries) {
+      final table = entry.key;
+      final gone = entry.value;
+      if (gone.isEmpty) continue;
+
+      final fqtn = builder.makeQT(table);
+      final pkCols = gone[0]
+          .relation
+          .columns
+          .where((x) => x.primaryKey != null && x.primaryKey != 0)
+          .map((x) => x.name)
+          .toList();
+
+      stmts.addAll(
+        builder.prepareDeleteBatchedStatements(
+          'DELETE FROM $fqtn WHERE',
+          pkCols,
+          gone.map((x) => x.oldRecord!).toList(),
+          maxSqlParameters,
+        ),
+      );
+    }
+
+    await adapter.runInTransaction([
+      updateLsnStmt(lsn),
+      Statement(builder.deferOrDisableFKsForTx),
+      ..._disableTriggers(affectedTables),
+      ...stmts,
+      ..._enableTriggers(affectedTables),
+    ]);
+
+    await _notifyChanges(fakeOplogEntries, ChangeOrigin.remote);
+  }
+
   Future<void> maybeGarbageCollect(
     String origin,
     DateTime commitTimestamp,
@@ -1578,6 +1658,16 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     ];
   }
 
+  // ignore: unused_element
+  Statement _addSeenGoneBatchStmt(List<String> subscriptionIds) {
+    final meta = opts.metaTable.toString();
+
+    return Statement(
+      "INSERT INTO $meta VALUES ('seenGoneBatch', ${builder.makePositionalParam(1)} ON CONFLICT (key) DO UPDATE SET value = $meta.value || ',' || excluded.value",
+      [subscriptionIds.join(',')],
+    );
+  }
+
   Statement _addSeenAdditionalDataStmt(String ref) {
     final meta = '${opts.metaTable}';
 
@@ -1590,8 +1680,15 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     return Statement(sql, args);
   }
 
-  Statement _resetSeenAdditionalDataStmt() {
-    return _setMetaStatement('seenAdditionalData', '');
+  Statement _resetAllSeenStmt({
+    List<String> keys = const ['seenAdditionalData', 'seenGoneBatch'],
+  }) {
+    final whereClause = keys
+        .mapIndexed((i, _) => 'key = ${builder.makePositionalParam(i + 1)}')
+        .join(' OR ');
+    final sql = "UPDATE ${opts.metaTable} SET VALUE = '' WHERE $whereClause";
+
+    return Statement(sql, [...keys]);
   }
 
   Statement _setMetaStatement(String key, Object? value) {
