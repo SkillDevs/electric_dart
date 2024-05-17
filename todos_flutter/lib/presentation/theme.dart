@@ -5,7 +5,7 @@ const ColorScheme kElectricColorScheme = ColorScheme(
 
   primary: Color(0xFF00d2a0),
   onPrimary: Color(0xFF111111),
-  //primaryContainer: Color(0xFF4F378B),
+  primaryContainer: Color(0xFF226857),
   //onPrimaryContainer: Color(0xFFEADDFF),
   secondary: Color(0xFF00d2a0),
   onSecondary: Color(0xFF111111),
