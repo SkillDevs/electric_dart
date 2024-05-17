@@ -137,7 +137,13 @@ class AsyncEventEmitter {
       // deep copy because once listeners mutate the `this.listeners` array as they remove themselves
       // which breaks the `map` which iterates over that same array while the contents may shift
       final ls = [...listeners];
-      final listenerProms = ls.map((listener) async => await listener(arg));
+      final listenerProms = ls.map((listener) async {
+        try {
+          await listener(arg);
+        } catch (_) {
+          // ignore errors to mimick Promise.allSettled
+        }
+      });
 
       Future.wait(listenerProms)
           // only process the next event when all listeners have finished

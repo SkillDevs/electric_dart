@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
@@ -14,7 +15,6 @@ import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/process.dart';
-import 'package:electricsql/src/satellite/shapes/manager.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/common.dart';
 import 'package:electricsql/src/util/encoders/encoders.dart';
@@ -1658,43 +1658,13 @@ void processTests({
 
       final subsMeta = await satellite.getMeta<String>('subscriptions');
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
-      expect(subsObj.length, 1);
+      expect((subsObj['active']! as Map).length, 1);
 
       // Check that we save the LSN sent by the mock
       expect(satellite.debugLsn, base64.decode('MTIz'));
     } catch (e, st) {
       fail('Reason: $e\n$st');
     }
-  });
-
-  test(
-      '(regression) shape subscription succeeds even if subscription data is delivered before the SatSubsReq RPC call receives its SatSubsResp answer',
-      () async {
-    await runMigrations();
-
-    const tablename = 'parent';
-
-    // relations must be present at subscription delivery
-    client.setRelations(kTestRelations);
-    client.setRelationData(tablename, parentRecord);
-
-    final conn = await startSatellite(satellite, authConfig, token);
-    await conn.connectionFuture;
-
-    final shapeDef = Shape(tablename: tablename);
-
-    satellite.relations = kTestRelations;
-
-    // Enable the deliver first flag in the mock client
-    // such that the subscription data is delivered before the
-    // subscription promise is resolved
-    final mockClient = satellite.client as MockSatelliteClient;
-    mockClient.enableDeliverFirst();
-
-    final ShapeSubscription(:synced) = await satellite.subscribe([shapeDef]);
-    await synced;
-
-    // doesn't throw
   });
 
   test('multiple subscriptions for the same shape are deduplicated', () async {
@@ -1729,7 +1699,10 @@ void processTests({
     await sub4.synced;
 
     // And be "merged" into one subscription
-    expect(satellite.subscriptions.getFulfilledSubscriptions().length, 1);
+    expect(
+      satellite.subscriptionManager.listContinuedSubscriptions().length,
+      1,
+    );
   });
 
   test('applied shape data will be acted upon correctly', () async {
@@ -1875,10 +1848,13 @@ void processTests({
     await startSatellite(satellite, authConfig, token);
 
     satellite.relations = kTestRelations;
-    final ShapeSubscription(:synced, :id) =
+    final ShapeSubscription(:synced, :key) =
         await satellite.subscribe([Shape(tablename: tablename)]);
     await synced;
     await satellite.performSnapshot();
+
+    final status = satellite.syncStatus(key);
+    if (status is! SyncStatusActive) fail('SyncStatus should be active');
 
     final completer = Completer<ChangeNotification>();
     satellite.notifier.subscribeToDataChanges((d) {
@@ -1887,12 +1863,19 @@ void processTests({
       }
     });
 
-    client.setGoneBatch(id, [
+    client.setGoneBatch(status.serverId, [
       (tablename: tablename, record: {'id': 1}),
       (tablename: tablename, record: {'id': 2}),
     ]);
     // Send additional data
-    await satellite.unsubscribe([id]);
+    await satellite
+        .unsubscribe([key])
+        .timeout(const Duration(milliseconds: 10))
+        .catchError(
+          (e) => Future<void>.error(
+            "Unsubscribe call to the server didn't resolve",
+          ),
+        );
 
     final change = await completer.future;
     expect(change.changes.length, 1);
@@ -1939,21 +1922,26 @@ void processTests({
     final shapeDef1 = Shape(tablename: tablename);
 
     satellite.relations = kTestRelations;
-    final ShapeSubscription(synced: dataReceived) =
+    final ShapeSubscription(synced: synced) =
         await satellite.subscribe([shapeDef1]);
-    await dataReceived; // wait for subscription to be fulfilled
 
-    try {
-      final row = await adapter.query(
-        Statement(
-          'SELECT id FROM "$namespace"."$tablename"',
+    await expectLater(
+      () => synced,
+      throwsA(
+        isA<SatelliteException>().having(
+          (e) => e.message,
+          'message',
+          contains('Error applying subscription data'),
         ),
-      );
+      ),
+    ).timeout(const Duration(milliseconds: 1000));
+    final row = await adapter.query(
+      Statement(
+        'SELECT id FROM "$namespace"."$tablename"',
+      ),
+    );
 
-      expect(row.length, 0);
-    } catch (e, st) {
-      fail('Reason: $e\n$st');
-    }
+    expect(row.length, 0);
   });
 
   test('a second successful subscription', () async {
@@ -1995,7 +1983,72 @@ void processTests({
 
       final subsMeta = await satellite.getMeta<String>('subscriptions');
       final subsObj = json.decode(subsMeta) as Map<String, Object?>;
-      expect(subsObj.length, 2);
+      expect((subsObj['active']! as Map).length, 2);
+    } catch (e, st) {
+      fail('Reason: $e\n$st');
+    }
+  });
+
+  test(
+      'a subscription that did not receive data before we went offline is retried',
+      () async {
+    await runMigrations();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData('parent', parentRecord);
+
+    final conn = await startSatellite(satellite, authConfig, token);
+    await conn.connectionFuture;
+
+    final shapeDef1 = Shape(
+      tablename: 'parent',
+    );
+
+    satellite.relations = kTestRelations;
+    // Make sure the data doesn't arrive but the ID does
+    client.skipNextEmit();
+    await satellite.subscribe([shapeDef1], 'testKey');
+
+    final state1 = satellite.subscriptionManager.status('testKey')
+        as SyncStatusEstablishing;
+    expect(state1.progress, 'receiving_data');
+
+    satellite.disconnect(null);
+
+    final completer = Completer<void>();
+
+    satellite.notifier.subscribeToDataChanges((_) {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    });
+
+    await satellite.connectWithBackoff();
+    await completer.future;
+
+    final state2 =
+        satellite.subscriptionManager.status('testKey') as SyncStatusActive;
+    expect(state1.serverId, isNot(state2.serverId));
+
+    try {
+      final row = await adapter.query(
+        Statement(
+          'SELECT id FROM "$namespace".parent',
+        ),
+      );
+      expect(row.length, 1);
+
+      final shadowRows = await adapter.query(
+        Statement(
+          'SELECT tags FROM _electric_shadow',
+        ),
+      );
+      expect(shadowRows.length, 1);
+
+      final subsMeta = await satellite.getMeta<String>('subscriptions');
+      final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+      expect((subsObj['active']! as Map).length, 1);
     } catch (e, st) {
       fail('Reason: $e\n$st');
     }
@@ -2079,38 +2132,39 @@ void processTests({
     final ShapeSubscription(synced: synced) =
         await satellite.subscribe([shapeDef2]);
 
-    try {
-      await synced;
-      fail('Expected a subscription error');
-    } catch (expected) {
-      expect(expected, isA<SatelliteException>());
+    await expectLater(
+      () => synced,
+      throwsA(
+        isA<SatelliteException>().having(
+          (e) => e.message,
+          'message',
+          contains("table 'another'"),
+        ),
+      ),
+    );
 
-      try {
-        final row = await adapter.query(
-          Statement('SELECT id FROM parent'),
-        );
-        expect(row.length, 0);
-        final row1 = await adapter.query(
-          Statement('SELECT id FROM child'),
-        );
-        expect(row1.length, 0);
+    final newRow = await adapter.query(
+      Statement('SELECT id FROM parent'),
+    );
+    expect(newRow.length, 0);
+    final newRow1 = await adapter.query(
+      Statement('SELECT id FROM child'),
+    );
+    expect(newRow1.length, 0);
 
-        final shadowRows = await adapter.query(
-          Statement('SELECT tags FROM _electric_shadow'),
-        );
-        expect(shadowRows.length, 2);
+    final shadowRows = await adapter.query(
+      Statement('SELECT tags FROM _electric_shadow'),
+    );
+    expect(shadowRows.length, 2);
 
-        final subsMeta = await satellite.getMeta<String>('subscriptions');
-        final subsObj = json.decode(subsMeta) as Map<String, Object?>;
-        expect(subsObj, <String, Object?>{});
-        expect(
-          (expected as SatelliteException).message!.indexOf("table 'another'"),
-          greaterThanOrEqualTo(0),
-        );
-      } catch (e, st) {
-        fail('Reason: $e\n$st');
-      }
-    }
+    final subsMeta = await satellite.getMeta<String>('subscriptions');
+    final subsObj = json.decode(subsMeta) as Map<String, Object?>;
+    expect(subsObj, {
+      'active': <String, dynamic>{},
+      'known': <String, dynamic>{},
+      'unfulfilled': <String, dynamic>{},
+      'unsubscribes': <dynamic>[],
+    });
   });
 
   test('a subscription request failure does not clear the manager state',
@@ -2145,14 +2199,16 @@ void processTests({
       fail('Reason: $e\n$st');
     }
 
-    try {
-      await satellite.subscribe([shapeDef2]);
-    } catch (error) {
-      expect(
-        (error as SatelliteException).code,
-        SatelliteErrorCode.tableNotFound,
-      );
-    }
+    await expectLater(
+      () => satellite.subscribe([shapeDef2]),
+      throwsA(
+        isA<SatelliteException>().having(
+          (e) => e.code,
+          'code',
+          SatelliteErrorCode.tableNotFound,
+        ),
+      ),
+    );
   });
 
   test("snapshot while not fully connected doesn't throw", () async {
@@ -2178,16 +2234,6 @@ void processTests({
       () async {
     await runMigrations(); // because the meta tables need to exist for shape GC
 
-    unawaited(
-      satellite.garbageCollectShapeHandler(
-        [ShapeDefinition(uuid: '', definition: Shape(tablename: 'parent'))],
-      ),
-    );
-
-    final subsManager = MockSubscriptionsManager(
-      satellite.garbageCollectShapeHandler,
-    );
-
     // Create the 'users' and 'posts' tables expected by sqlite
     // populate it with foreign keys and check that the subscription
     // manager does not violate the FKs when unsubscribing from all subscriptions
@@ -2202,7 +2248,10 @@ void processTests({
       ),
     ]);
 
-    await subsManager.unsubscribeAllAndGC();
+    await satellite.clearTables([
+      builder.makeQT('users'),
+      builder.makeQT('posts'),
+    ]);
     // if we reach here, the FKs were not violated
 
     // Check that everything was deleted
@@ -2225,12 +2274,7 @@ void processTests({
     expect((await satellite.getEntries(since: 0)).length, 0);
 
     unawaited(
-      satellite.garbageCollectShapeHandler([
-        ShapeDefinition(
-          uuid: '',
-          definition: Shape(tablename: 'parent'),
-        ),
-      ]),
+      satellite.clearTables([builder.makeQT('parent')]),
     );
 
     await satellite.performSnapshot();

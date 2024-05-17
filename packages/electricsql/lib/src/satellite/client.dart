@@ -908,16 +908,16 @@ class SatelliteClient implements Client {
   }
 
   void handleTransaction(SatOpLog message) {
-    if (!_subscriptionsDataCache.isDelivering()) {
-      processOpLogMessage(message);
-    } else if (inbound.receivingUnsubsBatch.isNotEmpty) {
+    if (inbound.receivingUnsubsBatch.isNotEmpty) {
       processUnsubsDataMessage(message);
-    } else {
+    } else if (_subscriptionsDataCache.isDelivering()) {
       try {
         _subscriptionsDataCache.transaction(message.ops);
       } catch (e) {
         logger.info('Error applying transaction message for subs $e');
       }
+    } else {
+      processOpLogMessage(message);
     }
   }
 
@@ -999,6 +999,7 @@ class SatelliteClient implements Client {
       }),
     );
 
+    // TODO(dart): Should we set null??
     inbound.receivingUnsubsBatch = [];
     inbound.goneBatch = [];
   }

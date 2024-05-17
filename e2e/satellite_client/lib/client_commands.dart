@@ -17,8 +17,24 @@ import 'package:satellite_dart_client/util/json.dart';
 import 'package:satellite_dart_client/util/pretty_output.dart';
 
 late String dbName;
-late QueryBuilder builder;
+
+final QueryBuilder builder =
+    dialect() == Dialect.postgres ? kPostgresQueryBuilder : kSqliteQueryBuilder;
 int? tokenExpirationMillis;
+
+Dialect dialect() {
+  final dialectEnv = Platform.environment['DIALECT'];
+  switch (dialectEnv) {
+    case 'Postgres':
+      return Dialect.postgres;
+    case 'SQLite':
+    case '':
+    case null:
+      return Dialect.sqlite;
+    default:
+      throw Exception('Unrecognised dialect: $dialectEnv');
+  }
+}
 
 typedef MyDriftElectricClient = ElectricClient<ClientDatabase>;
 
@@ -28,8 +44,7 @@ Future<ClientDatabase> makeDb(String name) async {
   print("DIALECT: $dialectEnv");
 
   ClientDatabase db;
-  if (dialectEnv == 'Postgres') {
-    builder = kPostgresQueryBuilder;
+  if (dialect() == Dialect.postgres) {
     final endpoint = makePgEndpoint(name);
     db = ClientDatabase(
       PgDatabase(
@@ -40,7 +55,6 @@ Future<ClientDatabase> makeDb(String name) async {
     );
     dbName = '${endpoint.host}:${endpoint.port}/${endpoint.database}';
   } else {
-    builder = kSqliteQueryBuilder;
     db = ClientDatabase(NativeDatabase(File(name)));
     await db.customSelect('PRAGMA foreign_keys = ON;').get();
   }
@@ -81,7 +95,7 @@ Future<MyDriftElectricClient> electrifyDb(
     pgMigrations = [];
   }
 
-  final result = await electrify<ClientDatabase>(
+  final electric = await electrify<ClientDatabase>(
     dbName: dbName,
     db: db,
     migrations: ElectricMigrations(
@@ -96,13 +110,13 @@ Future<MyDriftElectricClient> electrifyDb(
       : null;
   final token = await mockSecureAuthToken(exp: exp);
 
-  result.notifier.subscribeToConnectivityStateChanges((x) =>
+  electric.notifier.subscribeToConnectivityStateChanges((x) =>
       print('Connectivity state changed: ${x.connectivityState.status.name}'));
   if (connectToElectric) {
-    await result.connect(token); // connect to Electric
+    await electric.connect(token); // connect to Electric
   }
 
-  return result;
+  return electric;
 }
 
 // reconnects with Electric, e.g. after expiration of the JWT
@@ -453,7 +467,7 @@ Future<SingleRow> getJsonb(MyDriftElectricClient electric, String id) async {
 }
 
 Future<SingleRow> writeJson(
-    MyDriftElectricClient electric, String id, Object? js, Object? jsb) async {
+    MyDriftElectricClient electric, String id, Object? jsb) async {
   final item = await electric.db.jsons.insertReturning(
     JsonsCompanion.insert(
       id: id,

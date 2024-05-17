@@ -5,7 +5,15 @@ class SyncInputRaw {
   final List<IncludeRelRaw>? include;
   final SyncWhere? where;
 
-  SyncInputRaw({required this.tableName, this.include, this.where});
+  /// Unique key for a shape subscription, allowing shape modification and unsubscribe
+  final String? key;
+
+  SyncInputRaw({
+    required this.tableName,
+    this.include,
+    this.where,
+    this.key,
+  });
 }
 
 class IncludeRelRaw {

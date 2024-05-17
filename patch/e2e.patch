@@ -445,12 +445,12 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.18_node_satell
 diff -x lux -x satellite_client -x lux_logs -ur electric/tests/03.19_node_satellite_can_sync_json.lux dart/tests/03.19_node_satellite_can_sync_json.lux
 --- electric/tests/03.19_node_satellite_can_sync_json.lux	2024-01-01 00:00:00.000000000 +0000
 +++ dart/tests/03.19_node_satellite_can_sync_json.lux	2024-01-01 00:00:00.000000000 +0000
-@@ -63,7 +63,7 @@
-     # [invoke node_get_json "row5" "'bar'"]
+@@ -55,7 +55,7 @@
+     [invoke node_write_json "row5" "[ 1, { a: 'foo' }, true ]"]
      [invoke node_get_jsonb "row5" "[ 1, { a: 'foo' }, true ]"]
  
--    [invoke node_write_json "row6" "null" "[\"it's ⚡\", {}, \"\\u2603 under \\u2602\"]"]
-+    [invoke node_write_json "row6" "null" "[\"it's \\u26A1\", {}, \"\\u2603 under \\u2602\"]"]
+-    [invoke node_write_json "row6" "[\"it's ⚡\", {}, \"\\u2603 under \\u2602\"]"]
++    [invoke node_write_json "row6" "[\"it's \\u26A1\", {}, \"\\u2603 under \\u2602\"]"]
      [invoke node_get_jsonb "row6" "[ \"it's ⚡\", {}, '☃ under ☂' ]"]
  
      # Write JSON string "null"
@@ -703,7 +703,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [endmacro]
  
  [macro setup_client satellite_number electric port]
-@@ -55,118 +36,119 @@
+@@ -55,191 +36,192 @@
  [endmacro]
  
  [macro node_await_get match]
@@ -838,14 +838,12 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
      ??$node
  [endmacro]
  
- [macro node_write_json id json_value jsonb_value]
+ [macro node_write_json id jsonb_value]
      # Can write valid JSON to the DB
--    !await client.write_json(db, '${id}', ${json_value}, ${jsonb_value})
-+    !write_json db '${id}' ${json_value} ${jsonb_value}
-     #??{ id: '${id}', js: ${json_value}, jsb: ${jsonb_value} }
-     # ??{ id: '${id}', jsb: ${jsonb_value} }
+-    !await client.write_json(db, '${id}', ${jsonb_value})
++    !write_json db '${id}' ${jsonb_value}
      ??$node
-@@ -174,74 +156,74 @@
+ [endmacro]
  
  [macro node_write_blob id value]
      # Can write valid blobs to the DB
@@ -876,7 +874,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [endmacro]
  
  [macro node_await_column table column]
--    [invoke wait-for "await client.get_columns(db, '${table}')" "${column}" 10 $node]
+-    [invoke wait-for "await client.get_columns(db, '${table}')" "name: '${column}'" 10 $node]
 +    [invoke wait-for "get_columns db '${table}'" "name: '${column}'" 10 $node]
  [endmacro]
  
@@ -936,7 +934,7 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/tests/_satellite_macros
  [endmacro]
  
  # Makes both satellites and PG write rows
-@@ -269,17 +251,17 @@
+@@ -267,17 +249,17 @@
      
      [invoke log "Verify that satellite inserts reached each other"]
      [shell satellite_1]

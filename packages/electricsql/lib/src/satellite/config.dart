@@ -42,6 +42,7 @@ const kElectricMetaTable = '_electric_meta';
 const kElectricMigrationsTable = '_electric_migrations';
 const kElectricTriggerSettingsTable = '_electric_trigger_settings';
 const kElectricShadowTable = '_electric_shadow';
+const kElectricSubscriptionsTable = '_electric_subscriptions';
 
 SatelliteOpts Function(String namespace) satelliteDefaults =
     (String namespace) => SatelliteOpts(
@@ -52,6 +53,8 @@ SatelliteOpts Function(String namespace) satelliteDefaults =
           triggersTable:
               QualifiedTablename(namespace, kElectricTriggerSettingsTable),
           shadowTable: QualifiedTablename(namespace, kElectricShadowTable),
+          subscriptionsTable:
+              QualifiedTablename(namespace, kElectricSubscriptionsTable),
           pollingInterval: const Duration(milliseconds: 2000),
           minSnapshotWindow: const Duration(milliseconds: 40),
           clearOnBehindWindow: true,
@@ -109,6 +112,9 @@ class SatelliteOpts {
   /// The database table that contains dependency tracking information
   final QualifiedTablename shadowTable;
 
+  /// The database table that holds information about established subscriptions
+  final QualifiedTablename subscriptionsTable;
+
   /// Polls the database for changes every `pollingInterval` milliseconds.
   final Duration pollingInterval;
 
@@ -129,6 +135,7 @@ class SatelliteOpts {
     required this.oplogTable,
     required this.triggersTable,
     required this.shadowTable,
+    required this.subscriptionsTable,
     required this.pollingInterval,
     required this.minSnapshotWindow,
     required this.clearOnBehindWindow,
@@ -141,6 +148,7 @@ class SatelliteOpts {
     QualifiedTablename? oplogTable,
     QualifiedTablename? triggersTable,
     QualifiedTablename? shadowTable,
+    QualifiedTablename? subscriptionsTable,
     Duration? pollingInterval,
     Duration? minSnapshotWindow,
     bool? clearOnBehindWindow,
@@ -152,6 +160,7 @@ class SatelliteOpts {
       oplogTable: oplogTable ?? this.oplogTable,
       triggersTable: triggersTable ?? this.triggersTable,
       shadowTable: shadowTable ?? this.shadowTable,
+      subscriptionsTable: subscriptionsTable ?? this.subscriptionsTable,
       pollingInterval: pollingInterval ?? this.pollingInterval,
       minSnapshotWindow: minSnapshotWindow ?? this.minSnapshotWindow,
       clearOnBehindWindow: clearOnBehindWindow ?? this.clearOnBehindWindow,

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
@@ -55,11 +56,17 @@ class MockSatelliteProcess implements Satellite {
   });
 
   @override
+  SyncStatus syncStatus(String key) {
+    return SyncStatusUndefined();
+  }
+
+  @override
   Future<ShapeSubscription> subscribe(
-    List<Shape> shapeDefinitions,
-  ) async {
+    List<Shape> shapeDefinitions, [
+    String? key,
+  ]) async {
     return ShapeSubscription(
-      id: 'test',
+      key: 'test',
       synced: Future.value(),
     );
   }
@@ -186,6 +193,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   Map<String, List<DataChange>> goneBatches = {};
 
   bool deliverFirst = false;
+  bool doSkipNextEmit = false;
 
   Duration? _startReplicationDelay;
 
@@ -233,6 +241,10 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     deliverFirst = true;
   }
 
+  void skipNextEmit() {
+    doSkipNextEmit = true;
+  }
+
   @override
   Future<SubscribeResponse> subscribe(
     String subscriptionId,
@@ -254,8 +266,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
               error: SatelliteException(SatelliteErrorCode.tableNotFound, null),
             ),
           );
-        }
-        if (tablename == 'another' || tablename == 'User') {
+        } else if (tablename == 'another' || tablename == 'User') {
           return Future(() {
             sendErrorAfterTimeout(subscriptionId, 1);
             return SubscribeResponse(
@@ -280,7 +291,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     }
 
     return Future(() {
-      void emitDelivered() => enqueueEmit(
+      void emit() => enqueueEmit(
             kSubscriptionDelivered,
             SubscriptionData(
               subscriptionId: subscriptionId,
@@ -303,11 +314,15 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
       if (deliverFirst) {
         // When the `deliverFirst` flag is set,
         // we deliver the subscription before resolving the promise.
-        emitDelivered();
+        emit();
         Timer(const Duration(milliseconds: 1), resolve);
       } else {
         // Otherwise, we resolve the promise before delivering the subscription.
-        Timer(const Duration(milliseconds: 1), emitDelivered);
+        if (!doSkipNextEmit) {
+          Timer(const Duration(milliseconds: 1), emit);
+        } else {
+          doSkipNextEmit = false;
+        }
         resolve();
       }
 

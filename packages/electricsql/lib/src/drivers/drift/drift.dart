@@ -5,6 +5,7 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
@@ -93,6 +94,7 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
     T table, {
     SyncIncludeBuilder<T>? include,
     SyncWhereBuilder<T>? where,
+    String? key,
   });
 
   /// Same as [syncTable] but you would be providing table names, and foreign key
@@ -121,6 +123,10 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
   void clearTableReplicationTransform<TableDsl extends Table, D>(
     TableInfo<TableDsl, D> table,
   );
+
+  Future<void> syncUnsubscribe(List<String> keys);
+
+  SyncStatus syncStatus(String key);
 }
 
 class DriftElectricClient<DB extends GeneratedDatabase>
@@ -249,6 +255,7 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     T table, {
     SyncIncludeBuilder<T>? include,
     SyncWhereBuilder<T>? where,
+    String? key,
   }) {
     final shape = computeShapeForDrift<T>(
       db,
@@ -259,13 +266,13 @@ class DriftElectricClient<DB extends GeneratedDatabase>
 
     // print("SHAPE ${shape.toMap()}");
 
-    return _baseClient.syncShapeInternal(shape);
+    return _baseClient.syncShapeInternal(shape, key);
   }
 
   @override
   Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput) async {
     final shape = computeShape(syncInput);
-    return _baseClient.syncShapeInternal(shape);
+    return _baseClient.syncShapeInternal(shape, syncInput.key);
   }
 
   @override
@@ -340,6 +347,16 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     TableInfo<TableDsl, D> table,
   ) {
     return QualifiedTablename('main', table.actualTableName);
+  }
+
+  @override
+  SyncStatus syncStatus(String key) {
+    return _baseClient.syncStatus(key);
+  }
+
+  @override
+  Future<void> syncUnsubscribe(List<String> keys) {
+    return _baseClient.syncUnsubscribe(keys);
   }
 }
 

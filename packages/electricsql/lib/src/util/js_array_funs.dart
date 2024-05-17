@@ -25,3 +25,15 @@ extension JsArrayFuns<T> on List<T> {
     return removed;
   }
 }
+
+List<T> uniqueList<T>(Iterable<T> list) {
+  final Set<T> itemsSet = {};
+  final List<T> nonRepeated = [];
+
+  for (final e in list) {
+    if (itemsSet.add(e)) {
+      nonRepeated.add(e);
+    }
+  }
+  return nonRepeated;
+}

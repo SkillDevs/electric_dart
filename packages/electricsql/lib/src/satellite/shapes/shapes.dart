@@ -1,4 +1,5 @@
 import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/tablename.dart';
 
 /// Manages the state of satellite shape subscriptions
@@ -52,6 +53,8 @@ abstract class SubscriptionsManager {
 
   /// loads the subscription manager state from a text representation
   void setState(String serialized);
+
+  String hash(List<Shape> shapes);
 }
 
 sealed class DuplicatingSubRes {}
@@ -73,18 +76,7 @@ List<QualifiedTablename> getAllTablesForShape(
   Shape shape, {
   String schema = 'main',
 }) {
-  final allTables = _doGetAllTablesForShape(shape, schema: schema);
-
-  // Remove duplicates
-  final Set<QualifiedTablename> tablesSet = {};
-  final List<QualifiedTablename> nonRepeated = [];
-
-  for (final table in allTables) {
-    if (tablesSet.add(table)) {
-      nonRepeated.add(table);
-    }
-  }
-  return nonRepeated;
+  return uniqueList(_doGetAllTablesForShape(shape, schema: schema));
 }
 
 List<QualifiedTablename> _doGetAllTablesForShape(

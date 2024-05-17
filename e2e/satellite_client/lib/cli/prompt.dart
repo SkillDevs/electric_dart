@@ -231,8 +231,8 @@ Future<void> start() async {
           getJsonbRaw,
         );
       } else if (name == "write_json") {
-        await processCommand4Params<MyDriftElectricClient, String, Object?,
-            Object?, SingleRow>(
+        await processCommand3Params<MyDriftElectricClient, String, Object?,
+            SingleRow>(
           state,
           command,
           writeJson,

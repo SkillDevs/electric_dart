@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/auth/secure.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
@@ -15,8 +16,7 @@ import 'package:electricsql/src/satellite/error.dart';
 import 'package:electricsql/src/satellite/merge.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
-import 'package:electricsql/src/satellite/shapes/manager.dart';
-import 'package:electricsql/src/satellite/shapes/shapes.dart';
+import 'package:electricsql/src/satellite/shapes/shape_manager.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/arrays.dart';
 import 'package:electricsql/src/util/common.dart';
@@ -24,7 +24,6 @@ import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/encoders/encoders.dart';
 import 'package:electricsql/src/util/exceptions.dart';
-import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -39,10 +38,10 @@ typedef Uuid = String;
 typedef ChangeAccumulator = Map<String, Change>;
 
 class ShapeSubscription {
-  final String id;
+  final String key;
   final Future<void> synced;
 
-  ShapeSubscription({required this.id, required this.synced});
+  ShapeSubscription({required this.key, required this.synced});
 }
 
 typedef SubscriptionNotifier = ({
@@ -97,11 +96,9 @@ class SatelliteProcess implements Satellite {
 
   RelationsCache relations = {};
 
-  final List<Shape> previousShapeSubscriptions = [];
-  late SubscriptionsManager subscriptions;
-  final Map<String, Completer<void>> subscriptionNotifiers = {};
-  late String Function() subscriptionIdGenerator;
-  late String Function() shapeRequestIdGenerator;
+  final List<({String key, List<Shape> shapes})> previousShapeSubscriptions =
+      [];
+  late ShapeManager subscriptionManager;
 
   /// To optimize inserting a lot of data when the subscription data comes, we need to do
   /// less `INSERT` queries, but SQLite/Postgres support only a limited amount of `?`/`$i` positional
@@ -126,16 +123,12 @@ class SatelliteProcess implements Satellite {
     required this.notifier,
   })  : _adapter = adapter,
         builder = migrator.queryBuilder {
-    subscriptions = InMemorySubscriptionsManager(
-      garbageCollectShapeHandler,
-    );
+    subscriptionManager = ShapeManager();
+
     throttledSnapshot = Throttle(
       mutexSnapshot,
       opts.minSnapshotWindow,
     );
-
-    subscriptionIdGenerator = () => genUUID();
-    shapeRequestIdGenerator = subscriptionIdGenerator;
 
     connectRetryHandler = defaultConnectRetryHandler;
   }
@@ -227,7 +220,8 @@ This means there is a notifier subscription leak.`''');
 
     final subscriptionsState = await getMeta<String>('subscriptions');
     if (subscriptionsState.isNotEmpty) {
-      subscriptions.setState(subscriptionsState);
+      // this.subscriptions.setState(subscriptionsState)
+      subscriptionManager.initialize(subscriptionsState);
     }
   }
 
@@ -245,35 +239,6 @@ This means there is a notifier subscription leak.`''');
   @visibleForTesting
   void setAuthState(AuthState newAuthState) {
     authState = newAuthState;
-  }
-
-  @visibleForTesting
-  Future<void> garbageCollectShapeHandler(
-    List<ShapeDefinition> shapeDefs,
-  ) async {
-    final namespace = builder.defaultNamespace;
-    final allTables = shapeDefs
-        .map((ShapeDefinition def) => def.definition)
-        .expand((x) => getAllTablesForShape(x, schema: namespace));
-    final tables = allTables.toSet().toList();
-
-    // TODO: table and schema warrant escaping here too, but they aren't in the triggers table.
-
-    final deleteStmts = tables.map(
-      (x) => Statement(
-        'DELETE FROM $x',
-      ),
-    );
-
-    final stmtsWithTriggers = [
-      // reverts to off on commit/abort
-      Statement(builder.deferOrDisableFKsForTx),
-      ..._disableTriggers(tables),
-      ...deleteStmts,
-      ..._enableTriggers(tables),
-    ];
-
-    await adapter.runInTransaction(stmtsWithTriggers);
   }
 
   // Adds all the necessary listeners to the satellite client
@@ -354,127 +319,130 @@ This means there is a notifier subscription leak.`''');
     await _snapshotLock.synchronized(() => null);
   }
 
+  /// Get information about a requested subscription by it's key
+  @override
+  SyncStatus syncStatus(String key) {
+    return subscriptionManager.status(key);
+  }
+
+  /// Subscribe to a set of shapes, so that server data can get onto the client.
+  ///
+  /// A set of shapes can be "named" using a key. Any subsequent calls to `subscribe`
+  /// using this key will exchange the subscription: a new one will be subscribed, and
+  /// then the old one will be unsubscribed.
+  ///
+  /// If the `key` is not provided, it will instead be generated. Un-keyed subscriptions
+  /// are deduplicated: multiple `subscribe` calls with exactly same shapes will result in
+  /// only one subscription, and will even return the same key.
   @override
   Future<ShapeSubscription> subscribe(
-    List<Shape> shapeDefinitions,
-  ) async {
+    List<Shape> shapeDefinitions, [
+    String? key,
+  ]) async {
     // Await for client to be ready before doing anything else
     await initializing?.waitOn();
 
-    // First, we want to check if we already have either fulfilled or fulfilling subscriptions with exactly the same definitions
-    final existingSubscription =
-        subscriptions.getDuplicatingSubscription(shapeDefinitions);
-    if (existingSubscription != null &&
-        existingSubscription is DuplicatingSubInFlight) {
-      return ShapeSubscription(
-        id: existingSubscription.inFlight,
-        synced: subscriptionNotifiers[existingSubscription.inFlight]!.future,
-      );
-    } else if (existingSubscription != null &&
-        existingSubscription is DuplicatingSubFulfilled) {
-      return ShapeSubscription(
-        id: existingSubscription.fulfilled,
-        synced: Future.value(),
-      );
+    return _doSubscribe(shapeDefinitions, key);
+  }
+
+  /// Make a subscription without waiting for init
+  Future<ShapeSubscription> _doSubscribe(
+    List<Shape> shapes,
+    String? key,
+  ) async {
+    final _request = subscriptionManager.syncRequested(shapes, key);
+
+    if (_request case ExistingSyncRequest()) {
+      return ShapeSubscription(key: _request.key, synced: _request.existing);
     }
 
-    // If no exact match found, we try to establish the subscription
-    final List<ShapeRequest> shapeReqs = shapeDefinitions
-        .map(
-          (definition) => ShapeRequest(
-            requestId: shapeRequestIdGenerator(),
-            definition: definition,
-          ),
-        )
-        .toList();
-
-    final subId = subscriptionIdGenerator();
-    subscriptions.subscriptionRequested(subId, shapeReqs);
-
-    final completer = Completer<void>();
-    // store the resolve and reject
-    // such that we can resolve/reject
-    // the promise later when the shape
-    // is fulfilled or when an error arrives
-    // we store it before making the actual request
-    // to avoid that the answer would arrive too fast
-    // and this resolver and rejecter would not yet be stored
-    // this could especially happen in unit tests
-    subscriptionNotifiers[subId] = completer;
-
-    // store the promise because by the time the
-    // `await this.client.subscribe(subId, shapeReqs)` call resolves
-    // the `subId` entry in the `subscriptionNotifiers` may have been deleted
-    // so we can no longer access it
-    final subProm = subscriptionNotifiers[subId]!.future;
+    final request = _request as NewSyncRequest;
 
     // `clearSubAndThrow` deletes the listeners and cancels the subscription
-    Never clearSubAndThrow(Object error) {
-      subscriptionNotifiers.remove(subId);
-      subscriptions.subscriptionCancelled(subId);
-      throw error;
+    Never clearSubAndThrow(Object error, StackTrace st) {
+      request.syncFailed();
+      throw Error.throwWithStackTrace(error, st);
     }
 
     try {
-      final SubscribeResponse(:subscriptionId, :error) =
-          await client.subscribe(subId, shapeReqs);
-      if (subId != subscriptionId) {
-        clearSubAndThrow(
-          Exception(
-            'Expected SubscripeResponse for subscription id: $subId but got it for another id: $subscriptionId',
-          ),
-        );
-      }
+      // We're not using generated subscription ID in code here because
+      // it should become server-generated at some point.
+      final SubscribeResponse(:subscriptionId, :error) = await client.subscribe(
+        genUUID(),
+        shapes
+            .map((x) => ShapeRequest(definition: x, requestId: genUUID()))
+            .toList(),
+      );
 
-      if (error != null) {
-        clearSubAndThrow(error);
-      } else {
-        return ShapeSubscription(
-          id: subId,
-          synced: subProm,
-        );
-      }
-    } catch (e) {
-      clearSubAndThrow(e);
+      request.setServerId(subscriptionId);
+
+      if (error != null) throw error;
+
+      await setMeta('subscriptions', subscriptionManager.serialize());
+
+      return ShapeSubscription(
+        key: request.key,
+        synced: request.promise,
+      );
+    } catch (e, st) {
+      clearSubAndThrow(e, st);
     }
   }
 
   @override
-  Future<void> unsubscribe(List<String> subscriptionIds) async {
+  Future<void> unsubscribe(List<String> keys) {
+    return _unsubscribe(keys: keys);
+  }
+
+  // TODO(dart): Is this necessary?
+  Future<void> _unsubscribe({
+    List<String>? keys,
+    String? key,
+    List<Shape>? shapes,
+  }) {
+    if (keys != null) {
+      return unsubscribeIds(subscriptionManager.getServerIDs(keys));
+    } else if (key != null) {
+      return unsubscribeIds(subscriptionManager.getServerIDs([key]));
+    } else {
+      return unsubscribeIds(subscriptionManager.getServerID(shapes!));
+    }
+  }
+
+  Future<void> unsubscribeIds(List<String> subscriptionIds) async {
+    if (subscriptionIds.isEmpty) return;
+
     await client.unsubscribe(subscriptionIds);
 
     // If the server didn't send an error, we persist the fact the subscription was deleted.
-    subscriptions.unsubscribe(subscriptionIds);
+    subscriptionManager.unsubscribeMade(subscriptionIds);
     await adapter.run(
-      _setMetaStatement(
-        'subscriptions',
-        subscriptions.serialize(),
-      ),
+      _setMetaStatement('subscriptions', subscriptionManager.serialize()),
     );
   }
 
   Future<void> _handleSubscriptionData(SubscriptionData subsData) async {
-    subscriptions.subscriptionDelivered(subsData);
+    final afterApply =
+        subscriptionManager.dataDelivered(subsData.subscriptionId);
 
-    // When data is empty, we will simply store the subscription and lsn state
-    // Not storing this state means that a second open of the app will try to
-    // re-insert rows which will possible trigger a UNIQUE constraint violation
-    await _applySubscriptionData(subsData.data, subsData.lsn);
-
-    // Call the `onSuccess` callback for this subscription
-    final completer = subscriptionNotifiers[subsData.subscriptionId]!;
-    // GC the notifiers for this subscription ID
-    subscriptionNotifiers.remove(subsData.subscriptionId);
-    completer.complete();
+    await _applySubscriptionData(
+      subsData.data,
+      subsData.lsn,
+      additionalStatements: [],
+      subscriptionId: subsData.subscriptionId,
+    );
+    final toBeUnsubbed = afterApply();
+    if (toBeUnsubbed.isNotEmpty) {
+      await unsubscribeIds(toBeUnsubbed);
+    }
   }
 
-  // Applies initial data for a shape subscription. Current implementation
-  // assumes there are no conflicts INSERTing new rows and only expects
-  // subscriptions for entire tables.
+  /// Insert incoming subscription data into the database.
   Future<void> _applySubscriptionData(
     List<InitialDataChange> changes,
     LSN lsn, {
     List<Statement> additionalStatements = const [],
+    String? subscriptionId,
   }) async {
     final namespace = builder.defaultNamespace;
     final stmts = <Statement>[];
@@ -503,16 +471,17 @@ This means there is a notifier subscription leak.`''');
 
     // Group all changes by table name to be able to insert them all together
     for (final op in changes) {
-      final tableName = QualifiedTablename(namespace, op.relation.table);
-      final tableNameString = tableName.toString();
-      if (groupedChanges.containsKey(tableNameString)) {
-        final changeGroup = groupedChanges[tableNameString]!;
+      final qt = QualifiedTablename(namespace, op.relation.table);
+      final tableName = qt.toString();
+
+      if (groupedChanges.containsKey(tableName)) {
+        final changeGroup = groupedChanges[tableName]!;
         changeGroup.records.add(op.record);
       } else {
-        groupedChanges[tableNameString] = (
+        groupedChanges[tableName] = (
           relation: op.relation,
           records: [op.record],
-          table: tableName,
+          table: qt,
         );
       }
 
@@ -578,7 +547,9 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     stmts.addAll(batchedShadowInserts);
 
     // Then update subscription state and LSN
-    stmts.add(_setMetaStatement('subscriptions', subscriptions.serialize()));
+    stmts.add(
+      _setMetaStatement('subscriptions', subscriptionManager.serialize()),
+    );
     stmts.add(updateLsnStmt(lsn));
     stmts.addAll(additionalStatements);
 
@@ -626,7 +597,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
               SatelliteErrorCode.internal,
               'Error applying subscription data: $e',
             ),
-            subscriptionId: null,
+            subscriptionId: subscriptionId,
             stackTrace: st,
           ),
         ),
@@ -635,32 +606,30 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   }
 
   Future<void> _resetClientState({
-    bool keepSubscribedShapes = false,
+    bool? keepSubscribedShapes,
   }) async {
     logger.warning('resetting client state');
     disconnect(null);
-    final subscriptionIds = subscriptions.getFulfilledSubscriptions();
-
-    if (keepSubscribedShapes) {
-      final List<Shape> shapeDefs = subscriptionIds
-          .map((subId) => subscriptions.shapesForActiveSubscription(subId))
-          .whereNotNull()
-          .expand((List<ShapeDefinition> s) => s.map((i) => i.definition))
-          .toList();
-
-      previousShapeSubscriptions.addAll(shapeDefs);
-    }
 
     _lsn = null;
 
-    // TODO: this is obviously too conservative
-    // we should also work on updating subscriptions
-    // atomically on unsubscribe()
-    await subscriptions.unsubscribeAllAndGC();
+    final tables = subscriptionManager.reset(
+      defaultNamespace: builder.defaultNamespace,
+      reestablishSubscribed: keepSubscribedShapes,
+    );
 
+    return clearTables(tables);
+  }
+
+  @visibleForTesting
+  Future<void> clearTables(List<QualifiedTablename> tables) async {
     await adapter.runInTransaction([
       _setMetaStatement('lsn', null),
-      _setMetaStatement('subscriptions', subscriptions.serialize()),
+      _setMetaStatement('subscriptions', subscriptionManager.serialize()),
+      Statement(builder.deferOrDisableFKsForTx),
+      ..._disableTriggers(tables),
+      ...tables.map((x) => Statement('DELETE FROM $x')),
+      ..._enableTriggers(tables),
     ]);
   }
 
@@ -670,10 +639,17 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     final subscriptionId = errorData.subscriptionId;
     final satelliteError = errorData.error;
     final satelliteStackTrace = errorData.stackTrace;
-    Object? resettingError;
-    StackTrace? resettingStackTrace;
 
     logger.error('encountered a subscription error: ${satelliteError.message}');
+
+    Object resettingError = satelliteError;
+    StackTrace resettingStackTrace = satelliteStackTrace;
+    void Function(Object error, [StackTrace? stackTrace])? onFailure;
+
+    // We're pulling out the reject callback because we're about to reset the subscription manager
+    if (subscriptionId != null) {
+      onFailure = subscriptionManager.getOnFailureCallback(subscriptionId);
+    }
 
     try {
       await _resetClientState();
@@ -690,16 +666,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     }
 
     // Call the `onFailure` callback for this subscription
-    if (subscriptionId != null) {
-      final completer = subscriptionNotifiers[subscriptionId]!;
-
-      // GC the notifiers for this subscription ID
-      subscriptionNotifiers.remove(subscriptionId);
-      completer.completeError(
-        resettingError ?? satelliteError,
-        resettingStackTrace ?? satelliteStackTrace,
-      );
-    }
+    onFailure?.call(resettingError, resettingStackTrace);
   }
 
   void _handleClientRelations(Relation relation) {
@@ -833,7 +800,8 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       }
       await _connect();
       await _startReplication();
-      _subscribePreviousShapeRequests();
+      await _makePendingSubscriptions();
+      // this._subscribePreviousShapeRequests()
 
       _notifyConnectivityState(ConnectivityStatus.connected, null);
       initializing?.complete();
@@ -879,7 +847,14 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     return fut;
   }
 
-  void _subscribePreviousShapeRequests() {
+  Future<void> _makePendingSubscriptions() async {
+    final res = subscriptionManager.listPendingActions();
+
+    await unsubscribeIds(res.unsubscribe);
+    await Future.wait(res.subscribe.map((x) => _doSubscribe(x.shapes, x.key)));
+  }
+
+  /* void _subscribePreviousShapeRequests() {
     try {
       if (previousShapeSubscriptions.isNotEmpty) {
         logger.warning('Subscribing previous shape definitions');
@@ -895,7 +870,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
           'Client was unable to subscribe previously subscribed shapes: $error';
       throw SatelliteException(SatelliteErrorCode.internal, message);
     }
-  }
+  } */
 
   // NO DIRECT CALLS TO CONNECT
   Future<void> _connect() async {
@@ -959,10 +934,16 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     try {
       final schemaVersion = await migrator.querySchemaVersion();
 
+      // Load subscription state that to reset the subscription manager correctly
+      final subscriptionsState = await getMeta<String>('subscriptions');
+      if (subscriptionsState.isNotEmpty) {
+        subscriptionManager.initialize(subscriptionsState);
+      }
+
       // Fetch the subscription IDs that were fulfilled
       // such that we can resume and inform Electric
       // about fulfilled subscriptions
-      final subscriptionIds = subscriptions.getFulfilledSubscriptions();
+      final subscriptionIds = subscriptionManager.listContinuedSubscriptions();
       final observedTransactionData =
           await getMeta<String>('seenAdditionalData');
 
@@ -1147,7 +1128,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       });
 
       if (oplogEntries.isNotEmpty) {
-        unawaited(_notifyChanges(oplogEntries, ChangeOrigin.local));
+        _notifyChanges(oplogEntries, ChangeOrigin.local);
       }
 
       if (client.getOutboundReplicationStatus() == ReplicationStatus.active) {
@@ -1168,10 +1149,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     }
   }
 
-  Future<void> _notifyChanges(
-    List<OplogEntry> results,
-    ChangeOrigin origin,
-  ) async {
+  void _notifyChanges(List<OplogEntry> results, ChangeOrigin origin) {
     final ChangeAccumulator acc = {};
 
     // Would it be quicker to do this using a second SQL query that
@@ -1511,7 +1489,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       await adapter.runInTransaction(allStatements);
     }
 
-    await _notifyChanges(opLogEntries, ChangeOrigin.remote);
+    _notifyChanges(opLogEntries, ChangeOrigin.remote);
   }
 
   Future<void> _applyAdditionalData(AdditionalData data) {
@@ -1538,6 +1516,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   Future<void> _applyGoneBatch(GoneBatch goneBatch) async {
     final lsn = goneBatch.lsn;
     final allGone = goneBatch.changes;
+    final subscriptionIds = goneBatch.subscriptionIds;
 
     final fakeOplogEntries = allGone
         .map(
@@ -1600,8 +1579,9 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       ...stmts,
       ..._enableTriggers(affectedTables),
     ]);
+    subscriptionManager.goneBatchDelivered(subscriptionIds);
 
-    await _notifyChanges(fakeOplogEntries, ChangeOrigin.remote);
+    _notifyChanges(fakeOplogEntries, ChangeOrigin.remote);
   }
 
   Future<void> maybeGarbageCollect(

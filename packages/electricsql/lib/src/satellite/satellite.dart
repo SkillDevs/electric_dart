@@ -1,10 +1,10 @@
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
-import 'package:electricsql/src/satellite/process.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/util.dart';
@@ -32,7 +32,7 @@ abstract class Registry {
   Future<void> stopAll();
 }
 
-abstract class Satellite {
+abstract class Satellite implements IShapeManager {
   DbName get dbName;
   DatabaseAdapter get adapter;
   Migrator get migrator;
@@ -48,10 +48,6 @@ abstract class Satellite {
   void disconnect(SatelliteException? error);
   void clientDisconnect();
   Future<void> authenticate(String token);
-  Future<ShapeSubscription> subscribe(
-    List<Shape> shapeDefinitions,
-  );
-  Future<void> unsubscribe(List<String> shapeUuids);
 
   void setReplicationTransform(
     QualifiedTablename tableName,
