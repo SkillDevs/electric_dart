@@ -288,8 +288,10 @@ class ShapeManager {
     //       does not affect the hash. This has the unfortunate consequence of sorting the FK spec,
     //       but the chance of a table having two multi-column FKs over same columns BUT in a
     //       different order feels much lower than people using includes in an arbitrary order.
-    final shapeHash =
-        ohashList(shapes, unordered: true, getProps: (x) => x.props);
+    final shapeHash = ohash(
+      shapes.map((s) => s.toMap()).toList(),
+      opts: const OhashOpts(unorderedLists: true),
+    );
     final keyOrHash = key ?? shapeHash;
     /* Since multiple requests may have the same key, we'll need to differentiate them
      * based on both hash and key. We use `:` to join them because hash is base64 that
@@ -459,8 +461,10 @@ class ShapeManager {
   }
 
   List<String> getServerID(List<Shape> shapes) {
-    final shapeHash =
-        ohashList(shapes, unordered: true, getProps: (x) => x.props);
+    final shapeHash = ohash(
+      shapes.map((s) => s.toMap()).toList(),
+      opts: const OhashOpts(unorderedLists: true),
+    );
     final fullKey = makeFullKey(shapeHash, shapeHash);
     final serverId = _knownSubscriptions[fullKey]?.serverId;
     return serverId != null ? [serverId] : [];

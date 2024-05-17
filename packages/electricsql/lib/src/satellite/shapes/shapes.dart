@@ -2,6 +2,7 @@ import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/tablename.dart';
 
+// TODO(dart): Remove in official client?
 /// Manages the state of satellite shape subscriptions
 abstract class SubscriptionsManager {
   /// Stores the identifier for a subscription
