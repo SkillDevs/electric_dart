@@ -3,18 +3,36 @@ import 'package:electricsql/src/satellite/shapes/types.dart';
 
 typedef TableName = String;
 
-sealed class SyncStatus {}
+enum SyncStatusType {
+  undefined,
+  active,
+  cancelling,
+  establishing,
+}
 
-class SyncStatusUndefined extends SyncStatus {}
+sealed class SyncStatus {
+  SyncStatusType get statusType;
+}
+
+class SyncStatusUndefined extends SyncStatus {
+  @override
+  SyncStatusType get statusType => SyncStatusType.undefined;
+}
 
 class SyncStatusActive extends SyncStatus {
   final String serverId;
+
+  @override
+  SyncStatusType get statusType => SyncStatusType.active;
 
   SyncStatusActive(this.serverId);
 }
 
 class SyncStatusCancelling extends SyncStatus {
   final String serverId;
+
+  @override
+  SyncStatusType get statusType => SyncStatusType.cancelling;
 
   SyncStatusCancelling(this.serverId);
 }
@@ -23,6 +41,9 @@ class SyncStatusEstablishing extends SyncStatus {
   final String serverId;
   final String progress;
   final String? oldServerId;
+
+  @override
+  SyncStatusType get statusType => SyncStatusType.establishing;
 
   SyncStatusEstablishing({
     required this.serverId,

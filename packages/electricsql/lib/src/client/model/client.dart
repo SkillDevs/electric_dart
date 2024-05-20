@@ -1,6 +1,5 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';

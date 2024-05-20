@@ -8,14 +8,6 @@ import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/ohash.dart';
 import 'package:electricsql/util.dart';
 
-/* interface RequestedSubscription {
-  serverId?: string
-  overshadowsFullKeys: string[]
-  shapes: Shape[]
-  shapeHash: string
-  fullKey: string
-}
- */
 class RequestedSubscription {
   String? serverId;
   final List<String> overshadowsFullKeys;
@@ -65,6 +57,18 @@ class RequestedSubscription {
       fullKey: fullKey,
     );
   }
+}
+
+class SyncSubInfo {
+  final String key;
+  final List<Shape> shapes;
+  final SyncStatus status;
+
+  SyncSubInfo({
+    required this.key,
+    required this.shapes,
+    required this.status,
+  });
 }
 
 typedef OptionalRecord<T extends Object> = Map<String, T?>;
@@ -248,26 +252,25 @@ class ShapeManager {
     );
   }
 
-  /**
-   * List all subscriptions as defined along with their simple key and sync status
-   */
-  /* public listAllSubscriptions(): {
-    key: string
-    shapes: Shape[]
-    status: SyncStatus
-  }[] {
-    const allKeys = Object.keys(this.activeSubscriptions).concat(
-      Object.keys(this.requestedSubscriptions)
-    )
-    return allKeys.map((key) => ({
-      shapes:
-        this.knownSubscriptions[
-          (this.activeSubscriptions[key] ?? this.requestedSubscriptions[key])!
-        ]!.shapes,
-      status: this.status(key),
-      key,
-    }))
-  } */
+  /// List all subscriptions as defined along with their simple key and sync status
+  List<SyncSubInfo> listAllSubscriptions() {
+    final allKeys = <String>[
+      ..._activeSubscriptions.keys,
+      ..._requestedSubscriptions.keys,
+    ];
+
+    return allKeys
+        .map(
+          (key) => SyncSubInfo(
+            shapes: _knownSubscriptions[(_activeSubscriptions[key] ??
+                    _requestedSubscriptions[key])!]!
+                .shapes,
+            status: status(key),
+            key: key,
+          ),
+        )
+        .toList();
+  }
 
   /// Store a request to sync a list of shapes.
   ///

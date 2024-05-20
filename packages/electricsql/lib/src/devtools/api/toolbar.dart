@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/devtools/api/interface.dart';
 import 'package:electricsql/src/devtools/api/statements.dart';
@@ -86,28 +84,18 @@ class Toolbar implements ToolbarInterface {
   @override
   List<DebugShape> getSatelliteShapeSubscriptions(String dbName) {
     final sat = _getSatellite(dbName) as SatelliteProcess;
-    final manager = sat.subscriptions;
-    final shapes = jsonDecode(manager.serialize()) as Map<String, dynamic>;
-
-    return shapes.entries
-        .map((e) {
-          final id = e.key;
-          final shapes = (e.value as List<dynamic>)
-              .map(
-                (j) => Shape.fromMap(
-                  (j as Map<String, dynamic>)['definition']
-                      as Map<String, dynamic>,
-                ),
-              )
-              .toList();
-          return shapes.map(
-            (s) => DebugShape(
-              id: id,
-              shape: s,
+    final manager = sat.subscriptionManager;
+    final subscriptions = manager.listAllSubscriptions();
+    return subscriptions
+        .expand(
+          (subscription) => subscription.shapes.map(
+            (Shape shape) => DebugShape(
+              key: subscription.key,
+              shape: shape,
+              status: subscription.status.statusType,
             ),
-          );
-        })
-        .expand((e) => e)
+          ),
+        )
         .toList();
   }
 }

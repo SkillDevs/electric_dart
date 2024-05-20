@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:electricsql/electricsql.dart';
 // ignore: invalid_use_of_internal_member, implementation_imports
 import 'package:electricsql/src/devtools/shared.dart';
 import 'package:electricsql_devtools_extension/remote.dart';
@@ -99,17 +100,11 @@ class _ShapesTabState extends State<ShapesTab> {
 
                 return DataRow(
                   cells: <DataCell>[
-                    DataCell(Text(shape.id)),
+                    DataCell(Text(shape.key)),
                     DataCell(Text(shape.shape.tablename)),
                     DataCell(Text(includeStr)),
                     DataCell(Text(shape.shape.where ?? '')),
-                    // DataCell(buildStatusCell(shape.status)),
-                    const DataCell(
-                      ColoredChip(
-                        label: 'Active',
-                        fgAndBgColor: kChipColorGreen,
-                      ),
-                    ),
+                    DataCell(buildStatusCell(shape.status)),
                   ],
                 );
               },
@@ -120,7 +115,7 @@ class _ShapesTabState extends State<ShapesTab> {
     );
   }
 
-  /* Widget buildStatusCell(SyncStatusType status) {
+  Widget buildStatusCell(SyncStatusType status) {
     if (status == SyncStatusType.undefined) {
       return const Text('-');
     }
@@ -138,5 +133,5 @@ class _ShapesTabState extends State<ShapesTab> {
         SyncStatusType.undefined => throw UnimplementedError(),
       },
     );
-  } */
+  }
 }

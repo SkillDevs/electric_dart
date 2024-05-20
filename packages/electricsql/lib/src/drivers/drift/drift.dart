@@ -5,7 +5,6 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';

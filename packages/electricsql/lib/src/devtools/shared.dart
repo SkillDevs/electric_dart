@@ -1,31 +1,32 @@
 import 'package:electricsql/satellite.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
 
 typedef UnsubscribeFunction = void Function();
 
 class DebugShape {
-  final String id;
+  final String key;
   final Shape shape;
-  // final SyncStatusType status;
+  final SyncStatusType status;
 
   DebugShape({
-    required this.id,
+    required this.key,
     required this.shape,
-    // required this.status,
+    required this.status,
   });
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
-      'id': id,
+      'key': key,
       'shape': shape.toMap(),
-      // 'status': status.index,
+      'status': status.index,
     };
   }
 
   factory DebugShape.fromMap(Map<String, dynamic> map) {
     return DebugShape(
-      id: map['id'] as String,
+      key: map['key'] as String,
       shape: Shape.fromMap(map['shape'] as Map<String, dynamic>),
-      // status: SyncStatusType.values[map['status'] as int],
+      status: SyncStatusType.values[map['status'] as int],
     );
   }
 }
