@@ -12,11 +12,16 @@ dart pub get
 
 dart test
 
-git tag $TAG_NAME
+# Build the devtools extension
+pushd ../electricsql_devtools_extension
+./build.sh
+popd
+
+git tag "$TAG_NAME"
 
 dart pub publish
 
-git push origin $TAG_NAME
+git push origin "$TAG_NAME"
 
 # Restore the overrides
 melos bs

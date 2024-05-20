@@ -1,7 +1,11 @@
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class MockDatabaseAdapter implements DatabaseAdapter {
+  @override
+  final Dialect dialect = Dialect.sqlite;
+
   @override
   Future<List<Row>> query(Statement statement) async {
     return [];

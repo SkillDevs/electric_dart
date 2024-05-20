@@ -10,11 +10,11 @@ rm -rf pubspec_overrides.yaml
 
 dart pub get
 
-git tag $TAG_NAME
+git tag "$TAG_NAME"
 
 dart pub publish
 
-git push origin $TAG_NAME
+git push origin "$TAG_NAME"
 
 # Restore the overrides
 melos bs

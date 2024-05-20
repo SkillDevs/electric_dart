@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:equatable/equatable.dart';
@@ -41,6 +42,20 @@ class SatelliteException implements Exception {
 
   @override
   String toString() => 'Satellite Exception ($code) $message';
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'code': code.index,
+      'message': message,
+    };
+  }
+
+  factory SatelliteException.fromMap(Map<String, dynamic> map) {
+    return SatelliteException(
+      SatelliteErrorCode.values[map['code'] as int],
+      map['message'] as String?,
+    );
+  }
 }
 
 enum SatelliteErrorCode {
@@ -486,4 +501,25 @@ class ConnectivityState {
   final SatelliteException? reason;
 
   const ConnectivityState({required this.status, this.reason});
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'status': status.index,
+      'reason': reason?.toMap(),
+    };
+  }
+
+  factory ConnectivityState.fromMap(Map<String, dynamic> map) {
+    return ConnectivityState(
+      status: ConnectivityStatus.values[map['status'] as int],
+      reason: map['reason'] != null
+          ? SatelliteException.fromMap(map['reason'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory ConnectivityState.fromJson(String source) =>
+      ConnectivityState.fromMap(json.decode(source) as Map<String, dynamic>);
 }

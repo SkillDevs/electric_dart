@@ -16,28 +16,12 @@ class DeleteLocalDbButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, ref) {
-    final messenger = ScaffoldMessenger.of(context);
-
     return TextButton.icon(
       style: TextButton.styleFrom(
         foregroundColor: fgColor ?? Theme.of(context).colorScheme.error,
       ),
       onPressed: () async {
-        messenger.removeCurrentMaterialBanner();
-
-        ref.read(dbDeletedProvider.notifier).update((state) => true);
-
-        print("Closing Electric and deleting local database");
-
-        final electric = ref.read(electricClientProvider);
-        await electric.close();
-        print("Electric closed");
-
-        final todosDb = ref.read(todosDatabaseProvider);
-        await todosDb.todosRepo.close();
-
-        await db_lib.deleteTodosDbFile();
-        print("Local database deleted");
+        await deleteLocalDb(ref);
       },
       icon: const Icon(Symbols.delete),
       label: const Text("Delete local database"),
@@ -56,4 +40,23 @@ class DeleteDbScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> deleteLocalDb(WidgetRef ref) async {
+  final messenger = ScaffoldMessenger.of(ref.context);
+  messenger.removeCurrentMaterialBanner();
+
+  ref.read(dbDeletedProvider.notifier).update((state) => true);
+
+  print("Closing Electric and deleting local database");
+
+  final electric = ref.read(electricClientProvider);
+  await electric.close();
+  print("Electric closed");
+
+  final todosDb = ref.read(todosDatabaseProvider);
+  await todosDb.todosRepo.close();
+
+  await db_lib.deleteTodosDbFile();
+  print("Local database deleted");
 }

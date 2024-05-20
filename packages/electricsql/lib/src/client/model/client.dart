@@ -23,13 +23,11 @@ abstract interface class BaseElectricClient {
   void potentiallyChanged();
 
   Future<void> close();
-  void disconnect();
 
   // ElectricClient methods
-
   Satellite get satellite;
-
   Future<void> connect([String? token]);
+  void disconnect();
 }
 
 abstract interface class ElectricClientRaw implements BaseElectricClient {

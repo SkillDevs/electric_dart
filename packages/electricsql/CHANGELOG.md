@@ -1,3 +1,9 @@
+## 0.7.1
+
+* A DevTools extension for Electric is now included to check the status of the Electric service, inspect the electrified tables and check the status of the shape subscriptions.
+To know more about DevTools and how to run them on your IDE you can check these resources: [DevTools](https://docs.flutter.dev/tools/devtools/overview) and [DevTools extensions](https://docs.flutter.dev/tools/devtools/extensions).
+
+
 ## 0.7.0
 
 * Code based on official Typescript client [v0.11.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.0), [v0.11.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.1), [v0.11.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.2) and [v0.11.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.3).

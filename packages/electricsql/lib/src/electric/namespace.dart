@@ -1,5 +1,6 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/satellite.dart';
+import 'package:electricsql/src/devtools/devtools.dart' as devtools;
 import 'package:electricsql/src/notifiers/notifiers.dart';
 
 class ElectricNamespace {
@@ -40,5 +41,7 @@ class ElectricNamespace {
   Future<void> close() async {
     _unsubscribeStateChanges();
     await registry.stop(dbName);
+
+    devtools.handleElectricClientClosed(dbName);
   }
 }

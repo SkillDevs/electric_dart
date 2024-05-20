@@ -6,6 +6,7 @@ import 'package:electricsql/sockets.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
+import 'package:electricsql/src/devtools/devtools.dart' as devtools;
 import 'package:electricsql/util.dart';
 
 // These are the options that should be provided to the adapter's electrify
@@ -105,6 +106,8 @@ Future<ElectricClientRaw> electrifyBase<DB extends DBSchema>({
   if (satellite.connectivityState != null) {
     electric.setIsConnected(satellite.connectivityState!);
   }
+
+  devtools.handleNewElectricClient(electric);
 
   return electric;
 }

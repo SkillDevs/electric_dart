@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/util.dart' show genUUID;
 import 'package:electricsql_flutter/drivers/drift.dart';
 import 'package:flutter/material.dart';
@@ -103,6 +104,12 @@ class MyHomePage extends HookConsumerWidget {
 
     final electricClient = ref.watch(electricClientProvider);
     final db = electricClient.db;
+
+    // Let the Devtools know how to reset the local database
+    ElectricDevtoolsBinding.registerDbResetCallback(
+      electricClient,
+      () async => deleteLocalDb(ref),
+    );
 
     // Connect to Electric, and listen for connection success/failure
     final connectToElectricAV = useConnectToElectric(ref);

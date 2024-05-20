@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/conversions/postgres/mapping.dart'
     as pg_mapping;
+import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -11,6 +13,9 @@ class DriftAdapter implements DatabaseAdapter {
   final DatabaseConnectionUser db;
 
   DriftAdapter(this.db);
+
+  @override
+  late final Dialect dialect = driftDialectToElectric(db);
 
   @override
   Future<List<Row>> query(Statement statement) async {

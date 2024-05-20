@@ -2470,6 +2470,9 @@ class SlowDatabaseAdapter extends DatabaseAdapter {
   final Duration delay;
 
   @override
+  late final Dialect dialect = delegate.dialect;
+
+  @override
   Future<RunResult> run(Statement statement) async {
     await Future<void>.delayed(delay);
     return delegate.run(statement);
@@ -2506,6 +2509,9 @@ class ReplaceTxDatabaseAdapter extends DatabaseAdapter {
   ReplaceTxDatabaseAdapter(this.delegate);
 
   _TxFun<dynamic>? customTxFun;
+
+  @override
+  late final Dialect dialect = delegate.dialect;
 
   @override
   Future<RunResult> run(Statement statement) async {

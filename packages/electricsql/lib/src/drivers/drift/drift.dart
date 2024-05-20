@@ -36,13 +36,7 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     pgMigrations: pgMigrations,
   );
 
-  final driftDialect = db.typeMapping.dialect;
-
-  final Dialect dialect = switch (driftDialect) {
-    SqlDialect.sqlite => Dialect.sqlite,
-    SqlDialect.postgres => Dialect.postgres,
-    _ => throw ArgumentError('Unsupported dialect for Electric: $driftDialect'),
-  };
+  final Dialect dialect = driftDialectToElectric(db);
 
   Migrator migrator;
   if (opts?.migrator != null) {
@@ -76,6 +70,16 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
   driftClient.init();
 
   return driftClient;
+}
+
+Dialect driftDialectToElectric(DatabaseConnectionUser db) {
+  final driftDialect = db.typeMapping.dialect;
+
+  return switch (driftDialect) {
+    SqlDialect.sqlite => Dialect.sqlite,
+    SqlDialect.postgres => Dialect.postgres,
+    _ => throw ArgumentError('Unsupported dialect for Electric: $driftDialect'),
+  };
 }
 
 abstract interface class ElectricClient<DB extends GeneratedDatabase>

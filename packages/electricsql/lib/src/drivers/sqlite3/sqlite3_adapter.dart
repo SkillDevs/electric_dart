@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/src/migrators/query_builder/builder.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:synchronized/synchronized.dart';
@@ -8,6 +9,9 @@ import 'package:synchronized/synchronized.dart';
 class SqliteAdapter implements DatabaseAdapter {
   final sqlite.Database db;
   final Lock txLock = Lock();
+
+  @override
+  final Dialect dialect = Dialect.sqlite;
 
   SqliteAdapter(this.db);
 

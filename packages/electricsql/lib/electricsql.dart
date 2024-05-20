@@ -11,6 +11,9 @@ export 'src/client/model/index.dart';
 // Config
 export 'src/config/config.dart' show ElectricConfig, HydratedConfig;
 
+// Devtools
+export 'src/devtools/service_extension.dart' show ElectricDevtoolsBinding;
+
 // Electric
 export 'src/electric/index.dart';
 

@@ -1,7 +1,10 @@
+import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/util/types.dart';
 
 abstract class DatabaseAdapter {
   //db: AnyDatabase
+
+  Dialect get dialect;
 
   // Runs the provided sql statement
   Future<RunResult> run(Statement statement);
