@@ -1,3 +1,4 @@
+import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/notifiers/event.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -154,5 +155,63 @@ void main() {
 
     source.actuallyChanged('foo.db', [], ChangeOrigin.local);
     expect(notifications.length, 0);
+  });
+
+  test('subscribe to shape subscription status changes', () async {
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+
+    final notifications = <ShapeSubscriptionSyncStatusChangeNotification>[];
+
+    target.subscribeToShapeSubscriptionSyncStatusChanges((x) {
+      notifications.add(x);
+    });
+
+    source.shapeSubscriptionSyncStatusChanged(
+      'test.db',
+      'foo',
+      SyncStatusEstablishing(
+        serverId: 'foo',
+        progress: 'receiving_data',
+      ),
+    );
+
+    expect(notifications.length, 1);
+  });
+
+  test('subscribe to shape subscription status changes is scoped by db name',
+      () async {
+    final eventEmitter = EventEmitter();
+    final source = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+    final target = EventNotifier(dbName: 'test.db', eventEmitter: eventEmitter);
+
+    final notifications = <ShapeSubscriptionSyncStatusChangeNotification>[];
+
+    target.subscribeToShapeSubscriptionSyncStatusChanges((x) {
+      notifications.add(x);
+    });
+
+    source.shapeSubscriptionSyncStatusChanged(
+      'test.db',
+      'foo',
+      SyncStatusEstablishing(
+        serverId: 'foo',
+        progress: 'receiving_data',
+      ),
+    );
+
+    expect(notifications.length, 1);
+
+    source.shapeSubscriptionSyncStatusChanged(
+      'non-existing.db',
+      'foo',
+      SyncStatusEstablishing(
+        serverId: 'foo',
+        progress: 'receiving_data',
+      ),
+    );
+
+    expect(notifications.length, 1);
   });
 }

@@ -71,9 +71,13 @@ class SyncSubInfo {
   });
 }
 
+typedef OnShapeSyncStatusUpdated = void Function(String key, SyncStatus status);
+
 typedef OptionalRecord<T extends Object> = Map<String, T?>;
 
 class ShapeManager {
+  final OnShapeSyncStatusUpdated? _onShapeSyncStatusUpdated;
+
   /// Uses a full key (hash + key) for indexing
   OptionalRecord<RequestedSubscription> _knownSubscriptions = {};
 
@@ -89,6 +93,10 @@ class ShapeManager {
   Map<String, Completer<void>> _promises = {};
   Map<String, String> _serverIds = {};
   Set<String> _incompleteUnsubs = {};
+
+  ShapeManager({
+    OnShapeSyncStatusUpdated? onShapeSyncStatusUpdated,
+  }) : _onShapeSyncStatusUpdated = onShapeSyncStatusUpdated;
 
   /// Set internal state using a string returned from {@link ShapeManager#serialize}.
   void initialize(String serializedState) {
@@ -140,7 +148,7 @@ class ShapeManager {
   }) {
     final requested = _requestedSubscriptions.values.toList();
 
-    final tables = getTableNames(
+    final tables = getTableNamesForShapes(
       _knownSubscriptions.values
           .where((x) => !requested.contains(x?.fullKey))
           .map((x) => x?.shapes)
@@ -287,14 +295,8 @@ class ShapeManager {
     List<Shape> shapes, [
     String? key,
   ]) {
-    // TODO: This sorts the shapes objects for hashing to make sure that order of includes
-    //       does not affect the hash. This has the unfortunate consequence of sorting the FK spec,
-    //       but the chance of a table having two multi-column FKs over same columns BUT in a
-    //       different order feels much lower than people using includes in an arbitrary order.
-    final shapeHash = ohash(
-      shapes.map((s) => s.toMap()).toList(),
-      opts: const OhashOpts(unorderedLists: true),
-    );
+    final shapeHash = hashShapes(shapes);
+
     final keyOrHash = key ?? shapeHash;
     /* Since multiple requests may have the same key, we'll need to differentiate them
      * based on both hash and key. We use `:` to join them because hash is base64 that
@@ -330,10 +332,18 @@ class ShapeManager {
 
       _requestedSubscriptions[keyOrHash] = fullKey;
 
+      bool notified = false;
+
       _promises[fullKey] = Completer();
       return NewSyncRequest(
         key: keyOrHash,
-        setServerId: (id) => _setServerId(fullKey, id),
+        setServerId: (id) {
+          _setServerId(fullKey, id);
+          if (!notified) {
+            notified = true;
+            _onShapeSyncStatusUpdated?.call(keyOrHash, status(keyOrHash));
+          }
+        },
         syncFailed: () => syncFailed(keyOrHash, fullKey),
         promise: _promises[fullKey]!.future,
       );
@@ -392,6 +402,7 @@ class ShapeManager {
     _activeSubscriptions[key] = fullKey;
 
     if (sub.overshadowsFullKeys.isEmpty) {
+      _onShapeSyncStatusUpdated?.call(key, status(key));
       return () {
         // TODO(dart): Report issue, it can be null in test: a subscription that failed to apply because of FK constraint triggers GC
         _promises[fullKey]!.complete();
@@ -410,6 +421,12 @@ class ShapeManager {
   void unsubscribeMade(List<String> serverIds) {
     for (final id in serverIds) {
       _incompleteUnsubs.add(id);
+
+      if (_onShapeSyncStatusUpdated != null) {
+        final key = getKeyForServerID(id);
+        if (key == null) continue;
+        _onShapeSyncStatusUpdated!(key, status(key));
+      }
     }
   }
 
@@ -437,6 +454,8 @@ class ShapeManager {
           _promises[sub.fullKey]!.complete();
         }
       }
+
+      _onShapeSyncStatusUpdated?.call(key, status(key));
     }
   }
 
@@ -463,14 +482,30 @@ class ShapeManager {
         .toList();
   }
 
-  List<String> getServerID(List<Shape> shapes) {
+  List<String> getServerIDsForShapes(List<Shape> shapes) {
+    final shapeHash = hashShapes(shapes);
+    final fullKey = makeFullKey(shapeHash, shapeHash);
+    final serverId = _knownSubscriptions[fullKey]?.serverId;
+    return serverId != null ? [serverId] : [];
+  }
+
+  String? getKeyForServerID(String serverId) {
+    final fullKey = _serverIds[serverId];
+    if (fullKey == null) return null;
+    final (hash: _, :key) = splitFullKey(fullKey);
+    return key;
+  }
+
+  String hashShapes(List<Shape> shapes) {
+    // TODO: This sorts the shapes objects for hashing to make sure that order of includes
+    //       does not affect the hash. This has the unfortunate consequence of sorting the FK spec,
+    //       but the chance of a table having two multi-column FKs over same columns BUT in a
+    //       different order feels much lower than people using includes in an arbitrary order.
     final shapeHash = ohash(
       shapes.map((s) => s.toMap()).toList(),
       opts: const OhashOpts(unorderedLists: true),
     );
-    final fullKey = makeFullKey(shapeHash, shapeHash);
-    final serverId = _knownSubscriptions[fullKey]?.serverId;
-    return serverId != null ? [serverId] : [];
+    return shapeHash;
   }
 }
 
@@ -492,15 +527,18 @@ String makeFullKey(String hash, String key) {
   }
 }
 
-List<QualifiedTablename> getTableNames(List<Shape> shapes, String schema) {
+List<QualifiedTablename> getTableNamesForShapes(
+  List<Shape> shapes,
+  String schema,
+) {
   return uniqueList(
-    shapes.expand((x) => doGetTableNames(x, schema)),
+    shapes.expand((x) => doGetTableNamesForShape(x, schema)),
   );
 }
 
-List<QualifiedTablename> doGetTableNames(Shape shape, String schema) {
+List<QualifiedTablename> doGetTableNamesForShape(Shape shape, String schema) {
   final includes = shape.include
-          ?.expand((x) => doGetTableNames(x.select, schema))
+          ?.expand((x) => doGetTableNamesForShape(x.select, schema))
           .toList() ??
       [];
   includes.add(QualifiedTablename(schema, shape.tablename));

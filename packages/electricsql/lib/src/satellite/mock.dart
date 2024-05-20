@@ -13,7 +13,7 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/satellite/registry.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
-import 'package:electricsql/src/satellite/shapes/shapes.dart';
+import 'package:electricsql/src/satellite/shapes/shape_manager.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
 import 'package:electricsql/src/util/common.dart';
@@ -254,7 +254,7 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     final Map<String, String> shapeReqToUuid = {};
 
     for (final shape in shapes) {
-      final tables = getAllTablesForShape(shape.definition, schema: 'main');
+      final tables = getTableNamesForShapes([shape.definition], 'main');
 
       for (final qualTable in tables) {
         final tablename = qualTable.tablename;

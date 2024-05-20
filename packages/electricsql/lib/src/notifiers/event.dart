@@ -1,5 +1,5 @@
 import 'package:collection/collection.dart';
-import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -12,6 +12,7 @@ class EventNames {
   static const actualDataChange = 'data:actually:changed';
   static const potentialDataChange = 'data:potentially:changed';
   static const connectivityStateChange = 'network:connectivity:changed';
+  static const shapeSubscriptionStatusChange = 'shape:status:changed';
 }
 
 // Initialise global emitter to be shared between all
@@ -183,6 +184,41 @@ class EventNotifier implements Notifier {
     return () => _unsubscribe(eventListener);
   }
 
+  @override
+  void shapeSubscriptionSyncStatusChanged(
+    String dbName,
+    String key,
+    SyncStatus status,
+  ) {
+    if (!_hasDbName(dbName)) {
+      return;
+    }
+
+    _emitShapeSubscriptionSyncStatusChange(dbName, key, status);
+  }
+
+  @override
+  UnsubscribeFunction subscribeToShapeSubscriptionSyncStatusChanges(
+    ShapeSubscriptionSyncStatusChangeCallback callback,
+  ) {
+    void wrappedCallback(
+      ShapeSubscriptionSyncStatusChangeNotification notification,
+    ) {
+      if (_hasDbName(notification.dbName)) {
+        callback(notification);
+      }
+      return;
+    }
+
+    final eventListener = EventListener(
+      EventNames.shapeSubscriptionStatusChange,
+      wrappedCallback,
+    );
+    _subscribe(eventListener);
+
+    return () => _unsubscribe(eventListener);
+  }
+
   List<DbName> _getDbNames() {
     final idx = attachedDbIndex;
 
@@ -243,6 +279,23 @@ class EventNotifier implements Notifier {
     );
 
     emit(EventNames.connectivityStateChange, notification);
+
+    return notification;
+  }
+
+  ShapeSubscriptionSyncStatusChangeNotification
+      _emitShapeSubscriptionSyncStatusChange(
+    DbName dbName,
+    String key,
+    SyncStatus status,
+  ) {
+    final notification = ShapeSubscriptionSyncStatusChangeNotification(
+      dbName: dbName,
+      key: key,
+      status: status,
+    );
+
+    emit(EventNames.shapeSubscriptionStatusChange, notification);
 
     return notification;
   }

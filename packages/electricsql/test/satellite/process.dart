@@ -1622,9 +1622,10 @@ void processTests({
         await satellite.subscribe([shapeDef]);
     await synced;
 
-    // first notification is 'connected'
-    expect(notifier.notifications.length, 2);
-    final changeNotification = notifier.notifications[1] as ChangeNotification;
+    // first notification is 'connected', second and third is establishing shape,
+    // final one is initial sync
+    expect(notifier.notifications.length, 4);
+    final changeNotification = notifier.notifications[3] as ChangeNotification;
     expect(changeNotification.changes.length, 1);
     expect(
       changeNotification.changes[0],
@@ -2552,6 +2553,100 @@ void processTests({
 
     // Wait for the snapshot to finish to consider the test successful
     await Future<void>.delayed(const Duration(milliseconds: 1000));
+  });
+
+  test('notifies for shape lifecycle', () async {
+    await runMigrations();
+
+    const shapeSubKey = 'foo';
+    List<ShapeSubscriptionSyncStatusChangeNotification> shapeNotifications() =>
+        notifier.notifications
+            .whereType<ShapeSubscriptionSyncStatusChangeNotification>()
+            .toList();
+
+    // relations must be present at subscription delivery
+    client.setRelations(kTestRelations);
+    client.setRelationData('parent', parentRecord);
+    client.setRelationData('child', childRecord);
+
+    final conn = await startSatellite(satellite, authConfig, token);
+    await conn.connectionFuture;
+
+    satellite.relations = kTestRelations;
+    final ShapeSubscription(synced: syncedFirst) =
+        await satellite.subscribe([Shape(tablename: 'parent')], shapeSubKey);
+
+    // first one is establishing
+
+    expect(shapeNotifications().length, 1);
+    final firstNotification = shapeNotifications()[0];
+    expect(firstNotification.key, shapeSubKey);
+    final firstNotificationStatus =
+        firstNotification.status as SyncStatusEstablishing;
+    expect(firstNotificationStatus.progress, 'receiving_data');
+    final firstServerId = firstNotificationStatus.serverId;
+
+    await syncedFirst;
+
+    // second one is active
+    expect(shapeNotifications().length, 2);
+    final secondNotification = shapeNotifications()[1];
+    expect(secondNotification.key, shapeSubKey);
+    final secondNotificationStatus =
+        secondNotification.status as SyncStatusActive;
+    expect(secondNotificationStatus.serverId, firstServerId);
+
+    // change existing sub to different shape
+    final ShapeSubscription(synced: syncedSecond) = await satellite.subscribe(
+      [Shape(tablename: 'child')],
+      shapeSubKey,
+    );
+
+    // third one is a "mutation" one, receiving new data
+    expect(shapeNotifications().length, 3);
+    final thirdNotifictiaon = shapeNotifications()[2];
+    expect(thirdNotifictiaon.key, shapeSubKey);
+    final thirdNotifictiaonStatus =
+        thirdNotifictiaon.status as SyncStatusEstablishing;
+    expect(thirdNotifictiaonStatus.progress, 'receiving_data');
+    expect(thirdNotifictiaonStatus.oldServerId, firstServerId);
+    final secondServerId = thirdNotifictiaonStatus.serverId;
+
+    await syncedSecond;
+
+    expect(shapeNotifications().length, 5);
+
+    // fourth one is another "mutation" one, removing old data
+    final fourthNotifictiaon = shapeNotifications()[3];
+    expect(fourthNotifictiaon.key, shapeSubKey);
+    final fourthNotifictiaonStatus =
+        fourthNotifictiaon.status as SyncStatusEstablishing;
+    expect(fourthNotifictiaonStatus.progress, 'removing_data');
+    expect(fourthNotifictiaonStatus.serverId, secondServerId);
+
+    // fifth one should eventually get back to active
+    final fifthNotification = shapeNotifications()[4];
+    expect(fifthNotification.key, shapeSubKey);
+    final fifthNotificationStatus =
+        fifthNotification.status as SyncStatusActive;
+    expect(fifthNotificationStatus.serverId, secondServerId);
+
+    // cancel subscription
+    await satellite.unsubscribe([shapeSubKey]);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    // sixth one first notifies of cancellation
+    expect(shapeNotifications().length, 7);
+    final sixthNotification = shapeNotifications()[5];
+    expect(sixthNotification.key, shapeSubKey);
+    final sixthNotificationStatus =
+        sixthNotification.status as SyncStatusCancelling;
+    expect(sixthNotificationStatus.serverId, secondServerId);
+
+    // last one should indicate that it is gone
+    final seventhNotification = shapeNotifications()[6];
+    expect(seventhNotification.key, shapeSubKey);
+    expect(seventhNotification.status, SyncStatusUndefined());
   });
 }
 

@@ -123,7 +123,10 @@ class SatelliteProcess implements Satellite {
     required this.notifier,
   })  : _adapter = adapter,
         builder = migrator.queryBuilder {
-    subscriptionManager = ShapeManager();
+    subscriptionManager = ShapeManager(
+      onShapeSyncStatusUpdated: (key, status) =>
+          notifier.shapeSubscriptionSyncStatusChanged(dbName, key, status),
+    );
 
     throttledSnapshot = Throttle(
       mutexSnapshot,
@@ -378,6 +381,7 @@ This means there is a notifier subscription leak.`''');
 
       if (error != null) throw error;
 
+      // persist subscription metadata
       await setMeta('subscriptions', subscriptionManager.serialize());
 
       return ShapeSubscription(
@@ -405,7 +409,7 @@ This means there is a notifier subscription leak.`''');
     } else if (key != null) {
       return unsubscribeIds(subscriptionManager.getServerIDs([key]));
     } else {
-      return unsubscribeIds(subscriptionManager.getServerID(shapes!));
+      return unsubscribeIds(subscriptionManager.getServerIDsForShapes(shapes!));
     }
   }
 
@@ -416,6 +420,8 @@ This means there is a notifier subscription leak.`''');
 
     // If the server didn't send an error, we persist the fact the subscription was deleted.
     subscriptionManager.unsubscribeMade(subscriptionIds);
+
+    // persist subscription metadata
     await adapter.run(
       _setMetaStatement('subscriptions', subscriptionManager.serialize()),
     );
@@ -431,6 +437,7 @@ This means there is a notifier subscription leak.`''');
       additionalStatements: [],
       subscriptionId: subsData.subscriptionId,
     );
+
     final toBeUnsubbed = afterApply();
     if (toBeUnsubbed.isNotEmpty) {
       await unsubscribeIds(toBeUnsubbed);
@@ -1579,6 +1586,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       ...stmts,
       ..._enableTriggers(affectedTables),
     ]);
+
     subscriptionManager.goneBatchDelivered(subscriptionIds);
 
     _notifyChanges(fakeOplogEntries, ChangeOrigin.remote);

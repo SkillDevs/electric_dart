@@ -1,4 +1,5 @@
 import 'package:electricsql/src/auth/auth.dart';
+import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/util/tablename.dart';
 import 'package:electricsql/src/util/types.dart';
@@ -48,7 +49,8 @@ class RecordChange with EquatableMixin {
 
 class Change with EquatableMixin {
   final QualifiedTablename qualifiedTablename;
-  // rowid of each oplog entry for the changes - availiable only for local changes
+
+  /// rowid of each oplog entry for the changes - availiable only for local changes
   List<RowId>? rowids;
   List<RecordChange>? recordChanges;
 
@@ -106,6 +108,18 @@ class ConnectivityStateChangeNotification extends Notification {
   });
 }
 
+class ShapeSubscriptionSyncStatusChangeNotification extends Notification {
+  final DbName dbName;
+  final String key;
+  final SyncStatus status;
+
+  ShapeSubscriptionSyncStatusChangeNotification({
+    required this.dbName,
+    required this.key,
+    required this.status,
+  });
+}
+
 abstract class Notification {}
 
 typedef AuthStateCallback = void Function(AuthStateNotification notification);
@@ -118,72 +132,90 @@ typedef ConnectivityStateChangeCallback = void Function(
   ConnectivityStateChangeNotification notification,
 );
 
+typedef ShapeSubscriptionSyncStatusChangeCallback = void Function(
+  ShapeSubscriptionSyncStatusChangeNotification notification,
+);
+
 typedef NotificationCallback = void Function(Notification notification);
 
 typedef UnsubscribeFunction = void Function();
 
 abstract class Notifier {
-  // The name of the primary database that components communicating via this
-  // notifier have open and are using.
+  /// The name of the primary database that components communicating via this
+  /// notifier have open and are using.
   DbName get dbName;
 
-  // Some drivers can attach other open databases and reference them by alias
-  // (i.e.: first you `attach('foo.db')` then you can write SQL queries like
-  // `select * from foo.bars`. We keep track of attached databases and their
-  // aliases, so we can map the table namespaces in SQL queries to their real
-  // database names and thus emit and handle notifications to and from them.
+  /// Some drivers can attach other open databases and reference them by alias
+  /// (i.e.: first you `attach('foo.db')` then you can write SQL queries like
+  /// `select * from foo.bars`. We keep track of attached databases and their
+  /// aliases, so we can map the table namespaces in SQL queries to their real
+  /// database names and thus emit and handle notifications to and from them.
   void attach(DbName dbName, String dbAlias);
   void detach(String dbAlias);
 
-  // Technically, we keep track of the attached dbs in two mappings -- one is
-  // `alias: name`, the other `name: alias`.
+  /// Technically, we keep track of the attached dbs in two mappings -- one is
+  /// `alias: name`, the other `name: alias`.
   AttachedDbIndex get attachedDbIndex;
 
-  // And we provide a helper method to alias changes in the form
-  // `{attachedDbName, tablenames}` to `aliasedTablenames`.
+  /// And we provide a helper method to alias changes in the form
+  /// `{attachedDbName, tablenames}` to `aliasedTablenames`.
   List<QualifiedTablename> alias(ChangeNotification notification);
 
-  // Calling `authStateChanged` notifies the Satellite process that the
-  // user's authentication credentials have changed.
+  /// Calling `authStateChanged` notifies the Satellite process that the
+  /// user's authentication credentials have changed.
   void authStateChanged(AuthState authState);
   UnsubscribeFunction subscribeToAuthStateChanges(AuthStateCallback callback);
 
-  // The data change notification workflow starts by the electric database
-  // clients (or the user manually) calling `potentiallyChanged` whenever
-  // a write or transaction has been issued that may have changed the
-  // contents of either the primary or any of the attached databases.
+  /// The data change notification workflow starts by the electric database
+  /// clients (or the user manually) calling `potentiallyChanged` whenever
+  /// a write or transaction has been issued that may have changed the
+  /// contents of either the primary or any of the attached databases.
   void potentiallyChanged();
 
-  // Satellite processes subscribe to these "data has potentially changed"
-  // notifications. When they get one, they check the `_oplog` table in the
-  // database for *actual* changes persisted by the triggers.
+  /// Satellite processes subscribe to these "data has potentially changed"
+  /// notifications. When they get one, they check the `_oplog` table in the
+  /// database for *actual* changes persisted by the triggers.
   UnsubscribeFunction subscribeToPotentialDataChanges(
     PotentialChangeCallback callback,
   );
 
-  // When Satellite detects actual data changes in the oplog for a given
-  // database, it replicates it and calls  `actuallyChanged` with the list
-  // of changes.
+  /// When Satellite detects actual data changes in the oplog for a given
+  /// database, it replicates it and calls  `actuallyChanged` with the list
+  /// of changes.
   void actuallyChanged(
     DbName dbName,
     List<Change> changes,
     ChangeOrigin origin,
   );
 
-  // Reactive hooks then subscribe to "data has actually changed" notifications,
-  // using the info to trigger re-queries, if the changes affect databases and
-  // tables that their queries depend on. This then trigger re-rendering iff
-  // the query results are actually affected by the data changes.
+  /// Reactive hooks then subscribe to "data has actually changed" notifications,
+  /// using the info to trigger re-queries, if the changes affect databases and
+  /// tables that their queries depend on. This then trigger re-rendering iff
+  /// the query results are actually affected by the data changes.
   UnsubscribeFunction subscribeToDataChanges(ChangeCallback callback);
 
-  // Notification for network connectivity state changes.
-  // A connectivity change is automatically triggered in consequence of internal client events.
-  // 'connected': connection to Electric established
-  // 'disconnected': Electric is unreachable, or network is unavailable.
-  //                 A reason for the disconnection can be provided.
+  /// Notification for network connectivity state changes.
+  /// A connectivity change is automatically triggered in consequence of internal client events.
+  /// 'connected': connection to Electric established
+  /// 'disconnected': Electric is unreachable, or network is unavailable.
+  ///                 A reason for the disconnection can be provided.
   void connectivityStateChanged(String dbName, ConnectivityState state);
+
   UnsubscribeFunction subscribeToConnectivityStateChanges(
     ConnectivityStateChangeCallback callback,
+  );
+
+  /// Notification for shape subscription sync status changes.
+  /// Every notification will include a key that uniquely identifies the
+  /// shape for which the sync status changed, as well as the new sync status.
+  void shapeSubscriptionSyncStatusChanged(
+    String dbName,
+    String key,
+    SyncStatus status,
+  );
+
+  UnsubscribeFunction subscribeToShapeSubscriptionSyncStatusChanges(
+    ShapeSubscriptionSyncStatusChangeCallback callback,
   );
 }
 

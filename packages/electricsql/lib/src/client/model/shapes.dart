@@ -1,5 +1,6 @@
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:equatable/equatable.dart';
 
 typedef TableName = String;
 
@@ -10,13 +11,16 @@ enum SyncStatusType {
   establishing,
 }
 
-sealed class SyncStatus {
+sealed class SyncStatus with EquatableMixin {
   SyncStatusType get statusType;
 }
 
 class SyncStatusUndefined extends SyncStatus {
   @override
   SyncStatusType get statusType => SyncStatusType.undefined;
+
+  @override
+  List<Object?> get props => [statusType];
 }
 
 class SyncStatusActive extends SyncStatus {
@@ -26,6 +30,9 @@ class SyncStatusActive extends SyncStatus {
   SyncStatusType get statusType => SyncStatusType.active;
 
   SyncStatusActive(this.serverId);
+
+  @override
+  List<Object?> get props => [statusType, serverId];
 }
 
 class SyncStatusCancelling extends SyncStatus {
@@ -35,6 +42,9 @@ class SyncStatusCancelling extends SyncStatus {
   SyncStatusType get statusType => SyncStatusType.cancelling;
 
   SyncStatusCancelling(this.serverId);
+
+  @override
+  List<Object?> get props => [statusType, serverId];
 }
 
 class SyncStatusEstablishing extends SyncStatus {
@@ -50,6 +60,9 @@ class SyncStatusEstablishing extends SyncStatus {
     required this.progress,
     this.oldServerId,
   });
+
+  @override
+  List<Object?> get props => [statusType, serverId, progress, oldServerId];
 }
 
 abstract interface class IShapeManager {
