@@ -2576,9 +2576,12 @@ void processTests({
     final ShapeSubscription(synced: syncedFirst) =
         await satellite.subscribe([Shape(tablename: 'parent')], shapeSubKey);
 
-    // first one is establishing
+    await syncedFirst;
 
-    expect(shapeNotifications().length, 1);
+    // 'establishing' and 'active'
+    expect(shapeNotifications().length, 2);
+
+    // first one is establishing
     final firstNotification = shapeNotifications()[0];
     expect(firstNotification.key, shapeSubKey);
     final firstNotificationStatus =
@@ -2586,10 +2589,7 @@ void processTests({
     expect(firstNotificationStatus.progress, 'receiving_data');
     final firstServerId = firstNotificationStatus.serverId;
 
-    await syncedFirst;
-
     // second one is active
-    expect(shapeNotifications().length, 2);
     final secondNotification = shapeNotifications()[1];
     expect(secondNotification.key, shapeSubKey);
     final secondNotificationStatus =

@@ -318,10 +318,8 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
         Timer(const Duration(milliseconds: 1), resolve);
       } else {
         // Otherwise, we resolve the promise before delivering the subscription.
-        // Give enough time for the `Process.subscribe` promise to fully resolve before
-        // delivering the subscription.
         if (!doSkipNextEmit) {
-          Timer(const Duration(milliseconds: 50), emit);
+          Timer(const Duration(milliseconds: 1), emit);
         } else {
           doSkipNextEmit = false;
         }
