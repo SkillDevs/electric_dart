@@ -233,7 +233,7 @@ Check out the official docs from ElectricSQL [here](https://electric-sql.com/doc
 
 The package provides a DevTools extension to interact with the Electric service during development. That is: check the status of the service connectivity, inspect the table schemas, delete the local database, check the status of the shape subscriptions...
 
-<img align="center" height="500" src="https://raw.githubusercontent.com/SkillDevs/electric_dart/master/resources/devtools.png"/>
+<img align="center" max-height="500px" src="https://raw.githubusercontent.com/SkillDevs/electric_dart/master/resources/devtools.png"/>
 
 ### Reset local database
 
