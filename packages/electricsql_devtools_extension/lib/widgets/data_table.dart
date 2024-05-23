@@ -20,24 +20,21 @@ class SimpleTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Table(
-        columnWidths: const {
-          0: IntrinsicColumnWidth(),
-          1: FlexColumnWidth(),
-        },
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        children: [
-          for (final item in items)
-            TableRow(
-              children: [
-                _FirstCol(child: Text(item.title)),
-                _SecondCol(child: item.child),
-              ],
-            ),
-        ],
-      ),
+    return Table(
+      columnWidths: const {
+        0: IntrinsicColumnWidth(),
+        1: FlexColumnWidth(),
+      },
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: [
+        for (final item in items)
+          TableRow(
+            children: [
+              _FirstCol(child: Text(item.title)),
+              _SecondCol(child: item.child),
+            ],
+          ),
+      ],
     );
   }
 }

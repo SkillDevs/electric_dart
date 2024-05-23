@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:devtools_extensions/devtools_extensions.dart';
 import 'package:electricsql/electricsql.dart';
@@ -151,6 +152,13 @@ class RemoteToolbarApi {
     });
   }
 
+  Stream<void> _remoteTableDataChangedStream(int subId) {
+    return serviceManager.service!.onExtensionEvent.where((e) {
+      return e.extensionKind == 'electricsql:db-table-data-changed' &&
+          e.extensionData?.data['subscription'] == subId;
+    });
+  }
+
   Future<List<DebugShape>> getSatelliteShapeSubscriptions(String dbName) async {
     final shapesJ = await electricSQLRequest(
       'getSatelliteShapeSubscriptions',
@@ -178,6 +186,51 @@ class RemoteToolbarApi {
       getDataStream: _remoteShapeSubscriptionsStream,
       callback: callback,
     );
+  }
+
+  Future<Future<void> Function()> subscribeToDbTable(
+    String dbName,
+    String tableName,
+    void Function() callback,
+  ) {
+    return _genericRemoteSubscription(
+      payload: {
+        'db': dbName,
+        'table': tableName,
+      },
+      subscribeMethod: 'subscribeToDbTable',
+      unsubscribeMethod: 'unsubscribeFromDbTable',
+      getDataStream: _remoteTableDataChangedStream,
+      callback: (_) => callback(),
+    );
+  }
+
+  Future<SqlDialect> getDbDialect(String dbName) async {
+    final dialectJ = await electricSQLRequest(
+      'getDbDialect',
+      payload: {
+        'db': dbName,
+      },
+    );
+
+    return SqlDialect.values[dialectJ! as int];
+  }
+
+  Future<RemoteQueryRes> queryDb(
+    String dbName,
+    String query,
+    List<Object?> args,
+  ) async {
+    final result = await electricSQLRequest(
+      'queryDb',
+      payload: {
+        'db': dbName,
+        'query': query,
+        'args': json.encode(args),
+      },
+    );
+
+    return RemoteQueryRes.fromMap(result! as Map<String, dynamic>);
   }
 
   /// Generic method to subscribe to some stream in the remote app

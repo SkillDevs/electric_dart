@@ -6,7 +6,7 @@ import 'package:electricsql_devtools_extension/widgets/data_table.dart';
 import 'package:flutter/material.dart';
 
 class StatusTab extends StatefulWidget {
-  final ToolbarTabsProps props;
+  final DevToolsDbProps props;
 
   const StatusTab({
     super.key,

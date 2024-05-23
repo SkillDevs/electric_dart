@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 class ShapesTab extends StatefulWidget {
   const ShapesTab({super.key, required this.props});
 
-  final ToolbarTabsProps props;
+  final DevToolsDbProps props;
 
   @override
   State<ShapesTab> createState() => _ShapesTabState();
@@ -84,7 +84,6 @@ class _ShapesTabState extends State<ShapesTab> {
     }
 
     return DataTable2(
-      headingRowHeight: 35,
       minWidth: 800,
       isHorizontalScrollBarVisible: true,
       columns: <DataColumn>[

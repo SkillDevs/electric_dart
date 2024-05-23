@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 ThemeData getElectricTheme() {
   return ThemeData.from(colorScheme: kElectricColorScheme);
+}
+
+TextStyle getMonospaceTextStyle() {
+  // return GoogleFonts.sourceCodePro();
+  return GoogleFonts.jetBrainsMono();
 }
 
 const ColorScheme kElectricColorScheme = ColorScheme(

@@ -111,4 +111,42 @@ class Toolbar implements ToolbarInterface {
       (_) => callback(getSatelliteShapeSubscriptions(dbName)),
     );
   }
+
+  @override
+  Future<RemoteQueryRes> queryDb(
+    String dbName,
+    String sql,
+    List<Object?> args,
+  ) async {
+    final sat = _getSatellite(dbName);
+    try {
+      final rows = await sat.adapter.query(Statement(sql, args));
+
+      return RemoteQueryRes(rows: rows, error: null);
+    } catch (e) {
+      return RemoteQueryRes(rows: [], error: e.toString());
+    }
+  }
+
+  @override
+  UnsubscribeFunction subscribeToDbTable(
+    String dbName,
+    String tableName,
+    void Function() callback,
+  ) {
+    final sat = _getSatellite(dbName);
+
+    // subscribe to subsequent changes
+    return sat.notifier.subscribeToDataChanges((notification) {
+      if (notification.dbName != dbName) return;
+      for (final change in notification.changes) {
+        if (change.qualifiedTablename.tablename == tableName ||
+            // always trigger an update if subscribing to internal tables
+            tableName.startsWith('_electric')) {
+          callback();
+          return;
+        }
+      }
+    });
+  }
 }
