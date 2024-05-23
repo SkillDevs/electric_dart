@@ -105,10 +105,12 @@ class ElectricServiceExtension {
         await client.close();
         await resetDbFun();
 
+        postDbWasReset(dbName);
+        return null;
+      case 'afterDbReset':
         // On web we reload the page
         await afterDbReset();
         return null;
-
       case 'getSatelliteShapeSubscriptions':
         final shapes = api.getSatelliteShapeSubscriptions(parameters['db']!);
         return shapes.map((s) => s.toMap()).toList();

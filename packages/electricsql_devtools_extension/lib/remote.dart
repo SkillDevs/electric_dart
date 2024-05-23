@@ -86,12 +86,34 @@ class RemoteToolbarApi {
   }
 
   Future<void> resetDb(String dbName) async {
+    final dbHasResetCompleter = Completer<void>();
+
+    StreamSubscription<void>? sub;
+    sub = _remoteDbWasReset(dbName).listen((event) {
+      dbHasResetCompleter.complete();
+      sub?.cancel();
+      sub = null;
+    });
+
     await electricSQLRequest(
       'resetDb',
       payload: {
         'db': dbName,
       },
     );
+    
+    // Wait for the devtools plugin to actually be aware of the reset
+    // Workaround for https://github.com/flutter/devtools/issues/7779
+    await dbHasResetCompleter.future
+        .timeout(const Duration(seconds: 2))
+        .catchError((_) => null);
+    await sub?.cancel();
+
+
+    // Reload!
+
+    // This reloads the page on web
+    await electricSQLRequest('afterDbReset');
 
     // Hot restart
     await serviceManager.performHotRestart();
@@ -106,6 +128,13 @@ class RemoteToolbarApi {
       final statusJ = data['status']! as Map<String, dynamic>;
       final status = ConnectivityState.fromMap(statusJ);
       return status;
+    });
+  }
+
+  Stream<void> _remoteDbWasReset(String dbName) {
+    return serviceManager.service!.onExtensionEvent.where((e) {
+      return e.extensionKind == 'electricsql:db-was-reset' &&
+          e.extensionData?.data['db'] == dbName;
     });
   }
 
@@ -151,7 +180,7 @@ class RemoteToolbarApi {
       callback: callback,
     );
   }
-  
+
   /// Generic method to subscribe to some stream in the remote app
   /// Returns a function to unsubscribe
   Future<Future<void> Function()> _genericRemoteSubscription<T>({

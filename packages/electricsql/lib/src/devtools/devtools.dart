@@ -28,6 +28,10 @@ void postDbResetChanged(String dbName) {
   postEvent('db-reset-changed', {'db': dbName});
 }
 
+void postDbWasReset(String dbName) {
+  postEvent('db-was-reset', {'db': dbName});
+}
+
 void handleNewElectricClient(BaseElectricClient client) {
   if (enableDevtools) {
     ElectricServiceExtension.registerIfNeeded();
