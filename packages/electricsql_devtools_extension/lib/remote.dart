@@ -101,14 +101,13 @@ class RemoteToolbarApi {
         'db': dbName,
       },
     );
-    
+
     // Wait for the devtools plugin to actually be aware of the reset
     // Workaround for https://github.com/flutter/devtools/issues/7779
     await dbHasResetCompleter.future
         .timeout(const Duration(seconds: 2))
         .catchError((_) => null);
     await sub?.cancel();
-
 
     // Reload!
 

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'package:data_table_2/data_table_2.dart';
 import 'package:electricsql/electricsql.dart';
 // ignore: invalid_use_of_internal_member, implementation_imports
 import 'package:electricsql/src/devtools/shared.dart';
 import 'package:electricsql_devtools_extension/remote.dart';
 import 'package:electricsql_devtools_extension/tabs.dart';
 import 'package:electricsql_devtools_extension/widgets/chip.dart';
+import 'package:electricsql_devtools_extension/widgets/labeled_cell.dart';
 import 'package:flutter/material.dart';
 
 class ShapesTab extends StatefulWidget {
@@ -81,52 +83,45 @@ class _ShapesTabState extends State<ShapesTab> {
       );
     }
 
-    return Scrollbar(
-      child: SingleChildScrollView(
-        primary: true,
-        child: DataTable(
-          headingRowHeight: 35,
-          dataRowMinHeight: 40,
-          dataRowMaxHeight: 40,
-          columns: <DataColumn>[
-            ...['Shape Subscription Key', 'Table', 'Include', 'Where', 'Status']
-                .map(
-              (title) => DataColumn(
-                label: Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
+    return DataTable2(
+      headingRowHeight: 35,
+      minWidth: 800,
+      isHorizontalScrollBarVisible: true,
+      columns: <DataColumn>[
+        ...['Shape Subscription Key', 'Table', 'Include', 'Where', 'Status']
+            .map(
+          (title) => DataColumn(
+            label: LabeledTextCell(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              maxLines: 1,
             ),
-          ],
-          rows: <DataRow>[
-            ...shapes.map(
-              (shape) {
-                final include = shape.shape.include;
-                final String includeStr;
-                if (include == null || include.isEmpty) {
-                  includeStr = '';
-                } else {
-                  includeStr =
-                      include.map((v) => v.select.tablename).join(', ');
-                }
-
-                return DataRow(
-                  cells: <DataCell>[
-                    DataCell(Text(shape.key)),
-                    DataCell(Text(shape.shape.tablename)),
-                    DataCell(Text(includeStr)),
-                    DataCell(Text(shape.shape.where ?? '')),
-                    DataCell(buildStatusCell(shape.status)),
-                  ],
-                );
-              },
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
+      rows: <DataRow>[
+        ...shapes.map(
+          (shape) {
+            final include = shape.shape.include;
+            final String includeStr;
+            if (include == null || include.isEmpty) {
+              includeStr = '';
+            } else {
+              includeStr = include.map((v) => v.select.tablename).join(', ');
+            }
+
+            return DataRow(
+              cells: <DataCell>[
+                DataCell(LabeledTextCell(shape.key)),
+                DataCell(LabeledTextCell(shape.shape.tablename)),
+                DataCell(LabeledTextCell(includeStr)),
+                DataCell(LabeledTextCell(shape.shape.where ?? '')),
+                DataCell(buildStatusCell(shape.status)),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 
