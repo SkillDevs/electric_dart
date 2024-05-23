@@ -7,6 +7,7 @@ import 'package:electricsql/src/client/model/index.dart';
 import 'package:electricsql/src/devtools/api/toolbar.dart';
 import 'package:electricsql/src/devtools/devtools.dart';
 import 'package:electricsql/src/devtools/platform/platform.dart';
+import 'package:electricsql/src/devtools/shared.dart';
 import 'package:electricsql/src/satellite/registry.dart';
 import 'package:electricsql/util.dart';
 import 'package:meta/meta.dart';
@@ -54,7 +55,7 @@ class ElectricServiceExtension {
 
   // Random initial subscription id, so that it doesn't collide when restarting the app
   int _subscriptionId = Random().nextInt(100000);
-  final Map<int, void Function()> _activeStatusSubscriptions = {};
+  final Map<int, void Function()> _activeSubscriptions = {};
 
   Future<Object?> _handle(Map<String, String> parameters) async {
     final action = parameters['action']!;
@@ -72,25 +73,23 @@ class ElectricServiceExtension {
         final state = api.getSatelliteStatus(parameters['db']!);
         return state?.toMap();
       case 'subscribeToSatelliteStatus':
-        final id = _subscriptionId++;
-        final unsubscribe = api.subscribeToSatelliteStatus(
-          parameters['db']!,
-          (ConnectivityState state) {
-            postEvent(
-              'satellite-status',
-              {
-                'subscription': id,
-                'status': state.toMap(),
-              },
-            );
-          },
+        return _createSubscription(
+          (subId) => api.subscribeToSatelliteStatus(
+            parameters['db']!,
+            (ConnectivityState state) {
+              postEvent(
+                'satellite-status',
+                {
+                  'subscription': subId,
+                  'status': state.toMap(),
+                },
+              );
+            },
+          ),
         );
 
-        _activeStatusSubscriptions[id] = unsubscribe;
-        return id;
       case 'unsubscribeFromSatelliteStatus':
-        final subId = int.parse(parameters['id']!);
-        _activeStatusSubscriptions.remove(subId)?.call();
+        _unsubscribe(parameters);
         return null;
       case 'toggleSatelliteStatus':
         await api.toggleSatelliteStatus(parameters['db']!);
@@ -113,6 +112,24 @@ class ElectricServiceExtension {
       case 'getSatelliteShapeSubscriptions':
         final shapes = api.getSatelliteShapeSubscriptions(parameters['db']!);
         return shapes.map((s) => s.toMap()).toList();
+      case 'subscribeToSatelliteShapeSubscriptions':
+        return _createSubscription(
+          (subId) => api.subscribeToSatelliteShapeSubscriptions(
+            parameters['db']!,
+            (List<DebugShape> shapes) {
+              postEvent(
+                'shape-subscriptions',
+                {
+                  'subscription': subId,
+                  'shapes': shapes.map((e) => e.toMap()).toList(),
+                },
+              );
+            },
+          ),
+        );
+      case 'unsubscribeFromSatelliteShapeSubscriptions':
+        _unsubscribe(parameters);
+        return null;
     }
 
     throw UnsupportedError('Method $action unknown');
@@ -149,5 +166,17 @@ class ElectricServiceExtension {
         });
       });
     }
+  }
+
+  int _createSubscription(void Function() Function(int subId) subscribeFun) {
+    final id = _subscriptionId++;
+    final unsubscribe = subscribeFun(id);
+    _activeSubscriptions[id] = unsubscribe;
+    return id;
+  }
+
+  void _unsubscribe(Map<String, String> parameters) {
+    final subId = int.parse(parameters['id']!);
+    _activeSubscriptions.remove(subId)?.call();
   }
 }

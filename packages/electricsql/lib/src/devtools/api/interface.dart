@@ -16,4 +16,9 @@ abstract interface class ToolbarInterface {
   Future<List<DbTableInfo>> getElectricTables(String dbName);
 
   List<DebugShape> getSatelliteShapeSubscriptions(String dbName);
+
+  UnsubscribeFunction subscribeToSatelliteShapeSubscriptions(
+    String name,
+    void Function(List<DebugShape> shapes) callback,
+  );
 }

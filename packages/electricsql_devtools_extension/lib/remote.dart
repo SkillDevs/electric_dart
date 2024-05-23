@@ -34,29 +34,15 @@ class RemoteToolbarApi {
     String dbName,
     void Function(ConnectivityState) callback,
   ) async {
-    final subId = (await electricSQLRequest(
-      'subscribeToSatelliteStatus',
+    return _genericRemoteSubscription(
       payload: {
         'db': dbName,
       },
-    ))! as int;
-    // print("NEW SUB: $subId");
-
-    final sub = _remoteConnectivityStateStream(subId).listen((status) {
-      // print("SUB CHANGED: $status");
-      callback(status);
-    });
-
-    return () async {
-      // print("UNSUB $subId");
-      await sub.cancel();
-      await electricSQLRequest(
-        'unsubscribeFromSatelliteStatus',
-        payload: {
-          'id': subId.toString(),
-        },
-      );
-    };
+      subscribeMethod: 'subscribeToSatelliteStatus',
+      unsubscribeMethod: 'unsubscribeFromSatelliteStatus',
+      getDataStream: _remoteConnectivityStateStream,
+      callback: callback,
+    );
   }
 
   Future<void> toggleSatelliteStatus(String name) async {
@@ -123,6 +109,20 @@ class RemoteToolbarApi {
     });
   }
 
+  Stream<List<DebugShape>> _remoteShapeSubscriptionsStream(int subId) {
+    return serviceManager.service!.onExtensionEvent.where((e) {
+      return e.extensionKind == 'electricsql:shape-subscriptions' &&
+          e.extensionData?.data['subscription'] == subId;
+    }).map((event) {
+      final data = event.extensionData!.data;
+      final shapesJ = data['shapes']! as List<dynamic>;
+      final shapes = shapesJ
+          .map((s) => DebugShape.fromMap(s as Map<String, dynamic>))
+          .toList();
+      return shapes;
+    });
+  }
+
   Future<List<DebugShape>> getSatelliteShapeSubscriptions(String dbName) async {
     final shapesJ = await electricSQLRequest(
       'getSatelliteShapeSubscriptions',
@@ -135,6 +135,50 @@ class RemoteToolbarApi {
           .toList(),
     );
     return shapesJ;
+  }
+
+  Future<Future<void> Function()> subscribeToSatelliteShapeSubscriptions(
+    String dbName,
+    void Function(List<DebugShape>) callback,
+  ) {
+    return _genericRemoteSubscription(
+      payload: {
+        'db': dbName,
+      },
+      subscribeMethod: 'subscribeToSatelliteShapeSubscriptions',
+      unsubscribeMethod: 'unsubscribeFromSatelliteShapeSubscriptions',
+      getDataStream: _remoteShapeSubscriptionsStream,
+      callback: callback,
+    );
+  }
+  
+  /// Generic method to subscribe to some stream in the remote app
+  /// Returns a function to unsubscribe
+  Future<Future<void> Function()> _genericRemoteSubscription<T>({
+    Map<String, String> payload = const {},
+    required String subscribeMethod,
+    required String unsubscribeMethod,
+    required Stream<T> Function(int subId) getDataStream,
+    required void Function(T) callback,
+  }) async {
+    final subId = (await electricSQLRequest(
+      subscribeMethod,
+      payload: payload,
+    ))! as int;
+
+    final sub = getDataStream(subId).listen((status) {
+      callback(status);
+    });
+
+    return () async {
+      await sub.cancel();
+      await electricSQLRequest(
+        unsubscribeMethod,
+        payload: {
+          'id': subId.toString(),
+        },
+      );
+    };
   }
 }
 

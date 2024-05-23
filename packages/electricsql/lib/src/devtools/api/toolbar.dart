@@ -98,4 +98,17 @@ class Toolbar implements ToolbarInterface {
         )
         .toList();
   }
+
+  @override
+  UnsubscribeFunction subscribeToSatelliteShapeSubscriptions(
+    String dbName,
+    void Function(List<DebugShape> shapes) callback,
+  ) {
+    final sat = _getSatellite(dbName);
+
+    // subscribe to subsequent changes
+    return sat.notifier.subscribeToShapeSubscriptionSyncStatusChanges(
+      (_) => callback(getSatelliteShapeSubscriptions(dbName)),
+    );
+  }
 }

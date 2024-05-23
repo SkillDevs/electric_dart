@@ -351,7 +351,6 @@ String msgToString(Object message) {
   } else if (message is SatOpLogAck) {
     return '#SatOpLogAck{lsn: ${base64.encode(message.lsn)}, txid: ${message.transactionId}}';
   } else if (message is SatUnsubsDataBegin) {
-    // TODO(dart): JS client uses SatSat (typo)
     return '#SatUnsubsDataBegin{lsn: ${base64.encode(message.lsn)}, ${message.subscriptionIds}}';
   } else if (message is SatUnsubsDataEnd) {
     return '#SatUnsubsDataEnd{}';

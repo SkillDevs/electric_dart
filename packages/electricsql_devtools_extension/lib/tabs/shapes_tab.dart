@@ -19,7 +19,7 @@ class ShapesTab extends StatefulWidget {
 class _ShapesTabState extends State<ShapesTab> {
   List<DebugShape>? _shapes;
 
-  Timer? _timer;
+  Future<void> Function()? _unsubscribe;
 
   @override
   void initState() {
@@ -36,19 +36,34 @@ class _ShapesTabState extends State<ShapesTab> {
     }
   }
 
-  void _setupPeriodicShapesFetch(String dbName) {
-    _timer?.cancel();
+  Future<void> _setupPeriodicShapesFetch(String dbName) async {
+    await _unsubscribe?.call();
+    _unsubscribe = null;
 
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) async {
-      final api = kRemoteToolbar;
-      final shapes = await api.getSatelliteShapeSubscriptions(dbName);
+    _unsubscribe = await kRemoteToolbar.subscribeToSatelliteShapeSubscriptions(
+      dbName,
+      (shapes) {
+        if (mounted) {
+          setState(() {
+            _shapes = shapes;
+          });
+        }
+      },
+    );
 
-      if (mounted) {
-        setState(() {
-          _shapes = shapes;
-        });
-      }
-    });
+    final shapes = await kRemoteToolbar.getSatelliteShapeSubscriptions(dbName);
+    if (mounted) {
+      setState(() {
+        _shapes = shapes;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _unsubscribe?.call();
+    _unsubscribe = null;
+    super.dispose();
   }
 
   @override

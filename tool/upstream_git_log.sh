@@ -14,6 +14,7 @@ COMMIT_FORMAT='%h - %s%n%ad - %an%nhttps://github.com/electric-sql/electric/comm
 
 INTERESTING_FILES=(
   'clients/typescript'
+  'components/toolbar'
   'e2e'
 )
 
