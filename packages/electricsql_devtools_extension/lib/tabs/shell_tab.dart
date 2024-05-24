@@ -309,7 +309,7 @@ class _TableTab extends StatelessWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Text(
+          child: SelectableText(
             queryRes.error!,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
