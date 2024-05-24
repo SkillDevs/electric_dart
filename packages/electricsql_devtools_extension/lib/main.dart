@@ -89,8 +89,8 @@ class _FooDevToolsExtensionState extends State<FooDevToolsExtension> {
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(
-                maxHeight: 900,
-                maxWidth: 1200,
+                maxHeight: 1080,
+                maxWidth: 1920,
               ),
               child: Card.outlined(
                 color: kElectricColorScheme.surface,
