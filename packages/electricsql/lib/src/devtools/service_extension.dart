@@ -66,7 +66,7 @@ class ElectricServiceExtension {
   late final api = Toolbar(ElectricDevtoolsBinding.registry);
 
   // Random initial subscription id, so that it doesn't collide when restarting the app
-  int _subscriptionId = Random().nextInt(9999999999);
+  int _subscriptionId = Random().nextInt(99999999);
   final Map<int, void Function()> _activeSubscriptions = {};
 
   Future<Object?> _handle(Map<String, String> parameters) async {
