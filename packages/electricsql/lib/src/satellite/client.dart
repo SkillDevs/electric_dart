@@ -908,7 +908,7 @@ class SatelliteClient implements Client {
   }
 
   void handleTransaction(SatOpLog message) {
-    if (inbound.receivingUnsubsBatch.isNotEmpty) {
+    if (inbound.receivingUnsubsBatch != null) {
       processUnsubsDataMessage(message);
     } else if (_subscriptionsDataCache.isDelivering()) {
       try {
@@ -974,7 +974,8 @@ class SatelliteClient implements Client {
   }
 
   void handleUnsubsDataEnd(SatUnsubsDataEnd _msg) {
-    if (inbound.receivingUnsubsBatch.isEmpty) {
+    final inboundReceivingUnsubsBatch = inbound.receivingUnsubsBatch;
+    if (inboundReceivingUnsubsBatch == null) {
       throw SatelliteException(
         SatelliteErrorCode.protocolViolation,
         'Received a `SatUnsubsDataEnd` message but not the begin message',
@@ -985,7 +986,7 @@ class SatelliteClient implements Client {
     // will make a closure over array value instead of over `this` and will use current
     // value instead of whatever is the value of `this.inbound.receivingUnsubsBatch` in
     // the future.
-    final subscriptionIds = [...inbound.receivingUnsubsBatch];
+    final subscriptionIds = [...inboundReceivingUnsubsBatch];
 
     emitter.enqueueEmitGoneBatch(
       GoneBatchEvent(
@@ -999,8 +1000,7 @@ class SatelliteClient implements Client {
       }),
     );
 
-    // TODO(dart): Should we set null??
-    inbound.receivingUnsubsBatch = [];
+    inbound.receivingUnsubsBatch = null;
     inbound.goneBatch = [];
   }
 

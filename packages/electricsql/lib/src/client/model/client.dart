@@ -117,6 +117,7 @@ class ElectricClientImpl extends ElectricNamespace
   }
 
   @override
+  @internal
   Future<ShapeSubscription> syncShapeInternal(Shape shape, [String? key]) {
     return satellite.subscribe([shape], key);
   }

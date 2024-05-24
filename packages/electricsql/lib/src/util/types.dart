@@ -177,7 +177,7 @@ class InboundReplication extends Replication<ServerTransaction> {
   Set<String> unseenAdditionalDataRefs;
   IncompletionType? incomplete;
   List<DataChange> goneBatch;
-  List<String> receivingUnsubsBatch;
+  List<String>? receivingUnsubsBatch;
   SeenAdditionalDataInfo seenAdditionalDataSinceLastTx;
 
   InboundReplication({
