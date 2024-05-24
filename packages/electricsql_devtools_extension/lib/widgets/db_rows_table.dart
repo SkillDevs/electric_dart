@@ -19,8 +19,6 @@ class DbRowsTable extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final tableSource = useMemoized(() => _DataSource(rows: rows), [rows]);
-    final _sortColumnIndex = useState<int?>(null);
-    final _sortAscending = useState<bool>(true);
 
     if (rows.isEmpty) {
       return const Center(child: Text('No data to show'));
@@ -32,37 +30,55 @@ class DbRowsTable extends HookWidget {
 
     const approximateWidthPerCol = 150.0;
 
-    return PaginatedDataTable2(
-      minWidth: columns.length * approximateWidthPerCol,
-      isHorizontalScrollBarVisible: true,
-      columnSpacing: 25,
-      rowsPerPage: 25,
-      source: tableSource,
-      headingTextStyle: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-      ),
-      headingRowDecoration: const BoxDecoration(
-        color: Color.fromARGB(255, 34, 59, 49),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(15),
-          topRight: Radius.circular(15),
-        ),
-      ),
-      sortColumnIndex: _sortColumnIndex.value,
-      sortAscending: _sortAscending.value,
-      columns: <DataColumn>[
-        ...columns.map(
-          (column) => DataColumn(
-            label: Text(column, maxLines: 2),
-            onSort: (columnIndex, ascending) {
-              tableSource.sort(_getComparableFunForColumn(column), ascending);
-              _sortAscending.value = ascending;
-              _sortColumnIndex.value = columnIndex;
-            },
+    return HookBuilder(
+      key: ValueKey(tableSource),
+      builder: (context) {
+        final _sortColumnIndex = useState<int?>(null);
+        final _sortAscending = useState<bool>(true);
+        final scrollController = useScrollController();
+
+        return PaginatedDataTable2(
+          minWidth: columns.length * approximateWidthPerCol,
+          isHorizontalScrollBarVisible: true,
+          scrollController: scrollController,
+          columnSpacing: 25,
+          rowsPerPage: 25,
+          source: tableSource,
+          headingTextStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
-        ),
-      ],
+          headingRowDecoration: const BoxDecoration(
+            color: Color.fromARGB(255, 34, 59, 49),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(15),
+              topRight: Radius.circular(15),
+            ),
+          ),
+          sortColumnIndex: _sortColumnIndex.value,
+          sortAscending: _sortAscending.value,
+          onPageChanged: (_) {
+            if (scrollController.hasClients) {
+              scrollController.jumpTo(0);
+            }
+          },
+          columns: <DataColumn>[
+            ...columns.map(
+              (column) => DataColumn(
+                label: Text(column, maxLines: 2),
+                onSort: (columnIndex, ascending) {
+                  tableSource.sort(
+                    _getComparableFunForColumn(column),
+                    ascending,
+                  );
+                  _sortAscending.value = ascending;
+                  _sortColumnIndex.value = columnIndex;
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
