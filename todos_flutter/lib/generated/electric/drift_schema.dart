@@ -31,6 +31,9 @@ class Todo extends Table with ElectricTableMixin {
   Column<DateTime> get editedAt =>
       customType(ElectricTypes.timestampTZ).named('edited_at')();
 
+  Column<DateTime> get createdAt =>
+      customType(ElectricTypes.timestampTZ).named('created_at')();
+
   @override
   String? get tableName => 'todo';
 

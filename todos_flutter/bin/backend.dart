@@ -36,11 +36,13 @@ void main() async {
   Future<Response> post(Request request) async {
     final body = await request.readAsString();
 
+    final now = DateTime.now();
     await database.into(database.todo).insert(
           TodoCompanion.insert(
             id: genUUID(),
             completed: false,
-            editedAt: DateTime.now(),
+            createdAt: now,
+            editedAt: now,
             text$: Value('Via backend: $body'),
           ),
         );

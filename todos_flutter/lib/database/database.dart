@@ -33,6 +33,7 @@ class Todo {
   final String id;
   final String? listId;
   final String? text;
+  final DateTime createdAt;
   final DateTime editedAt;
   final bool completed;
 
@@ -40,6 +41,7 @@ class Todo {
     required this.id,
     required this.listId,
     required this.text,
+    required this.createdAt,
     required this.editedAt,
     required this.completed,
   });
@@ -47,6 +49,7 @@ class Todo {
   Todo copyWith({
     String? Function()? listId,
     String? text,
+    DateTime? createdAt,
     DateTime? editedAt,
     bool? completed,
   }) {
@@ -54,6 +57,7 @@ class Todo {
       id: id,
       listId: listId != null ? listId() : this.listId,
       text: text ?? this.text,
+      createdAt: createdAt ?? this.createdAt,
       editedAt: editedAt ?? this.editedAt,
       completed: completed ?? this.completed,
     );
