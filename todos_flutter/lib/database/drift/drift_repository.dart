@@ -62,7 +62,10 @@ class DriftRepository implements m.TodosRepository {
     return (db.todo.select()
           ..orderBy(
             [
-              (tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)
+              (tbl) => OrderingTerm(
+                    expression: tbl.createdAt,
+                    mode: OrderingMode.desc,
+                  )
             ],
           ))
         .map(
