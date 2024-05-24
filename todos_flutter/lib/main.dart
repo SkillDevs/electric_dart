@@ -243,12 +243,14 @@ class _TodosLoaded extends HookConsumerWidget {
                     }
                     print("done");
                     final db = ref.read(todosDatabaseProvider);
+                    final now = DateTime.now();
                     await db.insertTodo(
                       Todo(
                         id: genUUID(),
                         listId: kListId,
                         text: textController.text,
-                        editedAt: DateTime.now(),
+                        createdAt: now,
+                        editedAt: now,
                         completed: false,
                       ),
                     );

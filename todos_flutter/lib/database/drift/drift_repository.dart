@@ -30,6 +30,7 @@ class DriftRepository implements m.TodosRepository {
         completed: todo.completed,
         listid: Value(todo.listId),
         text$: Value(todo.text),
+        createdAt: todo.createdAt,
         editedAt: todo.editedAt,
       ),
     );
@@ -60,13 +61,16 @@ class DriftRepository implements m.TodosRepository {
   Stream<List<m.Todo>> watchTodos() {
     return (db.todo.select()
           ..orderBy(
-            [(tbl) => OrderingTerm(expression: tbl.text$.lower())],
+            [
+              (tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)
+            ],
           ))
         .map(
           (todo) => m.Todo(
             completed: todo.completed,
             id: todo.id,
             listId: todo.listid,
+            createdAt: todo.createdAt,
             editedAt: todo.editedAt,
             text: todo.text$!,
           ),
