@@ -202,7 +202,7 @@ class SatelliteClient implements Client {
       ),
       additionalData: [],
       goneBatch: [],
-      receivingUnsubsBatch: [],
+      receivingUnsubsBatch: null,
       unseenAdditionalDataRefs: {},
       seenAdditionalDataSinceLastTx: SeenAdditionalDataInfo(
         dataRefs: [],
