@@ -10,15 +10,19 @@ environment:
 
 dependencies:
   auto_size_text: ^3.0.0
+  code_text_field: ^1.1.0
   data_table_2: ^2.5.12
   devtools_app_shared: ^0.1.1
   devtools_extensions: ^0.1.1
   electricsql: ^0.7.0
   flutter:
     sdk: flutter
+  flutter_highlight: ^0.7.0
+  flutter_hooks: ^0.20.5
   flutter_portal: ^1.1.4
-  flutter_riverpod: ^2.5.1
-  syntax_highlight: ^0.4.0
+  google_fonts: ^6.2.1
+  highlight: ^0.7.0
+  hooks_riverpod: ^2.5.1
   vm_service: ^14.0.0
 
 dev_dependencies:

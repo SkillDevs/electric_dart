@@ -21,4 +21,16 @@ abstract interface class ToolbarInterface {
     String name,
     void Function(List<DebugShape> shapes) callback,
   );
+
+  Future<RemoteQueryRes> queryDb(
+    String dbName,
+    String sql,
+    List<Object?> args,
+  );
+
+  UnsubscribeFunction subscribeToDbTable(
+    String dbName,
+    String tableName,
+    void Function() callback,
+  );
 }

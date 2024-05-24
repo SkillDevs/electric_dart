@@ -15,6 +15,7 @@
             "cwd": "packages/electricsql_devtools_extension",
             "request": "launch",
             "type": "dart",
+			"deviceId": "chrome",
             "args": [
                 "--dart-define=use_simulated_environment=true"
             ],

@@ -1,16 +1,20 @@
 import 'dart:async';
 
 import 'package:devtools_extensions/devtools_extensions.dart';
+// ignore: invalid_use_of_internal_member, implementation_imports
+import 'package:electricsql/src/devtools/shared.dart';
 import 'package:electricsql_devtools_extension/remote.dart';
 import 'package:electricsql_devtools_extension/tabs.dart';
+import 'package:electricsql_devtools_extension/tabs/inspect_tables_tab.dart';
 import 'package:electricsql_devtools_extension/tabs/local_db_tab.dart';
 import 'package:electricsql_devtools_extension/tabs/shapes_tab.dart';
+import 'package:electricsql_devtools_extension/tabs/shell_tab.dart';
 import 'package:electricsql_devtools_extension/tabs/status_tab.dart';
 import 'package:electricsql_devtools_extension/theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_portal/flutter_portal.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 void main() {
   runApp(
@@ -174,7 +178,7 @@ class _LoadedState extends State<_Loaded> {
     final selectedDb = widget.dbNames[dbIndex];
 
     return DefaultTabController(
-      length: 3,
+      length: 5,
       child: Column(
         children: [
           _Header(
@@ -207,6 +211,8 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   bool? canResetDb;
+  SqlDialect? dbDialect;
+
   StreamSubscription<void>? _dbResetChangedSub;
   bool dbResetted = false;
 
@@ -216,6 +222,7 @@ class _BodyState extends State<_Body> {
 
     _listenDbResetChanged();
     _loadCanResetDb(widget.dbName);
+    _loadDbDialect(widget.dbName);
   }
 
   @override
@@ -233,6 +240,15 @@ class _BodyState extends State<_Body> {
     }
   }
 
+  Future<void> _loadDbDialect(String dbName) async {
+    final newDbDialect = await kRemoteToolbar.getDbDialect(dbName);
+    if (newDbDialect != dbDialect) {
+      setState(() {
+        dbDialect = newDbDialect;
+      });
+    }
+  }
+
   void _listenDbResetChanged() {
     _dbResetChangedSub = serviceManager.service!.onExtensionEvent.where((e) {
       return e.extensionKind == 'electricsql:db-reset-changed' &&
@@ -245,14 +261,17 @@ class _BodyState extends State<_Body> {
   @override
   Widget build(BuildContext context) {
     final _canResetDb = canResetDb;
-    if (_canResetDb == null || dbResetted == true) {
+    final _dbDialect = dbDialect;
+
+    if (_canResetDb == null || _dbDialect == null || dbResetted == true) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final dbName = widget.dbName;
 
-    final tabProps = ToolbarTabsProps(
+    final tabProps = DevToolsDbProps(
       dbName: dbName,
+      dialect: _dbDialect,
     );
 
     return Column(
@@ -263,11 +282,14 @@ class _BodyState extends State<_Body> {
             Tab(text: 'Connection'),
             Tab(text: 'Local DB'),
             Tab(text: 'Shapes'),
+            Tab(text: 'Inspect Tables'),
+            Tab(text: 'Shell'),
           ],
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
             child: TabBarView(
               // controller: _tabController,
               children: [
@@ -280,6 +302,8 @@ class _BodyState extends State<_Body> {
                   }),
                 ),
                 ShapesTab(props: tabProps),
+                InspectTablesTab(props: tabProps),
+                ShellTab(props: tabProps),
               ],
             ),
           ),

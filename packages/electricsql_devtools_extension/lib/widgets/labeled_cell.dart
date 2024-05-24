@@ -19,6 +19,7 @@ class LabeledTextCell extends StatelessWidget {
           messenger.showSnackBar(
             const SnackBar(
               content: Text('Copied to clipboard!'),
+              duration: Duration(milliseconds: 500),
             ),
           );
         },

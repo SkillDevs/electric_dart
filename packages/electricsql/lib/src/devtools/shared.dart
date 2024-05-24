@@ -3,6 +3,11 @@ import 'package:electricsql/src/client/model/shapes.dart';
 
 typedef UnsubscribeFunction = void Function();
 
+enum SqlDialect {
+  sqlite,
+  postgres,
+}
+
 class DebugShape {
   final String key;
   final Shape shape;
@@ -87,6 +92,34 @@ class DbTableInfo {
           (x) => TableColumn.fromMap(x as Map<String, dynamic>),
         ),
       ),
+    );
+  }
+}
+
+class RemoteQueryRes {
+  final List<Map<String, Object?>> rows;
+  final String? error;
+
+  RemoteQueryRes({
+    required this.rows,
+    required this.error,
+  });
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'rows': rows,
+      'error': error,
+    };
+  }
+
+  factory RemoteQueryRes.fromMap(Map<String, dynamic> map) {
+    return RemoteQueryRes(
+      rows: List<Map<String, Object?>>.from(
+        (map['rows'] as List<dynamic>).map<Map<String, Object?>>(
+          (x) => Map<String, Object?>.from(x as Map),
+        ),
+      ),
+      error: map['error'] as String?,
     );
   }
 }

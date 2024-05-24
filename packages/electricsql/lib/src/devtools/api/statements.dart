@@ -3,11 +3,6 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/devtools/shared.dart';
 import 'package:electricsql/util.dart';
 
-enum SqlDialect {
-  sqlite,
-  postgres,
-}
-
 const kSqliteGetTables = '''
 SELECT name, sql FROM sqlite_master
 WHERE type='table'

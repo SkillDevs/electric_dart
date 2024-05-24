@@ -3,18 +3,31 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:math';
 
+import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/model/index.dart';
 import 'package:electricsql/src/devtools/api/toolbar.dart';
 import 'package:electricsql/src/devtools/devtools.dart';
 import 'package:electricsql/src/devtools/platform/platform.dart';
 import 'package:electricsql/src/devtools/shared.dart';
-import 'package:electricsql/src/satellite/registry.dart';
 import 'package:electricsql/util.dart';
 import 'package:meta/meta.dart';
 
 class ElectricDevtoolsBinding {
   static final Map<String, BaseElectricClient> _clients = {};
   static final Map<String, Future<void> Function()> _dbResetCallbacks = {};
+  static Registry? _customRegistry;
+
+  /// The Electric Satellite registry used in the Electric Devtools.
+  static Registry get registry => _customRegistry ?? globalRegistry;
+
+  /// Set a custom Electric Satellite registry to use in the Electric Devtools.
+  /// This would need to be called before electrifiying your database.
+  static void setCustomRegistry(Registry registry) {
+    if (_customRegistry != null) {
+      throw StateError('Electric Registry already set. Can only be set once.');
+    }
+    _customRegistry = registry;
+  }
 
   /// Let the Electric Devtools know how to reset the database.
   /// Usually this would be a `db.close()` followed by a delete of the local database file.
@@ -50,11 +63,10 @@ class ElectricDevtoolsBinding {
 
 /// A service extension to interact with Electric
 class ElectricServiceExtension {
-  // TODO(dart): Configure the registry to use
-  late final api = Toolbar(globalRegistry);
+  late final api = Toolbar(ElectricDevtoolsBinding.registry);
 
   // Random initial subscription id, so that it doesn't collide when restarting the app
-  int _subscriptionId = Random().nextInt(100000);
+  int _subscriptionId = Random().nextInt(99999999);
   final Map<int, void Function()> _activeSubscriptions = {};
 
   Future<Object?> _handle(Map<String, String> parameters) async {
@@ -130,6 +142,34 @@ class ElectricServiceExtension {
           ),
         );
       case 'unsubscribeFromSatelliteShapeSubscriptions':
+        _unsubscribe(parameters);
+        return null;
+      case 'getDbDialect':
+        final dialect = await api.getDbDialect(parameters['db']!);
+        return dialect.index;
+
+      case 'queryDb':
+        final query = parameters['query']!;
+        final args = json.decode(parameters['args']!) as List<Object?>;
+        final result = await api.queryDb(parameters['db']!, query, args);
+        return result.toMap();
+
+      case 'subscribeToDbTable':
+        return _createSubscription(
+          (subId) => api.subscribeToDbTable(
+            parameters['db']!,
+            parameters['table']!,
+            () {
+              postEvent(
+                'db-table-data-changed',
+                {
+                  'subscription': subId,
+                },
+              );
+            },
+          ),
+        );
+      case 'unsubscribeFromDbTable':
         _unsubscribe(parameters);
         return null;
     }
