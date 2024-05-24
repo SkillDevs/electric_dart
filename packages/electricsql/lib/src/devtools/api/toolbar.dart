@@ -122,7 +122,22 @@ class Toolbar implements ToolbarInterface {
     try {
       final rows = await sat.adapter.query(Statement(sql, args));
 
-      return RemoteQueryRes(rows: rows, error: null);
+      final encodableRows = rows.map((row) {
+        return row.map((key, value) {
+          if (value == null ||
+              value is num ||
+              value is bool ||
+              value is String) {
+            return MapEntry(key, value);
+          } else if (value is DateTime) {
+            return MapEntry(key, value.toIso8601String());
+          } else {
+            return MapEntry(key, value.toString());
+          }
+        });
+      }).toList();
+
+      return RemoteQueryRes(rows: encodableRows, error: null);
     } catch (e) {
       return RemoteQueryRes(rows: [], error: e.toString());
     }

@@ -267,13 +267,19 @@ Future<Object?> electricSQLRequest(
   String method, {
   Map<String, String> payload = const {},
 }) async {
-  final response = await serviceManager.callServiceExtensionOnMainIsolate(
-    'ext.electricsql.tools',
-    args: {
-      'action': method,
-      ...payload,
-    },
-  );
+  try {
+    final response = await serviceManager.callServiceExtensionOnMainIsolate(
+      'ext.electricsql.tools',
+      args: {
+        'action': method,
+        ...payload,
+      },
+    );
 
-  return response.json!['r'];
+    return response.json!['r'];
+  } catch (e) {
+    // ignore: avoid_print
+    print(e);
+    rethrow;
+  }
 }
