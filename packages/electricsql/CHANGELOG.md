@@ -1,3 +1,8 @@
+## Next
+
+* The DevTools now supports inspecting the database tables and running arbitrary queries.
+
+
 ## 0.7.1
 
 * A DevTools extension for Electric is now included to check the status of the Electric service, inspect the electrified tables and check the status of the shape subscriptions.
