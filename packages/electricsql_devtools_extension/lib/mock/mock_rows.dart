@@ -12,6 +12,16 @@ List<Map<String, Object?>> debugGetSampleRows() {
       'nullable': _nullOrVal(_random.nextInt(100)),
       'bool': _random.nextBool(),
       'mixed': _random.nextDouble() < 0.5 ? _random.nextInt(100) : genUUID(),
+      'bytes': List.generate(100, (i) => _random.nextInt(256)),
+      'json': List.generate(
+        5,
+        (i) => {
+          'a': _random.nextInt(100),
+          'b': _random.nextDouble(),
+          'c': _random.nextBool(),
+          'd': genUUID(),
+        },
+      ),
     };
   }
 
