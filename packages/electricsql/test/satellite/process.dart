@@ -2421,7 +2421,7 @@ void processTests({
 
   test('connection cancelled on disconnect', () async {
     // such that satellite can't connect to Electric and will keep retrying
-    client.shutdown();
+    await client.shutdown();
     final conn = await startSatellite(satellite, authConfig, token);
 
     // We expect the connection to be cancelled
