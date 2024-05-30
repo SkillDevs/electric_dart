@@ -9,6 +9,8 @@ typedef Events = Map<String, Handler<dynamic>>;
 
 typedef EmittedEvent<Arg> = ({String event, Arg arg});
 
+typedef ErrorAndStackTrace = ({Object error, StackTrace st});
+
 /// Implementation of a typed async event emitter.
 /// This event emitter maintains a queue of events,
 /// the events are processed in order and the next is not started
@@ -24,7 +26,7 @@ class AsyncEventEmitter {
   final List<EmittedEvent<dynamic>> _eventQueue = [];
 
   // indicates whether the event queue is currently being processed
-  bool _processing = false;
+  Future<List<ErrorAndStackTrace?>>? _processing;
 
   List<Handler<dynamic>> _getListeners(String event) {
     return _listeners[event] ?? [];
@@ -116,8 +118,6 @@ class AsyncEventEmitter {
   /// If the event emitter does not have at least one listener registered for the 'error' event,
   /// and an 'error' event is emitted, the error is thrown.
   void _processQueue() {
-    _processing = true;
-
     final emittedEvent = _eventQueue.isEmpty ? null : _eventQueue.removeAt(0);
     if (emittedEvent != null) {
       // We call all listeners and process the next event when all listeners finished.
@@ -130,27 +130,41 @@ class AsyncEventEmitter {
       final listeners = _getListeners(event);
 
       if (event == 'error' && listeners.isEmpty) {
-        _processing = false;
+        _processing = null;
         throw arg as Object;
       }
 
       // deep copy because once listeners mutate the `this.listeners` array as they remove themselves
       // which breaks the `map` which iterates over that same array while the contents may shift
       final ls = [...listeners];
-      final listenerProms = ls.map((listener) async {
+      final listenerProms =
+          ls.map<Future<ErrorAndStackTrace?>>((listener) async {
         try {
           await listener(arg);
-        } catch (_) {
-          // ignore errors to mimick Promise.allSettled
+          return null;
+        } catch (e, st) {
+          return (error: e, st: st);
         }
       });
 
-      Future.wait(listenerProms)
-          // only process the next event when all listeners have finished
-          .whenComplete(() => _processQueue());
+      _processing = Future.wait(listenerProms);
+
+      // only process the next event when all listeners have finished
+      _processing!.then((settledPromises) {
+        _processQueue();
+
+        // re-throw any rejected promises such that the global error
+        // handler can catch them and log them, otherwise they would
+        // be suppressed and bugs may go unnoticed
+        for (final rejectedProm in settledPromises) {
+          if (rejectedProm != null) {
+            Error.throwWithStackTrace(rejectedProm.error, rejectedProm.st);
+          }
+        }
+      });
     } else {
       // signal that the queue is no longer being processed
-      _processing = false;
+      _processing = null;
     }
   }
 
@@ -164,7 +178,7 @@ class AsyncEventEmitter {
   /// @param args The arguments to pass to the listeners.
   void enqueueEmit<Arg>(String event, Arg arg) {
     _eventQueue.add((event: event, arg: arg));
-    if (!_processing) {
+    if (_processing == null) {
       _processQueue();
     }
   }
@@ -223,5 +237,10 @@ class AsyncEventEmitter {
   AsyncEventEmitter setMaxListeners(int maxListeners) {
     _maxListeners = maxListeners;
     return this;
+  }
+
+  /// Wait for event queue to finish processing.
+  Future<void> waitForProcessing() async {
+    await _processing;
   }
 }

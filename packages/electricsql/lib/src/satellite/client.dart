@@ -77,6 +77,8 @@ abstract interface class SafeEventEmitter {
   void removeAllListeners();
 
   int listenerCount(String event);
+
+  Future<void> waitForProcessing();
 }
 
 class SatelliteClient implements Client {
@@ -335,9 +337,10 @@ class SatelliteClient implements Client {
   }
 
   @override
-  void shutdown() {
-    disconnect();
+  Future<void> shutdown() async {
     _emitter.removeAllListeners();
+    await emitter.waitForProcessing();
+    disconnect();
     _isDown = true;
   }
 
@@ -1713,6 +1716,11 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
   @override
   void removeAllListeners() {
     _emitter.removeAllListeners(null);
+  }
+
+  @override
+  Future<void> waitForProcessing() {
+    return _emitter.waitForProcessing();
   }
 
   void Function() _on<T>(

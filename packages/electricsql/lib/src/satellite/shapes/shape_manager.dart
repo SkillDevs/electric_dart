@@ -404,7 +404,6 @@ class ShapeManager {
     if (sub.overshadowsFullKeys.isEmpty) {
       _onShapeSyncStatusUpdated?.call(key, status(key));
       return () {
-        // TODO(dart): Report issue, it can be null in test: a subscription that failed to apply because of FK constraint triggers GC
         _promises[fullKey]!.complete();
         _promises.remove(fullKey);
         return [];

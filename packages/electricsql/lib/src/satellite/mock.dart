@@ -406,7 +406,8 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
   }
 
   @override
-  void shutdown() {
+  Future<void> shutdown() async {
+    await waitForProcessing();
     isDown = true;
   }
 

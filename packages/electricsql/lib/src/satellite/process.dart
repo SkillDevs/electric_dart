@@ -312,7 +312,7 @@ This means there is a notifier subscription leak.`''');
     disconnect(null);
 
     if (shutdown == true) {
-      client.shutdown();
+      await client.shutdown();
     }
   }
 
@@ -398,7 +398,7 @@ This means there is a notifier subscription leak.`''');
     return _unsubscribe(keys: keys);
   }
 
-  // TODO(dart): Is this necessary?
+  /// A way to unsubscribe in multiple ways
   Future<void> _unsubscribe({
     List<String>? keys,
     String? key,
@@ -431,21 +431,24 @@ This means there is a notifier subscription leak.`''');
     final afterApply =
         subscriptionManager.dataDelivered(subsData.subscriptionId);
 
-    await _applySubscriptionData(
+    final applied = await _applySubscriptionData(
       subsData.data,
       subsData.lsn,
       additionalStatements: [],
       subscriptionId: subsData.subscriptionId,
     );
 
-    final toBeUnsubbed = afterApply();
-    if (toBeUnsubbed.isNotEmpty) {
-      await unsubscribeIds(toBeUnsubbed);
+    if (applied) {
+      final toBeUnsubbed = afterApply();
+      if (toBeUnsubbed.isNotEmpty) {
+        await unsubscribeIds(toBeUnsubbed);
+      }
     }
   }
 
   /// Insert incoming subscription data into the database.
-  Future<void> _applySubscriptionData(
+  /// Returns flag indicating whether application was successful or not.
+  Future<bool> _applySubscriptionData(
     List<InitialDataChange> changes,
     LSN lsn, {
     List<Statement> additionalStatements = const [],
@@ -596,6 +599,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
         notificationChanges,
         ChangeOrigin.initial,
       );
+      return true;
     } catch (e, st) {
       unawaited(
         _handleSubscriptionError(
@@ -609,6 +613,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
           ),
         ),
       );
+      return false;
     }
   }
 

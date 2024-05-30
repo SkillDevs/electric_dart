@@ -2396,7 +2396,7 @@ void processTests({
   });
 
   test('connection backoff success', () async {
-    client.shutdown();
+    await client.shutdown();
 
     int numExpects = 0;
 

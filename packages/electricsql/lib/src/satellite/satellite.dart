@@ -59,7 +59,7 @@ abstract class Satellite implements IShapeManager {
 abstract class Client {
   Future<void> connect();
   void disconnect();
-  void shutdown();
+  Future<void> shutdown();
   Future<AuthResponse> authenticate(
     AuthState authState,
   );
