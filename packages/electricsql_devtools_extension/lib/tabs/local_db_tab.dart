@@ -73,32 +73,44 @@ class _LocalDBTabState extends State<LocalDBTab> {
                 widget.props.dbName,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              if (widget.canResetDb) ...[
+              const SizedBox(width: 8),
+              if (widget.canResetDb && _resettingDb)
+                const SizedBox.square(
+                  dimension: 15,
+                  child: CircularProgressIndicator(),
+                )
+              else
+                Tooltip(
+                  message: 'Deletes the local db and restarts the app',
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: const Color(0xfff1a161),
+                      backgroundColor: const Color(0xff362517),
+                    ),
+                    onPressed: !widget.canResetDb
+                        ? null
+                        : () async {
+                            setState(() => _resettingDb = true);
+                            await kRemoteToolbar.resetDb(widget.props.dbName);
+                            if (!mounted) return;
+                            widget.onDbReset();
+                          },
+                    child: const Text('RESET'),
+                  ),
+                ),
+              // Explain why the reset button is disabled
+              if (!widget.canResetDb) ...[
                 const SizedBox(width: 8),
-                if (_resettingDb)
-                  const SizedBox.square(
-                    dimension: 15,
-                    child: CircularProgressIndicator(),
-                  )
-                else
-                  Tooltip(
-                    message: 'Deletes the local db and restarts the app',
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        foregroundColor: const Color(0xfff1a161),
-                        backgroundColor: const Color(0xff362517),
-                      ),
-                      child: const Text('RESET'),
-                      onPressed: () async {
-                        setState(() => _resettingDb = true);
-                        await kRemoteToolbar.resetDb(widget.props.dbName);
-                        if (!mounted) return;
-                        widget.onDbReset();
-                        // widget.props.api.resetDb(dbName);
-                      },
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: SelectableText(
+                      "To support the 'reset' option you need to use the 'ElectricDevtoolsBinding.registerDbResetCallback' function in your app",
+                      style: Theme.of(context).textTheme.labelMedium,
                     ),
                   ),
+                ),
               ],
             ],
           ),
