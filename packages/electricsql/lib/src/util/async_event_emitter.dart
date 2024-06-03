@@ -9,8 +9,6 @@ typedef Events = Map<String, Handler<dynamic>>;
 
 typedef EmittedEvent<Arg> = ({String event, Arg arg});
 
-typedef ErrorAndStackTrace = ({Object error, StackTrace st});
-
 /// Implementation of a typed async event emitter.
 /// This event emitter maintains a queue of events,
 /// the events are processed in order and the next is not started
@@ -26,7 +24,7 @@ class AsyncEventEmitter {
   final List<EmittedEvent<dynamic>> _eventQueue = [];
 
   // indicates whether the event queue is currently being processed
-  Future<List<ErrorAndStackTrace?>>? _processing;
+  Future<List<void>>? _processing;
 
   List<Handler<dynamic>> _getListeners(String event) {
     return _listeners[event] ?? [];
@@ -137,31 +135,26 @@ class AsyncEventEmitter {
       // deep copy because once listeners mutate the `this.listeners` array as they remove themselves
       // which breaks the `map` which iterates over that same array while the contents may shift
       final ls = [...listeners];
-      final listenerProms =
-          ls.map<Future<ErrorAndStackTrace?>>((listener) async {
+      final listenerProms = ls.map<Future<void>>((listener) async {
         try {
           await listener(arg);
-          return null;
-        } catch (e, st) {
-          return (error: e, st: st);
+        } catch (err) {
+          final e = err;
+          // rethrow any errors from listeners to be caught by the global
+          // error handler in the next tick to allow for the queue to be
+          // processed without suppressing errors
+          unawaited(
+            Future.microtask(() {
+              throw e;
+            }),
+          );
         }
       });
 
       _processing = Future.wait(listenerProms);
 
       // only process the next event when all listeners have finished
-      _processing!.then((settledPromises) {
-        _processQueue();
-
-        // re-throw any rejected promises such that the global error
-        // handler can catch them and log them, otherwise they would
-        // be suppressed and bugs may go unnoticed
-        for (final rejectedProm in settledPromises) {
-          if (rejectedProm != null) {
-            Error.throwWithStackTrace(rejectedProm.error, rejectedProm.st);
-          }
-        }
-      });
+      _processing!.then((_) => _processQueue());
     } else {
       // signal that the queue is no longer being processed
       _processing = null;

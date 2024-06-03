@@ -443,6 +443,8 @@ typedef EmitterTransactionCallback = EventCallbackCall<TransactionEvent>;
 typedef EmitterAdditionalDataCallback = EventCallbackCall<AdditionalDataEvent>;
 typedef EmitterGoneBatchCallback = EventCallbackCall<GoneBatchEvent>;
 
+typedef ErrorAndStackTrace = ({Object error, StackTrace st});
+
 // class Relation {
 //   final int id;
 //   final String schema;
