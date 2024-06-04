@@ -1,4 +1,5 @@
 import 'package:electricsql_cli/src/config_options.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:test/test.dart';
 
 const expectedEnvVars = <String>[
@@ -33,9 +34,16 @@ const expectedEnvVars = <String>[
   'POSTGRESQL_IMAGE',
   'ELECTRIC_IMAGE',
   'CONTAINER_NAME',
+  'ELECTRIC_FEATURES',
 ];
 
 void main() {
+  kDebugMockParsedPubspecLockInfo = ParsedPubspecLockInfo(
+    electricLibVersion: 'unknown',
+    electricCliVersion: 'unknown',
+    electricIsGitDependency: false,
+  );
+
   test('assert that all expected env vars are options for CLI', () {
     for (final varName in expectedEnvVars) {
       expect(
@@ -99,6 +107,79 @@ void main() {
         'proxy': 'postgres://db_user:db_password@db_host:123/proxy_db_name',
       }),
       'db_name',
+    );
+
+    // ignores query parameters in the URL
+    expect(
+      configOptions['DATABASE_NAME']!.inferVal!({
+        'databaseUrl':
+            'postgres://db_user:db_password@db_host:123/db_name?sslmode=disable',
+      }),
+      'db_name',
+    );
+
+    expect(
+      configOptions['DATABASE_NAME']!.inferVal!({
+        'proxy':
+            'postgres://db_user:db_password@db_host:123/db_name?sslmode=require',
+      }),
+      'db_name',
+    );
+
+    // correctly decodes encoded characters
+    expect(
+      configOptions['DATABASE_NAME']!.inferVal!({
+        'databaseUrl':
+            'postgres://db_user:db_password@db_host:123/odd%3Adb%2Fname',
+      }),
+      'odd:db/name',
+    );
+
+    expect(
+      configOptions['DATABASE_NAME']!.inferVal!({
+        'proxy': 'postgres://db_user:db_password@db_host:123/odd%3Adb%2Fname',
+      }),
+      'odd:db/name',
+    );
+  });
+
+  test('assert DATABASE_URL may contain percent-encoded characters', () {
+    const dbUrl =
+        'postgresql://test%2Bemail%40example.com:12%2B34@example.%63om/odd%3Adb%2Fname';
+
+    expect(
+      configOptions['DATABASE_HOST']!.inferVal!({'databaseUrl': dbUrl}),
+      'example.com',
+    );
+    expect(
+      configOptions['DATABASE_USER']!.inferVal!({'databaseUrl': dbUrl}),
+      'test+email@example.com',
+    );
+    expect(
+      configOptions['DATABASE_PASSWORD']!.inferVal!({'databaseUrl': dbUrl}),
+      '12+34',
+    );
+  });
+
+  test(
+      'assert DATABASE_PORT is inferred to the default value when not present in the URL',
+      () {
+    const dbUrl = 'postgresql://user:@example.com/db';
+
+    expect(
+      configOptions['DATABASE_PORT']!.inferVal!({'databaseUrl': dbUrl}),
+      5432,
+    );
+    expect(configOptions['DATABASE_PORT']!.inferVal!({'proxy': dbUrl}), 5432);
+  });
+
+  test(
+      'assert PG_PROXY_PORT is inferred to the default value when not present in the URL',
+      () {
+    const proxyUrl = 'postgresql://user:@example.com/db';
+    expect(
+      configOptions['PG_PROXY_PORT']!.inferVal!({'proxy': proxyUrl}),
+      '65432',
     );
   });
 }

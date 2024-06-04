@@ -1457,10 +1457,10 @@ SatOpRow serializeRow(
   final recordValues = relation.columns.fold<List<List<int>>>(
     [],
     (List<List<int>> acc, RelationColumn c) {
-      final Object? value = rec[c.name];
-      if (value != null) {
+      final Object? columnValue = rec[c.name];
+      if (columnValue != null) {
         final pgColumnType = _getColumnType(dbDescription, relation.table, c);
-        acc.add(serializeColumnData(value, pgColumnType, encoder));
+        acc.add(serializeColumnData(columnValue, pgColumnType, encoder));
       } else {
         acc.add(serializeNullData());
         setMaskBit(recordNullBitMask, recordNumColumn);

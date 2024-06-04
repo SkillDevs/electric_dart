@@ -1,9 +1,7 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql_cli/src/config.dart';
-import 'package:electricsql_cli/src/util.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:path/path.dart';
-
-const minorVersion = kElectricProtocolVersion;
 
 final configOptions = <String, ConfigOption<Object>>{
   // *** Client options ***
@@ -108,7 +106,11 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'DATABASE_PORT': ConfigOption<int>(
     doc: 'Port number of the database server.',
-    inferVal: (options) => inferDbUrlPart('port'),
+    inferVal: (options) => inferDbUrlPart(
+      'port',
+      options: options,
+      defaultValue: 5432,
+    ),
     defaultValue: 5432,
     groups: ['database'],
   ),
@@ -202,7 +204,8 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'PG_PROXY_PORT': ConfigOption<String>(
     inferVal: (options) {
-      final inferred = inferProxyUrlPart<int>('port', options: options);
+      final inferred =
+          inferProxyUrlPart<int>('port', options: options, defaultValue: 65432);
       // ignore: prefer_null_aware_operators
       return inferred == null ? null : inferred.toString();
     },
@@ -272,7 +275,7 @@ final configOptions = <String, ConfigOption<Object>>{
   ),
   'ELECTRIC_IMAGE': ConfigOption<String>(
     defaultValue:
-        'electricsql/electric:$minorVersion', // Latest minor version of the electric service
+        'electricsql/electric:${kElectricIsGitDependency ? 'canary' : kElectricProtocolVersion}',
     valueTypeName: 'image',
     doc: 'The Docker image to use for Electric.',
     groups: ['electric'],
@@ -281,6 +284,12 @@ final configOptions = <String, ConfigOption<Object>>{
     valueTypeName: 'name',
     defaultValueFun: (_) => getAppName() ?? 'electric',
     doc: 'The name to use for the Docker container.',
+    groups: ['electric'],
+  ),
+  'ELECTRIC_FEATURES': ConfigOption<String>(
+    valueTypeName: 'features',
+    defaultValue: '',
+    doc: 'Flags to enable experimental features',
     groups: ['electric'],
   ),
 };

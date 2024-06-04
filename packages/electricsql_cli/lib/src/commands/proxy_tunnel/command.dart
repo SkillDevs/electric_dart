@@ -4,9 +4,8 @@ import 'dart:io';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/config.dart';
-import 'package:electricsql_cli/src/exit_signals.dart';
 import 'package:electricsql_cli/src/logger.dart';
-import 'package:electricsql_cli/src/util.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:web_socket_channel/io.dart';
 
 const String defaultElectricServiceWSUrl = 'ws://localhost:5133';

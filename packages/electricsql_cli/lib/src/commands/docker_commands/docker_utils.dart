@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:electricsql_cli/src/assets.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/precheck.dart';
-import 'package:electricsql_cli/src/util.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:path/path.dart' as path;
 
 Future<Process> dockerCompose(

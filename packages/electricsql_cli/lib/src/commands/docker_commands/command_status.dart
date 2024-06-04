@@ -4,7 +4,7 @@ import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/docker_utils.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/logger.dart';
-import 'package:electricsql_cli/src/util.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 
 class DockerStatusCommand extends Command<int> {
   DockerStatusCommand({

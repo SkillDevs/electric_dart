@@ -1,7 +1,7 @@
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/config_options.dart';
 import 'package:electricsql_cli/src/env.dart';
-import 'package:electricsql_cli/src/util.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:recase/recase.dart';
 
 typedef ConfigMap = Map<String, Object?>;

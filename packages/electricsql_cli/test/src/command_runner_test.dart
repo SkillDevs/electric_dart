@@ -1,6 +1,5 @@
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/command_runner.dart';
-import 'package:electricsql_cli/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -55,14 +54,6 @@ void main() {
       expect(result, equals(ExitCode.usage.code));
       verify(() => logger.err(exception.message)).called(1);
       verify(() => logger.info('exception usage')).called(1);
-    });
-
-    group('--version', () {
-      test('outputs current version', () async {
-        final result = await commandRunner.run(['--version']);
-        expect(result, equals(ExitCode.success.code));
-        verify(() => logger.info(packageVersion)).called(1);
-      });
     });
 
     group('--verbose', () {

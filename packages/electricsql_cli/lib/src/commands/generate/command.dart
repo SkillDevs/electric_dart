@@ -15,9 +15,8 @@ import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
 import 'package:electricsql_cli/src/commands/generate/prisma.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/env.dart';
-import 'package:electricsql_cli/src/get_port.dart';
 import 'package:electricsql_cli/src/logger.dart';
-import 'package:electricsql_cli/src/util.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
@@ -187,8 +186,7 @@ Future<String?> _prechecks({
 }
 
 Future<bool> _isDartProject() async {
-  final pubspecFile = File('pubspec.yaml');
-  return pubspecFile.exists();
+  return kAppPubspecFile.exists();
 }
 
 Future<bool> _isElectricServiceReachable(String service) async {

@@ -5,7 +5,7 @@ import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/docker_commands/docker_utils.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/logger.dart';
-import 'package:electricsql_cli/src/util.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 
 class DockerPsqlCommand extends Command<int> {
   DockerPsqlCommand({

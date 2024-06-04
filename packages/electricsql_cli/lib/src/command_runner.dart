@@ -1,9 +1,10 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/commands/commands.dart';
+import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/config_options.dart';
 import 'package:electricsql_cli/src/env.dart';
-import 'package:electricsql_cli/src/util.dart';
-import 'package:electricsql_cli/src/version.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:mason_logger/mason_logger.dart';
 
 const executableName = 'electricsql_cli';
@@ -88,6 +89,10 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
 
   @override
   Future<int?> runCommand(ArgResults topLevelResults) async {
+    final config = getConfig();
+
+    _warnIfRunningCanaryServiceByDefault(config);
+
     // Fast track completion command
     if (topLevelResults.command?.name == 'completion') {
       await super.runCommand(topLevelResults);
@@ -118,12 +123,29 @@ class ElectricCliCommandRunner extends CommandRunner<int> {
     // Run the command or show version
     final int? exitCode;
     if (topLevelResults['version'] == true) {
-      _logger.info(packageVersion);
+      _logger.info('''
+Client: $kElectricLibVersion
+CLI: $kElectricCliVersion
+Service Docker image: ${config.read<String>('ELECTRIC_IMAGE')}''');
       exitCode = ExitCode.success.code;
     } else {
       exitCode = await super.runCommand(topLevelResults);
     }
 
     return exitCode;
+  }
+
+  void _warnIfRunningCanaryServiceByDefault(Config config) {
+    final defaultElectricImage =
+        configOptions['ELECTRIC_IMAGE']!.getDefaultValue({})!() as String;
+    final setElectricImage = config.read<String>('ELECTRIC_IMAGE');
+
+    if (defaultElectricImage == setElectricImage && kElectricIsGitDependency) {
+      // We are using the canary version of electric service because the user used the dart
+      // package as a git dependency.
+      _logger.warn(
+        'Using canary version of the ElectricSQL service because the package electricsql is being used with git dependency.',
+      );
+    }
   }
 }
