@@ -1,7 +1,10 @@
 import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/util/util.dart';
 import 'package:test/test.dart';
 
 void main() {
+  setDebugMockParsedPubspecLockInfo();
+  
   test('getConfigValue can capture `ELECTRIC_` prefixed CLI opitons', () {
     final image =
         getConfigValue<String>('ELECTRIC_IMAGE', {'image': 'electric:test'});

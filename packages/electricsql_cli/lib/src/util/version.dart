@@ -8,6 +8,14 @@ final bool kElectricIsGitDependency =
 
 ParsedPubspecLockInfo? kDebugMockParsedPubspecLockInfo;
 
+void setDebugMockParsedPubspecLockInfo() {
+  kDebugMockParsedPubspecLockInfo = ParsedPubspecLockInfo(
+    electricLibVersion: 'unknown',
+    electricCliVersion: 'unknown',
+    electricIsGitDependency: false,
+  );
+}
+
 final ParsedPubspecLockInfo _kParsedPubspecLockInfo =
     kDebugMockParsedPubspecLockInfo ?? _parsePubspecLockInfo();
 

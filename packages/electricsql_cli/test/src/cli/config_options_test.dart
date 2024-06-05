@@ -38,11 +38,7 @@ const expectedEnvVars = <String>[
 ];
 
 void main() {
-  kDebugMockParsedPubspecLockInfo = ParsedPubspecLockInfo(
-    electricLibVersion: 'unknown',
-    electricCliVersion: 'unknown',
-    electricIsGitDependency: false,
-  );
+  setDebugMockParsedPubspecLockInfo();
 
   test('assert that all expected env vars are options for CLI', () {
     for (final varName in expectedEnvVars) {
