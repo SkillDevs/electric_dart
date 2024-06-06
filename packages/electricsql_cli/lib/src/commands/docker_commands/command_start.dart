@@ -89,13 +89,19 @@ Future<void> runStartCommand({
     ...(withPostgres == true
         ? {
             'COMPOSE_PROFILES': 'with-postgres',
-            'DATABASE_URL':
-                'postgresql://postgres:${env['DATABASE_PASSWORD'] ?? 'pg_password'}@postgres:${env['DATABASE_PORT'] ?? '5432'}/${config.read<String>('DATABASE_NAME')}',
+            'DATABASE_URL': buildDatabaseURL(
+              user: env['DATABASE_USER']!,
+              password: env['DATABASE_PASSWORD']!,
+              host: 'postgres',
+              port: parsePort(env['DATABASE_PORT']!),
+              dbName: env['DATABASE_NAME']!,
+            ),
             'LOGICAL_PUBLISHER_HOST': 'electric',
           }
         : {}),
   };
-  finalLogger.info('Docker compose config: ${prettyMap(dockerConfig)}');
+  finalLogger.info('Docker compose config:');
+  printConfig(finalLogger, Config(dockerConfig));
 
   final proc = await dockerCompose(
     'up',

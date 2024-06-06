@@ -1,6 +1,7 @@
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/config_options.dart';
 import 'package:electricsql_cli/src/env.dart';
+import 'package:electricsql_cli/src/logger.dart';
 import 'package:electricsql_cli/src/util/util.dart';
 import 'package:recase/recase.dart';
 
@@ -15,6 +16,7 @@ class ConfigOption<T extends Object> {
   final T Function(ConfigMap)? defaultValueFun;
   final T? defaultValueStatic;
   final String? constructedDefault;
+  final bool secret;
 
   T Function()? getDefaultValue(ConfigMap options) {
     if (defaultValueFun != null) {
@@ -37,6 +39,7 @@ class ConfigOption<T extends Object> {
     T? defaultValue,
     this.defaultValueFun,
     this.constructedDefault,
+    this.secret = false,
   }) : defaultValueStatic = defaultValue;
 }
 
@@ -204,6 +207,43 @@ void expectValidConfigName<T>(String name) {
   if (config.dartType != T) {
     throw ArgumentError('Invalid config name type: $name is not of type $T');
   }
+}
+
+/// Redacts the given `stringToRedact` from the `config` _in place_,
+/// replacing any mention of the string with `******`.
+void redactConfigValue(Config config, String stringToRedact) {
+  for (final entry in config.entries) {
+    final key = entry.key;
+    final value = entry.value;
+    if (value is String && value.contains(stringToRedact)) {
+      config.map[key] = value.replaceAll(stringToRedact, '******');
+    }
+  }
+}
+
+/// Redacts sensitive information like secrets and passwords from the
+/// config and returns a separate, redacted version.
+///
+/// Redaction is done based on the `secret` property of the
+/// configuration option.
+Config redactConfigSecrets(Config config) {
+  final valuesToRedact = config.map.keys
+      .where((k) => configOptions[k]?.secret == true)
+      .map((k) => config.read<Object?>(k))
+      .whereType<String>();
+  final redactedConfig = Config({...config.map});
+  for (final v in valuesToRedact) {
+    redactConfigValue(redactedConfig, v);
+  }
+  return redactedConfig;
+}
+
+/// Prints the provided `config` taking care to redact any
+/// sensitive values
+void printConfig(Logger logger, Config config) {
+  logger.info(
+    prettyMap(redactConfigSecrets(config).map),
+  );
 }
 
 void addOptionToCommand(Command<dynamic> command, String optionName) {

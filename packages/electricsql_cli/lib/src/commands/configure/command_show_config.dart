@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:args/command_runner.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/logger.dart';
-import 'package:electricsql_cli/src/util/util.dart';
 
 class ShowConfigCommand extends Command<int> {
   ShowConfigCommand({
@@ -31,5 +30,5 @@ class ShowConfigCommand extends Command<int> {
 void showConfig({Logger? logger}) {
   final finalLogger = logger ?? Logger();
   final config = getConfig();
-  finalLogger.info(prettyMap(Map.fromEntries(config.entries)));
+  printConfig(finalLogger, config);
 }
