@@ -1,1 +1,1 @@
-const kElectricProtocolVersion = '0.11';
+const kElectricProtocolVersion = '0.12';
