@@ -9,7 +9,7 @@ environment:
   flutter: ">=3.10.0"
 
 dependencies:
-  electricsql: ^0.7.0
+  electricsql: ^0.8.0
 
   flutter:
     sdk: flutter
