@@ -2,7 +2,7 @@ name: electricsql_flutter
 description: Flutter specific utilities for the electricsql Dart package. Can be
   used as a standalone package instead of electricsql.
 repository: https://github.com/SkillDevs/electric_dart
-version: 0.7.0
+version: 0.8.0
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

@@ -1,3 +1,8 @@
+## 0.8.0
+
+* Code based on official Typescript client [v0.12.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.12.0).
+
+
 ## 0.7.0
 
 * Code based on official Typescript client [v0.11.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.0), [v0.11.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.1), [v0.11.2](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.2) and [v0.11.3](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.11.3).

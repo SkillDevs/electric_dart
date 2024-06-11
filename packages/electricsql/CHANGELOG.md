@@ -1,5 +1,6 @@
-## Next
+## 0.8.0
 
+* Code based on official Typescript client [v0.12.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.12.0).
 * The DevTools now supports inspecting the database tables and running arbitrary queries.
 
 

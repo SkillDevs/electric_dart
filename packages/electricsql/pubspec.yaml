@@ -1,6 +1,6 @@
 name: electricsql
 description: A Dart implementation for ElectricSQL (electric-sql.com) client.
-version: 0.7.1+4
+version: 0.8.0
 repository: https://github.com/SkillDevs/electric_dart
 
 environment:
