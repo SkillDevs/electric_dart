@@ -278,6 +278,7 @@ class _BodyState extends State<_Body> {
       children: <Widget>[
         const TabBar(
           isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
             Tab(text: 'Connection'),
             Tab(text: 'Local DB'),
