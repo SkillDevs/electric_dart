@@ -173,7 +173,7 @@ void main() {
       'foo',
       SyncStatusEstablishing(
         serverId: 'foo',
-        progress: 'receiving_data',
+        progress: SyncEstablishingProgress.receivingData,
       ),
     );
 
@@ -197,7 +197,7 @@ void main() {
       'foo',
       SyncStatusEstablishing(
         serverId: 'foo',
-        progress: 'receiving_data',
+        progress: SyncEstablishingProgress.receivingData,
       ),
     );
 
@@ -208,7 +208,7 @@ void main() {
       'foo',
       SyncStatusEstablishing(
         serverId: 'foo',
-        progress: 'receiving_data',
+        progress: SyncEstablishingProgress.receivingData,
       ),
     );
 

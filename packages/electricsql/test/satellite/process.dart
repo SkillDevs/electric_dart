@@ -2013,7 +2013,7 @@ void processTests({
 
     final state1 = satellite.subscriptionManager.status('testKey')
         as SyncStatusEstablishing;
-    expect(state1.progress, 'receiving_data');
+    expect(state1.progress, SyncEstablishingProgress.receivingData);
 
     satellite.disconnect(null);
 
@@ -2586,7 +2586,10 @@ void processTests({
     expect(firstNotification.key, shapeSubKey);
     final firstNotificationStatus =
         firstNotification.status as SyncStatusEstablishing;
-    expect(firstNotificationStatus.progress, 'receiving_data');
+    expect(
+      firstNotificationStatus.progress,
+      SyncEstablishingProgress.receivingData,
+    );
     final firstServerId = firstNotificationStatus.serverId;
 
     // second one is active
@@ -2608,7 +2611,10 @@ void processTests({
     expect(thirdNotifictiaon.key, shapeSubKey);
     final thirdNotifictiaonStatus =
         thirdNotifictiaon.status as SyncStatusEstablishing;
-    expect(thirdNotifictiaonStatus.progress, 'receiving_data');
+    expect(
+      thirdNotifictiaonStatus.progress,
+      SyncEstablishingProgress.receivingData,
+    );
     expect(thirdNotifictiaonStatus.oldServerId, firstServerId);
     final secondServerId = thirdNotifictiaonStatus.serverId;
 
@@ -2621,7 +2627,10 @@ void processTests({
     expect(fourthNotifictiaon.key, shapeSubKey);
     final fourthNotifictiaonStatus =
         fourthNotifictiaon.status as SyncStatusEstablishing;
-    expect(fourthNotifictiaonStatus.progress, 'removing_data');
+    expect(
+      fourthNotifictiaonStatus.progress,
+      SyncEstablishingProgress.removingData,
+    );
     expect(fourthNotifictiaonStatus.serverId, secondServerId);
 
     // fifth one should eventually get back to active

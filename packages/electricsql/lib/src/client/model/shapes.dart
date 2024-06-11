@@ -11,6 +11,11 @@ enum SyncStatusType {
   establishing,
 }
 
+enum SyncEstablishingProgress {
+  receivingData,
+  removingData,
+}
+
 sealed class SyncStatus with EquatableMixin {
   SyncStatusType get statusType;
 }
@@ -49,7 +54,7 @@ class SyncStatusCancelling extends SyncStatus {
 
 class SyncStatusEstablishing extends SyncStatus {
   final String serverId;
-  final String progress;
+  final SyncEstablishingProgress progress;
   final String? oldServerId;
 
   @override

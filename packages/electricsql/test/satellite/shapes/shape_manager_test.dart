@@ -156,7 +156,7 @@ void main() {
       (
         key: subKey,
         status: SyncStatusEstablishing(
-          progress: 'receiving_data',
+          progress: SyncEstablishingProgress.receivingData,
           serverId: serverId1,
         ),
       ),
@@ -184,7 +184,7 @@ void main() {
       (
         key: subKey,
         status: SyncStatusEstablishing(
-          progress: 'receiving_data',
+          progress: SyncEstablishingProgress.receivingData,
           serverId: serverId2,
           oldServerId: serverId1,
         ),
@@ -203,7 +203,7 @@ void main() {
       (
         key: subKey,
         status: SyncStatusEstablishing(
-          progress: 'removing_data',
+          progress: SyncEstablishingProgress.removingData,
           serverId: serverId2,
         ),
       ),

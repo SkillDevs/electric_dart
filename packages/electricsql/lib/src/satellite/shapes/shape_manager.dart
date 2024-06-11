@@ -206,18 +206,18 @@ class ShapeManager {
 
     if (active != null && requested != null && requested.serverId != null) {
       return SyncStatusEstablishing(
-        progress: 'receiving_data',
+        progress: SyncEstablishingProgress.receivingData,
         serverId: requested.serverId!,
         oldServerId: active.serverId,
       );
     } else if (requested != null && requested.serverId != null) {
       return SyncStatusEstablishing(
-        progress: 'receiving_data',
+        progress: SyncEstablishingProgress.receivingData,
         serverId: requested.serverId!,
       );
     } else if (active != null && active.overshadowsFullKeys.isNotEmpty) {
       return SyncStatusEstablishing(
-        progress: 'removing_data',
+        progress: SyncEstablishingProgress.removingData,
         serverId: active.serverId!,
       );
     } else if (active != null && _incompleteUnsubs.contains(active.serverId)) {
