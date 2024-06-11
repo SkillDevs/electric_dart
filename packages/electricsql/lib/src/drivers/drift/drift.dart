@@ -85,6 +85,7 @@ Dialect driftDialectToElectric(DatabaseConnectionUser db) {
 abstract interface class ElectricClient<DB extends GeneratedDatabase>
     implements BaseElectricClient {
   DB get db;
+  SyncManager get syncManager;
 
   /// Creates a Shape subscription. A shape is a set of related data that's synced
   /// onto the local device.
@@ -122,16 +123,15 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
   void clearTableReplicationTransform<TableDsl extends Table, D>(
     TableInfo<TableDsl, D> table,
   );
-
-  Future<void> syncUnsubscribe(List<String> keys);
-
-  SyncStatus syncStatus(String key);
 }
 
 class DriftElectricClient<DB extends GeneratedDatabase>
     implements ElectricClient<DB> {
   @override
   final DB db;
+
+  @override
+  SyncManager get syncManager => _baseClient.syncManager;
 
   final ElectricClientImpl _baseClient;
 
@@ -346,16 +346,6 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     TableInfo<TableDsl, D> table,
   ) {
     return QualifiedTablename('main', table.actualTableName);
-  }
-
-  @override
-  SyncStatus syncStatus(String key) {
-    return _baseClient.syncStatus(key);
-  }
-
-  @override
-  Future<void> syncUnsubscribe(List<String> keys) {
-    return _baseClient.syncUnsubscribe(keys);
   }
 }
 

@@ -75,3 +75,8 @@ abstract interface class IShapeManager {
   Future<void> unsubscribe(List<String> keys);
   SyncStatus syncStatus(String key);
 }
+
+abstract interface class SyncManager {
+  Future<void> unsubscribe(List<String> keys);
+  SyncStatus syncStatus(String key);
+}

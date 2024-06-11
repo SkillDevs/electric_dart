@@ -30,14 +30,12 @@ abstract interface class BaseElectricClient {
 }
 
 abstract interface class ElectricClientRaw implements BaseElectricClient {
+  SyncManager get syncManager;
+
   Future<ShapeSubscription> sync(SyncInputRaw sync);
 
   @protected
   Future<ShapeSubscription> syncShapeInternal(Shape shape, [String? key]);
-
-  Future<void> syncUnsubscribe(List<String> keys);
-
-  SyncStatus syncStatus(String key);
 }
 
 class ElectricClientImpl extends ElectricNamespace
@@ -53,6 +51,9 @@ class ElectricClientImpl extends ElectricNamespace
 
   @override
   final DBSchema dbDescription;
+
+  @override
+  late final SyncManager syncManager = _SyncManagerImpl(satellite: satellite);
 
   final Dialect dialect;
 
@@ -121,9 +122,15 @@ class ElectricClientImpl extends ElectricNamespace
   Future<ShapeSubscription> syncShapeInternal(Shape shape, [String? key]) {
     return satellite.subscribe([shape], key);
   }
+}
+
+class _SyncManagerImpl implements SyncManager {
+  final Satellite satellite;
+
+  _SyncManagerImpl({required this.satellite});
 
   @override
-  Future<void> syncUnsubscribe(List<String> keys) {
+  Future<void> unsubscribe(List<String> keys) {
     return satellite.unsubscribe(keys);
   }
 
