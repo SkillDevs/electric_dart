@@ -6,6 +6,7 @@ import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/auth/secure.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
@@ -27,6 +28,7 @@ import 'package:electricsql/src/util/exceptions.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:electricsql/src/util/relations.dart';
 import 'package:electricsql/src/util/tablename.dart';
+import 'package:electricsql/src/util/transaction.dart';
 import 'package:electricsql/src/util/types.dart' hide Change;
 import 'package:fixnum/fixnum.dart';
 import 'package:meta/meta.dart';
@@ -83,6 +85,9 @@ class SatelliteProcess implements Satellite {
   final QueryBuilder builder;
 
   final SatelliteOpts opts;
+  late ForeignKeyChecks fkChecks = builder.dialect == Dialect.sqlite
+      ? opts.fkChecks
+      : ForeignKeyChecks.inherit;
 
   @visibleForTesting
   AuthState? authState;
@@ -584,7 +589,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     stmts.addAll(additionalStatements);
 
     try {
-      await adapter.runInTransaction(stmts);
+      await runInTransaction(stmts);
 
       // We're explicitly not specifying rowids in these changes for now,
       // because nobody uses them and we don't have the machinery to to a
@@ -634,6 +639,12 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     }
   }
 
+  /// Runs the provided statements in a transaction and disables FK checks if `this.fkChecks` is set to `disabled`.
+  /// `this.fkChecks` should only be set to true when using SQLite as we already disable FK checks for incoming TXs when using Postgres
+  Future<void> runInTransaction(List<Statement> stmts) {
+    return runStmtsInTransaction(adapter, fkChecks: fkChecks, stmts: stmts);
+  }
+
   Future<void> _resetClientState({
     bool? keepSubscribedShapes,
   }) async {
@@ -652,7 +663,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
   @visibleForTesting
   Future<void> clearTables(List<QualifiedTablename> tables) async {
-    await adapter.runInTransaction([
+    await runInTransaction([
       _setMetaStatement('lsn', null),
       _setMetaStatement('subscriptions', subscriptionManager.serialize()),
       Statement(builder.deferOrDisableFKsForTx),
@@ -1513,9 +1524,10 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
           statements: allStatements,
           version: transaction.migrationVersion!,
         ),
+        fkChecks: fkChecks,
       );
     } else {
-      await adapter.runInTransaction(allStatements);
+      await runInTransaction(allStatements);
     }
 
     _notifyChanges(opLogEntries, ChangeOrigin.remote);
@@ -1601,7 +1613,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       );
     }
 
-    await adapter.runInTransaction([
+    await runInTransaction([
       updateLsnStmt(lsn),
       Statement(builder.deferOrDisableFKsForTx),
       ..._disableTriggers(affectedTables),

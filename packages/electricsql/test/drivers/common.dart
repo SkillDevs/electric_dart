@@ -277,6 +277,30 @@ void runTests(DatabaseAdapter Function() getAdapter) {
       await adapter.runInTransaction([Statement('SELECT 1')]);
     });
   });
+
+  test('grouped queries are isolated from other queries/transactions',
+      () async {
+    final adapter = getAdapter();
+
+    bool query1Finished = false;
+
+    // Make a slow grouped query and check that it is not interleaved with other queries/transactions
+    Future<int> slowQuery(UncoordinatedDatabaseAdapter adapter) async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await adapter.query(Statement('SELECT 1'));
+      query1Finished = true;
+      return 7;
+    }
+
+    final fut1 = adapter.runExclusively(slowQuery);
+    final fut2 = adapter.transaction<int>((_tx, setResult) async {
+      expect(query1Finished, true);
+      setResult(5);
+    });
+
+    final results = await Future.wait<void>([fut1, fut2]);
+    expect(results, [7, 5]);
+  });
 }
 
 Future<void> initDb(DatabaseAdapter adapter) async {

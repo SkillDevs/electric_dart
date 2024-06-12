@@ -1,4 +1,5 @@
 import 'package:electricsql/drivers/drivers.dart';
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/schema.dart';
@@ -6,6 +7,7 @@ import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
 import 'package:electricsql/src/util/tablename.dart';
+import 'package:electricsql/src/util/transaction.dart';
 import 'package:electricsql/src/util/types.dart';
 
 const kSchemaVersionErrorMsg = '''
@@ -140,7 +142,10 @@ abstract class BundleMigratorBase implements Migrator {
   }
 
   @override
-  Future<void> apply(StmtMigration migration) async {
+  Future<void> apply(
+    StmtMigration migration, {
+    ForeignKeyChecks fkChecks = ForeignKeyChecks.inherit,
+  }) async {
     final statements = migration.statements;
     final version = migration.version;
 
@@ -150,15 +155,19 @@ abstract class BundleMigratorBase implements Migrator {
       );
     }
 
-    await adapter.runInTransaction([
-      ...statements,
-      Statement(
-        '''
+    await runStmtsInTransaction(
+      adapter,
+      fkChecks: fkChecks,
+      stmts: [
+        ...statements,
+        Statement(
+          '''
 INSERT INTO $migrationsTable (version, applied_at)
 VALUES (${queryBuilder.makePositionalParam(1)}, ${queryBuilder.makePositionalParam(2)});''',
-        [version, DateTime.now().millisecondsSinceEpoch],
-      ),
-    ]);
+          [version, DateTime.now().millisecondsSinceEpoch],
+        ),
+      ],
+    );
   }
 
   /// Applies the provided migration only if it has not yet been applied.
@@ -166,7 +175,10 @@ VALUES (${queryBuilder.makePositionalParam(1)}, ${queryBuilder.makePositionalPar
   /// Returns A future that resolves to a boolean
   /// that indicates if the migration was applied.
   @override
-  Future<bool> applyIfNotAlready(StmtMigration migration) async {
+  Future<bool> applyIfNotAlready(
+    StmtMigration migration, {
+    ForeignKeyChecks fkChecks = ForeignKeyChecks.inherit,
+  }) async {
     final rows = await adapter.query(
       Statement(
         '''
@@ -181,7 +193,7 @@ WHERE version = ${queryBuilder.makePositionalParam(1)}''',
     if (shouldApply) {
       // This is a new migration because its version number
       // is not in our migrations table.
-      await apply(migration);
+      await apply(migration, fkChecks: fkChecks);
     }
 
     return shouldApply;

@@ -1106,6 +1106,8 @@ void processTests({
 
     await runMigrations();
 
+    // set FK checks to inherit because by default they are disabled
+    satellite.fkChecks = ForeignKeyChecks.inherit;
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await satellite.setMeta('compensations', 0);
     satellite.setAuthState(authState);
@@ -1239,6 +1241,8 @@ void processTests({
     await runMigrations();
 
     if (builder.dialect == Dialect.sqlite) {
+      // set FK checks to inherit because by default they are disabled
+      satellite.fkChecks = ForeignKeyChecks.inherit;
       await adapter.run(Statement('PRAGMA foreign_keys = ON'));
     }
     await satellite.setMeta('compensations', 0);
@@ -1911,6 +1915,12 @@ void processTests({
     }
 
     await runMigrations();
+
+    if (builder.dialect == Dialect.sqlite) {
+      // set FK checks to inherit because by default they are disabled
+      satellite.fkChecks = ForeignKeyChecks.inherit;
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
 
     const tablename = 'child';
 
@@ -2698,6 +2708,14 @@ class SlowDatabaseAdapter extends DatabaseAdapter {
     await Future<void>.delayed(delay);
     return delegate.runInTransaction(statements);
   }
+
+  @override
+  Future<T> runExclusively<T>(
+    Future<T> Function(UncoordinatedDatabaseAdapter) f,
+  ) async {
+    await Future<void>.delayed(delay);
+    return delegate.runExclusively(f);
+  }
 }
 
 typedef _TxFun<T> = Future<T> Function(
@@ -2736,5 +2754,12 @@ class ReplaceTxDatabaseAdapter extends DatabaseAdapter {
   @override
   Future<RunResult> runInTransaction(List<Statement> statements) async {
     return delegate.runInTransaction(statements);
+  }
+
+  @override
+  Future<T> runExclusively<T>(
+    Future<T> Function(UncoordinatedDatabaseAdapter) f,
+  ) {
+    return delegate.runExclusively(f);
   }
 }

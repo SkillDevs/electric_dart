@@ -34,13 +34,25 @@ class ElectricConfig {
   /// Optional backoff options for connecting with Electric
   final ConnectionBackoffOptions? connectionBackoffOptions;
 
+  /// Whether to check foreign keys when applying downstream (i.e. incoming) transactions to the local SQLite database.
+  /// Defaults to `disabled`, meaning that FKs are not checked.
+  /// When using Postgres, this option cannot be changed.
+  final ForeignKeyChecks? foreignKeyChecksDownstream;
+
   ElectricConfig({
     this.auth,
     this.url,
     this.logger,
     this.timeout,
     this.connectionBackoffOptions,
+    this.foreignKeyChecksDownstream,
   });
+}
+
+enum ForeignKeyChecks {
+  enabled,
+  disabled,
+  inherit,
 }
 
 class ElectricConfigWithDialect extends ElectricConfig {
@@ -56,6 +68,7 @@ class ElectricConfigWithDialect extends ElectricConfig {
       logger: config.logger,
       timeout: config.timeout,
       connectionBackoffOptions: config.connectionBackoffOptions,
+      foreignKeyChecksDownstream: config.foreignKeyChecksDownstream,
       dialect: dialect,
     );
   }
@@ -66,6 +79,7 @@ class ElectricConfigWithDialect extends ElectricConfig {
     required super.logger,
     required super.timeout,
     required super.connectionBackoffOptions,
+    required super.foreignKeyChecksDownstream,
     required this.dialect,
   });
 }
@@ -75,12 +89,14 @@ class HydratedConfig {
   final ReplicationConfig replication;
   final ConnectionBackoffOptions connectionBackoffOptions;
   final String namespace;
+  final ForeignKeyChecks fkChecks;
 
   HydratedConfig({
     required this.auth,
     required this.replication,
     required this.connectionBackoffOptions,
     required this.namespace,
+    required this.fkChecks,
   });
 }
 
@@ -110,6 +126,9 @@ HydratedConfig hydrateConfig(ElectricConfigWithDialect config) {
   final dialect = config.dialect ?? Dialect.sqlite;
   final defaultNamespace = dialect == Dialect.postgres ? 'public' : 'main';
 
+  final fkChecks =
+      config.foreignKeyChecksDownstream ?? ForeignKeyChecks.disabled;
+
   final replication = ReplicationConfig(
     host: parsedServiceUrl.hostname,
     port: parsedServiceUrl.port,
@@ -127,6 +146,7 @@ HydratedConfig hydrateConfig(ElectricConfigWithDialect config) {
     //debug: debug,
     connectionBackoffOptions: connectionBackoffOptions,
     namespace: defaultNamespace,
+    fkChecks: fkChecks,
   );
 }
 

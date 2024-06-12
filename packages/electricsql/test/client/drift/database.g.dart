@@ -113,6 +113,13 @@ class TableFromDriftFileData extends DataClass
         id: id ?? this.id,
         timestamp: timestamp ?? this.timestamp,
       );
+  TableFromDriftFileData copyWithCompanion(TableFromDriftFileCompanion data) {
+    return TableFromDriftFileData(
+      id: data.id.present ? data.id.value : this.id,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('TableFromDriftFileData(')
@@ -298,6 +305,13 @@ class Item extends DataClass implements Insertable<Item> {
         value: value ?? this.value,
         nbr: nbr.present ? nbr.value : this.nbr,
       );
+  Item copyWithCompanion(ItemsCompanion data) {
+    return Item(
+      value: data.value.present ? data.value.value : this.value,
+      nbr: data.nbr.present ? data.nbr.value : this.nbr,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('Item(')
@@ -499,6 +513,14 @@ class UserData extends DataClass implements Insertable<UserData> {
         name: name.present ? name.value : this.name,
         meta: meta.present ? meta.value : this.meta,
       );
+  UserData copyWithCompanion(UserCompanion data) {
+    return UserData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      meta: data.meta.present ? data.meta.value : this.meta,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('UserData(')
@@ -764,6 +786,16 @@ class PostData extends DataClass implements Insertable<PostData> {
         nbr: nbr.present ? nbr.value : this.nbr,
         authorId: authorId ?? this.authorId,
       );
+  PostData copyWithCompanion(PostCompanion data) {
+    return PostData(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      contents: data.contents.present ? data.contents.value : this.contents,
+      nbr: data.nbr.present ? data.nbr.value : this.nbr,
+      authorId: data.authorId.present ? data.authorId.value : this.authorId,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('PostData(')
@@ -1059,6 +1091,16 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
         userId: userId ?? this.userId,
         imageId: imageId.present ? imageId.value : this.imageId,
       );
+  ProfileData copyWithCompanion(ProfileCompanion data) {
+    return ProfileData(
+      id: data.id.present ? data.id.value : this.id,
+      bio: data.bio.present ? data.bio.value : this.bio,
+      meta: data.meta.present ? data.meta.value : this.meta,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      imageId: data.imageId.present ? data.imageId.value : this.imageId,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('ProfileData(')
@@ -1284,6 +1326,13 @@ class ProfileImageData extends DataClass
         id: id ?? this.id,
         image: image ?? this.image,
       );
+  ProfileImageData copyWithCompanion(ProfileImageCompanion data) {
+    return ProfileImageData(
+      id: data.id.present ? data.id.value : this.id,
+      image: data.image.present ? data.image.value : this.image,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('ProfileImageData(')
@@ -1827,6 +1876,29 @@ class DataType extends DataClass implements Insertable<DataType> {
         enum$: enum$.present ? enum$.value : this.enum$,
         relatedId: relatedId.present ? relatedId.value : this.relatedId,
       );
+  DataType copyWithCompanion(DataTypesCompanion data) {
+    return DataType(
+      id: data.id.present ? data.id.value : this.id,
+      date: data.date.present ? data.date.value : this.date,
+      time: data.time.present ? data.time.value : this.time,
+      timetz: data.timetz.present ? data.timetz.value : this.timetz,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      timestamptz:
+          data.timestamptz.present ? data.timestamptz.value : this.timestamptz,
+      bool$: data.bool$.present ? data.bool$.value : this.bool$,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      int2: data.int2.present ? data.int2.value : this.int2,
+      int4: data.int4.present ? data.int4.value : this.int4,
+      int8: data.int8.present ? data.int8.value : this.int8,
+      float4: data.float4.present ? data.float4.value : this.float4,
+      float8: data.float8.present ? data.float8.value : this.float8,
+      json: data.json.present ? data.json.value : this.json,
+      bytea: data.bytea.present ? data.bytea.value : this.bytea,
+      enum$: data.enum$.present ? data.enum$.value : this.enum$,
+      relatedId: data.relatedId.present ? data.relatedId.value : this.relatedId,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('DataType(')
@@ -2228,6 +2300,13 @@ class DummyData extends DataClass implements Insertable<DummyData> {
         id: id ?? this.id,
         timestamp: timestamp.present ? timestamp.value : this.timestamp,
       );
+  DummyData copyWithCompanion(DummyCompanion data) {
+    return DummyData(
+      id: data.id.present ? data.id.value : this.id,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('DummyData(')
@@ -2414,6 +2493,14 @@ class ExtraData extends DataClass implements Insertable<ExtraData> {
         id: id ?? this.id,
         int8BigInt: int8BigInt.present ? int8BigInt.value : this.int8BigInt,
       );
+  ExtraData copyWithCompanion(ExtraCompanion data) {
+    return ExtraData(
+      id: data.id.present ? data.id.value : this.id,
+      int8BigInt:
+          data.int8BigInt.present ? data.int8BigInt.value : this.int8BigInt,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('ExtraData(')
@@ -2485,6 +2572,7 @@ class ExtraCompanion extends UpdateCompanion<ExtraData> {
 
 abstract class _$TestsDatabase extends GeneratedDatabase {
   _$TestsDatabase(QueryExecutor e) : super(e);
+  $TestsDatabaseManager get managers => $TestsDatabaseManager(this);
   late final TableFromDriftFile tableFromDriftFile = TableFromDriftFile(this);
   late final $ItemsTable items = $ItemsTable(this);
   late final $UserTable user = $UserTable(this);
@@ -2509,4 +2597,1077 @@ abstract class _$TestsDatabase extends GeneratedDatabase {
         dummy,
         extra
       ];
+}
+
+typedef $TableFromDriftFileCreateCompanionBuilder = TableFromDriftFileCompanion
+    Function({
+  required String id,
+  required DateTime timestamp,
+  Value<int> rowid,
+});
+typedef $TableFromDriftFileUpdateCompanionBuilder = TableFromDriftFileCompanion
+    Function({
+  Value<String> id,
+  Value<DateTime> timestamp,
+  Value<int> rowid,
+});
+
+class $TableFromDriftFileTableManager extends RootTableManager<
+    _$TestsDatabase,
+    TableFromDriftFile,
+    TableFromDriftFileData,
+    $TableFromDriftFileFilterComposer,
+    $TableFromDriftFileOrderingComposer,
+    $TableFromDriftFileCreateCompanionBuilder,
+    $TableFromDriftFileUpdateCompanionBuilder> {
+  $TableFromDriftFileTableManager(_$TestsDatabase db, TableFromDriftFile table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $TableFromDriftFileFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $TableFromDriftFileOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<DateTime> timestamp = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TableFromDriftFileCompanion(
+            id: id,
+            timestamp: timestamp,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required DateTime timestamp,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TableFromDriftFileCompanion.insert(
+            id: id,
+            timestamp: timestamp,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $TableFromDriftFileFilterComposer
+    extends FilterComposer<_$TestsDatabase, TableFromDriftFile> {
+  $TableFromDriftFileFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get timestamp => $state.composableBuilder(
+      column: $state.table.timestamp,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $TableFromDriftFileOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, TableFromDriftFile> {
+  $TableFromDriftFileOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get timestamp => $state.composableBuilder(
+      column: $state.table.timestamp,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$ItemsTableCreateCompanionBuilder = ItemsCompanion Function({
+  required String value,
+  Value<int?> nbr,
+  Value<int> rowid,
+});
+typedef $$ItemsTableUpdateCompanionBuilder = ItemsCompanion Function({
+  Value<String> value,
+  Value<int?> nbr,
+  Value<int> rowid,
+});
+
+class $$ItemsTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $ItemsTable,
+    Item,
+    $$ItemsTableFilterComposer,
+    $$ItemsTableOrderingComposer,
+    $$ItemsTableCreateCompanionBuilder,
+    $$ItemsTableUpdateCompanionBuilder> {
+  $$ItemsTableTableManager(_$TestsDatabase db, $ItemsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ItemsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ItemsTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<String> value = const Value.absent(),
+            Value<int?> nbr = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ItemsCompanion(
+            value: value,
+            nbr: nbr,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String value,
+            Value<int?> nbr = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ItemsCompanion.insert(
+            value: value,
+            nbr: nbr,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$ItemsTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $ItemsTable> {
+  $$ItemsTableFilterComposer(super.$state);
+  ColumnFilters<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get nbr => $state.composableBuilder(
+      column: $state.table.nbr,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ItemsTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $ItemsTable> {
+  $$ItemsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get nbr => $state.composableBuilder(
+      column: $state.table.nbr,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$UserTableCreateCompanionBuilder = UserCompanion Function({
+  required int id,
+  Value<String?> name,
+  Value<String?> meta,
+  Value<int> rowid,
+});
+typedef $$UserTableUpdateCompanionBuilder = UserCompanion Function({
+  Value<int> id,
+  Value<String?> name,
+  Value<String?> meta,
+  Value<int> rowid,
+});
+
+class $$UserTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $UserTable,
+    UserData,
+    $$UserTableFilterComposer,
+    $$UserTableOrderingComposer,
+    $$UserTableCreateCompanionBuilder,
+    $$UserTableUpdateCompanionBuilder> {
+  $$UserTableTableManager(_$TestsDatabase db, $UserTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$UserTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$UserTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String?> name = const Value.absent(),
+            Value<String?> meta = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              UserCompanion(
+            id: id,
+            name: name,
+            meta: meta,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int id,
+            Value<String?> name = const Value.absent(),
+            Value<String?> meta = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              UserCompanion.insert(
+            id: id,
+            name: name,
+            meta: meta,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$UserTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $UserTable> {
+  $$UserTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get name => $state.composableBuilder(
+      column: $state.table.name,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get meta => $state.composableBuilder(
+      column: $state.table.meta,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$UserTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $UserTable> {
+  $$UserTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get name => $state.composableBuilder(
+      column: $state.table.name,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get meta => $state.composableBuilder(
+      column: $state.table.meta,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$PostTableCreateCompanionBuilder = PostCompanion Function({
+  required int id,
+  required String title,
+  required String contents,
+  Value<int?> nbr,
+  required int authorId,
+  Value<int> rowid,
+});
+typedef $$PostTableUpdateCompanionBuilder = PostCompanion Function({
+  Value<int> id,
+  Value<String> title,
+  Value<String> contents,
+  Value<int?> nbr,
+  Value<int> authorId,
+  Value<int> rowid,
+});
+
+class $$PostTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $PostTable,
+    PostData,
+    $$PostTableFilterComposer,
+    $$PostTableOrderingComposer,
+    $$PostTableCreateCompanionBuilder,
+    $$PostTableUpdateCompanionBuilder> {
+  $$PostTableTableManager(_$TestsDatabase db, $PostTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$PostTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$PostTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> contents = const Value.absent(),
+            Value<int?> nbr = const Value.absent(),
+            Value<int> authorId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PostCompanion(
+            id: id,
+            title: title,
+            contents: contents,
+            nbr: nbr,
+            authorId: authorId,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int id,
+            required String title,
+            required String contents,
+            Value<int?> nbr = const Value.absent(),
+            required int authorId,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PostCompanion.insert(
+            id: id,
+            title: title,
+            contents: contents,
+            nbr: nbr,
+            authorId: authorId,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$PostTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $PostTable> {
+  $$PostTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get title => $state.composableBuilder(
+      column: $state.table.title,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get contents => $state.composableBuilder(
+      column: $state.table.contents,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get nbr => $state.composableBuilder(
+      column: $state.table.nbr,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get authorId => $state.composableBuilder(
+      column: $state.table.authorId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$PostTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $PostTable> {
+  $$PostTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get title => $state.composableBuilder(
+      column: $state.table.title,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get contents => $state.composableBuilder(
+      column: $state.table.contents,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get nbr => $state.composableBuilder(
+      column: $state.table.nbr,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get authorId => $state.composableBuilder(
+      column: $state.table.authorId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$ProfileTableCreateCompanionBuilder = ProfileCompanion Function({
+  required int id,
+  required String bio,
+  Value<Object?> meta,
+  required int userId,
+  Value<String?> imageId,
+  Value<int> rowid,
+});
+typedef $$ProfileTableUpdateCompanionBuilder = ProfileCompanion Function({
+  Value<int> id,
+  Value<String> bio,
+  Value<Object?> meta,
+  Value<int> userId,
+  Value<String?> imageId,
+  Value<int> rowid,
+});
+
+class $$ProfileTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $ProfileTable,
+    ProfileData,
+    $$ProfileTableFilterComposer,
+    $$ProfileTableOrderingComposer,
+    $$ProfileTableCreateCompanionBuilder,
+    $$ProfileTableUpdateCompanionBuilder> {
+  $$ProfileTableTableManager(_$TestsDatabase db, $ProfileTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ProfileTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ProfileTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> bio = const Value.absent(),
+            Value<Object?> meta = const Value.absent(),
+            Value<int> userId = const Value.absent(),
+            Value<String?> imageId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ProfileCompanion(
+            id: id,
+            bio: bio,
+            meta: meta,
+            userId: userId,
+            imageId: imageId,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int id,
+            required String bio,
+            Value<Object?> meta = const Value.absent(),
+            required int userId,
+            Value<String?> imageId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ProfileCompanion.insert(
+            id: id,
+            bio: bio,
+            meta: meta,
+            userId: userId,
+            imageId: imageId,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$ProfileTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $ProfileTable> {
+  $$ProfileTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get bio => $state.composableBuilder(
+      column: $state.table.bio,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Object> get meta => $state.composableBuilder(
+      column: $state.table.meta,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get userId => $state.composableBuilder(
+      column: $state.table.userId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get imageId => $state.composableBuilder(
+      column: $state.table.imageId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ProfileTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $ProfileTable> {
+  $$ProfileTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get bio => $state.composableBuilder(
+      column: $state.table.bio,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Object> get meta => $state.composableBuilder(
+      column: $state.table.meta,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get userId => $state.composableBuilder(
+      column: $state.table.userId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get imageId => $state.composableBuilder(
+      column: $state.table.imageId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$ProfileImageTableCreateCompanionBuilder = ProfileImageCompanion
+    Function({
+  required String id,
+  required Uint8List image,
+  Value<int> rowid,
+});
+typedef $$ProfileImageTableUpdateCompanionBuilder = ProfileImageCompanion
+    Function({
+  Value<String> id,
+  Value<Uint8List> image,
+  Value<int> rowid,
+});
+
+class $$ProfileImageTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $ProfileImageTable,
+    ProfileImageData,
+    $$ProfileImageTableFilterComposer,
+    $$ProfileImageTableOrderingComposer,
+    $$ProfileImageTableCreateCompanionBuilder,
+    $$ProfileImageTableUpdateCompanionBuilder> {
+  $$ProfileImageTableTableManager(_$TestsDatabase db, $ProfileImageTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ProfileImageTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ProfileImageTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<Uint8List> image = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ProfileImageCompanion(
+            id: id,
+            image: image,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required Uint8List image,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ProfileImageCompanion.insert(
+            id: id,
+            image: image,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$ProfileImageTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $ProfileImageTable> {
+  $$ProfileImageTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get image => $state.composableBuilder(
+      column: $state.table.image,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ProfileImageTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $ProfileImageTable> {
+  $$ProfileImageTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get image => $state.composableBuilder(
+      column: $state.table.image,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$DataTypesTableCreateCompanionBuilder = DataTypesCompanion Function({
+  required int id,
+  Value<DateTime?> date,
+  Value<DateTime?> time,
+  Value<DateTime?> timetz,
+  Value<DateTime?> timestamp,
+  Value<DateTime?> timestamptz,
+  Value<bool?> bool$,
+  Value<String?> uuid,
+  Value<int?> int2,
+  Value<int?> int4,
+  Value<int?> int8,
+  Value<double?> float4,
+  Value<double?> float8,
+  Value<Object?> json,
+  Value<Uint8List?> bytea,
+  Value<DbColor?> enum$,
+  Value<int?> relatedId,
+  Value<int> rowid,
+});
+typedef $$DataTypesTableUpdateCompanionBuilder = DataTypesCompanion Function({
+  Value<int> id,
+  Value<DateTime?> date,
+  Value<DateTime?> time,
+  Value<DateTime?> timetz,
+  Value<DateTime?> timestamp,
+  Value<DateTime?> timestamptz,
+  Value<bool?> bool$,
+  Value<String?> uuid,
+  Value<int?> int2,
+  Value<int?> int4,
+  Value<int?> int8,
+  Value<double?> float4,
+  Value<double?> float8,
+  Value<Object?> json,
+  Value<Uint8List?> bytea,
+  Value<DbColor?> enum$,
+  Value<int?> relatedId,
+  Value<int> rowid,
+});
+
+class $$DataTypesTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $DataTypesTable,
+    DataType,
+    $$DataTypesTableFilterComposer,
+    $$DataTypesTableOrderingComposer,
+    $$DataTypesTableCreateCompanionBuilder,
+    $$DataTypesTableUpdateCompanionBuilder> {
+  $$DataTypesTableTableManager(_$TestsDatabase db, $DataTypesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$DataTypesTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$DataTypesTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<DateTime?> date = const Value.absent(),
+            Value<DateTime?> time = const Value.absent(),
+            Value<DateTime?> timetz = const Value.absent(),
+            Value<DateTime?> timestamp = const Value.absent(),
+            Value<DateTime?> timestamptz = const Value.absent(),
+            Value<bool?> bool$ = const Value.absent(),
+            Value<String?> uuid = const Value.absent(),
+            Value<int?> int2 = const Value.absent(),
+            Value<int?> int4 = const Value.absent(),
+            Value<int?> int8 = const Value.absent(),
+            Value<double?> float4 = const Value.absent(),
+            Value<double?> float8 = const Value.absent(),
+            Value<Object?> json = const Value.absent(),
+            Value<Uint8List?> bytea = const Value.absent(),
+            Value<DbColor?> enum$ = const Value.absent(),
+            Value<int?> relatedId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DataTypesCompanion(
+            id: id,
+            date: date,
+            time: time,
+            timetz: timetz,
+            timestamp: timestamp,
+            timestamptz: timestamptz,
+            bool$: bool$,
+            uuid: uuid,
+            int2: int2,
+            int4: int4,
+            int8: int8,
+            float4: float4,
+            float8: float8,
+            json: json,
+            bytea: bytea,
+            enum$: enum$,
+            relatedId: relatedId,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int id,
+            Value<DateTime?> date = const Value.absent(),
+            Value<DateTime?> time = const Value.absent(),
+            Value<DateTime?> timetz = const Value.absent(),
+            Value<DateTime?> timestamp = const Value.absent(),
+            Value<DateTime?> timestamptz = const Value.absent(),
+            Value<bool?> bool$ = const Value.absent(),
+            Value<String?> uuid = const Value.absent(),
+            Value<int?> int2 = const Value.absent(),
+            Value<int?> int4 = const Value.absent(),
+            Value<int?> int8 = const Value.absent(),
+            Value<double?> float4 = const Value.absent(),
+            Value<double?> float8 = const Value.absent(),
+            Value<Object?> json = const Value.absent(),
+            Value<Uint8List?> bytea = const Value.absent(),
+            Value<DbColor?> enum$ = const Value.absent(),
+            Value<int?> relatedId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DataTypesCompanion.insert(
+            id: id,
+            date: date,
+            time: time,
+            timetz: timetz,
+            timestamp: timestamp,
+            timestamptz: timestamptz,
+            bool$: bool$,
+            uuid: uuid,
+            int2: int2,
+            int4: int4,
+            int8: int8,
+            float4: float4,
+            float8: float8,
+            json: json,
+            bytea: bytea,
+            enum$: enum$,
+            relatedId: relatedId,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$DataTypesTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $DataTypesTable> {
+  $$DataTypesTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get date => $state.composableBuilder(
+      column: $state.table.date,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get time => $state.composableBuilder(
+      column: $state.table.time,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get timetz => $state.composableBuilder(
+      column: $state.table.timetz,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get timestamp => $state.composableBuilder(
+      column: $state.table.timestamp,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get timestamptz => $state.composableBuilder(
+      column: $state.table.timestamptz,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get bool$ => $state.composableBuilder(
+      column: $state.table.bool$,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get uuid => $state.composableBuilder(
+      column: $state.table.uuid,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get int2 => $state.composableBuilder(
+      column: $state.table.int2,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get int4 => $state.composableBuilder(
+      column: $state.table.int4,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get int8 => $state.composableBuilder(
+      column: $state.table.int8,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get float4 => $state.composableBuilder(
+      column: $state.table.float4,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get float8 => $state.composableBuilder(
+      column: $state.table.float8,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Object> get json => $state.composableBuilder(
+      column: $state.table.json,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<Uint8List> get bytea => $state.composableBuilder(
+      column: $state.table.bytea,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DbColor> get enum$ => $state.composableBuilder(
+      column: $state.table.enum$,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get relatedId => $state.composableBuilder(
+      column: $state.table.relatedId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$DataTypesTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $DataTypesTable> {
+  $$DataTypesTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get date => $state.composableBuilder(
+      column: $state.table.date,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get time => $state.composableBuilder(
+      column: $state.table.time,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get timetz => $state.composableBuilder(
+      column: $state.table.timetz,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get timestamp => $state.composableBuilder(
+      column: $state.table.timestamp,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get timestamptz => $state.composableBuilder(
+      column: $state.table.timestamptz,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get bool$ => $state.composableBuilder(
+      column: $state.table.bool$,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get uuid => $state.composableBuilder(
+      column: $state.table.uuid,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get int2 => $state.composableBuilder(
+      column: $state.table.int2,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get int4 => $state.composableBuilder(
+      column: $state.table.int4,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get int8 => $state.composableBuilder(
+      column: $state.table.int8,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get float4 => $state.composableBuilder(
+      column: $state.table.float4,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get float8 => $state.composableBuilder(
+      column: $state.table.float8,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Object> get json => $state.composableBuilder(
+      column: $state.table.json,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<Uint8List> get bytea => $state.composableBuilder(
+      column: $state.table.bytea,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DbColor> get enum$ => $state.composableBuilder(
+      column: $state.table.enum$,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get relatedId => $state.composableBuilder(
+      column: $state.table.relatedId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$DummyTableCreateCompanionBuilder = DummyCompanion Function({
+  required int id,
+  Value<DateTime?> timestamp,
+  Value<int> rowid,
+});
+typedef $$DummyTableUpdateCompanionBuilder = DummyCompanion Function({
+  Value<int> id,
+  Value<DateTime?> timestamp,
+  Value<int> rowid,
+});
+
+class $$DummyTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $DummyTable,
+    DummyData,
+    $$DummyTableFilterComposer,
+    $$DummyTableOrderingComposer,
+    $$DummyTableCreateCompanionBuilder,
+    $$DummyTableUpdateCompanionBuilder> {
+  $$DummyTableTableManager(_$TestsDatabase db, $DummyTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$DummyTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$DummyTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<DateTime?> timestamp = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DummyCompanion(
+            id: id,
+            timestamp: timestamp,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int id,
+            Value<DateTime?> timestamp = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DummyCompanion.insert(
+            id: id,
+            timestamp: timestamp,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$DummyTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $DummyTable> {
+  $$DummyTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get timestamp => $state.composableBuilder(
+      column: $state.table.timestamp,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$DummyTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $DummyTable> {
+  $$DummyTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get timestamp => $state.composableBuilder(
+      column: $state.table.timestamp,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$ExtraTableCreateCompanionBuilder = ExtraCompanion Function({
+  Value<int> id,
+  Value<BigInt?> int8BigInt,
+});
+typedef $$ExtraTableUpdateCompanionBuilder = ExtraCompanion Function({
+  Value<int> id,
+  Value<BigInt?> int8BigInt,
+});
+
+class $$ExtraTableTableManager extends RootTableManager<
+    _$TestsDatabase,
+    $ExtraTable,
+    ExtraData,
+    $$ExtraTableFilterComposer,
+    $$ExtraTableOrderingComposer,
+    $$ExtraTableCreateCompanionBuilder,
+    $$ExtraTableUpdateCompanionBuilder> {
+  $$ExtraTableTableManager(_$TestsDatabase db, $ExtraTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ExtraTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ExtraTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<BigInt?> int8BigInt = const Value.absent(),
+          }) =>
+              ExtraCompanion(
+            id: id,
+            int8BigInt: int8BigInt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<BigInt?> int8BigInt = const Value.absent(),
+          }) =>
+              ExtraCompanion.insert(
+            id: id,
+            int8BigInt: int8BigInt,
+          ),
+        ));
+}
+
+class $$ExtraTableFilterComposer
+    extends FilterComposer<_$TestsDatabase, $ExtraTable> {
+  $$ExtraTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<BigInt> get int8BigInt => $state.composableBuilder(
+      column: $state.table.int8BigInt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ExtraTableOrderingComposer
+    extends OrderingComposer<_$TestsDatabase, $ExtraTable> {
+  $$ExtraTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<BigInt> get int8BigInt => $state.composableBuilder(
+      column: $state.table.int8BigInt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+class $TestsDatabaseManager {
+  final _$TestsDatabase _db;
+  $TestsDatabaseManager(this._db);
+  $TableFromDriftFileTableManager get tableFromDriftFile =>
+      $TableFromDriftFileTableManager(_db, _db.tableFromDriftFile);
+  $$ItemsTableTableManager get items =>
+      $$ItemsTableTableManager(_db, _db.items);
+  $$UserTableTableManager get user => $$UserTableTableManager(_db, _db.user);
+  $$PostTableTableManager get post => $$PostTableTableManager(_db, _db.post);
+  $$ProfileTableTableManager get profile =>
+      $$ProfileTableTableManager(_db, _db.profile);
+  $$ProfileImageTableTableManager get profileImage =>
+      $$ProfileImageTableTableManager(_db, _db.profileImage);
+  $$DataTypesTableTableManager get dataTypes =>
+      $$DataTypesTableTableManager(_db, _db.dataTypes);
+  $$DummyTableTableManager get dummy =>
+      $$DummyTableTableManager(_db, _db.dummy);
+  $$ExtraTableTableManager get extra =>
+      $$ExtraTableTableManager(_db, _db.extra);
 }

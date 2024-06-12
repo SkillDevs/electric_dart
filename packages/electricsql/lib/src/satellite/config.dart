@@ -1,3 +1,4 @@
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/tablename.dart';
@@ -64,6 +65,7 @@ SatelliteOpts Function(String namespace) satelliteDefaults =
             maxDelay: Duration(seconds: 10000),
             randomizationFactor: 0.25, // Taken from `retry` package defaults
           ),
+          fkChecks: ForeignKeyChecks.disabled,
         );
 
 const kDefaultSatellitePushPeriod = 500;
@@ -127,6 +129,12 @@ class SatelliteOpts {
   /// Backoff options for connecting with Electric
   final ConnectionBackoffOptions connectionBackoffOptions;
 
+  /// Whether to enable or disable FK checks when applying incoming (i.e. remote) transactions to the local SQLite database.
+  /// When set to `inherit` the FK pragma is left untouched.
+  /// This option defaults to `disable` which disables FK checks on incoming transactions.
+  /// This option only affects FK checks on SQLite databases and should not be modified when using Postgres.
+  final ForeignKeyChecks fkChecks;
+
   bool get debug => logger.levelImportance <= Level.debug.value;
 
   const SatelliteOpts({
@@ -140,6 +148,7 @@ class SatelliteOpts {
     required this.minSnapshotWindow,
     required this.clearOnBehindWindow,
     required this.connectionBackoffOptions,
+    required this.fkChecks,
   });
 
   SatelliteOpts copyWith({
@@ -153,6 +162,7 @@ class SatelliteOpts {
     Duration? minSnapshotWindow,
     bool? clearOnBehindWindow,
     ConnectionBackoffOptions? connectionBackoffOptions,
+    ForeignKeyChecks? fkChecks,
   }) {
     return SatelliteOpts(
       metaTable: metaTable ?? this.metaTable,
@@ -166,6 +176,7 @@ class SatelliteOpts {
       clearOnBehindWindow: clearOnBehindWindow ?? this.clearOnBehindWindow,
       connectionBackoffOptions:
           connectionBackoffOptions ?? this.connectionBackoffOptions,
+      fkChecks: fkChecks ?? this.fkChecks,
     );
   }
 

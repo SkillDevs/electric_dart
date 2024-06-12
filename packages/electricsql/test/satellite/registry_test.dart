@@ -23,7 +23,11 @@ final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);
 
 final HydratedConfig config = hydrateConfig(
-  ElectricConfigWithDialect.from(config: ElectricConfig()),
+  ElectricConfigWithDialect.from(
+    config: ElectricConfig(
+      foreignKeyChecksDownstream: ForeignKeyChecks.inherit,
+    ),
+  ),
 );
 
 void main() {

@@ -1,3 +1,4 @@
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/util/types.dart';
 
@@ -42,7 +43,13 @@ abstract class Migrator {
   abstract final QueryBuilder queryBuilder;
 
   Future<int> up();
-  Future<void> apply(StmtMigration migration);
-  Future<bool> applyIfNotAlready(StmtMigration migration);
+  Future<void> apply(
+    StmtMigration migration, {
+    ForeignKeyChecks fkChecks,
+  });
+  Future<bool> applyIfNotAlready(
+    StmtMigration migration, {
+    ForeignKeyChecks fkChecks,
+  });
   Future<String?> querySchemaVersion();
 }

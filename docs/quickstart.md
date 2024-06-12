@@ -12,14 +12,14 @@ Add the required dependencies into your project.
 ```yaml
 dependencies:
   electricsql: <version>
-  drift: ^2.17.0 # or greater
+  drift: ^2.19.1 # or greater
 
   # Optionally include if you want to use the Flutter utilities
   electricsql_flutter: <version>
 
 dev_dependencies:
   electricsql_cli: <version>
-  drift_dev: ^2.17.0 # or greater
+  drift_dev: ^2.19.0 # or greater
   build_runner: ... # to build the drift code
 ```
 

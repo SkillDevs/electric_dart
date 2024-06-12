@@ -204,6 +204,17 @@ class TodoData extends DataClass implements Insertable<TodoData> {
         editedAt: editedAt ?? this.editedAt,
         createdAt: createdAt ?? this.createdAt,
       );
+  TodoData copyWithCompanion(TodoCompanion data) {
+    return TodoData(
+      id: data.id.present ? data.id.value : this.id,
+      listid: data.listid.present ? data.listid.value : this.listid,
+      text$: data.text$.present ? data.text$.value : this.text$,
+      completed: data.completed.present ? data.completed.value : this.completed,
+      editedAt: data.editedAt.present ? data.editedAt.value : this.editedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('TodoData(')
@@ -472,6 +483,14 @@ class TodolistData extends DataClass implements Insertable<TodolistData> {
         filter: filter.present ? filter.value : this.filter,
         editing: editing.present ? editing.value : this.editing,
       );
+  TodolistData copyWithCompanion(TodolistCompanion data) {
+    return TodolistData(
+      id: data.id.present ? data.id.value : this.id,
+      filter: data.filter.present ? data.filter.value : this.filter,
+      editing: data.editing.present ? data.editing.value : this.editing,
+    );
+  }
+
   @override
   String toString() {
     return (StringBuffer('TodolistData(')
@@ -569,7 +588,7 @@ class TodolistCompanion extends UpdateCompanion<TodolistData> {
 
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
-  _$AppDatabaseManager get managers => _$AppDatabaseManager(this);
+  $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TodoTable todo = $TodoTable(this);
   late final $TodolistTable todolist = $TodolistTable(this);
   @override
@@ -579,7 +598,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [todo, todolist];
 }
 
-typedef $$TodoTableInsertCompanionBuilder = TodoCompanion Function({
+typedef $$TodoTableCreateCompanionBuilder = TodoCompanion Function({
   required String id,
   Value<String?> listid,
   Value<String?> text$,
@@ -604,8 +623,7 @@ class $$TodoTableTableManager extends RootTableManager<
     TodoData,
     $$TodoTableFilterComposer,
     $$TodoTableOrderingComposer,
-    $$TodoTableProcessedTableManager,
-    $$TodoTableInsertCompanionBuilder,
+    $$TodoTableCreateCompanionBuilder,
     $$TodoTableUpdateCompanionBuilder> {
   $$TodoTableTableManager(_$AppDatabase db, $TodoTable table)
       : super(TableManagerState(
@@ -615,8 +633,7 @@ class $$TodoTableTableManager extends RootTableManager<
               $$TodoTableFilterComposer(ComposerState(db, table)),
           orderingComposer:
               $$TodoTableOrderingComposer(ComposerState(db, table)),
-          getChildManagerBuilder: (p) => $$TodoTableProcessedTableManager(p),
-          getUpdateCompanionBuilder: ({
+          updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String?> listid = const Value.absent(),
             Value<String?> text$ = const Value.absent(),
@@ -634,7 +651,7 @@ class $$TodoTableTableManager extends RootTableManager<
             createdAt: createdAt,
             rowid: rowid,
           ),
-          getInsertCompanionBuilder: ({
+          createCompanionCallback: ({
             required String id,
             Value<String?> listid = const Value.absent(),
             Value<String?> text$ = const Value.absent(),
@@ -653,18 +670,6 @@ class $$TodoTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
         ));
-}
-
-class $$TodoTableProcessedTableManager extends ProcessedTableManager<
-    _$AppDatabase,
-    $TodoTable,
-    TodoData,
-    $$TodoTableFilterComposer,
-    $$TodoTableOrderingComposer,
-    $$TodoTableProcessedTableManager,
-    $$TodoTableInsertCompanionBuilder,
-    $$TodoTableUpdateCompanionBuilder> {
-  $$TodoTableProcessedTableManager(super.$state);
 }
 
 class $$TodoTableFilterComposer
@@ -735,7 +740,7 @@ class $$TodoTableOrderingComposer
           ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
-typedef $$TodolistTableInsertCompanionBuilder = TodolistCompanion Function({
+typedef $$TodolistTableCreateCompanionBuilder = TodolistCompanion Function({
   required String id,
   Value<String?> filter,
   Value<String?> editing,
@@ -754,8 +759,7 @@ class $$TodolistTableTableManager extends RootTableManager<
     TodolistData,
     $$TodolistTableFilterComposer,
     $$TodolistTableOrderingComposer,
-    $$TodolistTableProcessedTableManager,
-    $$TodolistTableInsertCompanionBuilder,
+    $$TodolistTableCreateCompanionBuilder,
     $$TodolistTableUpdateCompanionBuilder> {
   $$TodolistTableTableManager(_$AppDatabase db, $TodolistTable table)
       : super(TableManagerState(
@@ -765,9 +769,7 @@ class $$TodolistTableTableManager extends RootTableManager<
               $$TodolistTableFilterComposer(ComposerState(db, table)),
           orderingComposer:
               $$TodolistTableOrderingComposer(ComposerState(db, table)),
-          getChildManagerBuilder: (p) =>
-              $$TodolistTableProcessedTableManager(p),
-          getUpdateCompanionBuilder: ({
+          updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String?> filter = const Value.absent(),
             Value<String?> editing = const Value.absent(),
@@ -779,7 +781,7 @@ class $$TodolistTableTableManager extends RootTableManager<
             editing: editing,
             rowid: rowid,
           ),
-          getInsertCompanionBuilder: ({
+          createCompanionCallback: ({
             required String id,
             Value<String?> filter = const Value.absent(),
             Value<String?> editing = const Value.absent(),
@@ -792,18 +794,6 @@ class $$TodolistTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
         ));
-}
-
-class $$TodolistTableProcessedTableManager extends ProcessedTableManager<
-    _$AppDatabase,
-    $TodolistTable,
-    TodolistData,
-    $$TodolistTableFilterComposer,
-    $$TodolistTableOrderingComposer,
-    $$TodolistTableProcessedTableManager,
-    $$TodolistTableInsertCompanionBuilder,
-    $$TodolistTableUpdateCompanionBuilder> {
-  $$TodolistTableProcessedTableManager(super.$state);
 }
 
 class $$TodolistTableFilterComposer
@@ -844,9 +834,9 @@ class $$TodolistTableOrderingComposer
           ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
-class _$AppDatabaseManager {
+class $AppDatabaseManager {
   final _$AppDatabase _db;
-  _$AppDatabaseManager(this._db);
+  $AppDatabaseManager(this._db);
   $$TodoTableTableManager get todo => $$TodoTableTableManager(_db, _db.todo);
   $$TodolistTableTableManager get todolist =>
       $$TodolistTableTableManager(_db, _db.todolist);
