@@ -2697,6 +2697,14 @@ class SlowDatabaseAdapter extends DatabaseAdapter {
     await Future<void>.delayed(delay);
     return delegate.runInTransaction(statements);
   }
+
+  @override
+  Future<T> runExclusively<T>(
+    Future<T> Function(UncoordinatedDatabaseAdapter) f,
+  ) async {
+    await Future<void>.delayed(delay);
+    return delegate.runExclusively(f);
+  }
 }
 
 typedef _TxFun<T> = Future<T> Function(
@@ -2735,5 +2743,12 @@ class ReplaceTxDatabaseAdapter extends DatabaseAdapter {
   @override
   Future<RunResult> runInTransaction(List<Statement> statements) async {
     return delegate.runInTransaction(statements);
+  }
+
+  @override
+  Future<T> runExclusively<T>(
+    Future<T> Function(UncoordinatedDatabaseAdapter) f,
+  ) {
+    return delegate.runExclusively(f);
   }
 }

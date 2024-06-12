@@ -20,12 +20,15 @@ class MockMigrator implements Migrator {
   }
 
   @override
-  Future<void> apply(StmtMigration migration) async {
+  Future<void> apply(StmtMigration migration, {bool? disableFKs}) async {
     return;
   }
 
   @override
-  Future<bool> applyIfNotAlready(StmtMigration migration) async {
+  Future<bool> applyIfNotAlready(
+    StmtMigration migration, {
+    bool? disableFKs,
+  }) async {
     return true;
   }
 

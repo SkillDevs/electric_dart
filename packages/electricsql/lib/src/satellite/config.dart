@@ -64,6 +64,7 @@ SatelliteOpts Function(String namespace) satelliteDefaults =
             maxDelay: Duration(seconds: 10000),
             randomizationFactor: 0.25, // Taken from `retry` package defaults
           ),
+          disableFKs: null,
         );
 
 const kDefaultSatellitePushPeriod = 500;
@@ -127,6 +128,11 @@ class SatelliteOpts {
   /// Backoff options for connecting with Electric
   final ConnectionBackoffOptions connectionBackoffOptions;
 
+  /// Whether to disable FK checks when applying incoming (i.e. remote) transactions to the local SQLite database.
+  /// When using Postgres, this is the default behavior and can't be changed.
+  /// If this flag is undefined and we're running on SQLite, then the FK pragma is left untouched.
+  final bool? disableFKs;
+
   bool get debug => logger.levelImportance <= Level.debug.value;
 
   const SatelliteOpts({
@@ -140,6 +146,7 @@ class SatelliteOpts {
     required this.minSnapshotWindow,
     required this.clearOnBehindWindow,
     required this.connectionBackoffOptions,
+    required this.disableFKs,
   });
 
   SatelliteOpts copyWith({
@@ -153,6 +160,7 @@ class SatelliteOpts {
     Duration? minSnapshotWindow,
     bool? clearOnBehindWindow,
     ConnectionBackoffOptions? connectionBackoffOptions,
+    bool? Function()? disableFKs,
   }) {
     return SatelliteOpts(
       metaTable: metaTable ?? this.metaTable,
@@ -166,6 +174,7 @@ class SatelliteOpts {
       clearOnBehindWindow: clearOnBehindWindow ?? this.clearOnBehindWindow,
       connectionBackoffOptions:
           connectionBackoffOptions ?? this.connectionBackoffOptions,
+      disableFKs: disableFKs != null ? disableFKs() : this.disableFKs,
     );
   }
 

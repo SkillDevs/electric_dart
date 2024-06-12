@@ -34,12 +34,17 @@ class ElectricConfig {
   /// Optional backoff options for connecting with Electric
   final ConnectionBackoffOptions? connectionBackoffOptions;
 
+  /// Whether to disable FK checks when applying downstream (i.e. incoming) transactions to the local SQLite database.
+  /// When using Postgres, this is the default behavior and can't be changed.
+  final bool? disableForeignKeysDownstream;
+
   ElectricConfig({
     this.auth,
     this.url,
     this.logger,
     this.timeout,
     this.connectionBackoffOptions,
+    this.disableForeignKeysDownstream,
   });
 }
 
@@ -56,6 +61,7 @@ class ElectricConfigWithDialect extends ElectricConfig {
       logger: config.logger,
       timeout: config.timeout,
       connectionBackoffOptions: config.connectionBackoffOptions,
+      disableForeignKeysDownstream: config.disableForeignKeysDownstream,
       dialect: dialect,
     );
   }
@@ -66,6 +72,7 @@ class ElectricConfigWithDialect extends ElectricConfig {
     required super.logger,
     required super.timeout,
     required super.connectionBackoffOptions,
+    required super.disableForeignKeysDownstream,
     required this.dialect,
   });
 }
@@ -75,12 +82,14 @@ class HydratedConfig {
   final ReplicationConfig replication;
   final ConnectionBackoffOptions connectionBackoffOptions;
   final String namespace;
+  final bool? disableFKs;
 
   HydratedConfig({
     required this.auth,
     required this.replication,
     required this.connectionBackoffOptions,
     required this.namespace,
+    required this.disableFKs,
   });
 }
 
@@ -127,6 +136,7 @@ HydratedConfig hydrateConfig(ElectricConfigWithDialect config) {
     //debug: debug,
     connectionBackoffOptions: connectionBackoffOptions,
     namespace: defaultNamespace,
+    disableFKs: config.disableForeignKeysDownstream,
   );
 }
 

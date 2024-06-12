@@ -63,6 +63,16 @@ class DriftAdapter implements DatabaseAdapter {
       return completer.future;
     });
   }
+
+  @override
+  Future<T> runExclusively<T>(
+    Future<T> Function(UncoordinatedDatabaseAdapter adapter) f,
+  ) async {
+    return await db.exclusively<T>(() async {
+      final UncoordinatedDatabaseAdapter adapter = this;
+      return f(adapter);
+    });
+  }
 }
 
 class Transaction implements DbTransaction {

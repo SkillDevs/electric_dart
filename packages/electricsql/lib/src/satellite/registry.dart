@@ -198,6 +198,7 @@ class GlobalRegistry extends BaseRegistry {
 
     final SatelliteOpts satelliteOpts =
         satelliteDefaults(config.namespace).copyWith(
+      disableFKs: () => config.disableFKs,
       connectionBackoffOptions: config.connectionBackoffOptions,
     );
 

@@ -42,7 +42,7 @@ abstract class Migrator {
   abstract final QueryBuilder queryBuilder;
 
   Future<int> up();
-  Future<void> apply(StmtMigration migration);
-  Future<bool> applyIfNotAlready(StmtMigration migration);
+  Future<void> apply(StmtMigration migration, {bool? disableFKs});
+  Future<bool> applyIfNotAlready(StmtMigration migration, {bool? disableFKs});
   Future<String?> querySchemaVersion();
 }

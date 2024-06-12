@@ -27,4 +27,11 @@ class MockDatabaseAdapter implements DatabaseAdapter {
   ) async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<T> runExclusively<T>(
+    Future<T> Function(UncoordinatedDatabaseAdapter adapter) f,
+  ) {
+    throw UnimplementedError();
+  }
 }
