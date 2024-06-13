@@ -54,8 +54,9 @@ clone_electric:
 lux: ${LUX_PATH}
 
 ${LUX}:
-	git clone https://github.com/hawk/lux.git
+	git clone https://github.com/electric-sql/lux.git
 	cd lux && \
+	git checkout otp-27 && \
 	autoconf && \
 	./configure && \
 	make

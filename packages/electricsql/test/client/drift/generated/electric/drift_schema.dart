@@ -1,6 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-// ignore_for_file: depend_on_referenced_packages, prefer_double_quotes
+// ignore_for_file: always_use_package_imports, depend_on_referenced_packages
+// ignore_for_file: prefer_double_quotes
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
@@ -26,9 +27,6 @@ class Items extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {value};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class User extends Table with ElectricTableMixin {
@@ -43,9 +41,6 @@ class User extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $UserTableRelations get $relations => const $UserTableRelations();
@@ -67,9 +62,6 @@ class Post extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $PostTableRelations get $relations => const $PostTableRelations();
@@ -94,9 +86,6 @@ class Profile extends Table with ElectricTableMixin {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
-  bool get withoutRowId => true;
-
-  @override
   $ProfileTableRelations get $relations => const $ProfileTableRelations();
 }
 
@@ -110,9 +99,6 @@ class ProfileImage extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $ProfileImageTableRelations get $relations =>
@@ -175,9 +161,6 @@ class DataTypes extends Table with ElectricTableMixin {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
-  bool get withoutRowId => true;
-
-  @override
   $DataTypesTableRelations get $relations => const $DataTypesTableRelations();
 }
 
@@ -192,9 +175,6 @@ class Dummy extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $DummyTableRelations get $relations => const $DummyTableRelations();

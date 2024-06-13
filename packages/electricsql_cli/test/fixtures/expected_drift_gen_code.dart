@@ -44,9 +44,6 @@ class Project extends Table with ElectricTableMixin {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
-  bool get withoutRowId => true;
-
-  @override
   $ProjectTableRelations get $relations => const $ProjectTableRelations();
 }
 
@@ -66,9 +63,6 @@ class Membership extends Table with ElectricTableMixin {
         projectId,
         userId,
       };
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $MembershipTableRelations get $relations => const $MembershipTableRelations();
@@ -119,9 +113,6 @@ class Datatypes extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {cUuid};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Weirdnames extends Table {
@@ -141,9 +132,6 @@ class Weirdnames extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {cUuid};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 @DataClassName(
@@ -162,9 +150,6 @@ class GenOptsDriftTable extends Table {
 
   @override
   String? get tableName => 'GenOpts';
-
-  @override
-  bool get withoutRowId => true;
 }
 
 @UseRowClass(
@@ -180,9 +165,6 @@ class TableWithCustomRowClass extends Table {
 
   @override
   String? get tableName => 'TableWithCustomRowClass';
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Enums extends Table {
@@ -196,9 +178,6 @@ class Enums extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class User extends Table with ElectricTableMixin {
@@ -211,9 +190,6 @@ class User extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $UserTableRelations get $relations => const $UserTableRelations();
@@ -237,9 +213,6 @@ class Post extends Table with ElectricTableMixin {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
-  bool get withoutRowId => true;
-
-  @override
   $PostTableRelations get $relations => const $PostTableRelations();
 }
 
@@ -257,9 +230,6 @@ class Profile extends Table with ElectricTableMixin {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
-  bool get withoutRowId => true;
-
-  @override
   $ProfileTableRelations get $relations => const $ProfileTableRelations();
 }
 
@@ -271,9 +241,6 @@ class Message extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $MessageTableRelations get $relations => const $MessageTableRelations();

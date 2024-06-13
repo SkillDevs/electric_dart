@@ -8,7 +8,7 @@ import 'package:electricsql/electricsql.dart';
 const kSqliteMigrations = <Migration>[
   Migration(
     statements: [
-      'CREATE TABLE "todolist" (\n  "id" TEXT NOT NULL,\n  "filter" TEXT,\n  "editing" TEXT,\n  CONSTRAINT "todolist_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+      'CREATE TABLE "todolist" (\n  "id" TEXT NOT NULL,\n  "filter" TEXT,\n  "editing" TEXT,\n  CONSTRAINT "todolist_pkey" PRIMARY KEY ("id")\n);\n',
       'INSERT OR IGNORE INTO _electric_trigger_settings (namespace, tablename, flag) VALUES (\'main\', \'todolist\', 1);',
       'DROP TRIGGER IF EXISTS update_ensure_main_todolist_primarykey;',
       'CREATE TRIGGER update_ensure_main_todolist_primarykey\n  BEFORE UPDATE ON "main"."todolist"\nBEGIN\n  SELECT\n    CASE\n      WHEN old."id" != new."id" THEN\n      		RAISE (ABORT, \'cannot change the value of column id as it belongs to the primary key\')\n    END;\nEND;',
@@ -23,7 +23,7 @@ const kSqliteMigrations = <Migration>[
   ),
   Migration(
     statements: [
-      'CREATE TABLE "todo" (\n  "id" TEXT NOT NULL,\n  "listid" TEXT,\n  "text" TEXT,\n  "completed" INTEGER NOT NULL,\n  "edited_at" TEXT NOT NULL,\n  "created_at" TEXT NOT NULL,\n  CONSTRAINT "todo_listid_fkey" FOREIGN KEY ("listid") REFERENCES "todolist" ("id"),\n  CONSTRAINT "todo_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+      'CREATE TABLE "todo" (\n  "id" TEXT NOT NULL,\n  "listid" TEXT,\n  "text" TEXT,\n  "completed" INTEGER NOT NULL,\n  "edited_at" TEXT NOT NULL,\n  "created_at" TEXT NOT NULL,\n  CONSTRAINT "todo_listid_fkey" FOREIGN KEY ("listid") REFERENCES "todolist" ("id"),\n  CONSTRAINT "todo_pkey" PRIMARY KEY ("id")\n);\n',
       'INSERT OR IGNORE INTO _electric_trigger_settings (namespace, tablename, flag) VALUES (\'main\', \'todo\', 1);',
       'DROP TRIGGER IF EXISTS update_ensure_main_todo_primarykey;',
       'CREATE TRIGGER update_ensure_main_todo_primarykey\n  BEFORE UPDATE ON "main"."todo"\nBEGIN\n  SELECT\n    CASE\n      WHEN old."id" != new."id" THEN\n      		RAISE (ABORT, \'cannot change the value of column id as it belongs to the primary key\')\n    END;\nEND;',

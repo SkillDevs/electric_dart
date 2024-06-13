@@ -58,7 +58,7 @@ Future<void> main() async {
     await adapter.run(Statement('DROP TABLE IF EXISTS Items'));
     await adapter.run(
       Statement(
-        'CREATE TABLE IF NOT EXISTS Items (value TEXT PRIMARY KEY NOT NULL, nbr INTEGER) WITHOUT ROWID;',
+        'CREATE TABLE IF NOT EXISTS Items (value TEXT PRIMARY KEY NOT NULL, nbr INTEGER);',
       ),
     );
   }

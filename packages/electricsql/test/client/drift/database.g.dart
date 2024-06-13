@@ -253,9 +253,6 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
   $ItemsTable createAlias(String alias) {
     return $ItemsTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Item extends DataClass implements Insertable<Item> {
@@ -321,28 +318,35 @@ class Item extends DataClass implements Insertable<Item> {
 class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<String> value;
   final Value<int?> nbr;
+  final Value<int> rowid;
   const ItemsCompanion({
     this.value = const Value.absent(),
     this.nbr = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   ItemsCompanion.insert({
     required String value,
     this.nbr = const Value.absent(),
+    this.rowid = const Value.absent(),
   }) : value = Value(value);
   static Insertable<Item> custom({
     Expression<String>? value,
     Expression<int>? nbr,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (value != null) 'value': value,
       if (nbr != null) 'nbr': nbr,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  ItemsCompanion copyWith({Value<String>? value, Value<int?>? nbr}) {
+  ItemsCompanion copyWith(
+      {Value<String>? value, Value<int?>? nbr, Value<int>? rowid}) {
     return ItemsCompanion(
       value: value ?? this.value,
       nbr: nbr ?? this.nbr,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -355,6 +359,9 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     if (nbr.present) {
       map['nbr'] = Variable<int>(nbr.value, ElectricTypes.int4);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -362,7 +369,8 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   String toString() {
     return (StringBuffer('ItemsCompanion(')
           ..write('value: $value, ')
-          ..write('nbr: $nbr')
+          ..write('nbr: $nbr, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -435,9 +443,6 @@ class $UserTable extends User with TableInfo<$UserTable, UserData> {
   $UserTable createAlias(String alias) {
     return $UserTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class UserData extends DataClass implements Insertable<UserData> {
@@ -519,34 +524,43 @@ class UserCompanion extends UpdateCompanion<UserData> {
   final Value<int> id;
   final Value<String?> name;
   final Value<String?> meta;
+  final Value<int> rowid;
   const UserCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.meta = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   UserCompanion.insert({
     required int id,
     this.name = const Value.absent(),
     this.meta = const Value.absent(),
+    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<UserData> custom({
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? meta,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (meta != null) 'meta': meta,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   UserCompanion copyWith(
-      {Value<int>? id, Value<String?>? name, Value<String?>? meta}) {
+      {Value<int>? id,
+      Value<String?>? name,
+      Value<String?>? meta,
+      Value<int>? rowid}) {
     return UserCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       meta: meta ?? this.meta,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -562,6 +576,9 @@ class UserCompanion extends UpdateCompanion<UserData> {
     if (meta.present) {
       map['meta'] = Variable<String>(meta.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -570,7 +587,8 @@ class UserCompanion extends UpdateCompanion<UserData> {
     return (StringBuffer('UserCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('meta: $meta')
+          ..write('meta: $meta, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -673,9 +691,6 @@ class $PostTable extends Post with TableInfo<$PostTable, PostData> {
   $PostTable createAlias(String alias) {
     return $PostTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class PostData extends DataClass implements Insertable<PostData> {
@@ -780,12 +795,14 @@ class PostCompanion extends UpdateCompanion<PostData> {
   final Value<String> contents;
   final Value<int?> nbr;
   final Value<int> authorId;
+  final Value<int> rowid;
   const PostCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
     this.contents = const Value.absent(),
     this.nbr = const Value.absent(),
     this.authorId = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   PostCompanion.insert({
     required int id,
@@ -793,6 +810,7 @@ class PostCompanion extends UpdateCompanion<PostData> {
     required String contents,
     this.nbr = const Value.absent(),
     required int authorId,
+    this.rowid = const Value.absent(),
   })  : id = Value(id),
         title = Value(title),
         contents = Value(contents),
@@ -803,6 +821,7 @@ class PostCompanion extends UpdateCompanion<PostData> {
     Expression<String>? contents,
     Expression<int>? nbr,
     Expression<int>? authorId,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -810,6 +829,7 @@ class PostCompanion extends UpdateCompanion<PostData> {
       if (contents != null) 'contents': contents,
       if (nbr != null) 'nbr': nbr,
       if (authorId != null) 'authorId': authorId,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
@@ -818,13 +838,15 @@ class PostCompanion extends UpdateCompanion<PostData> {
       Value<String>? title,
       Value<String>? contents,
       Value<int?>? nbr,
-      Value<int>? authorId}) {
+      Value<int>? authorId,
+      Value<int>? rowid}) {
     return PostCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
       contents: contents ?? this.contents,
       nbr: nbr ?? this.nbr,
       authorId: authorId ?? this.authorId,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -846,6 +868,9 @@ class PostCompanion extends UpdateCompanion<PostData> {
     if (authorId.present) {
       map['authorId'] = Variable<int>(authorId.value, ElectricTypes.int4);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -856,7 +881,8 @@ class PostCompanion extends UpdateCompanion<PostData> {
           ..write('title: $title, ')
           ..write('contents: $contents, ')
           ..write('nbr: $nbr, ')
-          ..write('authorId: $authorId')
+          ..write('authorId: $authorId, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -956,9 +982,6 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
   $ProfileTable createAlias(String alias) {
     return $ProfileTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class ProfileData extends DataClass implements Insertable<ProfileData> {
@@ -1067,12 +1090,14 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
   final Value<Object?> meta;
   final Value<int> userId;
   final Value<String?> imageId;
+  final Value<int> rowid;
   const ProfileCompanion({
     this.id = const Value.absent(),
     this.bio = const Value.absent(),
     this.meta = const Value.absent(),
     this.userId = const Value.absent(),
     this.imageId = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   ProfileCompanion.insert({
     required int id,
@@ -1080,6 +1105,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     this.meta = const Value.absent(),
     required int userId,
     this.imageId = const Value.absent(),
+    this.rowid = const Value.absent(),
   })  : id = Value(id),
         bio = Value(bio),
         userId = Value(userId);
@@ -1089,6 +1115,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     Expression<Object>? meta,
     Expression<int>? userId,
     Expression<String>? imageId,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1096,6 +1123,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
       if (meta != null) 'meta': meta,
       if (userId != null) 'userId': userId,
       if (imageId != null) 'imageId': imageId,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
@@ -1104,13 +1132,15 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
       Value<String>? bio,
       Value<Object?>? meta,
       Value<int>? userId,
-      Value<String?>? imageId}) {
+      Value<String?>? imageId,
+      Value<int>? rowid}) {
     return ProfileCompanion(
       id: id ?? this.id,
       bio: bio ?? this.bio,
       meta: meta ?? this.meta,
       userId: userId ?? this.userId,
       imageId: imageId ?? this.imageId,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1132,6 +1162,9 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     if (imageId.present) {
       map['imageId'] = Variable<String>(imageId.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -1142,7 +1175,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
           ..write('bio: $bio, ')
           ..write('meta: $meta, ')
           ..write('userId: $userId, ')
-          ..write('imageId: $imageId')
+          ..write('imageId: $imageId, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1207,9 +1241,6 @@ class $ProfileImageTable extends ProfileImage
   $ProfileImageTable createAlias(String alias) {
     return $ProfileImageTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class ProfileImageData extends DataClass
@@ -1275,29 +1306,36 @@ class ProfileImageData extends DataClass
 class ProfileImageCompanion extends UpdateCompanion<ProfileImageData> {
   final Value<String> id;
   final Value<Uint8List> image;
+  final Value<int> rowid;
   const ProfileImageCompanion({
     this.id = const Value.absent(),
     this.image = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   ProfileImageCompanion.insert({
     required String id,
     required Uint8List image,
+    this.rowid = const Value.absent(),
   })  : id = Value(id),
         image = Value(image);
   static Insertable<ProfileImageData> custom({
     Expression<String>? id,
     Expression<Uint8List>? image,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (image != null) 'image': image,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  ProfileImageCompanion copyWith({Value<String>? id, Value<Uint8List>? image}) {
+  ProfileImageCompanion copyWith(
+      {Value<String>? id, Value<Uint8List>? image, Value<int>? rowid}) {
     return ProfileImageCompanion(
       id: id ?? this.id,
       image: image ?? this.image,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1310,6 +1348,9 @@ class ProfileImageCompanion extends UpdateCompanion<ProfileImageData> {
     if (image.present) {
       map['image'] = Variable<Uint8List>(image.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -1317,7 +1358,8 @@ class ProfileImageCompanion extends UpdateCompanion<ProfileImageData> {
   String toString() {
     return (StringBuffer('ProfileImageCompanion(')
           ..write('id: $id, ')
-          ..write('image: $image')
+          ..write('image: $image, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1573,9 +1615,6 @@ class $DataTypesTable extends DataTypes
   $DataTypesTable createAlias(String alias) {
     return $DataTypesTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class DataType extends DataClass implements Insertable<DataType> {
@@ -1872,6 +1911,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
   final Value<Uint8List?> bytea;
   final Value<DbColor?> enum$;
   final Value<int?> relatedId;
+  final Value<int> rowid;
   const DataTypesCompanion({
     this.id = const Value.absent(),
     this.date = const Value.absent(),
@@ -1890,6 +1930,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.bytea = const Value.absent(),
     this.enum$ = const Value.absent(),
     this.relatedId = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   DataTypesCompanion.insert({
     required int id,
@@ -1909,6 +1950,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     this.bytea = const Value.absent(),
     this.enum$ = const Value.absent(),
     this.relatedId = const Value.absent(),
+    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<DataType> custom({
     Expression<int>? id,
@@ -1928,6 +1970,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     Expression<Uint8List>? bytea,
     Expression<DbColor>? enum$,
     Expression<int>? relatedId,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1947,6 +1990,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       if (bytea != null) 'bytea': bytea,
       if (enum$ != null) 'enum': enum$,
       if (relatedId != null) 'relatedId': relatedId,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
@@ -1967,7 +2011,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       Value<Object?>? json,
       Value<Uint8List?>? bytea,
       Value<DbColor?>? enum$,
-      Value<int?>? relatedId}) {
+      Value<int?>? relatedId,
+      Value<int>? rowid}) {
     return DataTypesCompanion(
       id: id ?? this.id,
       date: date ?? this.date,
@@ -1986,6 +2031,7 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
       bytea: bytea ?? this.bytea,
       enum$: enum$ ?? this.enum$,
       relatedId: relatedId ?? this.relatedId,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -2045,6 +2091,9 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
     if (relatedId.present) {
       map['relatedId'] = Variable<int>(relatedId.value, ElectricTypes.int4);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -2067,7 +2116,8 @@ class DataTypesCompanion extends UpdateCompanion<DataType> {
           ..write('json: $json, ')
           ..write('bytea: $bytea, ')
           ..write('enum\$: ${enum$}, ')
-          ..write('relatedId: $relatedId')
+          ..write('relatedId: $relatedId, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -2130,9 +2180,6 @@ class $DummyTable extends Dummy with TableInfo<$DummyTable, DummyData> {
   $DummyTable createAlias(String alias) {
     return $DummyTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class DummyData extends DataClass implements Insertable<DummyData> {
@@ -2203,28 +2250,35 @@ class DummyData extends DataClass implements Insertable<DummyData> {
 class DummyCompanion extends UpdateCompanion<DummyData> {
   final Value<int> id;
   final Value<DateTime?> timestamp;
+  final Value<int> rowid;
   const DummyCompanion({
     this.id = const Value.absent(),
     this.timestamp = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   DummyCompanion.insert({
     required int id,
     this.timestamp = const Value.absent(),
+    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<DummyData> custom({
     Expression<int>? id,
     Expression<DateTime>? timestamp,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (timestamp != null) 'timestamp': timestamp,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  DummyCompanion copyWith({Value<int>? id, Value<DateTime?>? timestamp}) {
+  DummyCompanion copyWith(
+      {Value<int>? id, Value<DateTime?>? timestamp, Value<int>? rowid}) {
     return DummyCompanion(
       id: id ?? this.id,
       timestamp: timestamp ?? this.timestamp,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -2238,6 +2292,9 @@ class DummyCompanion extends UpdateCompanion<DummyData> {
       map['timestamp'] =
           Variable<DateTime>(timestamp.value, ElectricTypes.timestamp);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -2245,7 +2302,8 @@ class DummyCompanion extends UpdateCompanion<DummyData> {
   String toString() {
     return (StringBuffer('DummyCompanion(')
           ..write('id: $id, ')
-          ..write('timestamp: $timestamp')
+          ..write('timestamp: $timestamp, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -2260,7 +2318,7 @@ class $ExtraTable extends Extra with TableInfo<$ExtraTable, ExtraData> {
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
       'id', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _int8BigIntMeta =
       const VerificationMeta('int8BigInt');
   @override
@@ -2281,8 +2339,6 @@ class $ExtraTable extends Extra with TableInfo<$ExtraTable, ExtraData> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
     }
     if (data.containsKey('int8_big_int')) {
       context.handle(
@@ -2310,9 +2366,6 @@ class $ExtraTable extends Extra with TableInfo<$ExtraTable, ExtraData> {
   $ExtraTable createAlias(String alias) {
     return $ExtraTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class ExtraData extends DataClass implements Insertable<ExtraData> {
@@ -2388,9 +2441,9 @@ class ExtraCompanion extends UpdateCompanion<ExtraData> {
     this.int8BigInt = const Value.absent(),
   });
   ExtraCompanion.insert({
-    required int id,
+    this.id = const Value.absent(),
     this.int8BigInt = const Value.absent(),
-  }) : id = Value(id);
+  });
   static Insertable<ExtraData> custom({
     Expression<int>? id,
     Expression<BigInt>? int8BigInt,

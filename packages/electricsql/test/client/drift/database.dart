@@ -18,9 +18,6 @@ class Extra extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 @DriftDatabase(

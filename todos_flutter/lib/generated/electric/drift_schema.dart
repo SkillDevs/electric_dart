@@ -41,9 +41,6 @@ class Todo extends Table with ElectricTableMixin {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
-  bool get withoutRowId => true;
-
-  @override
   $TodoTableRelations get $relations => const $TodoTableRelations();
 }
 
@@ -59,9 +56,6 @@ class Todolist extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $TodolistTableRelations get $relations => const $TodolistTableRelations();
