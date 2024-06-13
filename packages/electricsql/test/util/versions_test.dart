@@ -67,6 +67,21 @@ Future<void> main() async {
           'Valid versions are: ${validVersions.join(', ')}',
     );
   });
+
+  test('Check version in pubspec matches client version constant', () async {
+    final pubspecContent = await File('pubspec.yaml').readAsString();
+
+    final versionRegexp = RegExp('version: (.+)');
+    final version = versionRegexp.firstMatch(pubspecContent)!.group(1)!;
+
+    expect(
+      version,
+      kElectricClientVersion,
+      reason:
+          'Version in pubspec.yaml $version does not match the client version constant $kElectricClientVersion',
+    );
+  
+  });
 }
 
 Future<({String commit, String version})> getReferenceVersion() async {
