@@ -95,6 +95,7 @@ class _QuerySide extends StatelessWidget {
             children: <Widget>[
               const TabBar(
                 isScrollable: true,
+                tabAlignment: TabAlignment.start,
                 tabs: [
                   Tab(text: 'Query'),
                   Tab(text: 'History'),
@@ -270,6 +271,7 @@ class _ResultsSide extends ConsumerWidget {
                 children: <Widget>[
                   const TabBar(
                     isScrollable: true,
+                    tabAlignment: TabAlignment.start,
                     tabs: [
                       Tab(text: 'Table'),
                       Tab(text: 'JSON'),
