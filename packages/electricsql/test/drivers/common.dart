@@ -219,8 +219,8 @@ void runTests(DatabaseAdapter Function() getAdapter) {
 
       final result = await adapter.query(Statement('SELECT * FROM items;'));
       expect(result, [
-        {'value': 'bar'},
         {'value': 'foo'},
+        {'value': 'bar'},
       ]);
 
       // Can open a new transaction
