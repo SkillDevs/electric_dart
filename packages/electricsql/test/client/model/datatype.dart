@@ -1022,7 +1022,7 @@ Future<DartT> _insertAndFetchFromExtra<DartT extends Object>(
   required DialectAwareSqlType<DartT>? customT,
 }) async {
   final baseCompanion = ExtraCompanion.insert(
-    id: 77,
+    id: const Value(77),
   );
 
   final insertCompanion = insertCol(baseCompanion, value);

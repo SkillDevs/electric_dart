@@ -80,7 +80,6 @@ Future<void> main() async {
       reason:
           'Version in pubspec.yaml $version does not match the client version constant $kElectricClientVersion',
     );
-  
   });
 }
 
