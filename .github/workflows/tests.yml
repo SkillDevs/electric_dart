@@ -37,7 +37,7 @@ jobs:
         run: docker pull postgres:latest
 
       - name: Run tests
-        run: melos test:all
+        run: melos run test:all
 
   lint:
     runs-on: ubuntu-latest
@@ -57,7 +57,7 @@ jobs:
         run: melos bs
 
       - name: Verify formatting
-        run: melos format
+        run: melos run format
 
       - name: Analyze project source
-        run: melos analyze
+        run: melos run analyze

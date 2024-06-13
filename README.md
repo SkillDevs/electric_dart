@@ -271,9 +271,9 @@ Install the `protoc_plugin` Dart package.
 
 To generate the code
 
-`melos generate_proto`
+`melos run generate_proto`
 
 
 ### Run the tests
 
-`melos test:all`
+`melos run test:all`
