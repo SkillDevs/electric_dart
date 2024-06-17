@@ -353,7 +353,15 @@ class SatelliteClient implements Client {
 
   Future<void> handleIncoming(Uint8List data) async {
     try {
+      print(
+          '${DateTime.now()} INCOMING PROTOBUF SIZE: ${data.length.toHumanReadableSize()}');
+      final sw = Stopwatch()..start();
       final messageInfo = toMessage(data);
+      // if (messageInfo.msgType == SatMsgType.opLog) {
+      //   print("force locking the thread by sleeping");
+      //   sleep(Duration(seconds: 13));
+      // }
+      print('DECODE MESSAGE elapsed: ${sw.elapsed}');
       final message = messageInfo.msg;
 
       if (_incomingLock.inLock &&
@@ -1637,5 +1645,39 @@ class SatelliteClientEventEmitter implements SafeEventEmitter {
 
   void _enqueueEmit<T>(String eventName, T data) {
     return _emitter.enqueueEmit<T>(eventName, data);
+  }
+}
+
+extension SizeExtensions on num {
+  /// method returns a human readable string representing a file size
+  /// size can be passed as number or as string
+  /// the optional parameter 'round' specifies the number of numbers after comma/point (default is 2)
+  /// the optional boolean parameter 'useBase1024' specifies if we should count in 1024's (true) or 1000's (false). e.g. 1KB = 1024B (default is true)
+  String toHumanReadableSize({int round = 2, bool useBase1024 = true}) {
+    const List<String> affixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+
+    final num divider = useBase1024 ? 1024 : 1000;
+
+    final num size = this;
+    num runningDivider = divider;
+    num runningPreviousDivider = 0;
+    int affix = 0;
+
+    while (size >= runningDivider && affix < affixes.length - 1) {
+      runningPreviousDivider = runningDivider;
+      runningDivider *= divider;
+      affix++;
+    }
+
+    String result =
+        (runningPreviousDivider == 0 ? size : size / runningPreviousDivider)
+            .toStringAsFixed(round);
+
+    //Check if the result ends with .00000 (depending on how many decimals) and remove it if found.
+    if (result.endsWith('0' * round)) {
+      result = result.substring(0, result.length - round - 1);
+    }
+
+    return '$result ${affixes[affix]}';
   }
 }
