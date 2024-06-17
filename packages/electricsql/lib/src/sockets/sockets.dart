@@ -76,6 +76,7 @@ abstract class WebSocketBase implements Socket {
   }) {
     final effectiveError = error ??
         SatelliteException(SatelliteErrorCode.socketError, 'socket error');
+    print("${DateTime.now()} NOTIFY ERROR AND CLOSE SOCKET ${effectiveError.message} ${effectiveError.code}");
     for (final callback in _errorCallbacks) {
       callback(effectiveError, stackTrace);
     }
@@ -114,7 +115,9 @@ abstract class WebSocketBase implements Socket {
 
     try {
       _channel = createSocketChannel(opts.url);
+      print("${DateTime.now()} WAITING SOCKET CHANNEL READY");
       await _channel!.ready;
+      print("${DateTime.now()} SOCKET CHANNEL IS READY");
     } catch (e) {
       _notifyErrorAndCloseSocket(
         error: SatelliteException(
@@ -166,6 +169,7 @@ abstract class WebSocketBase implements Socket {
 
   @override
   Socket closeAndRemoveListeners() {
+    print("${DateTime.now()} CLOSE SOCKET AND REMOVE LISTENERS");
     _messageListener = null;
     _closeListener = null;
 
@@ -231,6 +235,7 @@ abstract class WebSocketBase implements Socket {
   }
 
   void _socketClose() {
+    print("${DateTime.now()} SOCKET CLOSE");
     for (final subscription in _subscriptions) {
       subscription.cancel();
     }
