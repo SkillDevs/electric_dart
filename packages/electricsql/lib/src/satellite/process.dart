@@ -473,6 +473,7 @@ This means there is a notifier subscription leak.`''');
     final groupedChanges = <String,
         ({
       Relation relation,
+      List<String> primaryKeyColNames,
       List<DbRecord> records,
       QualifiedTablename table,
     })>{};
@@ -480,27 +481,38 @@ This means there is a notifier subscription leak.`''');
     final allArgsForShadowInsert = <DbRecord>[];
 
     // Group all changes by table name to be able to insert them all together
+    final Map<String, String> fullTableNameLookup = {};
     for (final op in changes) {
-      final qt = QualifiedTablename(namespace, op.relation.table);
-      final tableName = qt.toString();
-
-      if (groupedChanges.containsKey(tableName)) {
-        final changeGroup = groupedChanges[tableName]!;
-        changeGroup.records.add(op.record);
-      } else {
-        groupedChanges[tableName] = (
+      ({
+        Relation relation,
+        List<String> primaryKeyColNames,
+        List<DbRecord> records,
+        QualifiedTablename table,
+      }) groupedChange;
+      if (!fullTableNameLookup.containsKey(op.relation.table)) {
+        final qt = QualifiedTablename(namespace, op.relation.table);
+        final tableName = qt.toString();
+        fullTableNameLookup[op.relation.table] = tableName;
+        groupedChange = (
           relation: op.relation,
+          primaryKeyColNames: op.relation.columns
+              .where((col) => col.primaryKey != null && col.primaryKey != 0)
+              .map((col) => col.name)
+              .toList(),
           records: [op.record],
           table: qt,
         );
+        groupedChanges[tableName] = groupedChange;
+      } else {
+        groupedChange =
+            groupedChanges[fullTableNameLookup[op.relation.table]!]!;
+        groupedChange.records.add(op.record);
       }
 
       // Since we're already iterating changes, we can also prepare data for shadow table
-      final primaryKeyCols =
-          op.relation.columns.fold(<String, Object>{}, (agg, col) {
-        if (col.primaryKey != null && col.primaryKey != 0) {
-          agg[col.name] = op.record[col.name]!;
-        }
+      final primaryKeyCols = groupedChange.primaryKeyColNames
+          .fold(<String, Object>{}, (agg, colName) {
+        agg[colName] = op.record[colName]!;
         return agg;
       });
 
@@ -522,7 +534,8 @@ This means there is a notifier subscription leak.`''');
     // For each table, do a batched insert
     for (final entry in groupedChanges.entries) {
       // final _table = entry.key;
-      final (:relation, :records, table: table) = entry.value;
+      final (:relation, :records, table: table, primaryKeyColNames: _) =
+          entry.value;
       final columnNames = relation.columns.map((col) => col.name).toList();
       final qualifiedTableName = '$table';
       final orIgnore = builder.sqliteOnly('OR IGNORE');
@@ -571,12 +584,9 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       // `RETURNING` clause in the middle of `runInTransaction`.
       final notificationChanges = <Change>[];
       for (final entry in groupedChanges.entries) {
-        final (:relation, :records, :table) = entry.value;
+        final (relation: _, :records, :table, :primaryKeyColNames) =
+            entry.value;
 
-        final primaryKeyColNames = relation.columns
-            .where((col) => col.primaryKey != null)
-            .map((col) => col.name)
-            .toList();
         notificationChanges.add(
           Change(
             qualifiedTablename: table,

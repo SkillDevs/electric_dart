@@ -197,6 +197,8 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
 
   Duration? _startReplicationDelay;
 
+  Map<String, ReplicatedRowTransformer<DbRecord>> replicationTransforms = {};
+
   void setStartReplicationDelay(Duration? delay) {
     _startReplicationDelay = delay;
   }
@@ -586,12 +588,12 @@ class MockSatelliteClient extends AsyncEventEmitter implements Client {
     QualifiedTablename tableName,
     ReplicatedRowTransformer<DbRecord> transform,
   ) {
-    throw UnimplementedError();
+    replicationTransforms[tableName.tablename] = transform;
   }
 
   @override
   void clearReplicationTransform(QualifiedTablename tableName) {
-    throw UnimplementedError();
+    replicationTransforms.remove(tableName.tablename);
   }
 
   void Function() _on<T>(
