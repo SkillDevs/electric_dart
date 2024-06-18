@@ -1,22 +1,23 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/util.dart';
 
-/// Runs the provided statements in a transaction and disables FK checks if `disableFKs` is true.
-/// FK checks are enabled if `disableFKs` is false.
-/// FK checks are left untouched if `disableFKs` is undefined.
-/// `disableFKs` should only be set to true when using SQLite as we already disable FK checks for incoming TXs when using Postgres,
+/// Runs the provided statements in a transaction and sets the `foreign_keys` pragma based on the `fkChecks` flag.
+/// FK checks are enabled if `fkChecks` is `ForeignKeyChecks.enabled`.
+/// FK checks are disabled if `fkChecks` is `ForeignKeyChecks.disabled`.
+/// FK checks are left untouched if `fkChecks` is `ForeignKeyChecks.inherit`.
+/// `fkChecks` should only be set to `ForeignKeyChecks.disabled` when using SQLite as we already disable FK checks for incoming TXs when using Postgres,
 /// so the executed SQL code to disable FKs is for SQLite dialect only.
 Future<RunResult> runStmtsInTransaction(
   DatabaseAdapter adapter, {
-  required bool? disableFKs,
+  required ForeignKeyChecks fkChecks,
   required List<Statement> stmts,
 }) {
-  if (disableFKs == null) {
+  if (fkChecks == ForeignKeyChecks.inherit) {
     // don't touch the FK pragma
     return adapter.runInTransaction(stmts);
   }
 
-  final desiredPragma = disableFKs ? 0 : 1;
+  final desiredPragma = fkChecks == ForeignKeyChecks.disabled ? 0 : 1;
 
   return adapter.runExclusively((uncoordinatedAdapter) async {
     final res = await uncoordinatedAdapter.query(

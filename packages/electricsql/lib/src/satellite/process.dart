@@ -5,6 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/auth/secure.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
@@ -77,8 +78,9 @@ class SatelliteProcess implements Satellite {
   final QueryBuilder builder;
 
   final SatelliteOpts opts;
-  late final bool? disableFKs =
-      builder.dialect == Dialect.sqlite ? opts.disableFKs : null;
+  late ForeignKeyChecks fkChecks = builder.dialect == Dialect.sqlite
+      ? opts.fkChecks
+      : ForeignKeyChecks.inherit;
 
   @visibleForTesting
   AuthState? authState;
@@ -630,10 +632,10 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     }
   }
 
-  /// Runs the provided statements in a transaction and disables FK checks if `disableFKs` is true.
-  /// `disableFKs` should only be set to true when using SQLite as we already disable FK checks for incoming TXs when using Postgres
+  /// Runs the provided statements in a transaction and disables FK checks if `this.fkChecks` is set to `disabled`.
+  /// `this.fkChecks` should only be set to true when using SQLite as we already disable FK checks for incoming TXs when using Postgres
   Future<void> runInTransaction(List<Statement> stmts) {
-    return runStmtsInTransaction(adapter, disableFKs: disableFKs, stmts: stmts);
+    return runStmtsInTransaction(adapter, fkChecks: fkChecks, stmts: stmts);
   }
 
   Future<void> _resetClientState({
@@ -1515,7 +1517,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
           statements: allStatements,
           version: transaction.migrationVersion!,
         ),
-        disableFKs: disableFKs,
+        fkChecks: fkChecks,
       );
     } else {
       await runInTransaction(allStatements);

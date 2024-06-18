@@ -1105,6 +1105,8 @@ void processTests({
 
     await runMigrations();
 
+    // set FK checks to inherit because by default they are disabled
+    satellite.fkChecks = ForeignKeyChecks.inherit;
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
     await satellite.setMeta('compensations', 0);
     satellite.setAuthState(authState);
@@ -1238,6 +1240,8 @@ void processTests({
     await runMigrations();
 
     if (builder.dialect == Dialect.sqlite) {
+      // set FK checks to inherit because by default they are disabled
+      satellite.fkChecks = ForeignKeyChecks.inherit;
       await adapter.run(Statement('PRAGMA foreign_keys = ON'));
     }
     await satellite.setMeta('compensations', 0);
@@ -1910,6 +1914,12 @@ void processTests({
     }
 
     await runMigrations();
+
+    if (builder.dialect == Dialect.sqlite) {
+      // set FK checks to inherit because by default they are disabled
+      satellite.fkChecks = ForeignKeyChecks.inherit;
+      await adapter.run(Statement('PRAGMA foreign_keys = ON'));
+    }
 
     const tablename = 'child';
 

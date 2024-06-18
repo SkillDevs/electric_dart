@@ -34,9 +34,10 @@ class ElectricConfig {
   /// Optional backoff options for connecting with Electric
   final ConnectionBackoffOptions? connectionBackoffOptions;
 
-  /// Whether to disable FK checks when applying downstream (i.e. incoming) transactions to the local SQLite database.
-  /// When using Postgres, this is the default behavior and can't be changed.
-  final bool? disableForeignKeysDownstream;
+  /// Whether to check foreign keys when applying downstream (i.e. incoming) transactions to the local SQLite database.
+  /// Defaults to `disabled`, meaning that FKs are not checked.
+  /// When using Postgres, this option cannot be changed.
+  final ForeignKeyChecks? foreignKeyChecksDownstream;
 
   ElectricConfig({
     this.auth,
@@ -44,8 +45,14 @@ class ElectricConfig {
     this.logger,
     this.timeout,
     this.connectionBackoffOptions,
-    this.disableForeignKeysDownstream,
+    this.foreignKeyChecksDownstream,
   });
+}
+
+enum ForeignKeyChecks {
+  enabled,
+  disabled,
+  inherit,
 }
 
 class ElectricConfigWithDialect extends ElectricConfig {
@@ -61,7 +68,7 @@ class ElectricConfigWithDialect extends ElectricConfig {
       logger: config.logger,
       timeout: config.timeout,
       connectionBackoffOptions: config.connectionBackoffOptions,
-      disableForeignKeysDownstream: config.disableForeignKeysDownstream,
+      foreignKeyChecksDownstream: config.foreignKeyChecksDownstream,
       dialect: dialect,
     );
   }
@@ -72,7 +79,7 @@ class ElectricConfigWithDialect extends ElectricConfig {
     required super.logger,
     required super.timeout,
     required super.connectionBackoffOptions,
-    required super.disableForeignKeysDownstream,
+    required super.foreignKeyChecksDownstream,
     required this.dialect,
   });
 }
@@ -82,14 +89,14 @@ class HydratedConfig {
   final ReplicationConfig replication;
   final ConnectionBackoffOptions connectionBackoffOptions;
   final String namespace;
-  final bool? disableFKs;
+  final ForeignKeyChecks fkChecks;
 
   HydratedConfig({
     required this.auth,
     required this.replication,
     required this.connectionBackoffOptions,
     required this.namespace,
-    required this.disableFKs,
+    required this.fkChecks,
   });
 }
 
@@ -119,6 +126,9 @@ HydratedConfig hydrateConfig(ElectricConfigWithDialect config) {
   final dialect = config.dialect ?? Dialect.sqlite;
   final defaultNamespace = dialect == Dialect.postgres ? 'public' : 'main';
 
+  final fkChecks =
+      config.foreignKeyChecksDownstream ?? ForeignKeyChecks.disabled;
+
   final replication = ReplicationConfig(
     host: parsedServiceUrl.hostname,
     port: parsedServiceUrl.port,
@@ -136,7 +146,7 @@ HydratedConfig hydrateConfig(ElectricConfigWithDialect config) {
     //debug: debug,
     connectionBackoffOptions: connectionBackoffOptions,
     namespace: defaultNamespace,
-    disableFKs: config.disableForeignKeysDownstream,
+    fkChecks: fkChecks,
   );
 }
 

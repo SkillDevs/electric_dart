@@ -29,15 +29,14 @@ void main() {
     db.dispose();
   });
 
-  test('runInTransaction disables FK checks when flag is set to true',
+  test('runInTransaction disables FK checks when flag is set to disabled',
       () async {
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
 
     // Should succeed even though the FK is not valid
-    // because we pass `true` for the `disableFKs` flag
     final res = await runStmtsInTransaction(
       adapter,
-      disableFKs: true,
+      fkChecks: ForeignKeyChecks.disabled,
       stmts: [
         Statement(
           "INSERT INTO child (cid, p) VALUES ('c1', 'p1');",
@@ -62,15 +61,14 @@ void main() {
   });
 
   test(
-      'runInTransaction disables FK checks when flag is set to true and FK pragma is already disabled',
+      'runInTransaction disables FK checks when flag is set to disabled and FK pragma is already disabled',
       () async {
     await adapter.run(Statement('PRAGMA foreign_keys = OFF;'));
 
     // Should succeed even though the FK is not valid
-    // because we pass `true` for the `disableFKs` flag
     final res = await runStmtsInTransaction(
       adapter,
-      disableFKs: true,
+      fkChecks: ForeignKeyChecks.disabled,
       stmts: [
         Statement(
           "INSERT INTO child (cid, p) VALUES ('c1', 'p1');",
@@ -94,16 +92,15 @@ void main() {
     expect(fkRow.first['foreign_keys'], 0);
   });
 
-  test('runInTransaction enables FK checks when flag is set to false',
+  test('runInTransaction enables FK checks when flag is set to enabled',
       () async {
     await adapter.run(Statement('PRAGMA foreign_keys = OFF;'));
 
     // Should fail because the FK is not valid
-    // because we pass `false` for the `disableFKs` flag
     await expectLater(
       () => runStmtsInTransaction(
         adapter,
-        disableFKs: false,
+        fkChecks: ForeignKeyChecks.enabled,
         stmts: [
           Statement(
             "INSERT INTO child (cid, p) VALUES ('c1', 'p1');",
@@ -125,7 +122,7 @@ void main() {
     // Now insert a parent row and a child row pointing to the parent
     await runStmtsInTransaction(
       adapter,
-      disableFKs: false,
+      fkChecks: ForeignKeyChecks.enabled,
       stmts: [
         Statement("INSERT INTO parent (pid) VALUES ('p1');"),
         Statement("INSERT INTO child (cid, p) VALUES ('c1', 'p1');"),
@@ -155,16 +152,15 @@ void main() {
   });
 
   test(
-      'runInTransaction enables FK checks when flag is set to false and pragma is already enabled',
+      'runInTransaction enables FK checks when flag is set to enabled and pragma is already enabled',
       () async {
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
 
     // Should fail because the FK is not valid
-    // because we pass `false` for the `disableFKs` flag
     await expectLater(
       () => runStmtsInTransaction(
         adapter,
-        disableFKs: false,
+        fkChecks: ForeignKeyChecks.enabled,
         stmts: [
           Statement(
             "INSERT INTO child (cid, p) VALUES ('c1', 'p1');",
@@ -186,7 +182,7 @@ void main() {
     // Now insert a parent row and a child row pointing to the parent
     await runStmtsInTransaction(
       adapter,
-      disableFKs: false,
+      fkChecks: ForeignKeyChecks.enabled,
       stmts: [
         Statement("INSERT INTO parent (pid) VALUES ('p1');"),
         Statement("INSERT INTO child (cid, p) VALUES ('c1', 'p1');"),
@@ -215,17 +211,15 @@ void main() {
     expect(fkRow.first['foreign_keys'], 1);
   });
 
-  test(
-      'runInTransaction does not touch enabled FK pragma when flag is undefined',
+  test('runInTransaction does not touch enabled FK pragma when flag is inherit',
       () async {
     await adapter.run(Statement('PRAGMA foreign_keys = ON;'));
 
     // Should fail because the FK is not valid
-    // because we pass `false` for the `disableFKs` flag
     await expectLater(
       () => runStmtsInTransaction(
         adapter,
-        disableFKs: null,
+        fkChecks: ForeignKeyChecks.inherit,
         stmts: [
           Statement(
             "INSERT INTO child (cid, p) VALUES ('c1', 'p1');",
@@ -256,7 +250,7 @@ void main() {
     // Now insert a parent row and a child row pointing to the parent
     await runStmtsInTransaction(
       adapter,
-      disableFKs: null,
+      fkChecks: ForeignKeyChecks.inherit,
       stmts: [
         Statement("INSERT INTO parent (pid) VALUES ('p1');"),
         Statement("INSERT INTO child (cid, p) VALUES ('c1', 'p1');"),
@@ -288,17 +282,17 @@ void main() {
   });
 
   test(
-      'runInTransaction does not touch disabled FK pragma when flag is undefined',
+      'runInTransaction does not touch disabled FK pragma when flag is inherit',
       () async {
     await adapter.run(Statement('PRAGMA foreign_keys = OFF;'));
 
     // Should succeed even though the FK is not valid
     // because we disabled the FK pragma
-    // and passed `undefined` for the `disableFKs` flag
+    // and passed `inherit` for the `fkChecks` flag
     // which means the FK pragma is used as is
     final res = await runStmtsInTransaction(
       adapter,
-      disableFKs: null,
+      fkChecks: ForeignKeyChecks.inherit,
       stmts: [
         Statement(
           "INSERT INTO child (cid, p) VALUES ('c1', 'p1');",

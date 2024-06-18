@@ -1,3 +1,4 @@
+import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
@@ -141,7 +142,10 @@ abstract class BundleMigratorBase implements Migrator {
   }
 
   @override
-  Future<void> apply(StmtMigration migration, {bool? disableFKs}) async {
+  Future<void> apply(
+    StmtMigration migration, {
+    ForeignKeyChecks fkChecks = ForeignKeyChecks.inherit,
+  }) async {
     final statements = migration.statements;
     final version = migration.version;
 
@@ -153,7 +157,7 @@ abstract class BundleMigratorBase implements Migrator {
 
     await runStmtsInTransaction(
       adapter,
-      disableFKs: disableFKs,
+      fkChecks: fkChecks,
       stmts: [
         ...statements,
         Statement(
@@ -173,7 +177,7 @@ VALUES (${queryBuilder.makePositionalParam(1)}, ${queryBuilder.makePositionalPar
   @override
   Future<bool> applyIfNotAlready(
     StmtMigration migration, {
-    bool? disableFKs,
+    ForeignKeyChecks fkChecks = ForeignKeyChecks.inherit,
   }) async {
     final rows = await adapter.query(
       Statement(
@@ -189,7 +193,7 @@ WHERE version = ${queryBuilder.makePositionalParam(1)}''',
     if (shouldApply) {
       // This is a new migration because its version number
       // is not in our migrations table.
-      await apply(migration, disableFKs: disableFKs);
+      await apply(migration, fkChecks: fkChecks);
     }
 
     return shouldApply;
