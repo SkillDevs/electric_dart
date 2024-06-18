@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/util/proto.dart';
+import 'package:electricsql/util.dart';
 import 'package:test/test.dart';
 
 String encodeSatOpMigrateMsg(SatOpMigrate request) {
@@ -20,7 +21,7 @@ MetaData makeMigrationMetaData(QueryBuilder builder) {
           SatOpMigrate_Stmt(
             type: SatOpMigrate_Type.CREATE_TABLE,
             sql:
-                'CREATE TABLE "${builder.defaultNamespace}"."stars" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL\n)${builder.sqliteOnly(' WITHOUT ROWID')};\n',
+                'CREATE TABLE "${builder.defaultNamespace}"."stars" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL\n);\n',
           ),
         ],
         table: SatOpMigrate_Table(
@@ -91,7 +92,7 @@ void builderTests({
     expect(migration.version, migrationMetaData.version);
     expect(
       migration.statements[0],
-      'CREATE TABLE "${builder.defaultNamespace}"."stars" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL\n)${builder.sqliteOnly(' WITHOUT ROWID')};\n',
+      'CREATE TABLE "${builder.defaultNamespace}"."stars" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "avatar_url" TEXT NOT NULL,\n  "name" TEXT,\n  "starred_at" TEXT NOT NULL,\n  "username" TEXT NOT NULL\n);\n',
     );
     if (builder.dialect == Dialect.sqlite) {
       expect(
@@ -132,7 +133,7 @@ void builderTests({
               SatOpMigrate_Stmt(
                 type: SatOpMigrate_Type.CREATE_TABLE,
                 sql:
-                    'CREATE TABLE "${builder.defaultNamespace}"."tenants" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+                    'CREATE TABLE "${builder.defaultNamespace}"."tenants" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")\n);\n',
               ),
             ],
             table: SatOpMigrate_Table(
@@ -169,7 +170,7 @@ void builderTests({
               SatOpMigrate_Stmt(
                 type: SatOpMigrate_Type.CREATE_TABLE,
                 sql:
-                    'CREATE TABLE "${builder.defaultNamespace}"."users" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  "email" TEXT NOT NULL,\n  "password_hash" TEXT NOT NULL,\n  CONSTRAINT "users_pkey" PRIMARY KEY ("id")\n) WITHOUT ROWID;\n',
+                    'CREATE TABLE "${builder.defaultNamespace}"."users" (\n  "id" TEXT NOT NULL,\n  "name" TEXT NOT NULL,\n  "email" TEXT NOT NULL,\n  "password_hash" TEXT NOT NULL,\n  CONSTRAINT "users_pkey" PRIMARY KEY ("id")\n);\n',
               ),
             ],
             table: SatOpMigrate_Table(
@@ -224,7 +225,7 @@ void builderTests({
               SatOpMigrate_Stmt(
                 type: SatOpMigrate_Type.CREATE_TABLE,
                 sql:
-                    'CREATE TABLE "${builder.defaultNamespace}"."tenant_users" (\n  "tenant_id" TEXT NOT NULL,\n  "user_id" TEXT NOT NULL,\n  CONSTRAINT "tenant_users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_pkey" PRIMARY KEY ("tenant_id", "user_id")\n) WITHOUT ROWID;\n',
+                    'CREATE TABLE "${builder.defaultNamespace}"."tenant_users" (\n  "tenant_id" TEXT NOT NULL,\n  "user_id" TEXT NOT NULL,\n  CONSTRAINT "tenant_users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE,\n  CONSTRAINT "tenant_users_pkey" PRIMARY KEY ("tenant_id", "user_id")\n);\n',
               ),
             ],
             table: SatOpMigrate_Table(
@@ -299,6 +300,124 @@ void builderTests({
     expect(migration.version == metaData.version, isTrue);
     expect(migration.statements, [
       'CREATE INDEX idx_stars_username ON stars(username);',
+    ]);
+  });
+
+  test('prepareInsertBatchedStatements correctly splits up data in batches',
+      () {
+    const data = [
+      {'a': 1, 'b': 2},
+      {'a': 3, 'b': 4},
+      {'a': 5, 'b': 6},
+    ];
+    final stmts = builder.prepareInsertBatchedStatements(
+      'INSERT INTO test (a, b) VALUES',
+      ['a', 'b'],
+      data,
+      5, // at most 5 `?`s in one SQL statement, so we should see the split
+    );
+
+    final List<String> posArgs = builder.dialect == Dialect.sqlite
+        ? ['?', '?', '?', '?']
+        : [r'$1', r'$2', r'$3', r'$4'];
+
+    expect(stmts, [
+      Statement(
+        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]}), (${posArgs[2]}, ${posArgs[3]})',
+        [1, 2, 3, 4],
+      ),
+      Statement(
+        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]})',
+        [5, 6],
+      ),
+    ]);
+  });
+
+  test('prepareInsertBatchedStatements respects column order', () {
+    const data = [
+      {'a': 1, 'b': 2},
+      {'a': 3, 'b': 4},
+      {'a': 5, 'b': 6},
+    ];
+    final stmts = builder.prepareInsertBatchedStatements(
+      'INSERT INTO test (a, b) VALUES',
+      ['b', 'a'],
+      data,
+      5,
+    );
+
+    final List<String> posArgs = builder.dialect == Dialect.sqlite
+        ? ['?', '?', '?', '?']
+        : [r'$1', r'$2', r'$3', r'$4'];
+
+    expect(stmts, [
+      Statement(
+        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]}), (${posArgs[2]}, ${posArgs[3]})',
+        [2, 1, 4, 3],
+      ),
+      Statement(
+        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]})',
+        [6, 5],
+      ),
+    ]);
+  });
+
+  test('prepareDeleteBatchedStatements correctly splits up data in batches',
+      () {
+    const data = [
+      {'a': 1, 'b': 2},
+      {'a': 3, 'b': 4},
+      {'a': 5, 'b': 6},
+    ];
+    final stmts = builder.prepareDeleteBatchedStatements(
+      'DELETE FROM test WHERE',
+      ['a', 'b'],
+      data,
+      5, // at most 5 `?`s in one SQL statement, so we should see the split
+    );
+
+    final List<String> posArgs = builder.dialect == Dialect.sqlite
+        ? ['?', '?', '?', '?']
+        : [r'$1', r'$2', r'$3', r'$4'];
+
+    expect(stmts, [
+      Statement(
+        'DELETE FROM test WHERE ("a" = ${posArgs[0]} AND "b" = ${posArgs[1]}) OR ("a" = ${posArgs[2]} AND "b" = ${posArgs[3]})',
+        [1, 2, 3, 4],
+      ),
+      Statement(
+        'DELETE FROM test WHERE ("a" = ${posArgs[0]} AND "b" = ${posArgs[1]})',
+        [5, 6],
+      ),
+    ]);
+  });
+
+  test('prepareDeleteBatchedStatements respects column order', () {
+    const data = [
+      {'a': 1, 'b': 2},
+      {'a': 3, 'b': 4},
+      {'a': 5, 'b': 6},
+    ];
+    final stmts = builder.prepareDeleteBatchedStatements(
+      'DELETE FROM test WHERE',
+      ['b', 'a'],
+      data,
+      5,
+    );
+
+    final List<String> posArgs = builder.dialect == Dialect.sqlite
+        ? ['?', '?', '?', '?']
+        : [r'$1', r'$2', r'$3', r'$4'];
+
+    expect(stmts, [
+      Statement(
+        'DELETE FROM test WHERE ("b" = ${posArgs[0]} AND "a" = ${posArgs[1]}) OR ("b" = ${posArgs[2]} AND "a" = ${posArgs[3]})',
+        [2, 1, 4, 3],
+      ),
+      Statement(
+        'DELETE FROM test WHERE ("b" = ${posArgs[0]} AND "a" = ${posArgs[1]})',
+        [6, 5],
+      ),
     ]);
   });
 }

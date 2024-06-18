@@ -378,7 +378,7 @@ class SatelliteClient implements Client {
         });
       }
 
-      if (logger.levelImportance <= Level.debug.value) {
+      if (logger.isDebugMode) {
         logger.debug('[proto] recv: ${msgToString(messageInfo.msg)}');
       }
 
@@ -543,7 +543,7 @@ class SatelliteClient implements Client {
   }
 
   void sendMessage(Object request) {
-    if (logger.levelImportance <= Level.debug.value) {
+    if (logger.isDebugMode) {
       logger.debug('[proto] send: ${msgToString(request)}');
     }
     final _socket = socket;

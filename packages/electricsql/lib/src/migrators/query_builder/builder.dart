@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/util/index.dart';
-import 'package:electricsql/src/util/js_array_funs.dart';
 
 enum Dialect {
   sqlite,
@@ -335,37 +334,51 @@ abstract class QueryBuilder {
     final stmts = <Statement>[];
     final columnCount = columns.length;
     final recordCount = records.length;
-    int processed = 0;
-    int positionalParam = 1;
-    String pos(int i) => makePositionalParam(i);
-    String makeInsertPattern() {
-      final insertRow = List.generate(
-        columnCount,
-        (_) => pos(positionalParam++),
-      );
-
-      return " (${insertRow.join(', ')})";
-    }
 
     // Amount of rows we can insert at once
     final batchMaxSize = (maxParameters / columnCount).floor();
+
+    // keep a temporary join array for joining strings, to avoid
+    // the overhead of generating a new array every time
+    final tempColJoinArray =
+        List<String>.filled(columnCount, '', growable: false);
+
+    int processed = 0;
+    int prevInsertCount = -1;
+    String insertPattern = '';
+
     while (processed < recordCount) {
-      positionalParam = 1; // start counting parameters from 1 again
       final currentInsertCount = min(recordCount - processed, batchMaxSize);
-      String sql = baseSql +
-          List.generate(currentInsertCount, (_) => makeInsertPattern())
-              .join(',');
+
+      // cache insert pattern as it is going to be the same for every batch
+      // of `batchMaxSize` - ideally we can externalize this cache since for a
+      // given adapter this is _always_ going to be the same
+      if (currentInsertCount != prevInsertCount) {
+        insertPattern = List.generate(currentInsertCount, (recordIdx) {
+          for (int i = 0; i < columnCount; i++) {
+            tempColJoinArray[i] = makePositionalParam(
+              recordIdx * columnCount + i + 1,
+            );
+          }
+          return ' (${tempColJoinArray.join(', ')})';
+        }).join(',');
+      }
+
+      String sql = baseSql + insertPattern;
 
       if (suffixSql != '') {
         sql += ' $suffixSql';
       }
 
-      final List<Object?> args = records
-          .slice(processed, processed + currentInsertCount)
-          .expand((record) => columns.map((col) => record[col]))
-          .toList();
+      final List<Object?> args = [];
+      for (int i = 0; i < currentInsertCount; i++) {
+        for (int j = 0; j < columnCount; j++) {
+          args.add(records[processed + i][columns[j]]);
+        }
+      }
 
       processed += currentInsertCount;
+      prevInsertCount = currentInsertCount;
       stmts.add(Statement(sql, args));
     }
     return stmts;
@@ -393,38 +406,49 @@ abstract class QueryBuilder {
     final stmts = <Statement>[];
     final columnCount = columns.length;
     final recordCount = records.length;
-    int processed = 0;
-    int positionalParam = 1;
-    String pos(int i) => makePositionalParam(i);
-    String makeWherePattern() {
-      final columnComparisons = List.generate(
-        columnCount,
-        (i) => '"${columns[i]}" = ${pos(positionalParam++)}',
-      );
-
-      return " (${columnComparisons.join(' AND ')})";
-    }
 
     // Amount of rows we can delete at once
     final batchMaxSize = (maxParameters / columnCount).floor();
+
+    // keep a temporary join array for joining strings, to avoid
+    // the overhead of generating a new array every time
+    final tempColumnComparisonJoinArr =
+        List<String>.filled(columnCount, '', growable: false);
+
+    int processed = 0;
+    int prevDeleteCount = -1;
+    String deletePattern = '';
+
     while (processed < recordCount) {
-      positionalParam = 1; // start counting parameters from 1 again
       final currentDeleteCount = min(recordCount - processed, batchMaxSize);
-      String sql = baseSql +
-          List.generate(currentDeleteCount, (_) => makeWherePattern()).join(
-            ' OR ',
-          );
+
+      // cache delete pattern as it is going to be the same for every batch
+      // of `batchMaxSize` - ideally we can externalize this cache since for a
+      // given adapter this is _always_ going to be the same
+      if (currentDeleteCount != prevDeleteCount) {
+        deletePattern = List.generate(currentDeleteCount, (recordIdx) {
+          for (int i = 0; i < columnCount; i++) {
+            tempColumnComparisonJoinArr[i] =
+                '"${columns[i]}" = ${makePositionalParam(recordIdx * columnCount + i + 1)}';
+          }
+          return ' (${tempColumnComparisonJoinArr.join(' AND ')})';
+        }).join(' OR');
+      }
+      String sql = baseSql + deletePattern;
 
       if (suffixSql != '') {
         sql += ' $suffixSql';
       }
 
-      final args = records
-          .slice(processed, processed + currentDeleteCount)
-          .expand((record) => columns.map((col) => record[col]))
-          .toList();
+      final List<Object?> args = [];
+      for (int i = 0; i < currentDeleteCount; i++) {
+        for (int j = 0; j < columnCount; j++) {
+          args.add(records[processed + i][columns[j]]);
+        }
+      }
 
       processed += currentDeleteCount;
+      prevDeleteCount = currentDeleteCount;
       stmts.add(Statement(sql, args));
     }
     return stmts;

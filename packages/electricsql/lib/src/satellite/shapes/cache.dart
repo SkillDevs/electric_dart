@@ -112,7 +112,7 @@ class SubscriptionsDataCache extends EventEmitter {
       lsn: delivered.lsn,
       data: delivered.transaction
           .map(
-            (t) => proccessShapeDataOperations(t, relations),
+            (t) => processShapeDataOperations(t, relations),
           )
           .toList(),
       shapeReqToUuid: delivered.shapeReqToUuid,
@@ -274,7 +274,7 @@ class SubscriptionsDataCache extends EventEmitter {
     }
   }
 
-  InitialDataChange proccessShapeDataOperations(
+  InitialDataChange processShapeDataOperations(
     SatTransOp op,
     Map<int, Relation> relations,
   ) {

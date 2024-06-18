@@ -283,8 +283,27 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   }) {
     // forbid transforming relation keys to avoid breaking
     // referential integrity
-    final relations = getTableRelations(table.asDslTable)?.$relationsList ?? [];
-    final immutableFields = relations.map((r) => r.fromField).toList();
+
+    final tableRelations = getTableRelations(table)?.$relationsList ?? [];
+
+    final outgoingRelations =
+        tableRelations.where((r) => r.isOutgoingRelation());
+    final incomingRelations =
+        tableRelations.where((r) => r.isIncomingRelation());
+
+    // the column could be the FK column when it is an outgoing FK
+    // or it could be a PK column when it is an incoming FK
+    final fkCols = outgoingRelations.map((r) => r.fromField);
+
+    // Incoming relations don't have the `fromField` and `toField` filled in
+    // so we need to fetch the `toField` from the opposite relation
+    // which is effectively a column in this table to which the FK points
+    final pkCols =
+        incomingRelations.map((r) => r.getOppositeRelation(db).toField);
+
+    // Merge all columns that are part of a FK relation.
+    // Remove duplicate columns in case a column has both an outgoing FK and an incoming FK.
+    final immutableFields = <String>{...fkCols, ...pkCols}.toList();
 
     final QualifiedTablename qualifiedTableName = _getQualifiedTableName(table);
 
@@ -301,9 +320,7 @@ class DriftElectricClient<DB extends GeneratedDatabase>
             immutableFields,
             toInsertable: toInsertable,
           );
-          return insertable
-              .toColumns(false)
-              .map((key, val) => MapEntry(key, expressionToValue(val)));
+          return driftInsertableToValues(insertable);
         },
         transformOutbound: (DbRecord record) {
           final dataClass = table.map(record) as D;
@@ -314,22 +331,10 @@ class DriftElectricClient<DB extends GeneratedDatabase>
             immutableFields,
             toInsertable: toInsertable,
           );
-          return insertable
-              .toColumns(false)
-              .map((key, val) => MapEntry(key, expressionToValue(val)));
+          return driftInsertableToValues(insertable);
         },
       ),
     );
-  }
-
-  Object? expressionToValue(Expression<Object?> expression) {
-    if (expression is Variable) {
-      return expression.value;
-    } else if (expression is Constant) {
-      return expression.value;
-    } else {
-      throw ArgumentError('Unsupported expression type: $expression');
-    }
   }
 
   @override
@@ -351,4 +356,20 @@ class DriftElectricClient<DB extends GeneratedDatabase>
 
 class _TableUpdateFromElectric extends TableUpdate {
   _TableUpdateFromElectric(super.table);
+}
+
+Map<String, Object?> driftInsertableToValues(Insertable<dynamic> insertable) {
+  return insertable
+      .toColumns(false)
+      .map((key, val) => MapEntry(key, _expressionToValue(val)));
+}
+
+Object? _expressionToValue(Expression<Object?> expression) {
+  if (expression is Variable) {
+    return expression.value;
+  } else if (expression is Constant) {
+    return expression.value;
+  } else {
+    throw ArgumentError('Unsupported expression type: $expression');
+  }
 }

@@ -270,7 +270,7 @@ void main() async {
 
     await db.into(db.extra).insert(
           ExtraCompanion.insert(
-            id: 1,
+            id: const Value(1),
             int8BigInt: Value(bigInt),
           ),
         );

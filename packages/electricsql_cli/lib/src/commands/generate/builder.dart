@@ -212,7 +212,6 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
 
         _getTableNameGetter(tableInfo),
         if (primaryKeyGetter != null) primaryKeyGetter,
-        _getWithoutRowIdGetter(),
         if (tableInfo.relations.isNotEmpty) _getRelationsGetter(tableInfo),
       ],
     );
@@ -337,19 +336,6 @@ Method _getColumnFieldGetter(
       ..returns = _getOutColumnTypeFromColumnInfo(schemaInfo, columnInfo)
       ..annotations.addAll(genOpts?.annotations ?? [])
       ..body = columnExpr.code,
-  );
-}
-
-Method _getWithoutRowIdGetter() {
-  return Method(
-    (b) => b
-      ..name = 'withoutRowId'
-      ..returns = refer('bool')
-      ..type = MethodType.getter
-      ..body = literal(true).code
-      ..annotations.add(
-        const CodeExpression(Code('override')),
-      ),
   );
 }
 

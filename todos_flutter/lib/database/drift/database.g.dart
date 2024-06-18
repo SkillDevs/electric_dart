@@ -118,9 +118,6 @@ class $TodoTable extends Todo with TableInfo<$TodoTable, TodoData> {
   $TodoTable createAlias(String alias) {
     return $TodoTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class TodoData extends DataClass implements Insertable<TodoData> {
@@ -242,6 +239,7 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
   final Value<bool> completed;
   final Value<DateTime> editedAt;
   final Value<DateTime> createdAt;
+  final Value<int> rowid;
   const TodoCompanion({
     this.id = const Value.absent(),
     this.listid = const Value.absent(),
@@ -249,6 +247,7 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
     this.completed = const Value.absent(),
     this.editedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   TodoCompanion.insert({
     required String id,
@@ -257,6 +256,7 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
     required bool completed,
     required DateTime editedAt,
     required DateTime createdAt,
+    this.rowid = const Value.absent(),
   })  : id = Value(id),
         completed = Value(completed),
         editedAt = Value(editedAt),
@@ -268,6 +268,7 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
     Expression<bool>? completed,
     Expression<DateTime>? editedAt,
     Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -276,6 +277,7 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
       if (completed != null) 'completed': completed,
       if (editedAt != null) 'edited_at': editedAt,
       if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
@@ -285,7 +287,8 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
       Value<String?>? text$,
       Value<bool>? completed,
       Value<DateTime>? editedAt,
-      Value<DateTime>? createdAt}) {
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
     return TodoCompanion(
       id: id ?? this.id,
       listid: listid ?? this.listid,
@@ -293,6 +296,7 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
       completed: completed ?? this.completed,
       editedAt: editedAt ?? this.editedAt,
       createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -319,6 +323,9 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
       map['created_at'] =
           Variable<DateTime>(createdAt.value, ElectricTypes.timestampTZ);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -330,7 +337,8 @@ class TodoCompanion extends UpdateCompanion<TodoData> {
           ..write('text\$: ${text$}, ')
           ..write('completed: $completed, ')
           ..write('editedAt: $editedAt, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -405,9 +413,6 @@ class $TodolistTable extends Todolist
   $TodolistTable createAlias(String alias) {
     return $TodolistTable(attachedDatabase, alias);
   }
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class TodolistData extends DataClass implements Insertable<TodolistData> {
@@ -492,34 +497,43 @@ class TodolistCompanion extends UpdateCompanion<TodolistData> {
   final Value<String> id;
   final Value<String?> filter;
   final Value<String?> editing;
+  final Value<int> rowid;
   const TodolistCompanion({
     this.id = const Value.absent(),
     this.filter = const Value.absent(),
     this.editing = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   TodolistCompanion.insert({
     required String id,
     this.filter = const Value.absent(),
     this.editing = const Value.absent(),
+    this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<TodolistData> custom({
     Expression<String>? id,
     Expression<String>? filter,
     Expression<String>? editing,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (filter != null) 'filter': filter,
       if (editing != null) 'editing': editing,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   TodolistCompanion copyWith(
-      {Value<String>? id, Value<String?>? filter, Value<String?>? editing}) {
+      {Value<String>? id,
+      Value<String?>? filter,
+      Value<String?>? editing,
+      Value<int>? rowid}) {
     return TodolistCompanion(
       id: id ?? this.id,
       filter: filter ?? this.filter,
       editing: editing ?? this.editing,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -535,6 +549,9 @@ class TodolistCompanion extends UpdateCompanion<TodolistData> {
     if (editing.present) {
       map['editing'] = Variable<String>(editing.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -543,7 +560,8 @@ class TodolistCompanion extends UpdateCompanion<TodolistData> {
     return (StringBuffer('TodolistCompanion(')
           ..write('id: $id, ')
           ..write('filter: $filter, ')
-          ..write('editing: $editing')
+          ..write('editing: $editing, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -568,6 +586,7 @@ typedef $$TodoTableInsertCompanionBuilder = TodoCompanion Function({
   required bool completed,
   required DateTime editedAt,
   required DateTime createdAt,
+  Value<int> rowid,
 });
 typedef $$TodoTableUpdateCompanionBuilder = TodoCompanion Function({
   Value<String> id,
@@ -576,6 +595,7 @@ typedef $$TodoTableUpdateCompanionBuilder = TodoCompanion Function({
   Value<bool> completed,
   Value<DateTime> editedAt,
   Value<DateTime> createdAt,
+  Value<int> rowid,
 });
 
 class $$TodoTableTableManager extends RootTableManager<
@@ -603,6 +623,7 @@ class $$TodoTableTableManager extends RootTableManager<
             Value<bool> completed = const Value.absent(),
             Value<DateTime> editedAt = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
           }) =>
               TodoCompanion(
             id: id,
@@ -611,6 +632,7 @@ class $$TodoTableTableManager extends RootTableManager<
             completed: completed,
             editedAt: editedAt,
             createdAt: createdAt,
+            rowid: rowid,
           ),
           getInsertCompanionBuilder: ({
             required String id,
@@ -619,6 +641,7 @@ class $$TodoTableTableManager extends RootTableManager<
             required bool completed,
             required DateTime editedAt,
             required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
           }) =>
               TodoCompanion.insert(
             id: id,
@@ -627,6 +650,7 @@ class $$TodoTableTableManager extends RootTableManager<
             completed: completed,
             editedAt: editedAt,
             createdAt: createdAt,
+            rowid: rowid,
           ),
         ));
 }
@@ -715,11 +739,13 @@ typedef $$TodolistTableInsertCompanionBuilder = TodolistCompanion Function({
   required String id,
   Value<String?> filter,
   Value<String?> editing,
+  Value<int> rowid,
 });
 typedef $$TodolistTableUpdateCompanionBuilder = TodolistCompanion Function({
   Value<String> id,
   Value<String?> filter,
   Value<String?> editing,
+  Value<int> rowid,
 });
 
 class $$TodolistTableTableManager extends RootTableManager<
@@ -745,21 +771,25 @@ class $$TodolistTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String?> filter = const Value.absent(),
             Value<String?> editing = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
           }) =>
               TodolistCompanion(
             id: id,
             filter: filter,
             editing: editing,
+            rowid: rowid,
           ),
           getInsertCompanionBuilder: ({
             required String id,
             Value<String?> filter = const Value.absent(),
             Value<String?> editing = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
           }) =>
               TodolistCompanion.insert(
             id: id,
             filter: filter,
             editing: editing,
+            rowid: rowid,
           ),
         ));
 }

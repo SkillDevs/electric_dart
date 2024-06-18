@@ -410,7 +410,7 @@ void main() {
         SatOpMigrate_Stmt(
           type: SatOpMigrate_Type.CREATE_TABLE,
           sql:
-              'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n) WITHOUT ROWID;\n',
+              'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n);\n',
         ),
       ],
       table: SatOpMigrate_Table(
@@ -461,7 +461,7 @@ void main() {
               migrationType: SatOpMigrate_Type.CREATE_TABLE,
               table: migrate.table,
               sql:
-                  'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n) WITHOUT ROWID;\n',
+                  'CREATE TABLE "foo" (\n  "value" TEXT NOT NULL,\n  CONSTRAINT "foo_pkey" PRIMARY KEY ("value")\n);\n',
             ),
           ],
           origin: begin.origin,

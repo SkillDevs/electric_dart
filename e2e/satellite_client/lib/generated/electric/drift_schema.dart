@@ -1,6 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-// ignore_for_file: depend_on_referenced_packages, prefer_double_quotes
+// ignore_for_file: always_use_package_imports, depend_on_referenced_packages
+// ignore_for_file: prefer_double_quotes
 
 import 'package:drift/drift.dart';
 import 'package:electricsql/drivers/drift.dart';
@@ -45,9 +46,6 @@ class Items extends Table with ElectricTableMixin {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
-  bool get withoutRowId => true;
-
-  @override
   $ItemsTableRelations get $relations => const $ItemsTableRelations();
 }
 
@@ -63,9 +61,6 @@ class OtherItems extends Table with ElectricTableMixin {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 
   @override
   $OtherItemsTableRelations get $relations => const $OtherItemsTableRelations();
@@ -85,9 +80,6 @@ class Timestamps extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Datetimes extends Table {
@@ -102,9 +94,6 @@ class Datetimes extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Bools extends Table {
@@ -117,9 +106,6 @@ class Bools extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Uuids extends Table {
@@ -130,9 +116,6 @@ class Uuids extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Ints extends Table {
@@ -149,9 +132,6 @@ class Ints extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Floats extends Table {
@@ -168,9 +148,6 @@ class Floats extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Jsons extends Table {
@@ -187,9 +164,6 @@ class Jsons extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Enums extends Table {
@@ -203,9 +177,6 @@ class Enums extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 class Blobs extends Table {
@@ -218,9 +189,6 @@ class Blobs extends Table {
 
   @override
   Set<Column<Object>>? get primaryKey => {id};
-
-  @override
-  bool get withoutRowId => true;
 }
 
 // ------------------------------ ENUMS ------------------------------

@@ -77,6 +77,8 @@ class Logger {
 
   Logger(this._logger);
 
+  bool get isDebugMode => logger.levelImportance <= Level.debug.value;
+
   int get levelImportance => _logger.level.value;
 
   void setLogLevel(Level logLevel) {

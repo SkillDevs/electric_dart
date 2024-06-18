@@ -24,8 +24,8 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 ### Reference implementation:
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
-* Version `v0.12.0`
-* Commit: `f322afcec33c29610f72baae922abc86fd604caa`
+* Version `v0.12.0-dev`
+* Commit: `ecdd4ab8e27461227172fcbaa1084715593fa78b`
 
 
 ### What is ElectricSQL?
@@ -271,9 +271,9 @@ Install the `protoc_plugin` Dart package.
 
 To generate the code
 
-`melos generate_proto`
+`melos run generate_proto`
 
 
 ### Run the tests
 
-`melos test:all`
+`melos run test:all`
