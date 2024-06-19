@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
@@ -78,7 +77,7 @@ class EventNotifier implements Notifier {
             return QualifiedTablename(dbAlias, qualifiedTablename.tablename);
           }
         })
-        .whereNotNull()
+        .nonNulls
         .toList();
   }
 
