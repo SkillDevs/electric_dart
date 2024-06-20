@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
-import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
@@ -272,11 +272,14 @@ void main() {
     await connectAndAuth();
 
     final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': {
-          'name1': PgType.text,
-          'name2': PgType.text,
-        },
+      tableSchemas: {
+        'table': TableSchema(
+          fields: {
+            'name1': PgType.text,
+            'name2': PgType.text,
+          },
+          relations: [],
+        ),
       },
       migrations: [],
       pgMigrations: [],
@@ -708,19 +711,22 @@ void main() {
       ],
     );
 
-    final Fields tblFields = {
-      'id': PgType.uuid,
-      'content': PgType.varchar,
-      'text_null': PgType.text,
-      'text_null_default': PgType.text,
-      'intvalue_null': PgType.int4,
-      'intvalue_null_default': PgType.int4,
-    };
+    final TableSchema tbl = TableSchema(
+      fields: {
+        'id': PgType.uuid,
+        'content': PgType.varchar,
+        'text_null': PgType.text,
+        'text_null_default': PgType.text,
+        'intvalue_null': PgType.int4,
+        'intvalue_null_default': PgType.int4,
+      },
+      relations: [],
+    );
 
     final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': tblFields,
-        'Items': tblFields,
+      tableSchemas: {
+        'table': tbl,
+        'Items': tbl,
       },
       migrations: [],
       pgMigrations: [],
@@ -1088,15 +1094,18 @@ void main() {
 
     const tablename = 'THE_TABLE_ID';
 
-    final Fields tblFields = {
-      'name1': PgType.text,
-      'name2': PgType.text,
-    };
+    final TableSchema tbl = TableSchema(
+      fields: {
+        'name1': PgType.text,
+        'name2': PgType.text,
+      },
+      relations: [],
+    );
 
     final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': tblFields,
-        tablename: tblFields,
+      tableSchemas: {
+        'table': tbl,
+        tablename: tbl,
       },
       migrations: [],
       pgMigrations: [],
@@ -1196,11 +1205,14 @@ void main() {
     await connectAndAuth();
 
     final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': {
-          'name1': PgType.text,
-          'name2': PgType.text,
-        },
+      tableSchemas: {
+        'table': TableSchema(
+          fields: {
+            'name1': PgType.text,
+            'name2': PgType.text,
+          },
+          relations: [],
+        )
       },
       migrations: [],
       pgMigrations: [],

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:electricsql/src/auth/auth.dart';
-import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/electric/adapter.dart';

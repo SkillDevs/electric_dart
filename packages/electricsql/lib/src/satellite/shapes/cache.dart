@@ -1,4 +1,4 @@
-import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';

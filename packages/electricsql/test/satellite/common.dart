@@ -6,7 +6,7 @@ import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/bundle.dart';
@@ -34,19 +34,28 @@ SatelliteOpts opts(String namespace) => satelliteDefaults(namespace).copyWith(
     );
 
 DBSchema kTestDbDescription = DBSchemaRaw(
-  fields: {
-    'child': {
-      'id': PgType.integer,
-      'parent': PgType.integer,
-    },
-    'parent': {
-      'id': PgType.integer,
-      'value': PgType.text,
-      'other': PgType.integer,
-    },
-    'another': {
-      'id': PgType.integer,
-    },
+  tableSchemas: {
+    'child': TableSchema(
+      fields: {
+        'id': PgType.integer,
+        'parent': PgType.integer,
+      },
+      relations: [],
+    ),
+    'parent': TableSchema(
+      fields: {
+        'id': PgType.integer,
+        'value': PgType.text,
+        'other': PgType.integer,
+      },
+      relations: [],
+    ),
+    'another': TableSchema(
+      fields: {
+        'id': PgType.integer,
+      },
+      relations: [],
+    ),
   },
   migrations: [],
   pgMigrations: [],
@@ -414,7 +423,8 @@ Future<ElectricClientRaw> mockElectricClient(
     notifier: notifier,
     registry: registry,
     satellite: satellite,
-    dbDescription: DBSchemaRaw(fields: {}, migrations: [], pgMigrations: []),
+    dbDescription:
+        DBSchemaRaw(tableSchemas: {}, migrations: [], pgMigrations: []),
     dialect: Dialect.sqlite,
   );
 

@@ -6,6 +6,7 @@ import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:meta/meta.dart';
 
 typedef FieldName = String;
+typedef RelationName = String;
 
 typedef Fields = Map<FieldName, PgType>;
 
@@ -23,8 +24,18 @@ class ElectricMigrations {
   });
 }
 
+class TableSchema {
+  final Fields fields;
+  final List<Relation> relations;
+
+  TableSchema({
+    required this.fields,
+    required this.relations,
+  });
+}
+
 abstract class DBSchema {
-  final Map<String, Fields> _fieldsByTable;
+  final Map<String, TableSchema> _tableSchemas;
   final List<Migration> _migrations;
   final List<Migration> _pgMigrations;
 
@@ -35,19 +46,56 @@ abstract class DBSchema {
   /// @param migrations Bundled SQLite migrations
   /// @param pgMigrations Bundled Postgres migrations
   DBSchema({
-    required Map<String, Fields> fieldsByTable,
+    required Map<String, TableSchema> tableSchemas,
     required List<Migration> migrations,
     required List<Migration> pgMigrations,
-  })  : _fieldsByTable = fieldsByTable,
+  })  : _tableSchemas = tableSchemas,
         _migrations = migrations,
         _pgMigrations = pgMigrations;
 
   bool hasTable(String table) {
-    return _fieldsByTable.containsKey(table);
+    return _tableSchemas.containsKey(table);
+  }
+
+  TableSchema getTableSchema(String table) {
+    return _tableSchemas[table]!;
   }
 
   Fields getFields(String table) {
-    return _fieldsByTable[table]!;
+    return getTableSchema(table).fields;
+  }
+
+  List<Relation> getRelations(String table) {
+    return getTableSchema(table).relations;
+  }
+
+  RelationName getRelationName(TableName table, FieldName field) {
+    return getRelations(table)
+        .firstWhere((r) => r.relationField == field)
+        .relationName;
+  }
+
+  Relation getRelation(String table, RelationName relationName) {
+    return getRelations(table)
+        .firstWhere((r) => r.relationName == relationName);
+  }
+
+  TableName getRelatedTable(TableName table, FieldName field) {
+    final relationName = getRelationName(table, field);
+    final relation = getRelation(table, relationName);
+    return relation.relatedTable;
+  }
+
+  FieldName getForeignKey(TableName table, FieldName field) {
+    final relationName = getRelationName(table, field);
+    final relation = getRelation(table, relationName);
+    if (relation.isOutgoingRelation()) {
+      return relation.fromField;
+    }
+    // it's an incoming relation
+    // we need to fetch the `fromField` from the outgoing relation
+    final oppositeRelation = relation.getOppositeRelation(this);
+    return oppositeRelation.fromField;
   }
 }
 
@@ -62,13 +110,17 @@ class DBSchemaDrift extends DBSchema {
     // ignore: invalid_use_of_visible_for_overriding_member
     final driftDb = db.attachedDatabase;
 
-    final _fieldsByTable = {
+    final _tableSchemas = {
       for (final table in driftDb.allTables)
-        table.actualTableName: _buildFieldsForTable(table, driftDb),
+        table.actualTableName: TableSchema(
+          fields: _buildFieldsForTable(table, driftDb),
+          // TODO: get relations
+          relations: [],
+        ),
     };
 
     return DBSchemaDrift._(
-      fieldsByTable: _fieldsByTable,
+      tableSchemas: _tableSchemas,
       migrations: migrations,
       pgMigrations: pgMigrations,
       db: db,
@@ -76,7 +128,7 @@ class DBSchemaDrift extends DBSchema {
   }
 
   DBSchemaDrift._({
-    required super.fieldsByTable,
+    required super.tableSchemas,
     required super.migrations,
     required super.pgMigrations,
     required this.db,
@@ -135,13 +187,14 @@ class DBSchemaDrift extends DBSchema {
 
 @visibleForTesting
 class DBSchemaRaw extends DBSchema {
-  Map<String, Fields> get fields => _fieldsByTable;
+  Map<String, Fields> get fields =>
+      _tableSchemas.map((k, v) => MapEntry(k, v.fields));
 
   DBSchemaRaw({
-    required Map<String, Fields> fields,
+    required super.tableSchemas,
     required super.migrations,
     required super.pgMigrations,
-  }) : super(fieldsByTable: fields);
+  });
 }
 
 @protected
@@ -232,4 +285,32 @@ List<Map<String, Object?>> _extractWhereConditionsFor(
   }
 
   return conditions;
+}
+
+class Relation {
+  final String relationField;
+  final String fromField;
+  final String toField;
+  final String relationName;
+  final String relatedTable;
+
+  const Relation({
+    required this.relationField,
+    required this.fromField,
+    required this.toField,
+    required this.relationName,
+    required this.relatedTable,
+  });
+
+  bool isIncomingRelation() {
+    return fromField == '' && toField == '';
+  }
+
+  bool isOutgoingRelation() {
+    return !isIncomingRelation();
+  }
+
+  Relation getOppositeRelation(DBSchema dbDescription) {
+    return dbDescription.getRelation(relatedTable, relationName);
+  }
 }
