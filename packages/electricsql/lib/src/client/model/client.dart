@@ -75,7 +75,7 @@ class ElectricClientImpl extends ElectricNamespace
 
   @override
   void disconnect() {
-    satellite.disconnect(null);
+    satellite.clientDisconnect();
   }
 
   factory ElectricClientImpl.create({
