@@ -87,9 +87,20 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
   DB get db;
   SyncManager get syncManager;
 
-  /// Creates a Shape subscription. A shape is a set of related data that's synced
-  /// onto the local device.
+  /// Subscribes to the given shape, returnig a [ShapeSubscription] object which
+  /// can be used to wait for the shape to sync initial data.
+  ///
   /// https://electric-sql.com/docs/usage/data-access/shapes
+  ///
+  /// NOTE: If you establish a shape subscription that has already synced its initial data,
+  /// awaiting `shape.synced` will always resolve immediately as shape subscriptions are persisted.
+  /// i.e.: imagine that you re-sync the same shape during subsequent application loads.
+  /// Awaiting `shape.synced` a second time will only ensure that the initial
+  /// shape load is complete. It does not ensure that the replication stream
+  /// has caught up to the central DB's more recent state.
+  ///
+  /// @param i - The shape to subscribe to
+  /// @returns A shape subscription
   Future<ShapeSubscription> syncTable<T extends Table>(
     T table, {
     SyncIncludeBuilder<T>? include,

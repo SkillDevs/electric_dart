@@ -39,6 +39,13 @@ typedef ChangeAccumulator = Map<String, Change>;
 
 class ShapeSubscription {
   final String key;
+
+  /// A promise that will resolve once the subscription has synced
+  /// the initial data for the shape.
+  ///
+  /// NOTE: This does not wait for the most recent data changes to
+  /// be synced into the local database, only an initial data batch
+  /// required to establish the subesequent data replication.
   final Future<void> synced;
 
   ShapeSubscription({required this.key, required this.synced});
