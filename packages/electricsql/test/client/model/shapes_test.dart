@@ -274,6 +274,7 @@ void main() {
   test('shape from drift', () async {
     final shape = computeShapeForDrift(
       db,
+      electric.dbDescription,
       db.post,
       where: (p) =>
           p.title.equals('foo') &

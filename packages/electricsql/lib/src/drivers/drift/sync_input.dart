@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 
 typedef SyncIncludeBuilder<T extends Table> = List<SyncInputRelation> Function(
@@ -42,17 +44,23 @@ class SyncInputRelation<T extends Table> {
 
 Shape computeShapeForDrift<T extends Table>(
   GeneratedDatabase db,
+  DBSchema dbDescription,
   T table, {
   SyncIncludeBuilder<T>? include,
   SyncWhereBuilder<T>? where,
 }) {
   final relationsToInclude = include?.call(table);
 
-  final List<Rel>? rels = relationsToInclude?.map((syncRel) {
-    final relation = syncRel.relation;
-    final relatedDriftTable = relation.getDriftTable(db);
+  final tableInfo = findDriftTableInfo(db, table);
+  final tableName = tableInfo.actualTableName;
 
-    final String foreignKey = _getForeignKey(db, relation);
+  final List<Rel>? rels = relationsToInclude?.map((syncRel) {
+    final relationDrift = syncRel.relation;
+
+    final String foreignKey = dbDescription.getForeignKeyFromRelationName(
+      tableName,
+      relationDrift.relationName,
+    );
 
     return Rel(
       foreignKey: [
@@ -60,7 +68,8 @@ Shape computeShapeForDrift<T extends Table>(
       ],
       select: computeShapeForDrift(
         db,
-        relatedDriftTable,
+        dbDescription,
+        relationDrift.getDriftTable(db),
         include: syncRel._genericInclude,
         where: syncRel._genericWhere,
       ),
@@ -94,16 +103,6 @@ Shape computeShapeForDrift<T extends Table>(
     where: whereStr,
     include: rels,
   );
-}
-
-String _getForeignKey(GeneratedDatabase db, TableRelation<Table> relation) {
-  if (relation.isOutgoingRelation()) {
-    return relation.fromField;
-  }
-  // it's an incoming relation
-  // we need to fetch the `fromField` from the outgoing relation
-  final oppositeRelation = relation.getOppositeRelation(db);
-  return oppositeRelation.fromField;
 }
 
 class _PGGenerationContext extends GenerationContext {

@@ -269,6 +269,7 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   }) {
     final shape = computeShapeForDrift<T>(
       db,
+      dbDescription,
       table,
       include: include,
       where: where,
@@ -403,4 +404,15 @@ Object? _expressionToValue(Expression<Object?> expression) {
   } else {
     throw ArgumentError('Unsupported expression type: $expression');
   }
+}
+
+TableInfo<T, dynamic>
+    findDriftTableInfo<DB extends GeneratedDatabase, T extends Table>(
+  DB db,
+  T table,
+) {
+  final TableInfo<Table, dynamic> genTable = db.allTables.firstWhere((t) {
+    return t.asDslTable == table;
+  });
+  return genTable as TableInfo<T, dynamic>;
 }

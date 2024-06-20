@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/conversions/custom_types.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
+import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 import 'package:meta/meta.dart';
 
@@ -88,6 +89,13 @@ abstract class DBSchema {
 
   FieldName getForeignKey(TableName table, FieldName field) {
     final relationName = getRelationName(table, field);
+    return getForeignKeyFromRelationName(table, relationName);
+  }
+
+  FieldName getForeignKeyFromRelationName(
+    TableName table,
+    RelationName relationName,
+  ) {
     final relation = getRelation(table, relationName);
     if (relation.isOutgoingRelation()) {
       return relation.fromField;
@@ -100,10 +108,10 @@ abstract class DBSchema {
 }
 
 class DBSchemaDrift extends DBSchema {
-  final DatabaseConnectionUser db;
+  final GeneratedDatabase db;
 
   factory DBSchemaDrift({
-    required DatabaseConnectionUser db,
+    required GeneratedDatabase db,
     required List<Migration> migrations,
     required List<Migration> pgMigrations,
   }) {
@@ -114,8 +122,19 @@ class DBSchemaDrift extends DBSchema {
       for (final table in driftDb.allTables)
         table.actualTableName: TableSchema(
           fields: _buildFieldsForTable(table, driftDb),
-          // TODO: get relations
-          relations: [],
+          relations: getTableRelations(table)
+                  ?.$relationsList
+                  .map(
+                    (tr) => Relation(
+                      fromField: tr.fromField,
+                      toField: tr.toField,
+                      relationName: tr.relationName,
+                      relationField: "",
+                      relatedTable: tr.getDriftTable(db).actualTableName,
+                    ),
+                  )
+                  .toList() ??
+              [],
         ),
     };
 

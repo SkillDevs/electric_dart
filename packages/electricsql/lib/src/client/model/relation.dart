@@ -13,6 +13,8 @@ class TableRelation<T extends Table> {
     required this.relationName,
   });
 
+
+  // TODO: Remove these methods
   bool isIncomingRelation() {
     return fromField == '' && toField == '';
   }
@@ -21,11 +23,11 @@ class TableRelation<T extends Table> {
     return !isIncomingRelation();
   }
 
-  T getDriftTable<DB extends GeneratedDatabase>(DB db) {
+  TableInfo<T, dynamic> getDriftTable<DB extends GeneratedDatabase>(DB db) {
     final TableInfo<Table, dynamic> genTable = db.allTables.firstWhere((t) {
       return t is T;
     });
-    return genTable as T;
+    return genTable as TableInfo<T, dynamic>;
   }
 
   TableRelation<Table> getOppositeRelation(GeneratedDatabase db) {
