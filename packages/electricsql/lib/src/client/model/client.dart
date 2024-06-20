@@ -71,6 +71,7 @@ class ElectricClientImpl extends ElectricNamespace
 
   @override
   void disconnect() {
+    print("${DateTime.now()} PROCESS DISCONNECT FROM CLIENT");
     satellite.disconnect(null);
   }
 

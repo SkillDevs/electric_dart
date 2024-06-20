@@ -244,6 +244,7 @@ class SatelliteClient implements Client {
     }
 
     if (isConnected()) {
+      print("${DateTime.now()} DISCONNECT BEFORE CONNECTING");
       disconnect();
     }
 
@@ -253,6 +254,7 @@ class SatelliteClient implements Client {
     this.socket = socket;
 
     void onceError(Object error, StackTrace st) {
+      print("${DateTime.now()} DISCONNECT BECAUSE ERROR $error\n\t$st");
       disconnect();
       completer.completeError(error, st);
     }
@@ -269,6 +271,7 @@ class SatelliteClient implements Client {
       socket.onMessage(socketHandler!);
       socket.onError((error, st) {
         if (_emitter.listenerCount('error') == 0) {
+          print("${DateTime.now()} DISCONNECT ON ERROR BECAUSE LISTENER COUNT 0");
           disconnect();
           logger.error(
             'socket error but no listener is attached: $error',
@@ -277,6 +280,7 @@ class SatelliteClient implements Client {
         _emitter.enqueueEmitError(error, st);
       });
       socket.onClose((reason) {
+        print("${DateTime.now()} DISCONNECT ON CLOSE BECAUSE REASON ${reason.code}");
         disconnect();
         if (_emitter.listenerCount('error') == 0) {
           logger.error('socket closed but no listener is attached');
@@ -327,6 +331,7 @@ class SatelliteClient implements Client {
 
   @override
   void shutdown() {
+    print("${DateTime.now()} SATELLITE CLIENT SHUTDOWN");
     disconnect();
     _emitter.removeAllListeners();
     _isDown = true;

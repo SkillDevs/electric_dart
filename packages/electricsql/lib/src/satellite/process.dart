@@ -338,6 +338,7 @@ This means there is a notifier subscription leak.`''');
     // interact with a closed database connection
     await _waitForActiveSnapshots();
 
+    print("${DateTime.now()} PROCESS DISCONNECT ON STOP");
     disconnect(null);
 
     if (shutdown == true) {
@@ -627,6 +628,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     bool keepSubscribedShapes = false,
   }) async {
     logger.warning('resetting client state');
+    print("${DateTime.now()} PROCESS DISCONNECT WHEN RESETTING CLIENT STATE");
     disconnect(null);
     final subscriptionIds = subscriptions.getFulfilledSubscriptions();
 
@@ -744,6 +746,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
   Future<void> _handleOrThrowClientError(SatelliteException error) async {
     if (error.code == SatelliteErrorCode.authExpired) {
       logger.warning('Connection closed by Electric because the JWT expired.');
+      print("${DateTime.now()} PROCESS DISCONNECT BECAUSE AUTH EXPIRED");
       return disconnect(
         SatelliteException(
           error.code,
@@ -752,6 +755,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       );
     }
 
+    print("${DateTime.now()} PROCESS DISCONNECT WHEN HANDLING ERROR");
     disconnect(error);
 
     if (isThrowable(error)) {
@@ -861,6 +865,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
         stackTrace = StackTrace.current;
       }
 
+      print("${DateTime.now()} PROCESS DISCONNECT ON CONNECT WITH BACKOFF");
       disconnect(error is SatelliteException ? error : null);
       initializing?.completeError(error, stackTrace);
     }
@@ -929,6 +934,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
   @override
   void disconnect(SatelliteException? error) {
+    print("${DateTime.now()} DISCONNECT BECAUSE PROCESS DISCONNECT: ${error?.code} ${error?.message}");
     client.disconnect();
     _notifyConnectivityState(ConnectivityStatus.disconnected, error);
   }
@@ -940,6 +946,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
       SatelliteErrorCode.connectionCancelledByDisconnect,
       "Connection cancelled by 'disconnect'",
     );
+    print("${DateTime.now()} PROCESS DISCONNECT FROM CLIENTDISCONNECT");
     disconnect(error);
     cancelConnectionWaiter(error);
   }
