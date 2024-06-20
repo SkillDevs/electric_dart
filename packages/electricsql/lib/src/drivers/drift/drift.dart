@@ -125,8 +125,8 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
   /// to avoid partially transformed tables.
   void setTableReplicationTransform<TableDsl extends Table, D>(
     TableInfo<TableDsl, D> table, {
-    required Insertable<D> Function(D row) transformInbound,
-    required Insertable<D> Function(D row) transformOutbound,
+    required D Function(D row) transformInbound,
+    required D Function(D row) transformOutbound,
     Insertable<D> Function(D)? toInsertable,
   });
 
@@ -288,8 +288,8 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   @override
   void setTableReplicationTransform<TableDsl extends Table, D>(
     TableInfo<TableDsl, D> table, {
-    required Insertable<D> Function(D row) transformInbound,
-    required Insertable<D> Function(D row) transformOutbound,
+    required D Function(D row) transformInbound,
+    required D Function(D row) transformOutbound,
     Insertable<D> Function(D)? toInsertable,
   }) {
     // forbid transforming relation keys to avoid breaking
@@ -318,31 +318,44 @@ class DriftElectricClient<DB extends GeneratedDatabase>
 
     final QualifiedTablename qualifiedTableName = _getQualifiedTableName(table);
 
+    Insertable<D> _getInsertable(D d) {
+      if (d is Insertable<D>) {
+        return d;
+      } else {
+        if (toInsertable == null) {
+          throw ArgumentError(
+            'toInsertable is required for non-insertable data classes',
+          );
+        }
+        return toInsertable(d);
+      }
+    }
+
     // ignore: invalid_use_of_protected_member
     _baseClient.replicationTransformManager.setTableTransform(
       qualifiedTableName,
       ReplicatedRowTransformer(
         transformInbound: (DbRecord record) {
           final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
-            table,
+          final out = transformTableRecord<D>(
             dataClass,
             transformInbound,
             immutableFields,
-            toInsertable: toInsertable,
+            validateFun: (d) => validateDriftRecord(table, _getInsertable(d)),
+            toRecord: (d) => driftInsertableToValues(_getInsertable(d)),
           );
-          return driftInsertableToValues(insertable);
+          return driftInsertableToValues(_getInsertable(out));
         },
         transformOutbound: (DbRecord record) {
           final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
-            table,
+          final out = transformTableRecord<D>(
             dataClass,
             transformOutbound,
             immutableFields,
-            toInsertable: toInsertable,
+            validateFun: (d) => validateDriftRecord(table, _getInsertable(d)),
+            toRecord: (d) => driftInsertableToValues(_getInsertable(d)),
           );
-          return driftInsertableToValues(insertable);
+          return driftInsertableToValues(_getInsertable(out));
         },
       ),
     );
@@ -363,6 +376,13 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   ) {
     return QualifiedTablename('main', table.actualTableName);
   }
+}
+
+void validateDriftRecord<TableDsl extends Table, D>(
+  TableInfo<TableDsl, D> table,
+  Insertable<D> record,
+) {
+  table.validateIntegrity(record, isInserting: true).throwIfInvalid(record);
 }
 
 class _TableUpdateFromElectric extends TableUpdate {

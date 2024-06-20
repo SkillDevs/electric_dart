@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/validation/validation.dart';
 import 'package:electricsql/util.dart';
@@ -40,35 +39,21 @@ class ReplicationTransformManager implements IReplicationTransformManager {
 /// @param schema schema to parse/validate raw record to record of type {@link T}
 /// @param immutableFields - fields that cannot be modified by {@link transformRow}
 /// @return the transformed raw record
-Insertable<D>
-    transformTableRecord<TableDsl extends Table, D, T extends DbRecord>(
-  TableInfo<TableDsl, D> table,
+D transformTableRecord<D>(
   D record,
-  Insertable<D> Function(D) transformRow,
+  D Function(D) transformRow,
   List<String> immutableFields, {
-  Insertable<D> Function(D)? toInsertable,
+  required void Function(D) validateFun,
+  required Map<String, Object?> Function(D) toRecord,
 }) {
   // apply specified transformation
   final transformedParsedRow = transformRow(record);
 
   // validate transformed row
-  table
-      .validateIntegrity(transformedParsedRow, isInserting: true)
-      .throwIfInvalid(transformedParsedRow);
+  validateFun(transformedParsedRow);
 
-  final Insertable<D> originalInsertable;
-  if (record is Insertable<D>) {
-    originalInsertable = record;
-  } else {
-    if (toInsertable == null) {
-      throw ArgumentError(
-        'toInsertable is required for non-insertable data classes',
-      );
-    }
-    originalInsertable = toInsertable(record);
-  }
-  final originalCols = originalInsertable.toColumns(false);
-  final transformedCols = transformedParsedRow.toColumns(false);
+  final originalCols = toRecord(record);
+  final transformedCols = toRecord(transformedParsedRow);
 
   for (final newKey in transformedCols.keys) {
     if (!originalCols.containsKey(newKey)) {

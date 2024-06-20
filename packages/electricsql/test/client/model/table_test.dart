@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:electricsql/src/client/model/client.dart';
 import 'package:electricsql/src/client/validation/validation.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
@@ -50,7 +49,7 @@ void main() async {
       db,
     );
 
-    Insertable<PostData> modifyAuthorId(PostData post) {
+    PostData modifyAuthorId(PostData post) {
       return post.copyWith(
         authorId: 9, // this is a FK, should not be allowed to modify it
       );
@@ -116,7 +115,7 @@ void main() async {
       db,
     );
 
-    Insertable<UserData> modifyUserId(UserData user) {
+    UserData modifyUserId(UserData user) {
       return user.copyWith(
         id: 9, // this is the column pointed at by the FK, should not be allowed to modify it
       );
