@@ -70,27 +70,27 @@ abstract class DBSchema {
     return getTableSchema(table).relations;
   }
 
-  RelationName getRelationName(TableName table, FieldName field) {
-    return getRelations(table)
-        .firstWhere((r) => r.relationField == field)
-        .relationName;
-  }
+  // RelationName getRelationName(TableName table, FieldName field) {
+  //   return getRelations(table)
+  //       .firstWhere((r) => r.relationField == field)
+  //       .relationName;
+  // }
 
   Relation getRelation(String table, RelationName relationName) {
     return getRelations(table)
         .firstWhere((r) => r.relationName == relationName);
   }
 
-  TableName getRelatedTable(TableName table, FieldName field) {
-    final relationName = getRelationName(table, field);
-    final relation = getRelation(table, relationName);
-    return relation.relatedTable;
-  }
+  // TableName getRelatedTable(TableName table, FieldName field) {
+  //   final relationName = getRelationName(table, field);
+  //   final relation = getRelation(table, relationName);
+  //   return relation.relatedTable;
+  // }
 
-  FieldName getForeignKey(TableName table, FieldName field) {
-    final relationName = getRelationName(table, field);
-    return getForeignKeyFromRelationName(table, relationName);
-  }
+  // FieldName getForeignKey(TableName table, FieldName field) {
+  //   final relationName = getRelationName(table, field);
+  //   return getForeignKeyFromRelationName(table, relationName);
+  // }
 
   FieldName getForeignKeyFromRelationName(
     TableName table,
@@ -129,7 +129,7 @@ class DBSchemaDrift extends DBSchema {
                       fromField: tr.fromField,
                       toField: tr.toField,
                       relationName: tr.relationName,
-                      relationField: "",
+                      // relationField: "",
                       relatedTable: tr.getDriftTable(db).actualTableName,
                     ),
                   )
@@ -307,14 +307,14 @@ List<Map<String, Object?>> _extractWhereConditionsFor(
 }
 
 class Relation {
-  final String relationField;
+  // final String relationField;
   final String fromField;
   final String toField;
   final String relationName;
   final String relatedTable;
 
   const Relation({
-    required this.relationField,
+    // required this.relationField,
     required this.fromField,
     required this.toField,
     required this.relationName,

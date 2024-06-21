@@ -1212,7 +1212,7 @@ void main() {
             'name2': PgType.text,
           },
           relations: [],
-        )
+        ),
       },
       migrations: [],
       pgMigrations: [],
