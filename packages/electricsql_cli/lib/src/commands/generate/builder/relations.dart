@@ -27,7 +27,7 @@ List<Class> getRelationClasses(DriftSchemaInfo driftSchemaInfo) {
         ..constructors.add(Constructor((b) => b.constant = true))
         ..name = getRelationsClassName(tableInfo)
         ..implements
-            .add(refer(kTableRelationsInterfaceName, kElectricSqlImport))
+            .add(refer(kTableRelationsInterfaceName, kElectricSqlDriftImport))
         ..methods.addAll([
           ...relationGetters,
           relationsListGetter,
@@ -47,7 +47,7 @@ Method _getTableRelationGetter(
       schemaInfo.tablesByPrismaModel[relation.relatedModel]!.dartClassName;
 
   final tableRelationRef =
-      refer('TableRelation<$relatedDriftTableName>', kElectricSqlImport);
+      refer('TableRelation<$relatedDriftTableName>', kElectricSqlDriftImport);
   final tableRelationExpr = tableRelationRef.constInstance([], {
     'fromField': literal(relation.fromField),
     'toField': literal(relation.toField),
@@ -71,7 +71,7 @@ Method _getRelationsListGetter(
   return Method(
     (b) => b
       ..name = '\$relationsList'
-      ..returns = refer('List<TableRelation<Table>>', kElectricSqlImport)
+      ..returns = refer('List<TableRelation<Table>>', kElectricSqlDriftImport)
       ..type = MethodType.getter
       ..annotations.add(
         const CodeExpression(Code('override')),

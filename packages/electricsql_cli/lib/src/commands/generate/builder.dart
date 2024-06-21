@@ -242,7 +242,7 @@ List<Class> _getTableClasses(DriftSchemaInfo driftSchemaInfo) {
         ..mixins.addAll(
           [
             if (tableInfo.relations.isNotEmpty)
-              refer(kElectricTableMixin, kElectricSqlImport),
+              refer(kElectricTableMixin, kElectricSqlDriftImport),
           ],
         ),
     );
