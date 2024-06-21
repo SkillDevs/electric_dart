@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';

@@ -1,5 +1,5 @@
+import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/validation/validation.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';

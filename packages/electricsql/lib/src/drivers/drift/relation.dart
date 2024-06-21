@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/drivers/drift.dart';
 
 class TableRelation<T extends Table> {
   final String fromField;
