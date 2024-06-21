@@ -1,4 +1,5 @@
 import 'package:electricsql/src/client/model/client.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/validation/validation.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
@@ -39,7 +40,7 @@ void main() async {
     final electric = DriftElectricClient(
       ElectricClientImpl.create(
         dbName: 'testDB',
-        dbDescription: kTestDbDescription,
+        dbDescription: DBSchemaDrift(db: db, migrations: [], pgMigrations: []),
         adapter: adapter,
         notifier: notifier,
         satellite: satellite,
@@ -105,7 +106,7 @@ void main() async {
     final electric = DriftElectricClient(
       ElectricClientImpl.create(
         dbName: 'testDB',
-        dbDescription: kTestDbDescription,
+        dbDescription: DBSchemaDrift(db: db, migrations: [], pgMigrations: []),
         adapter: adapter,
         notifier: notifier,
         satellite: satellite,

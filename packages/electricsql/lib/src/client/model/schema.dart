@@ -125,7 +125,7 @@ class DBSchemaDrift extends DBSchema {
           relations: getTableRelations(table)
                   ?.$relationsList
                   .map(
-                    (tr) => Relation(
+                    (TableRelation tr) => Relation(
                       fromField: tr.fromField,
                       toField: tr.toField,
                       relationName: tr.relationName,
