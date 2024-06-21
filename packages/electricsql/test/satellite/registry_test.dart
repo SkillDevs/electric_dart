@@ -17,7 +17,7 @@ const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
 final DBSchema dbDescription =
-    DBSchemaRaw(fields: {}, migrations: [], pgMigrations: []);
+    DBSchemaRaw(tableSchemas: {}, migrations: [], pgMigrations: []);
 final Migrator migrator = MockMigrator(queryBuilder: kSqliteQueryBuilder);
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);

@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:drift_postgres/drift_postgres.dart';
-import 'package:electricsql/src/client/conversions/custom_types.dart';
+import 'package:electricsql/drivers/drift.dart';
 import 'package:postgres/postgres.dart' as pg;
 
 import 'generated/electric/drift_schema.dart';

@@ -6,26 +6,26 @@ import 'package:electricsql/src/satellite/oplog.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
 import 'package:electricsql/src/util/types.dart';
 
-typedef TableInfo = Map<String, TableSchema>;
+typedef TableInfo = Map<String, TableSchemaBasic>;
 
-class TableSchema {
+class TableSchemaBasic {
   final List<String> primaryKey;
   final List<String> columns;
 
-  TableSchema({required this.primaryKey, required this.columns});
+  TableSchemaBasic({required this.primaryKey, required this.columns});
 }
 
 TableInfo initTableInfo(String namespace) {
   return {
-    '$namespace.parent': TableSchema(
+    '$namespace.parent': TableSchemaBasic(
       primaryKey: ['id'],
       columns: ['id', 'value', 'other'],
     ),
-    '$namespace.child': TableSchema(
+    '$namespace.child': TableSchemaBasic(
       primaryKey: ['id'],
       columns: ['id', 'parent'],
     ),
-    '$namespace.Items': TableSchema(
+    '$namespace.Items': TableSchemaBasic(
       primaryKey: ['value'],
       columns: ['value', 'other'],
     ),
@@ -135,7 +135,7 @@ OplogEntry generateRemoteOplogEntry(
   return result;
 }
 
-GenerateFromResult generateFrom(TableSchema schema, Row values) {
+GenerateFromResult generateFrom(TableSchemaBasic schema, Row values) {
   final columns = schema.columns.fold<Row>({}, (acc, column) {
     if (values.containsKey(column)) {
       acc[column] = values[column];

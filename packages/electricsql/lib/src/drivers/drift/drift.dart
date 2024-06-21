@@ -3,7 +3,6 @@ import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/relation.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/config/config.dart';
@@ -269,6 +268,7 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   }) {
     final shape = computeShapeForDrift<T>(
       db,
+      dbDescription,
       table,
       include: include,
       where: where,
@@ -295,7 +295,7 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     // forbid transforming relation keys to avoid breaking
     // referential integrity
 
-    final tableRelations = getTableRelations(table)?.$relationsList ?? [];
+    final tableRelations = dbDescription.getRelations(table.actualTableName);
 
     final outgoingRelations =
         tableRelations.where((r) => r.isOutgoingRelation());
@@ -309,8 +309,8 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     // Incoming relations don't have the `fromField` and `toField` filled in
     // so we need to fetch the `toField` from the opposite relation
     // which is effectively a column in this table to which the FK points
-    final pkCols =
-        incomingRelations.map((r) => r.getOppositeRelation(db).toField);
+    final pkCols = incomingRelations
+        .map((r) => r.getOppositeRelation(dbDescription).toField);
 
     // Merge all columns that are part of a FK relation.
     // Remove duplicate columns in case a column has both an outgoing FK and an incoming FK.
@@ -403,4 +403,15 @@ Object? _expressionToValue(Expression<Object?> expression) {
   } else {
     throw ArgumentError('Unsupported expression type: $expression');
   }
+}
+
+TableInfo<T, dynamic>
+    findDriftTableInfo<DB extends GeneratedDatabase, T extends Table>(
+  DB db,
+  T table,
+) {
+  final TableInfo<Table, dynamic> genTable = db.allTables.firstWhere((t) {
+    return t.asDslTable == table;
+  });
+  return genTable as TableInfo<T, dynamic>;
 }

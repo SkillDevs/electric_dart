@@ -6,7 +6,7 @@ import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
@@ -274,6 +274,7 @@ void main() {
   test('shape from drift', () async {
     final shape = computeShapeForDrift(
       db,
+      electric.dbDescription,
       db.post,
       where: (p) =>
           p.title.equals('foo') &
