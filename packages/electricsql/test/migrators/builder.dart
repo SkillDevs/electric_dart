@@ -303,6 +303,24 @@ void builderTests({
     ]);
   });
 
+  test('makePositionalParam generates correct parameter strings', () {
+    const numParams = 4;
+    var expectedParams = <String>[];
+    switch (builder.dialect) {
+      case Dialect.sqlite:
+        expectedParams = ['?', '?', '?', '?'];
+      case Dialect.postgres:
+        expectedParams = [r'$1', r'$2', r'$3', r'$4'];
+    }
+    expect(
+      List<String>.generate(
+        numParams,
+        (idx) => builder.makePositionalParam(idx + 1),
+      ),
+      expectedParams,
+    );
+  });
+
   test('prepareInsertBatchedStatements correctly splits up data in batches',
       () {
     const data = [
@@ -317,17 +335,21 @@ void builderTests({
       5, // at most 5 `?`s in one SQL statement, so we should see the split
     );
 
-    final List<String> posArgs = builder.dialect == Dialect.sqlite
-        ? ['?', '?', '?', '?']
-        : [r'$1', r'$2', r'$3', r'$4'];
+    var parameters = <String>[];
+    switch (builder.dialect) {
+      case Dialect.sqlite:
+        parameters = ['(?, ?), (?, ?)', '(?, ?)'];
+      case Dialect.postgres:
+        parameters = [r'($1, $2), ($3, $4)', r'($1, $2)'];
+    }
 
     expect(stmts, [
       Statement(
-        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]}), (${posArgs[2]}, ${posArgs[3]})',
+        'INSERT INTO test (a, b) VALUES ${parameters[0]}',
         [1, 2, 3, 4],
       ),
       Statement(
-        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]})',
+        'INSERT INTO test (a, b) VALUES ${parameters[1]}',
         [5, 6],
       ),
     ]);
@@ -346,17 +368,21 @@ void builderTests({
       5,
     );
 
-    final List<String> posArgs = builder.dialect == Dialect.sqlite
-        ? ['?', '?', '?', '?']
-        : [r'$1', r'$2', r'$3', r'$4'];
+    var parameters = <String>[];
+    switch (builder.dialect) {
+      case Dialect.sqlite:
+        parameters = ['(?, ?), (?, ?)', '(?, ?)'];
+      case Dialect.postgres:
+        parameters = [r'($1, $2), ($3, $4)', r'($1, $2)'];
+    }
 
     expect(stmts, [
       Statement(
-        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]}), (${posArgs[2]}, ${posArgs[3]})',
+        'INSERT INTO test (a, b) VALUES ${parameters[0]}',
         [2, 1, 4, 3],
       ),
       Statement(
-        'INSERT INTO test (a, b) VALUES (${posArgs[0]}, ${posArgs[1]})',
+        'INSERT INTO test (a, b) VALUES ${parameters[1]}',
         [6, 5],
       ),
     ]);
@@ -376,18 +402,51 @@ void builderTests({
       5, // at most 5 `?`s in one SQL statement, so we should see the split
     );
 
-    final List<String> posArgs = builder.dialect == Dialect.sqlite
-        ? ['?', '?', '?', '?']
-        : [r'$1', r'$2', r'$3', r'$4'];
+    var parameters = <String>[];
+    switch (builder.dialect) {
+      case Dialect.sqlite:
+        parameters = ['(?, ?), (?, ?)', '(?, ?)'];
+      case Dialect.postgres:
+        parameters = [r'($1, $2), ($3, $4)', r'($1, $2)'];
+    }
 
     expect(stmts, [
       Statement(
-        'DELETE FROM test WHERE ("a" = ${posArgs[0]} AND "b" = ${posArgs[1]}) OR ("a" = ${posArgs[2]} AND "b" = ${posArgs[3]})',
+        'DELETE FROM test WHERE ("a", "b") IN (${builder.pgOnly(' VALUES ')}${parameters[0]})',
         [1, 2, 3, 4],
       ),
       Statement(
-        'DELETE FROM test WHERE ("a" = ${posArgs[0]} AND "b" = ${posArgs[1]})',
+        'DELETE FROM test WHERE ("a", "b") IN (${builder.pgOnly(' VALUES ')}${parameters[1]})',
         [5, 6],
+      ),
+    ]);
+  });
+
+  test('prepareDeleteBatchedStatements handles single column deletes', () {
+    const data = [
+      {'a': 1, 'b': 2},
+      {'a': 3, 'b': 4},
+      {'a': 5, 'b': 6},
+    ];
+    final stmts = builder.prepareDeleteBatchedStatements(
+      'DELETE FROM test WHERE',
+      ['a'],
+      data,
+      5, // at most 5 `?`s in one SQL statement, so we should see the split
+    );
+
+    var parameters = <String>[];
+    switch (builder.dialect) {
+      case Dialect.sqlite:
+        parameters = ['?, ?, ?'];
+      case Dialect.postgres:
+        parameters = [r'$1, $2, $3'];
+    }
+
+    expect(stmts, [
+      Statement(
+        'DELETE FROM test WHERE ("a") IN (${parameters[0]})',
+        [1, 3, 5],
       ),
     ]);
   });
@@ -405,17 +464,21 @@ void builderTests({
       5,
     );
 
-    final List<String> posArgs = builder.dialect == Dialect.sqlite
-        ? ['?', '?', '?', '?']
-        : [r'$1', r'$2', r'$3', r'$4'];
+    var parameters = <String>[];
+    switch (builder.dialect) {
+      case Dialect.sqlite:
+        parameters = ['(?, ?), (?, ?)', '(?, ?)'];
+      case Dialect.postgres:
+        parameters = [r'($1, $2), ($3, $4)', r'($1, $2)'];
+    }
 
     expect(stmts, [
       Statement(
-        'DELETE FROM test WHERE ("b" = ${posArgs[0]} AND "a" = ${posArgs[1]}) OR ("b" = ${posArgs[2]} AND "a" = ${posArgs[3]})',
+        'DELETE FROM test WHERE ("b", "a") IN (${builder.pgOnly(' VALUES ')}${parameters[0]})',
         [2, 1, 4, 3],
       ),
       Statement(
-        'DELETE FROM test WHERE ("b" = ${posArgs[0]} AND "a" = ${posArgs[1]})',
+        'DELETE FROM test WHERE ("b", "a") IN (${builder.pgOnly(' VALUES ')}${parameters[1]})',
         [6, 5],
       ),
     ]);

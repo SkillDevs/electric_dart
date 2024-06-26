@@ -341,4 +341,16 @@ END;''',
   String createPKJsonObject(String rows) {
     return removeSpaceAndNullValuesFromJson(createJsonObject(rows));
   }
+
+  @override
+  String createInClause(
+    List<String> columns,
+    List<Object> args,
+  ) {
+    final useTuples = columns.length > 1;
+    return '''
+(${columns.map(_quote).join(', ')}) IN (${useTuples ? args.map((tup) => "(${(tup as List<String>).join(", ")})").join(', ') : args.join(', ')})''';
+  }
 }
+
+String _quote(String col) => '"$col"';

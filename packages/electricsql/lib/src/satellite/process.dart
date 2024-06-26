@@ -1564,7 +1564,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
     // Batch-delete shadow entries
     final stmts = builder.prepareDeleteBatchedStatements(
-      'DELETE FROM ${opts.shadowTable} WHERE ',
+      'DELETE FROM ${opts.shadowTable} WHERE',
       ['namespace', 'tablename', 'primaryKey'],
       fakeOplogEntries.map((e) => e.toRow()).toList(),
       maxSqlParameters,

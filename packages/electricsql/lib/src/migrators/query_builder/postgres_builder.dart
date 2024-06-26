@@ -481,4 +481,14 @@ ON CONFLICT DO NOTHING;
   String removeSpaceAndNullValuesFromJson(String j) {
     return 'json_strip_nulls($j)';
   }
+
+  @override
+  String createInClause(
+    List<String> columns,
+    List<Object> args,
+  ) {
+    final useTuples = columns.length > 1;
+    return '''
+(${columns.map(quote).join(', ')}) IN (${useTuples ? " VALUES ${args.map((tup) => "(${(tup as List<String>).join(', ')})").join(', ')}" : args.join(', ')})''';
+  }
 }
