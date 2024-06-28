@@ -1,19 +1,12 @@
 include common.mk
 
-deps: lux
-	make clone_electric
-	make -C satellite_client build
-	make -C elixir_client build
-	make -C prisma_example build
-
-test_sqlite_and_pg: test_only
-	make -C tests test_pg
+export DOCKER_COMPOSE_FILE=compose.yaml
 
 test_only:
-	${LUX} --junit tests
+	${LUX} tests/*.lux
 
 test-no-satellite:
-	find tests -type f -maxdepth 1 -name "*.lux" -and -not -name "03.*.lux" | sort -h | xargs ${LUX} --junit
+	find tests -maxdepth 1 -type f -name "*.lux" -and -not -name "03.*.lux" | sort -h | xargs ${LUX} --junit
 
 test-satellite-only:
 	${LUX} --junit tests/03.*.lux
@@ -23,11 +16,11 @@ test_only_custom:
 
 test: deps pull test_only
 
-test-no-satellite:
-	find tests -type f -maxdepth 1 -name "*.lux" -and -not -name "03.*.lux" | sort -h | xargs ${LUX} --junit
-
-test-satellite-only:
-	${LUX} --junit tests/03.*.lux
+deps: lux
+	make clone_electric
+	make -C satellite_client build
+	make -C elixir_client build
+	make -C prisma_example build
 
 pull:
 	docker compose -f services_templates.yaml pull \

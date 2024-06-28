@@ -1,9 +1,9 @@
 diff -x lux -x satellite_client -x lux_logs -ur electric/common.mk dart/common.mk
 --- electric/common.mk	2024-01-01 00:00:00.000000000 +0000
 +++ dart/common.mk	2024-01-01 00:00:00.000000000 +0000
-@@ -41,6 +41,15 @@
- 	export ELECTRIC_CLIENT_IMAGE=${ELECTRIC_CLIENT_IMAGE_NAME}:${ELECTRIC_IMAGE_TAG}
- endif
+@@ -43,6 +43,16 @@
+ 
+ export DISABLE_TZDATA_AUTOUPDATE=true
  
 +export ELECTRIC_COMMIT:=$(shell cd $(PROJECT_ROOT) && tool/extract_electric_commit.sh)
 +
@@ -14,9 +14,10 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/common.mk dart/common.m
 +	cd ${ELECTRIC_REPO} && \
 +	git fetch origin && \
 +	git checkout --force ${ELECTRIC_COMMIT}
- 
++
  lux: ${LUX_PATH}
  
+ ${LUX}:
 Only in dart: electric_repo
 diff -x lux -x satellite_client -x lux_logs -ur electric/elixir_client/Makefile dart/elixir_client/Makefile
 --- electric/elixir_client/Makefile	2024-01-01 00:00:00.000000000 +0000
@@ -42,35 +43,25 @@ diff -x lux -x satellite_client -x lux_logs -ur electric/.gitignore dart/.gitign
 diff -x lux -x satellite_client -x lux_logs -ur electric/Makefile dart/Makefile
 --- electric/Makefile	2024-01-01 00:00:00.000000000 +0000
 +++ dart/Makefile	2024-01-01 00:00:00.000000000 +0000
-@@ -1,6 +1,7 @@
- include common.mk
+@@ -11,9 +11,13 @@
+ test-satellite-only:
+ 	${LUX} --junit tests/03.*.lux
+ 
++test_only_custom:
++	${LUX} --junit ${TEST}
++
+ test: deps pull test_only
  
  deps: lux
 +	make clone_electric
  	make -C satellite_client build
  	make -C elixir_client build
  	make -C prisma_example build
-@@ -11,6 +12,15 @@
- test_only:
- 	${LUX} --junit tests
- 
-+test-no-satellite:
-+	find tests -type f -maxdepth 1 -name "*.lux" -and -not -name "03.*.lux" | sort -h | xargs ${LUX} --junit
-+
-+test-satellite-only:
-+	${LUX} --junit tests/03.*.lux
-+
-+test_only_custom:
-+	${LUX} --junit ${TEST}
-+
- test: deps pull test_only
- 
- test-no-satellite:
 Only in dart: run_client_e2e_with_retries.sh
 diff -x lux -x satellite_client -x lux_logs -ur electric/services_templates.yaml dart/services_templates.yaml
 --- electric/services_templates.yaml	2024-01-01 00:00:00.000000000 +0000
 +++ dart/services_templates.yaml	2024-01-01 00:00:00.000000000 +0000
-@@ -42,7 +42,7 @@
+@@ -40,7 +40,7 @@
        - "host.docker.internal:host-gateway"
  
    satellite_client:

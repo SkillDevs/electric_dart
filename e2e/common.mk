@@ -41,6 +41,8 @@ else
 	export ELECTRIC_CLIENT_IMAGE=${ELECTRIC_CLIENT_IMAGE_NAME}:${ELECTRIC_IMAGE_TAG}
 endif
 
+export DISABLE_TZDATA_AUTOUPDATE=true
+
 export ELECTRIC_COMMIT:=$(shell cd $(PROJECT_ROOT) && tool/extract_electric_commit.sh)
 
 export ELECTRIC_REPO := $(abspath $(E2E_ROOT)/electric_repo)
@@ -91,8 +93,12 @@ stop_dev_env:
 	if [ -n "`docker ps --filter name=sysbench_run --format '{{.Names}}'`" ]; then \
 		docker ps --filter name=sysbench_run --format '{{.Names}}' | xargs docker kill; \
 	fi
-	docker compose -f ${DOCKER_COMPOSE_FILE} stop --timeout 1
-	docker compose -f ${DOCKER_COMPOSE_FILE} down
+	# The timeout should allow for any remaining OT batches to be exported prior to server shutdown.
+	docker compose -f ${DOCKER_COMPOSE_FILE} stop --timeout 5 electric_1 pg_1
+	docker compose -f ${DOCKER_COMPOSE_FILE} down --timeout 5
+
+start_otel_collector:
+	docker compose -f ${DOCKER_COMPOSE_FILE} up otel-collector
 
 start_sysbench:
 	docker compose -f ${DOCKER_COMPOSE_FILE} run \

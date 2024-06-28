@@ -18,6 +18,7 @@ dependencies:
   equatable: ^2.0.5
   http: ^1.1.0
   mason_logger: ^0.2.5
+  meta: ^1.0.0
   package_config: ^2.1.0
   path: ^1.8.3
   recase: ^4.1.0

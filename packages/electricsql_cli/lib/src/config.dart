@@ -134,7 +134,8 @@ T? getOptionalConfigValue<T>(
   // Then check if the option was passed as an environment variable
   final envName = name.startsWith('ELECTRIC_') ? name : 'ELECTRIC_$name';
   final envVal = programEnv[envName];
-  if (configOptions[name]! is ConfigOption<bool>) {
+  if (programEnv.isDefined(envName) &&
+      configOptions[name]! is ConfigOption<bool>) {
     final bool b = notBlank(envVal) &&
         !['f', 'false', '0', '', 'no'].contains(envVal!.toLowerCase());
     return b as T;

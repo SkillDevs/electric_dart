@@ -1,9 +1,20 @@
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql_cli/src/config.dart';
 import 'package:electricsql_cli/src/util/util.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 
-final configOptions = <String, ConfigOption<Object>>{
+Map<String, ConfigOption<Object>>? _debugConfigOptions;
+
+@visibleForTesting
+void setDebugConfigOptions(Map<String, ConfigOption<Object>>? options) {
+  _debugConfigOptions = options;
+}
+
+Map<String, ConfigOption<Object>> get configOptions =>
+    _debugConfigOptions ?? _kConfigOptions;
+
+final _kConfigOptions = <String, ConfigOption<Object>>{
   // *** Client options ***
   'SERVICE': ConfigOption<String>(
     valueTypeName: 'url',

@@ -1,9 +1,57 @@
+import 'dart:collection';
+
+import 'package:dotenv/dotenv.dart';
 import 'package:electricsql_cli/src/config.dart';
+import 'package:electricsql_cli/src/config_options.dart';
+import 'package:electricsql_cli/src/env.dart';
 import 'package:electricsql_cli/src/util/util.dart';
 import 'package:test/test.dart';
 
 void main() {
   setDebugMockParsedPubspecLockInfo();
+
+  final origProgramEnv = programEnv;
+  final origConfigOptions =
+      UnmodifiableMapView<String, ConfigOption<Object>>(configOptions);
+
+  setUp(() {
+    final dotEnv = DotEnv()..addAll(origProgramEnv.map);
+    setProgramEnv(dotEnv);
+    setDebugConfigOptions({...origConfigOptions});
+  });
+
+  tearDown(() {
+    // cleanup
+    setProgramEnv(origProgramEnv);
+    setDebugConfigOptions(null);
+  });
+
+  test('getConfigValue respects boolean flag defaults', () async {
+    const flagWithTrueDefault = '_MOCK_TRUE_DEFAULT';
+    const flagWithFalseDefault = '_MOCK_FALSE_DEFAULT';
+
+    configOptions[flagWithTrueDefault] = ConfigOption<bool>(
+      doc: '',
+      defaultValue: true,
+    );
+
+    configOptions[flagWithFalseDefault] = ConfigOption<bool>(
+      doc: '',
+      defaultValue: false,
+    );
+
+    expect(getConfigValue<bool>(flagWithTrueDefault), true);
+    expect(getConfigValue<bool>(flagWithFalseDefault), false);
+
+    // ensure environment overrides default
+    programEnv.addAll({
+      'ELECTRIC_$flagWithTrueDefault': 'false',
+      'ELECTRIC_$flagWithFalseDefault': 'true',
+    });
+
+    expect(getConfigValue<bool>(flagWithTrueDefault), false);
+    expect(getConfigValue<bool>(flagWithFalseDefault), true);
+  });
 
   test('getConfigValue can capture `ELECTRIC_` prefixed CLI opitons', () {
     final image =

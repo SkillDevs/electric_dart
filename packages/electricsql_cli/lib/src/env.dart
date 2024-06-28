@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dotenv/dotenv.dart';
+import 'package:meta/meta.dart';
 
 DotEnv? _cachedProgramEnv;
 
@@ -10,6 +11,11 @@ DotEnv get programEnv {
     _cachedProgramEnv = env;
   }
   return _cachedProgramEnv!;
+}
+
+@visibleForTesting
+void setProgramEnv(DotEnv? env) {
+  _cachedProgramEnv = env;
 }
 
 DotEnv _loadEnv() {
