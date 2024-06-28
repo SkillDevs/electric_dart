@@ -1,5 +1,13 @@
 export 'package:electricsql/src/client/model/schema.dart'
-    show ElectricMigrations;
+    show
+        DBSchema,
+        DBSchemaRaw,
+        ElectricMigrations,
+        Fields,
+        Relation,
+        TableSchema;
+
+export '../conversions/index.dart';
 
 export 'client.dart' show BaseElectricClient, ElectricClientRaw;
 export 'shapes.dart'

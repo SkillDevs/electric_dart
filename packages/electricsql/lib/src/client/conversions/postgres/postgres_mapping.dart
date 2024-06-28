@@ -1,5 +1,6 @@
-import 'dart:convert';
+import 'dart:convert' hide Converter;
 
+import 'package:electricsql/src/client/conversions/converter.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/converters/codecs/float4.dart';
 import 'package:electricsql/src/util/converters/codecs/int2.dart';
@@ -7,10 +8,29 @@ import 'package:electricsql/src/util/converters/codecs/int4.dart';
 import 'package:electricsql/src/util/converters/codecs/json.dart';
 import 'package:electricsql/src/util/converters/codecs/uuid.dart';
 import 'package:electricsql/src/util/converters/helpers.dart';
+import 'package:electricsql/src/util/converters/type_converters.dart';
 import 'package:postgres/postgres.dart' as pg;
 
 // ignore: implementation_imports
 import 'package:postgres/src/types/text_codec.dart';
+
+const kPostgresConverter = PostgresConverter();
+
+class PostgresConverter implements Converter {
+  const PostgresConverter();
+
+  @override
+  Object? decode(Object? v, PgType pgType) {
+    if (v == null) return null;
+    return mapToUser(pgType, v, null);
+  }
+
+  @override
+  Object? encode(Object? v, PgType pgType) {
+    if (v == null) return null;
+    return mapToSql(pgType, v);
+  }
+}
 
 Object mapToSql(PgType? type, Object inputDartValue) {
   final pg.Type pgType = _mapElectricPgType(type);
@@ -65,7 +85,6 @@ String mapToSqlLiteral(
   PgType pgType,
   Object inputDartValue,
   String typeName,
-  Codec<Object, Object> codec,
 ) {
   final pgLibType = _mapElectricPgType(pgType);
   final dartValue =
@@ -86,9 +105,10 @@ String mapToSqlLiteral(
   } else if (pgType == PgType.timestamp) {
     pgEncoded = _encodeDateTimeWithoutTZ(dartValue as DateTime);
   } else if (pgType == PgType.json || pgType == PgType.jsonb) {
-    final jsonEncoded = dartValue == null
-        ? 'null'
-        : codec.encode(dartValue as Object) as String;
+    final codec =
+        pgType == PgType.json ? TypeConverters.json : TypeConverters.jsonb;
+    final String jsonEncoded =
+        dartValue == null ? 'null' : codec.encode(dartValue as Object);
     pgEncoded = _pgEncoder.convert(jsonEncoded);
   } else if (pgType == PgType.float4 && dartValue is num) {
     final dd = fround(dartValue);
@@ -100,12 +120,16 @@ String mapToSqlLiteral(
   return pgEncoded;
 }
 
-Object mapToUser(PgType? type, Object sqlValue, Codec<Object, Object> codec) {
+Object mapToUser(
+  PgType? type,
+  Object sqlValue,
+  Codec<Object, Object>? enumCodec,
+) {
   if (type == PgType.time) {
     return (sqlValue as pg.Time).utcDateTime;
   } else if (type == null) {
     final enumStr = _readEnum(sqlValue);
-    return codec.decode(enumStr);
+    return enumCodec!.decode(enumStr);
   } else {
     return sqlValue;
   }
@@ -152,6 +176,9 @@ dynamic _updateDartInput(
     Int2Codec.validateInt(dartValue as int);
   } else if (pgType == pg.Type.integer) {
     Int4Codec.validateInt(dartValue as int);
+  } else if (pgType == pg.Type.bigInteger && dartValue is BigInt) {
+    final int8 = dartValue.rangeCheckedToInt();
+    return int8;
   }
 
   if (dartValue is DateTime) {
@@ -181,7 +208,9 @@ dynamic _updateDartInput(
 }
 
 Object toImplicitlyCastedValue(Object value) {
-  if (value is double) {
+  if (value is pg.TypedValue) {
+    return value;
+  } else if (value is double) {
     if (value.isNaN || value.isInfinite) {
       return pg.TypedValue(pg.Type.double, value);
     }
@@ -192,21 +221,4 @@ Object toImplicitlyCastedValue(Object value) {
   }
 
   return pg.TypedValue(pg.Type.unspecified, value);
-}
-
-extension on BigInt {
-  static final _bigIntMinValue64 = BigInt.from(-9223372036854775808);
-  static final _bigIntMaxValue64 = BigInt.from(9223372036854775807);
-
-  int rangeCheckedToInt() {
-    if (this < _bigIntMinValue64 || this > _bigIntMaxValue64) {
-      throw ArgumentError.value(
-        this,
-        'this',
-        'BigInt value exceeds the range of 64 bits',
-      );
-    }
-
-    return toInt();
-  }
 }

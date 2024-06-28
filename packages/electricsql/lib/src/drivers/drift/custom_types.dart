@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:electricsql/src/client/conversions/postgres/mapping.dart'
     as pg_mapping;
+import 'package:electricsql/src/client/conversions/sqlite.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/util/converters/type_converters.dart';
 
@@ -22,34 +23,13 @@ class ElectricTypes {
   static const JsonBType jsonb = JsonBType();
 }
 
-class CustomElectricTypeGeneric<DartT extends Object, SQLType extends Object>
-    implements DialectAwareSqlType<DartT> {
-  final Codec<DartT, SQLType> codec;
+abstract class CustomElectricTypeGeneric<DartT extends Object,
+    SQLType extends Object> implements DialectAwareSqlType<DartT> {
   final String typeName;
 
   const CustomElectricTypeGeneric({
-    required this.codec,
     required this.typeName,
   });
-
-  @override
-  String mapToSqlLiteral(GenerationContext context, DartT dartValue) {
-    final encoded = codec.encode(dartValue);
-    if (encoded is String) {
-      return "'$encoded'";
-    }
-    return '$encoded';
-  }
-
-  @override
-  Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
-    return codec.encode(dartValue);
-  }
-
-  @override
-  DartT read(SqlTypes types, Object fromSql) {
-    return codec.decode(fromSql as SQLType);
-  }
 
   @override
   String sqlTypeName(GenerationContext context) => typeName;
@@ -60,7 +40,6 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
   final PgType pgType;
 
   const CustomElectricType({
-    required super.codec,
     required super.typeName,
     required this.pgType,
   });
@@ -68,37 +47,51 @@ abstract class CustomElectricType<DartT extends Object, SQLType extends Object>
   @override
   Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
     if (context.dialect == SqlDialect.postgres) {
-      return pg_mapping.mapToSql(pgType, dartValue);
+      return pg_mapping.kPostgresConverter.encode(dartValue, pgType)!;
     } else {
-      return super.mapToSqlParameter(context, dartValue);
+      return kSqliteConverter.encode(dartValue, pgType)!;
     }
   }
 
   @override
   String mapToSqlLiteral(GenerationContext context, DartT dartValue) {
     if (context.dialect == SqlDialect.postgres) {
-      return pg_mapping.mapToSqlLiteral(pgType, dartValue, typeName, codec);
+      return pg_mapping.mapToSqlLiteral(pgType, dartValue, typeName);
     } else {
-      return super.mapToSqlLiteral(context, dartValue);
+      final encoded = kSqliteConverter.encode(dartValue, pgType)!;
+      if (encoded is String) {
+        return "'$encoded'";
+      }
+      return '$encoded';
     }
   }
 
   @override
   DartT read(SqlTypes types, Object fromSql) {
     if (types.dialect == SqlDialect.postgres) {
-      return pg_mapping.mapToUser(pgType, fromSql, codec) as DartT;
+      final decoded = pg_mapping.kPostgresConverter.decode(fromSql, pgType)!;
+      return decoded as DartT;
     } else {
-      return super.read(types, fromSql);
+      final decoded = kSqliteConverter.decode(fromSql, pgType)!;
+      return decoded as DartT;
     }
   }
 }
 
 class CustomElectricTypeEnum<DartT extends Object>
     extends CustomElectricTypeGeneric<DartT, String> {
+  final Codec<DartT, String> codec;
+
   const CustomElectricTypeEnum({
-    required super.codec,
+    required this.codec,
     required super.typeName,
   });
+
+  @override
+  String mapToSqlLiteral(GenerationContext context, DartT dartValue) {
+    final String encoded = codec.encode(dartValue);
+    return "'$encoded'";
+  }
 
   @override
   Object mapToSqlParameter(GenerationContext context, DartT dartValue) {
@@ -108,7 +101,7 @@ class CustomElectricTypeEnum<DartT extends Object>
       final String enumStr = codec.encode(dartValue);
       return pg_mapping.mapToSql(pgType, enumStr);
     } else {
-      return super.mapToSqlParameter(context, dartValue);
+      return codec.encode(dartValue);
     }
   }
 
@@ -117,7 +110,7 @@ class CustomElectricTypeEnum<DartT extends Object>
     if (types.dialect == SqlDialect.postgres) {
       return pg_mapping.mapToUser(null, fromSql, codec) as DartT;
     } else {
-      return super.read(types, fromSql);
+      return codec.decode(fromSql as String);
     }
   }
 }
@@ -125,7 +118,6 @@ class CustomElectricTypeEnum<DartT extends Object>
 class TimestampType extends CustomElectricType<DateTime, String> {
   const TimestampType()
       : super(
-          codec: TypeConverters.timestamp,
           typeName: 'timestamp',
           pgType: PgType.timestamp,
         );
@@ -134,7 +126,6 @@ class TimestampType extends CustomElectricType<DateTime, String> {
 class TimestampTZType extends CustomElectricType<DateTime, String> {
   const TimestampTZType()
       : super(
-          codec: TypeConverters.timestampTZ,
           typeName: 'timestamptz',
           pgType: PgType.timestampTz,
         );
@@ -143,7 +134,6 @@ class TimestampTZType extends CustomElectricType<DateTime, String> {
 class DateType extends CustomElectricType<DateTime, String> {
   const DateType()
       : super(
-          codec: TypeConverters.date,
           typeName: 'date',
           pgType: PgType.date,
         );
@@ -152,7 +142,6 @@ class DateType extends CustomElectricType<DateTime, String> {
 class TimeType extends CustomElectricType<DateTime, String> {
   const TimeType()
       : super(
-          codec: TypeConverters.time,
           typeName: 'time',
           pgType: PgType.time,
         );
@@ -161,7 +150,6 @@ class TimeType extends CustomElectricType<DateTime, String> {
 class TimeTZType extends CustomElectricType<DateTime, String> {
   const TimeTZType()
       : super(
-          codec: TypeConverters.timeTZ,
           typeName: 'timetz',
           pgType: PgType.timeTz,
         );
@@ -170,7 +158,6 @@ class TimeTZType extends CustomElectricType<DateTime, String> {
 class UUIDType extends CustomElectricType<String, String> {
   const UUIDType()
       : super(
-          codec: TypeConverters.uuid,
           typeName: 'uuid',
           pgType: PgType.uuid,
         );
@@ -179,7 +166,6 @@ class UUIDType extends CustomElectricType<String, String> {
 class Int2Type extends CustomElectricType<int, int> {
   const Int2Type()
       : super(
-          codec: TypeConverters.int2,
           typeName: 'int2',
           pgType: PgType.int2,
         );
@@ -188,7 +174,6 @@ class Int2Type extends CustomElectricType<int, int> {
 class Int4Type extends CustomElectricType<int, int> {
   const Int4Type()
       : super(
-          codec: TypeConverters.int4,
           typeName: 'int4',
           pgType: PgType.int4,
         );
@@ -197,7 +182,6 @@ class Int4Type extends CustomElectricType<int, int> {
 class Int8Type extends CustomElectricType<int, int> {
   const Int8Type()
       : super(
-          codec: TypeConverters.int8,
           typeName: 'int8',
           pgType: PgType.int8,
         );
@@ -206,7 +190,6 @@ class Int8Type extends CustomElectricType<int, int> {
 class Float4Type extends CustomElectricType<double, Object> {
   const Float4Type()
       : super(
-          codec: TypeConverters.float4,
           typeName: 'float4',
           pgType: PgType.float4,
         );
@@ -214,7 +197,7 @@ class Float4Type extends CustomElectricType<double, Object> {
   @override
   String mapToSqlLiteral(GenerationContext context, double dartValue) {
     if (context.dialect == SqlDialect.sqlite) {
-      return _doubleToSqliteLiteral(codec, dartValue);
+      return _doubleToSqliteLiteral(TypeConverters.float4, dartValue);
     } else {
       return super.mapToSqlLiteral(context, dartValue);
     }
@@ -224,7 +207,6 @@ class Float4Type extends CustomElectricType<double, Object> {
 class Float8Type extends CustomElectricType<double, Object> {
   const Float8Type()
       : super(
-          codec: TypeConverters.float8,
           typeName: 'float8',
           pgType: PgType.float8,
         );
@@ -232,7 +214,7 @@ class Float8Type extends CustomElectricType<double, Object> {
   @override
   String mapToSqlLiteral(GenerationContext context, double dartValue) {
     if (context.dialect == SqlDialect.sqlite) {
-      return _doubleToSqliteLiteral(codec, dartValue);
+      return _doubleToSqliteLiteral(TypeConverters.float8, dartValue);
     } else {
       return super.mapToSqlLiteral(context, dartValue);
     }
@@ -242,7 +224,6 @@ class Float8Type extends CustomElectricType<double, Object> {
 class JsonType extends CustomElectricType<Object, String> {
   const JsonType()
       : super(
-          codec: TypeConverters.json,
           typeName: 'json',
           pgType: PgType.json,
         );
@@ -251,7 +232,6 @@ class JsonType extends CustomElectricType<Object, String> {
 class JsonBType extends CustomElectricType<Object, String> {
   const JsonBType()
       : super(
-          codec: TypeConverters.jsonb,
           typeName: 'jsonb',
           pgType: PgType.jsonb,
         );

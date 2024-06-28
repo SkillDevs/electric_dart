@@ -1,12 +1,10 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnectionUser;
-import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/electricsql.dart' hide Relation;
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
-import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/drivers/drift/drift_adapter.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
 import 'package:electricsql/src/migrators/bundle.dart';
@@ -14,7 +12,6 @@ import 'package:electricsql/src/migrators/schema.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/notifiers/index.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
-import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/util/random.dart';
@@ -33,7 +30,7 @@ SatelliteOpts opts(String namespace) => satelliteDefaults(namespace).copyWith(
       pollingInterval: const Duration(milliseconds: 200),
     );
 
-DBSchema kTestDbDescription = DBSchemaRaw(
+const DBSchema kTestDbDescription = DBSchemaRaw(
   tableSchemas: {
     'child': TableSchema(
       fields: {
@@ -417,14 +414,14 @@ Future<ElectricClientRaw> mockElectricClient(
   registry.satellites[dbName] = satellite;
 
   // Mock Electric client that does not contain the DAL
-  final electric = ElectricClientImpl.internal(
+  final electric = ElectricClientRawImpl.internal(
     dbName: dbName,
     adapter: adapter,
     notifier: notifier,
     registry: registry,
     satellite: satellite,
     dbDescription:
-        DBSchemaRaw(tableSchemas: {}, migrations: [], pgMigrations: []),
+        const DBSchemaRaw(tableSchemas: {}, migrations: [], pgMigrations: []),
     dialect: Dialect.sqlite,
   );
 

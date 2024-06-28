@@ -49,7 +49,7 @@ void serializationTests({
       ],
     );
 
-    final dbDescription = DBSchemaRaw(
+    const dbDescription = DBSchemaRaw(
       tableSchemas: {
         'table': TableSchema(
           fields: {
@@ -218,7 +218,7 @@ void serializationTests({
       ],
     );
 
-    final dbDescription = DBSchemaRaw(
+    const dbDescription = DBSchemaRaw(
       tableSchemas: {
         'table': TableSchema(
           fields: {
@@ -278,7 +278,7 @@ void serializationTests({
     expect(boolColumn.type, 'INTEGER');
 
     // Db schema holds the correct Postgres types
-    final boolsDbDescription = DBSchemaRaw(
+    const boolsDbDescription = DBSchemaRaw(
       tableSchemas: {
         'bools': TableSchema(
           fields: {
@@ -334,7 +334,7 @@ void serializationTests({
     expect(sqliteInferredRelations.length, 0);
 
     // Empty Db schema
-    final testDbDescription = DBSchemaRaw(
+    const testDbDescription = DBSchemaRaw(
       tableSchemas: {},
       migrations: [],
       pgMigrations: [],

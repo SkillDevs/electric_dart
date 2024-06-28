@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:archive/archive_io.dart';
 import 'package:args/command_runner.dart';
+import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql_cli/src/commands/command_util.dart';
 import 'package:electricsql_cli/src/commands/configure/command_with_config.dart';
@@ -22,6 +23,7 @@ import 'package:path/path.dart' as path;
 
 const String defaultDriftSchemaFileName = 'drift_schema.dart';
 const bool _defaultDebug = false;
+const bool _defaultWithDal = true;
 
 /// {@template sample_command}
 ///
@@ -63,8 +65,16 @@ More information at: https://drift.simonbinder.eu/docs/getting-started/advanced_
 Optional flag to enable debug mode
 
 When enabled, the temporary migration files used to generate the client will be retained for inspection.''',
-        defaultsTo: false,
+        defaultsTo: _defaultDebug,
         negatable: false,
+      )
+      ..addOption(
+        'with-dal',
+        help: '''
+Optional flag to disable generation of the Electric client.
+
+Defaults to true. When set to false, only the migrations will be generated and a minimal database description but no DAL.''',
+        defaultsTo: 'true',
       );
   }
 
@@ -86,6 +96,8 @@ When enabled, the temporary migration files used to generate the client will be 
 
     final bool int8AsBigInt = opts['int8-as-bigint']! as bool;
     final bool debug = opts['debug']! as bool;
+    final String withDalRaw = opts['with-dal']! as String;
+    final bool withDal = withDalRaw != 'false';
     final String? withMigrations = opts['with-migrations'] as String?;
 
     final _cliDriftGenOpts = _CLIDriftGenOpts(
@@ -98,6 +110,7 @@ When enabled, the temporary migration files used to generate the client will be 
       proxy: config.read<String>('PROXY'),
       debug: debug,
       withMigrations: withMigrations,
+      withDal: withDal,
       logger: _logger,
       driftSchemaGenOpts: _cliDriftGenOpts,
     );
@@ -118,6 +131,7 @@ Future<void> runElectricCodeGeneration({
   ElectricDriftGenOpts? driftSchemaGenOpts,
   bool? debug,
   String? withMigrations,
+  bool? withDal,
   Logger? logger,
 }) async {
   final finalLogger = logger ?? Logger();
@@ -148,6 +162,7 @@ Future<void> runElectricCodeGeneration({
     driftSchemaGenOpts: driftSchemaGenOpts,
     withMigrations: withMigrations,
     debug: debug ?? _defaultDebug,
+    withDal: withDal ?? _defaultWithDal,
     logger: finalLogger,
   );
 
@@ -206,6 +221,7 @@ class _GeneratorOpts {
     required this.config,
     required this.debug,
     required this.withMigrations,
+    required this.withDal,
     required this.driftSchemaGenOpts,
     required this.logger,
   });
@@ -214,6 +230,7 @@ class _GeneratorOpts {
   final ElectricDriftGenOpts? driftSchemaGenOpts;
   final String? withMigrations;
   final bool debug;
+  final bool withDal;
   final Logger logger;
 }
 
@@ -287,7 +304,6 @@ Future<void> _runGenerator(_GeneratorOpts opts) async {
 
 Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
   final logger = opts.logger;
-  final config = opts.config;
 
   final currentDir = Directory.current;
 
@@ -298,61 +314,27 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
   bool generationFailed = false;
 
   try {
-    final buildSqliteMigrations = await bundleMigrationsFor(
-      Dialect.sqlite,
-      opts,
-      tmpDir: tmpDir,
-    );
+    // Build and bundle the SQLite and PG migrations
+    final dbDescription = await buildAndBundleMigrations(opts, tmpDir);
 
-    final buildPgMigrations = await bundleMigrationsFor(
-      Dialect.postgres,
-      opts,
-      tmpDir: tmpDir,
-    );
+    if (opts.withDal) {
+      // Generate Electric client
+      await introspectDbAndGenerateClient(opts, tmpDir, dbDescription);
+    }
 
-    final prismaCLIDir =
-        await Directory(path.join(tmpDir.path, 'prisma-cli')).create();
-    final prismaCLI = PrismaCLI(logger: logger, folder: prismaCLIDir);
+    if (!opts.withDal) {
+      // User doesn't want an Electric client
+      // Write the minimal database description to a file
+      opts.logger.info('Generating database schema...');
+      final outFolder = Directory(opts.config.read<String>('CLIENT_PATH'));
 
-    await wrapWithProgress(
-      logger,
-      () => prismaCLI.install(),
-      progressMsg: 'Installing Prisma CLI via Docker',
-      completeMsg: 'Prisma CLI installed',
-    );
-
-    final prismaSchema =
-        await createIntrospectionSchema(tmpDir, config: config);
-
-    // Introspect the created DB to update the Prisma schema
-    await wrapWithProgress(
-      logger,
-      () => introspectDB(prismaCLI, prismaSchema),
-      progressMsg: 'Introspecting database',
-      completeMsg: 'Database introspected',
-    );
-
-    // print(prismaSchemaContent);
-
-    final outFolder = config.read<String>('CLIENT_PATH');
-
-    // Generate the Electric client from the given introspected schema
-    await wrapWithProgress(
-      logger,
-      () => _generateClient(prismaSchema, outFolder, opts),
-      progressMsg: 'Generating Drift DB schema',
-      completeMsg: 'Drift DB schema generated',
-    );
-
-    await wrapWithProgress(
-      logger,
-      () async {
-        await buildSqliteMigrations();
-        await buildPgMigrations();
-      },
-      progressMsg: 'Generating bundled migrations',
-      completeMsg: 'Bundled migrations generated',
-    );
+      await wrapWithProgress(
+        logger,
+        () => bundleDbDescription(dbDescription, outFolder),
+        progressMsg: 'Generating database schema...',
+        completeMsg: 'Successfully generated database schema',
+      );
+    }
   } catch (e) {
     generationFailed = true;
     logger.err('generate command failed: $e');
@@ -364,7 +346,15 @@ Future<void> _runGeneratorInner(_GeneratorOpts opts) async {
   }
 }
 
-Future<Future<void> Function()> bundleMigrationsFor(
+Future<void> bundleDbDescription(
+  DBSchema dbDescription,
+  Directory outFolder,
+) async {
+  final dbDescriptionFile = File(path.join(outFolder.path, 'schema.dart'));
+  await buildRawSchema(dbDescription, dbDescriptionFile);
+}
+
+Future<Future<DBSchema> Function()> bundleMigrationsFor(
   Dialect dialect,
   _GeneratorOpts opts, {
   required Directory tmpDir,
@@ -388,7 +378,7 @@ Future<Future<void> Function()> bundleMigrationsFor(
       dialect == Dialect.sqlite ? kSqliteQueryBuilder : kPostgresQueryBuilder;
 
   return () async {
-    await buildMigrations(
+    return await buildMigrations(
       migrationsDir,
       migrationsFile,
       builder,
@@ -397,6 +387,80 @@ Future<Future<void> Function()> bundleMigrationsFor(
           : 'kPostgresMigrations',
     );
   };
+}
+
+Future<DBSchema> buildAndBundleMigrations(
+  _GeneratorOpts opts,
+  Directory tmpDir,
+) async {
+  final logger = opts.logger;
+
+  final buildSqliteMigrations = await bundleMigrationsFor(
+    Dialect.sqlite,
+    opts,
+    tmpDir: tmpDir,
+  );
+
+  final buildPgMigrations = await bundleMigrationsFor(
+    Dialect.postgres,
+    opts,
+    tmpDir: tmpDir,
+  );
+
+  late DBSchema dbDescription;
+  await wrapWithProgress(
+    logger,
+    () async {
+      dbDescription = await buildSqliteMigrations();
+      await buildPgMigrations();
+    },
+    progressMsg: 'Generating bundled migrations',
+    completeMsg: 'Bundled migrations generated',
+  );
+
+  return dbDescription;
+}
+
+Future<void> introspectDbAndGenerateClient(
+  _GeneratorOpts opts,
+  Directory tmpDir,
+  DBSchema dbDescription,
+) async {
+  final logger = opts.logger;
+  final config = opts.config;
+
+  final prismaCLIDir =
+      await Directory(path.join(tmpDir.path, 'prisma-cli')).create();
+  final prismaCLI = PrismaCLI(logger: logger, folder: prismaCLIDir);
+
+  await wrapWithProgress(
+    logger,
+    () => prismaCLI.install(),
+    progressMsg: 'Installing Prisma CLI via Docker',
+    completeMsg: 'Prisma CLI installed',
+  );
+
+  final prismaSchema = await createIntrospectionSchema(tmpDir, config: config);
+
+  // Introspect the created DB to update the Prisma schema
+  await wrapWithProgress(
+    logger,
+    () => introspectDB(prismaCLI, prismaSchema),
+    progressMsg: 'Introspecting database',
+    completeMsg: 'Database introspected',
+  );
+
+  // print(prismaSchemaContent);
+
+  final outFolder = config.read<String>('CLIENT_PATH');
+
+  // Generate the Electric client from the given introspected schema
+  await wrapWithProgress(
+    logger,
+    () => _generateClient(prismaSchema, outFolder, opts),
+    progressMsg: 'Generating Drift DB schema',
+    completeMsg: 'Drift DB schema generated',
+  );
 }
 
 Future<void> _generateClient(

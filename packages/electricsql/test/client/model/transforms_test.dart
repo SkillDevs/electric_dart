@@ -1,8 +1,11 @@
 import 'package:drift/drift.dart';
+import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/client/validation/validation.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
+import 'package:electricsql/src/drivers/drift/schema.dart';
 import 'package:electricsql/util.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../drift/database.dart';
@@ -16,10 +19,13 @@ const post1 = PostData(
 );
 
 late TestsDatabase db;
+late DBSchema schema;
 
 Future<void> main() async {
   setUp(() async {
     db = TestsDatabase.memory();
+
+    schema = DBSchemaDrift(db: db, migrations: [], pgMigrations: []);
   });
 
   tearDown(() async {
@@ -31,8 +37,10 @@ Future<void> main() async {
     required DbRecord Function(DbRecord)? update,
     required List<String> immutableFields,
   }) {
+    final fields = schema.getFields('Post');
+
     final origCols = driftInsertableToValues(r);
-    transformTableRecord<Insertable<PostData>>(
+    transformTableRecordGeneric<Insertable<PostData>>(
       r,
       (row) {
         final Map<String, Expression<Object>> updated;
@@ -48,6 +56,7 @@ Future<void> main() async {
 
         return RawValuesInsertable(updated);
       },
+      fields,
       immutableFields,
       validateFun: (d) => validateDriftRecord(db.post, d),
       toRecord: (d) => driftInsertableToValues(d),
@@ -160,4 +169,32 @@ Future<void> main() async {
       throwsA(isA<InvalidRecordTransformationError>()),
     );
   });
+
+  test('setReplicationTransform throws an error if table does not exist', () {
+    expect(
+      () => setReplicationTransform<DbRecord>(
+        dbDescription: schema,
+        replicationTransformManager: ReplicatedRowTransformManagerMock(),
+        qualifiedTableName:
+            const QualifiedTablename('main', 'non_existent_table'),
+        transformInbound: (r) => r,
+        transformOutbound: (r) => r,
+        validateFun: null,
+        toRecord: (r) => r,
+        fromRecord: (r) => r,
+      ),
+      throwsA(
+        isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          contains(
+            "Cannot set replication transform for table 'non_existent_table'. Table does not exist in the database schema.",
+          ),
+        ),
+      ),
+    );
+  });
 }
+
+class ReplicatedRowTransformManagerMock extends Mock
+    implements IReplicationTransformManager {}

@@ -26,13 +26,18 @@ env:
 #   group: e2e-${{ github.workflow }}
 #   cancel-in-progress: false
 
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e_satellite_tests:
-    name: E2E Satellite tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
         dialect: [SQLite, Postgres]
+        dal: [true, false]
+    name: E2E Satellite tests (Dialect ${{ matrix.dialect }} - uses DAL? ${{ matrix.dal }})
     defaults:
       run:
         working-directory: e2e
@@ -40,6 +45,7 @@ jobs:
     #   BUILDKITE_ANALYTICS_TOKEN: ${{ secrets.BUILDKITE_TEST_ANALYTICS_E2E }}
       ELECTRIC_REPO: e2e/electric_repo
       DIALECT: ${{ matrix.dialect }}
+      DAL: ${{ matrix.dal }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,10 +54,10 @@ jobs:
 
       # Make sure that only one E2E workflow is running at the same time
       # Ports used in the tests are fixed and cannot be reused
-      - uses: ahmadnassri/action-workflow-queue@v1
-        with:
-          # milliseconds
-          timeout: 900000  # 15 minutes
+      # - uses: ahmadnassri/action-workflow-queue@v1
+      #   with:
+      #     # milliseconds
+      #     timeout: 1500000  # 25 minutes
 
       - name: Inject slug/short variables
         uses: rlespinasse/github-slug-action@v4

@@ -4,41 +4,44 @@ import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/drivers/drift/drift.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
 
-typedef SyncIncludeBuilder<T extends Table> = List<SyncInputRelation> Function(
+@Deprecated('Use ShapeIncludeBuilder')
+typedef SyncIncludeBuilder<T extends Table> = ShapeIncludeBuilder<T>;
+
+@Deprecated('Use ShapeWhereBuilder')
+typedef SyncWhereBuilder<T extends Table> = ShapeWhereBuilder<T>;
+
+@Deprecated('Use ShapeInputRelation')
+typedef SyncInputRelation<T extends Table> = ShapeInputRelation<T>;
+
+typedef ShapeIncludeBuilder<T extends Table> = List<ShapeInputRelation>
+    Function(
   T table,
 );
-typedef SyncWhereBuilder<T extends Table> = Expression<bool> Function(T table);
+typedef ShapeWhereBuilder<T extends Table> = Expression<bool> Function(T table);
 
-class SyncInput {
-  final Expression<bool>? where;
-  final List<SyncInputRelation>? include;
-
-  SyncInput({this.where, this.include});
-}
-
-class SyncInputRelation<T extends Table> {
+class ShapeInputRelation<T extends Table> {
   final TableRelation<T> relation;
-  final SyncIncludeBuilder<T>? include;
-  final SyncWhereBuilder<T>? where;
+  final ShapeIncludeBuilder<T>? include;
+  final ShapeWhereBuilder<T>? where;
 
-  static SyncInputRelation from<R extends Table>(
+  static ShapeInputRelation from<R extends Table>(
     TableRelation<R> relation, {
-    SyncIncludeBuilder<R>? include,
-    SyncWhereBuilder<R>? where,
+    ShapeIncludeBuilder<R>? include,
+    ShapeWhereBuilder<R>? where,
   }) {
-    return SyncInputRelation<R>._(
+    return ShapeInputRelation<R>._(
       relation,
       include: include,
       where: where,
     );
   }
 
-  SyncInputRelation._(this.relation, {this.include, this.where});
+  ShapeInputRelation._(this.relation, {this.include, this.where});
 
-  SyncIncludeBuilder<Table>? get _genericInclude =>
+  ShapeIncludeBuilder<Table>? get _genericInclude =>
       include == null ? null : (Table t) => include!.call(t as T);
 
-  SyncWhereBuilder<Table>? get _genericWhere =>
+  ShapeWhereBuilder<Table>? get _genericWhere =>
       where == null ? null : (Table t) => where!.call(t as T);
 }
 
@@ -46,13 +49,19 @@ Shape computeShapeForDrift<T extends Table>(
   GeneratedDatabase db,
   DBSchema dbDescription,
   T table, {
-  SyncIncludeBuilder<T>? include,
-  SyncWhereBuilder<T>? where,
+  ShapeIncludeBuilder<T>? include,
+  ShapeWhereBuilder<T>? where,
 }) {
-  final relationsToInclude = include?.call(table);
-
   final tableInfo = findDriftTableInfo(db, table);
   final tableName = tableInfo.actualTableName;
+
+  if (!dbDescription.hasTable(tableName)) {
+    throw Exception(
+      "Cannot sync the requested shape. Table '$tableName' does not exist in the database schema.",
+    );
+  }
+
+  final relationsToInclude = include?.call(table);
 
   final List<Rel>? rels = relationsToInclude?.map((syncRel) {
     final relationDrift = syncRel.relation;

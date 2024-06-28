@@ -184,7 +184,7 @@
 [endmacro]
 
 [macro node_await_insert keys]
-    !insert_item db ${keys}
+    !insert_items db ${keys}
     ??$node
 [endmacro]
 
@@ -203,7 +203,7 @@
 [endmacro]
 
 [macro node_await_insert_other keys]
-    !insert_other_item db ${keys}
+    !insert_other_items db ${keys}
     ??$node
 [endmacro]
 

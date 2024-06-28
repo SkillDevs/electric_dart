@@ -9,4 +9,13 @@ export '../src/drivers/drift/relation.dart' show TableRelation, TableRelations;
 export '../src/drivers/drift/schema.dart'
     show DBSchemaDrift, ElectricTableMixin;
 export '../src/drivers/drift/sync_input.dart'
-    show SyncIncludeBuilder, SyncInputRelation, SyncWhereBuilder;
+    show
+        ShapeIncludeBuilder,
+        ShapeInputRelation,
+        ShapeWhereBuilder,
+        // ignore: deprecated_member_use_from_same_package
+        SyncIncludeBuilder,
+        // ignore: deprecated_member_use_from_same_package
+        SyncInputRelation,
+        // ignore: deprecated_member_use_from_same_package
+        SyncWhereBuilder;

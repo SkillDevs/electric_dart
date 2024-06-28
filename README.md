@@ -25,7 +25,7 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
 * Version `v0.12.1-dev`
-* Commit: `5e2e276c81a6fd7a7db3f9a3853b0132e219cba6`
+* Commit: `837ce928e3a887ee8a48966efd029224a585e6f1`
 
 
 ### What is ElectricSQL?
@@ -131,13 +131,13 @@ In this example, projects are synced with all its related content (project issue
 final shape = await electric.syncTable(
     db.projects,
     include: (p) => [
-        SyncInputRelation.from(
+        ShapeInputRelation.from(
             p.$relations.issues,
             include: (i) => [
-                SyncInputRelation.from(
+                ShapeInputRelation.from(
                     i.$relations.comments,
                     include: (c) => [
-                        SyncInputRelation.from(c.$relations.author),
+                        ShapeInputRelation.from(c.$relations.author),
                     ],
                 ),
             ],

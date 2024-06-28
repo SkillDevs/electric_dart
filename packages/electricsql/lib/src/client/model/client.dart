@@ -1,10 +1,12 @@
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/client/model/transform.dart';
+import 'package:electricsql/src/client/model/sync.dart';
+import 'package:electricsql/src/client/model/transform.dart' as transform_lib;
+import 'package:electricsql/src/client/model/transform.dart'
+    hide setReplicationTransform;
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
-import 'package:electricsql/src/satellite/shapes/types.dart';
+import 'package:electricsql/util.dart';
 import 'package:meta/meta.dart';
 
 abstract interface class BaseElectricClient {
@@ -12,7 +14,6 @@ abstract interface class BaseElectricClient {
   String get dbName;
   DatabaseAdapter get adapter;
   Notifier get notifier;
-  DBSchema get dbDescription;
   Registry get registry;
 
   bool get isConnected;
@@ -24,21 +25,23 @@ abstract interface class BaseElectricClient {
   Future<void> close();
 
   // ElectricClient methods
+  DBSchema get dbDescription;
   Satellite get satellite;
+  SyncManager get syncManager;
+  @internal
+  IReplicationTransformManager get replicationTransformManager;
   Future<void> connect([String? token]);
   void disconnect();
 }
 
 abstract interface class ElectricClientRaw implements BaseElectricClient {
-  SyncManager get syncManager;
-
-  Future<ShapeSubscription> sync(SyncInputRaw sync);
-
-  @protected
-  Future<ShapeSubscription> syncShapeInternal(Shape shape, [String? key]);
+  void setReplicationTransform(
+    QualifiedTablename qualifiedTableName,
+    ReplicatedRowTransformer<DbRecord> i,
+  );
 }
 
-class ElectricClientImpl extends ElectricNamespace
+class ElectricClientRawImpl extends ElectricNamespace
     implements ElectricClientRaw {
   @override
   final Satellite satellite;
@@ -46,14 +49,15 @@ class ElectricClientImpl extends ElectricNamespace
   @protected
   late final IShapeManager shapeManager;
 
-  @protected
+  @override
+  @internal
   late final IReplicationTransformManager replicationTransformManager;
 
   @override
   final DBSchema dbDescription;
 
   @override
-  late final SyncManager syncManager = _SyncManagerImpl(satellite: satellite);
+  late final SyncManager syncManager = _SyncManagerImpl(baseClient: this);
 
   final Dialect dialect;
 
@@ -78,7 +82,7 @@ class ElectricClientImpl extends ElectricNamespace
     satellite.clientDisconnect();
   }
 
-  factory ElectricClientImpl.create({
+  factory ElectricClientRawImpl.create({
     required String dbName,
     required DatabaseAdapter adapter,
     required DBSchema dbDescription,
@@ -87,7 +91,7 @@ class ElectricClientImpl extends ElectricNamespace
     required Registry registry,
     required Dialect dialect,
   }) {
-    return ElectricClientImpl.internal(
+    return ElectricClientRawImpl.internal(
       dbName: dbName,
       adapter: adapter,
       notifier: notifier,
@@ -99,7 +103,7 @@ class ElectricClientImpl extends ElectricNamespace
   }
 
   @protected
-  ElectricClientImpl.internal({
+  ElectricClientRawImpl.internal({
     required super.dbName,
     required super.adapter,
     required super.notifier,
@@ -112,30 +116,43 @@ class ElectricClientImpl extends ElectricNamespace
   }
 
   @override
-  Future<ShapeSubscription> sync(SyncInputRaw syncInput) async {
-    final shape = computeShape(syncInput);
-    return syncShapeInternal(shape, syncInput.key);
-  }
-
-  @override
-  @internal
-  Future<ShapeSubscription> syncShapeInternal(Shape shape, [String? key]) {
-    return satellite.subscribe([shape], key);
+  void setReplicationTransform(
+    QualifiedTablename qualifiedTableName,
+    ReplicatedRowTransformer<DbRecord> i,
+  ) {
+    transform_lib.setReplicationTransform(
+      dbDescription: dbDescription,
+      replicationTransformManager: replicationTransformManager,
+      qualifiedTableName: qualifiedTableName,
+      validateFun: null,
+      transformInbound: i.transformInbound,
+      transformOutbound: i.transformOutbound,
+      toRecord: (r) => r,
+      fromRecord: (r) => r,
+    );
   }
 }
 
 class _SyncManagerImpl implements SyncManager {
-  final Satellite satellite;
+  final BaseElectricClient baseClient;
 
-  _SyncManagerImpl({required this.satellite});
+  _SyncManagerImpl({required this.baseClient});
+
+  @override
+  Future<ShapeSubscription> subscribe(
+    ShapeInputRaw i, [
+    String? key,
+  ]) {
+    return syncShape(baseClient.satellite, baseClient.dbDescription, i, key);
+  }
 
   @override
   Future<void> unsubscribe(List<String> keys) {
-    return satellite.unsubscribe(keys);
+    return baseClient.satellite.unsubscribe(keys);
   }
 
   @override
   SyncStatus syncStatus(String key) {
-    return satellite.syncStatus(key);
+    return baseClient.satellite.syncStatus(key);
   }
 }

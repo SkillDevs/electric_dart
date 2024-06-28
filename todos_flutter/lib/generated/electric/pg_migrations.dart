@@ -1,7 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 // ignore_for_file: always_use_package_imports, depend_on_referenced_packages
-// ignore_for_file: prefer_double_quotes
+// ignore_for_file: prefer_double_quotes, require_trailing_commas
 
 import 'package:electricsql/electricsql.dart';
 

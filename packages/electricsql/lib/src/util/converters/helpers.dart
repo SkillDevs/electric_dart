@@ -131,3 +131,20 @@ ExtractedDateTime extractDateAndTime(DateTime v) {
   final time = match.group(2)!;
   return (date: date, time: time);
 }
+
+extension BigIntExt on BigInt {
+  static final _bigIntMinValue64 = BigInt.from(-9223372036854775808);
+  static final _bigIntMaxValue64 = BigInt.from(9223372036854775807);
+
+  int rangeCheckedToInt() {
+    if (this < _bigIntMinValue64 || this > _bigIntMaxValue64) {
+      throw ArgumentError.value(
+        this,
+        'this',
+        'BigInt value exceeds the range of 64 bits',
+      );
+    }
+
+    return toInt();
+  }
+}

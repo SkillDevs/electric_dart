@@ -1,3 +1,5 @@
+-- migrate:up
+
 /*
  * This migration file defines all the tables used by the e2e tests.
  * Use it to migrate a Postgres database and then generate the Electric client from it.
@@ -93,3 +95,5 @@ CREATE TABLE "blobs" (
 );
 
 ALTER TABLE "blobs" ENABLE ELECTRIC;
+
+-- migrate:down

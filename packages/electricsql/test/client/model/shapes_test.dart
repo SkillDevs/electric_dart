@@ -2,14 +2,13 @@
 
 import 'package:drift/drift.dart' hide Migrator;
 import 'package:electricsql/drivers/drift.dart';
-import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/electricsql.dart' hide Relation;
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/schema.dart' hide Relation;
+import 'package:electricsql/src/client/model/sync.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/notifiers/mock.dart';
-import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/config.dart';
 import 'package:electricsql/src/satellite/mock.dart';
 import 'package:electricsql/src/util/random.dart';
@@ -207,9 +206,9 @@ void main() {
 
     client.setRelations(relations);
 
-    final input = SyncInputRaw(
+    final input = ShapeInputRaw(
       tableName: 'Post',
-      where: SyncWhere({
+      where: ShapeWhere({
         'OR': [
           {'id': 5},
           {'id': 42},
@@ -228,12 +227,12 @@ void main() {
       include: [
         IncludeRelRaw(
           foreignKey: ['authorId'],
-          select: SyncInputRaw(
+          select: ShapeInputRaw(
             tableName: 'User',
             include: [
               IncludeRelRaw(
                 foreignKey: ['userId'],
-                select: SyncInputRaw(
+                select: ShapeInputRaw(
                   tableName: 'Profile',
                 ),
               ),
@@ -243,7 +242,7 @@ void main() {
       ],
     );
 
-    final shape = computeShape(input);
+    final shape = computeShape(electric.dbDescription, input);
 
     expect(
       shape,
@@ -284,13 +283,13 @@ void main() {
           (p.id.isIn([3, 2]) | p.title.like('%hello')) &
           (p.id.equals(1) | p.id.equals(2)).not(),
       include: (p) => [
-        SyncInputRelation.from(
+        ShapeInputRelation.from(
           p.$relations.author,
           // This is not allowed on the server (no filtering of many-to-one relations), but we're just testing that `where`
           // clauses on nested objects are parsed correctly
           where: (u) => u.id.isSmallerThanValue(5),
           include: (u) => [
-            SyncInputRelation.from(u.$relations.profile),
+            ShapeInputRelation.from(u.$relations.profile),
           ],
         ),
       ],
@@ -358,7 +357,7 @@ Future<void> makeContext() async {
     pgMigrations: pgMigrations,
   );
 
-  final baseElectricClient = ElectricClientImpl.create(
+  final baseElectricClient = ElectricClientRawImpl.create(
     dbName: dbName,
     adapter: adapter,
     notifier: notifier,

@@ -3,12 +3,10 @@ import 'package:electricsql/drivers/drift.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
-import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
@@ -65,7 +63,8 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     ),
   );
 
-  final driftClient = DriftElectricClient(namespace as ElectricClientImpl, db);
+  final driftClient =
+      DriftElectricClient(namespace as ElectricClientRawImpl, db);
   driftClient.init();
 
   return driftClient;
@@ -83,8 +82,10 @@ Dialect driftDialectToElectric(DatabaseConnectionUser db) {
 
 abstract interface class ElectricClient<DB extends GeneratedDatabase>
     implements BaseElectricClient {
+  @internal
+  ElectricClientRaw get rawClient;
+
   DB get db;
-  SyncManager get syncManager;
 
   /// Subscribes to the given shape, returnig a [ShapeSubscription] object which
   /// can be used to wait for the shape to sync initial data.
@@ -99,18 +100,19 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
   /// has caught up to the central DB's more recent state.
   ///
   /// @param i - The shape to subscribe to
+  /// @param key - An optional unique key that identifies the subscription
   /// @returns A shape subscription
   Future<ShapeSubscription> syncTable<T extends Table>(
     T table, {
-    SyncIncludeBuilder<T>? include,
-    SyncWhereBuilder<T>? where,
+    ShapeIncludeBuilder<T>? include,
+    ShapeWhereBuilder<T>? where,
     String? key,
   });
 
   /// Same as [syncTable] but you would be providing table names, and foreign key
   /// relationships manually. This is more low-level and should be avoided if
   /// possible.
-  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput);
+  Future<ShapeSubscription> syncTableRaw(ShapeInputRaw shapeInput);
 
   /// Puts transforms in place such that any data being replicated
   /// to or from this table is first handled appropriately while
@@ -143,7 +145,11 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   @override
   SyncManager get syncManager => _baseClient.syncManager;
 
-  final ElectricClientImpl _baseClient;
+  final ElectricClientRaw _baseClient;
+
+  @override
+  @internal
+  ElectricClientRaw get rawClient => _baseClient;
 
   void Function()? _disposeHook;
 
@@ -245,10 +251,19 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   Satellite get satellite => _baseClient.satellite;
 
   @override
+  IReplicationTransformManager get replicationTransformManager =>
+      _baseClient.replicationTransformManager;
+
+  @override
   void setIsConnected(ConnectivityState connectivityState) {
     return _baseClient.setIsConnected(connectivityState);
   }
 
+  /// Connects to the Electric sync service.
+  /// This method is idempotent, it is safe to call it multiple times.
+  /// @param token - The JWT token to use to connect to the Electric sync service.
+  ///                This token is required on first connection but can be left out when reconnecting
+  ///                in which case the last seen token is reused.
   @override
   Future<void> connect([String? token]) {
     return _baseClient.connect(token);
@@ -262,8 +277,8 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   @override
   Future<ShapeSubscription> syncTable<T extends Table>(
     T table, {
-    SyncIncludeBuilder<T>? include,
-    SyncWhereBuilder<T>? where,
+    ShapeIncludeBuilder<T>? include,
+    ShapeWhereBuilder<T>? where,
     String? key,
   }) {
     final shape = computeShapeForDrift<T>(
@@ -275,14 +290,12 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     );
 
     // print("SHAPE ${shape.toMap()}");
-
-    return _baseClient.syncShapeInternal(shape, key);
+    return _baseClient.satellite.subscribe([shape], key);
   }
 
   @override
-  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput) async {
-    final shape = computeShape(syncInput);
-    return _baseClient.syncShapeInternal(shape, syncInput.key);
+  Future<ShapeSubscription> syncTableRaw(ShapeInputRaw shapeInput) {
+    return syncManager.subscribe(shapeInput);
   }
 
   @override
@@ -292,30 +305,6 @@ class DriftElectricClient<DB extends GeneratedDatabase>
     required D Function(D row) transformOutbound,
     Insertable<D> Function(D)? toInsertable,
   }) {
-    // forbid transforming relation keys to avoid breaking
-    // referential integrity
-
-    final tableRelations = dbDescription.getRelations(table.actualTableName);
-
-    final outgoingRelations =
-        tableRelations.where((r) => r.isOutgoingRelation());
-    final incomingRelations =
-        tableRelations.where((r) => r.isIncomingRelation());
-
-    // the column could be the FK column when it is an outgoing FK
-    // or it could be a PK column when it is an incoming FK
-    final fkCols = outgoingRelations.map((r) => r.fromField);
-
-    // Incoming relations don't have the `fromField` and `toField` filled in
-    // so we need to fetch the `toField` from the opposite relation
-    // which is effectively a column in this table to which the FK points
-    final pkCols = incomingRelations
-        .map((r) => r.getOppositeRelation(dbDescription).toField);
-
-    // Merge all columns that are part of a FK relation.
-    // Remove duplicate columns in case a column has both an outgoing FK and an incoming FK.
-    final immutableFields = <String>{...fkCols, ...pkCols}.toList();
-
     final QualifiedTablename qualifiedTableName = _getQualifiedTableName(table);
 
     Insertable<D> _getInsertable(D d) {
@@ -331,33 +320,15 @@ class DriftElectricClient<DB extends GeneratedDatabase>
       }
     }
 
-    // ignore: invalid_use_of_protected_member
-    _baseClient.replicationTransformManager.setTableTransform(
-      qualifiedTableName,
-      ReplicatedRowTransformer(
-        transformInbound: (DbRecord record) {
-          final dataClass = table.map(record) as D;
-          final out = transformTableRecord<D>(
-            dataClass,
-            transformInbound,
-            immutableFields,
-            validateFun: (d) => validateDriftRecord(table, _getInsertable(d)),
-            toRecord: (d) => driftInsertableToValues(_getInsertable(d)),
-          );
-          return driftInsertableToValues(_getInsertable(out));
-        },
-        transformOutbound: (DbRecord record) {
-          final dataClass = table.map(record) as D;
-          final out = transformTableRecord<D>(
-            dataClass,
-            transformOutbound,
-            immutableFields,
-            validateFun: (d) => validateDriftRecord(table, _getInsertable(d)),
-            toRecord: (d) => driftInsertableToValues(_getInsertable(d)),
-          );
-          return driftInsertableToValues(_getInsertable(out));
-        },
-      ),
+    setReplicationTransform(
+      dbDescription: dbDescription,
+      replicationTransformManager: replicationTransformManager,
+      qualifiedTableName: qualifiedTableName,
+      transformInbound: transformInbound,
+      transformOutbound: transformOutbound,
+      validateFun: (d) => validateDriftRecord(table, _getInsertable(d)),
+      toRecord: (d) => driftInsertableToValues(_getInsertable(d)),
+      fromRecord: (r) => table.map(r) as D,
     );
   }
 

@@ -16,7 +16,7 @@ import 'package:test/test.dart';
 const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
-final DBSchema dbDescription =
+const DBSchema dbDescription =
     DBSchemaRaw(tableSchemas: {}, migrations: [], pgMigrations: []);
 final Migrator migrator = MockMigrator(queryBuilder: kSqliteQueryBuilder);
 final SocketFactory socketFactory = WebSocketIOFactory();

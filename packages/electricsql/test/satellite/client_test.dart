@@ -271,7 +271,7 @@ void main() {
   test('receive transaction over multiple messages', () async {
     await connectAndAuth();
 
-    final dbDescription = DBSchemaRaw(
+    const dbDescription = DBSchemaRaw(
       tableSchemas: {
         'table': TableSchema(
           fields: {
@@ -711,7 +711,7 @@ void main() {
       ],
     );
 
-    final TableSchema tbl = TableSchema(
+    const TableSchema tbl = TableSchema(
       fields: {
         'id': PgType.uuid,
         'content': PgType.varchar,
@@ -723,7 +723,7 @@ void main() {
       relations: [],
     );
 
-    final dbDescription = DBSchemaRaw(
+    const dbDescription = DBSchemaRaw(
       tableSchemas: {
         'table': tbl,
         'Items': tbl,
@@ -1094,7 +1094,7 @@ void main() {
 
     const tablename = 'THE_TABLE_ID';
 
-    final TableSchema tbl = TableSchema(
+    const TableSchema tbl = TableSchema(
       fields: {
         'name1': PgType.text,
         'name2': PgType.text,
@@ -1102,7 +1102,7 @@ void main() {
       relations: [],
     );
 
-    final dbDescription = DBSchemaRaw(
+    const dbDescription = DBSchemaRaw(
       tableSchemas: {
         'table': tbl,
         tablename: tbl,
@@ -1204,7 +1204,7 @@ void main() {
   test('client correctly handles additional data messages', () async {
     await connectAndAuth();
 
-    final dbDescription = DBSchemaRaw(
+    const dbDescription = DBSchemaRaw(
       tableSchemas: {
         'table': TableSchema(
           fields: {

@@ -3,8 +3,13 @@ import 'dart:io';
 
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
+import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
+import 'package:electricsql/satellite.dart';
+import 'package:electricsql/util.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/enums.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/migrations.dart';
+import 'package:electricsql_cli/src/commands/generate/builder/raw_schema.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/relations.dart';
 import 'package:electricsql_cli/src/commands/generate/builder/util.dart';
 import 'package:electricsql_cli/src/commands/generate/drift_gen_opts.dart';
@@ -12,13 +17,35 @@ import 'package:electricsql_cli/src/commands/generate/drift_schema.dart';
 import 'package:electricsql_cli/src/drift_gen_util.dart';
 import 'package:path/path.dart' as path;
 
-Future<void> buildMigrations(
+Future<void> buildRawSchema(DBSchema dbDescription, File schemaFile) async {
+  final outParent = schemaFile.parent;
+  if (!outParent.existsSync()) {
+    await outParent.create(recursive: true);
+  }
+
+  final contents = generateRawSchemaDartCode(dbDescription);
+
+  await schemaFile.writeAsString(contents);
+}
+
+String generateRawSchemaDartCode(DBSchema dbDescription) {
+  return _buildLibCode(
+    (b) => b
+      ..body.addAll([
+        getElectricMigrationsField(),
+        getRawElectricDBSchemaCodeField(dbDescription),
+      ]),
+  );
+}
+
+Future<DBSchema> buildMigrations(
   Directory migrationsFolder,
   File migrationsFile,
   QueryBuilder builder, {
   required String constantName,
 }) async {
-  final migrations = await loadMigrations(migrationsFolder, builder);
+  final migrationsAndSchema = await loadMigrations(migrationsFolder, builder);
+  final migrations = migrationsAndSchema.migrations;
 
   final outParent = migrationsFile.parent;
   if (!outParent.existsSync()) {
@@ -30,9 +57,15 @@ Future<void> buildMigrations(
 
   // Update the configuration file
   await migrationsFile.writeAsString(contents);
+
+  return migrationsAndSchema.dbDescription;
 }
 
-Future<List<Migration>> loadMigrations(
+/// Loads all migrations that are present in the provided migrations folder,
+/// and builds a database description from them.
+/// @param migrationsFolder Folder where migrations are stored.
+/// @returns An object containing an array of migrations as well as database schema describing the tables.
+Future<({List<Migration> migrations, DBSchema dbDescription})> loadMigrations(
   Directory migrationsFolder,
   QueryBuilder builder,
 ) async {
@@ -44,9 +77,32 @@ Future<List<Migration>> loadMigrations(
   final migrationsMetadatas = await Future.wait(
     migrationFiles.map(_readMetadataFile),
   );
-  return migrationsMetadatas
-      .map((data) => makeMigration(data, builder))
-      .toList();
+
+  // Aggregate table information from all migrations
+  // and create the database description
+  final tables = aggregateTableInfo(migrationsMetadatas);
+  final dbDescription = createDbDescription(tables);
+  return (
+    migrations: migrationsMetadatas
+        .map((data) => makeMigration(data, builder))
+        .toList(),
+    dbDescription: dbDescription,
+  );
+}
+
+List<SatOpMigrate_Table> aggregateTableInfo(List<MetaData> migrations) {
+  final tables = <String, SatOpMigrate_Table>{};
+  for (final migration in migrations) {
+    for (final satOpMigrate in migration.ops) {
+      if (satOpMigrate.hasTable()) {
+        final tbl = satOpMigrate.table;
+        // table information from later migrations
+        // overwrite information from earlier migrations
+        tables[tbl.name] = tbl;
+      }
+    }
+  }
+  return tables.values.toList();
 }
 
 /// Reads the specified metadata file.
@@ -123,6 +179,7 @@ String _buildLibCode(void Function(LibraryBuilder b) updateLib) {
           'always_use_package_imports',
           'depend_on_referenced_packages',
           'prefer_double_quotes',
+          'require_trailing_commas',
         ]);
       updateLib(b);
     },
@@ -164,7 +221,7 @@ String generateDriftSchemaDartCode(DriftSchemaInfo driftSchemaInfo) {
     (b) => b
       ..body.addAll(
         [
-          _getElectricMigrationsField(),
+          getElectricMigrationsField(),
           _getElectrifiedTablesField(tableClasses),
           ...tableClasses,
           if (electricEnums.isNotEmpty) ...[
@@ -259,31 +316,6 @@ Field _getElectrifiedTablesField(List<Class> tableClasses) {
       ..assignment =
           // List of table types
           literalList(tableClasses.map((e) => refer(e.name))).code,
-  );
-}
-
-Field _getElectricMigrationsField() {
-  /*
-  const kElectricMigrations = ElectricMigrations(
-    sqliteMigrations: kSqliteMigrations,
-    pgMigrations: kPostgresMigrations,
-  );
-  */
-
-  final electricMigrationsRef = refer('ElectricMigrations', kElectricSqlImport);
-  final sqliteMigrationsRef =
-      refer('kSqliteMigrations', './$kSqliteMigrationsFileName');
-  final pgMigrationsRef =
-      refer('kPostgresMigrations', './$kPostgresMigrationsFileName');
-
-  return Field(
-    (b) => b
-      ..name = 'kElectricMigrations'
-      ..modifier = FieldModifier.constant
-      ..assignment = electricMigrationsRef.newInstance([], {
-        'sqliteMigrations': sqliteMigrationsRef,
-        'pgMigrations': pgMigrationsRef,
-      }).code,
   );
 }
 

@@ -38,7 +38,7 @@ void main() async {
     final client = context.client;
 
     final electric = DriftElectricClient(
-      ElectricClientImpl.create(
+      ElectricClientRawImpl.create(
         dbName: 'testDB',
         dbDescription: DBSchemaDrift(db: db, migrations: [], pgMigrations: []),
         adapter: adapter,
@@ -104,7 +104,7 @@ void main() async {
     final client = context.client;
 
     final electric = DriftElectricClient(
-      ElectricClientImpl.create(
+      ElectricClientRawImpl.create(
         dbName: 'testDB',
         dbDescription: DBSchemaDrift(db: db, migrations: [], pgMigrations: []),
         adapter: adapter,

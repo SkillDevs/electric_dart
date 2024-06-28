@@ -4,7 +4,6 @@ import 'package:electricsql/notifiers.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/sockets.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/devtools/devtools.dart' as devtools;
 import 'package:electricsql/util.dart';
@@ -93,7 +92,7 @@ Future<ElectricClientRaw> electrifyBase<DB extends DBSchema>({
   );
 
   final dialect = configWithDefaults.replication.dialect;
-  final electric = ElectricClientImpl.create(
+  final electric = ElectricClientRawImpl.create(
     dbName: dbName,
     adapter: adapter,
     notifier: notifier,

@@ -40,3 +40,15 @@ Migration _migrationFromJson(Map<String, Object?> m) {
     version: version,
   );
 }
+
+Map<String, Object?>? toEncodableMap(Map<String, Object?>? o) {
+  return o?.map((key, value) {
+    final Object? effectiveValue;
+    if (value is DateTime) {
+      effectiveValue = value.toIso8601String();
+    } else {
+      effectiveValue = value;
+    }
+    return MapEntry(key, effectiveValue);
+  });
+}

@@ -1,7 +1,6 @@
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
-import 'package:meta/meta.dart';
+import 'package:equatable/equatable.dart';
 
 typedef FieldName = String;
 typedef RelationName = String;
@@ -18,18 +17,21 @@ class ElectricMigrations {
   });
 }
 
-class TableSchema {
+class TableSchema with EquatableMixin {
   final Fields fields;
   final List<Relation> relations;
 
-  TableSchema({
+  const TableSchema({
     required this.fields,
     required this.relations,
   });
+
+  @override
+  List<Object?> get props => [fields, relations];
 }
 
 abstract class DBSchema {
-  final Map<String, TableSchema> _tableSchemas;
+  final Map<String, TableSchema> tableSchemas;
   final List<Migration> _migrations;
   final List<Migration> _pgMigrations;
 
@@ -39,20 +41,19 @@ abstract class DBSchema {
   /// @param tables Description of the database tables
   /// @param migrations Bundled SQLite migrations
   /// @param pgMigrations Bundled Postgres migrations
-  DBSchema({
-    required Map<String, TableSchema> tableSchemas,
+  const DBSchema({
+    required this.tableSchemas,
     required List<Migration> migrations,
     required List<Migration> pgMigrations,
-  })  : _tableSchemas = tableSchemas,
-        _migrations = migrations,
+  })  : _migrations = migrations,
         _pgMigrations = pgMigrations;
 
   bool hasTable(String table) {
-    return _tableSchemas.containsKey(table);
+    return tableSchemas.containsKey(table);
   }
 
   TableSchema getTableSchema(String table) {
-    return _tableSchemas[table]!;
+    return tableSchemas[table]!;
   }
 
   Fields getFields(String table) {
@@ -61,6 +62,14 @@ abstract class DBSchema {
 
   List<Relation> getRelations(String table) {
     return getTableSchema(table).relations;
+  }
+
+  List<Relation> getOutgoingRelations(TableName table) {
+    return getRelations(table).where((r) => r.isOutgoingRelation()).toList();
+  }
+
+  List<Relation> getIncomingRelations(TableName table) {
+    return getRelations(table).where((r) => r.isIncomingRelation()).toList();
   }
 
   // RelationName getRelationName(TableName table, FieldName field) {
@@ -100,42 +109,15 @@ abstract class DBSchema {
   }
 }
 
-@visibleForTesting
 class DBSchemaRaw extends DBSchema {
   Map<String, Fields> get fields =>
-      _tableSchemas.map((k, v) => MapEntry(k, v.fields));
+      tableSchemas.map((k, v) => MapEntry(k, v.fields));
 
-  DBSchemaRaw({
+  const DBSchemaRaw({
     required super.tableSchemas,
     required super.migrations,
     required super.pgMigrations,
   });
-}
-
-@protected
-Shape computeShape(SyncInputRaw i) {
-  final include = i.include ?? [];
-  final SyncWhere where = i.where ?? SyncWhere.raw('');
-
-  Rel includeRelToRel(IncludeRelRaw ir) {
-    return Rel(
-      foreignKey: ir.foreignKey,
-      select: computeShape(
-        ir.select,
-      ),
-    );
-  }
-
-  // Recursively go over the included fields
-  final List<Rel> includedTables =
-      include.map((e) => includeRelToRel(e)).toList();
-
-  final whereClause = where.where;
-  return Shape(
-    tablename: i.tableName,
-    include: includedTables.isEmpty ? null : includedTables,
-    where: whereClause == '' ? null : whereClause,
-  );
 }
 
 // TODO(dart): Equivalent implementation from official electric to add support for other map based
@@ -202,7 +184,7 @@ List<Map<String, Object?>> _extractWhereConditionsFor(
   return conditions;
 }
 
-class Relation {
+class Relation with EquatableMixin {
   // final String relationField;
   final String fromField;
   final String toField;
@@ -228,4 +210,13 @@ class Relation {
   Relation getOppositeRelation(DBSchema dbDescription) {
     return dbDescription.getRelation(relatedTable, relationName);
   }
+
+  @override
+  List<Object?> get props => [
+        // relationField,
+        fromField,
+        toField,
+        relationName,
+        relatedTable,
+      ];
 }

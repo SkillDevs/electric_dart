@@ -1,14 +1,20 @@
 import 'package:electricsql/src/client/model/schema.dart';
 
-class SyncInputRaw {
+@Deprecated('Use ShapeInputRaw')
+typedef SyncInputRaw = ShapeInputRaw;
+
+@Deprecated('Use ShapeWhere')
+typedef SyncWhere = ShapeWhere;
+
+class ShapeInputRaw {
   final String tableName;
   final List<IncludeRelRaw>? include;
-  final SyncWhere? where;
+  final ShapeWhere? where;
 
   /// Unique key for a shape subscription, allowing shape modification and unsubscribe
   final String? key;
 
-  SyncInputRaw({
+  ShapeInputRaw({
     required this.tableName,
     this.include,
     this.where,
@@ -18,7 +24,7 @@ class SyncInputRaw {
 
 class IncludeRelRaw {
   final List<String> foreignKey;
-  final SyncInputRaw select;
+  final ShapeInputRaw select;
 
   IncludeRelRaw({
     required this.foreignKey,
@@ -26,10 +32,10 @@ class IncludeRelRaw {
   });
 }
 
-class SyncWhere {
+class ShapeWhere {
   final String where;
 
-  SyncWhere(Map<String, Object> map) : where = makeSqlWhereClause(map);
+  ShapeWhere(Map<String, Object> map) : where = makeSqlWhereClause(map);
 
-  SyncWhere.raw(this.where);
+  ShapeWhere.raw(this.where);
 }
