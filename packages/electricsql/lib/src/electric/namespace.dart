@@ -1,3 +1,4 @@
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/devtools/devtools.dart' as devtools;

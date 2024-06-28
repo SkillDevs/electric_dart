@@ -1,3 +1,4 @@
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/notifiers.dart';

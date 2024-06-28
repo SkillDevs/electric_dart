@@ -1,3 +1,4 @@
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/sync.dart';
 import 'package:electricsql/src/client/model/transform.dart' as transform_lib;

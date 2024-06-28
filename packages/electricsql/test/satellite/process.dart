@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/migrators/migrators.dart';

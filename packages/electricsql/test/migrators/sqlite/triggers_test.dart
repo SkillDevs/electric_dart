@@ -1,7 +1,7 @@
 import 'dart:convert';
 
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/drivers/sqlite3.dart';
-import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/satellite/config.dart';

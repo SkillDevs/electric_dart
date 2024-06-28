@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/conversions/postgres/mapping.dart'
     as pg_mapping;
 import 'package:electricsql/src/drivers/drift/drift.dart';
-import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/debug/debug.dart';
 import 'package:electricsql/src/util/types.dart';
 

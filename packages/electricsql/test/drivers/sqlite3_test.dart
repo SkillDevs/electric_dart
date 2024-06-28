@@ -1,5 +1,5 @@
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/drivers/sqlite3/sqlite3_adapter.dart';
-import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';

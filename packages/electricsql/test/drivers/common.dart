@@ -1,4 +1,4 @@
-import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:meta/meta.dart';
 import 'package:sqlite3/sqlite3.dart';

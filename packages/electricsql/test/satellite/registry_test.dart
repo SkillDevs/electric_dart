@@ -1,6 +1,6 @@
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
-import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/electric/mock.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/mock.dart';

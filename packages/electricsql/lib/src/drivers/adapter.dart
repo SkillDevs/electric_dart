@@ -5,6 +5,8 @@ import 'package:electricsql/src/util/types.dart';
 // commit message: feat (client): flag to disable FKs on incoming TXs in SQLite
 // https://github.com/electric-sql/electric/commit/f4f020d97916dd975661ea56ac2e08df3a70fab1
 
+/// A `DatabaseAdapter` adapts a database client to provide the
+/// normalised interface defined here.
 abstract class DatabaseAdapter {
   //db: AnyDatabase
 

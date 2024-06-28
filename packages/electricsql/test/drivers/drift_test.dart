@@ -4,7 +4,7 @@ import 'package:drift/backends.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:electricsql/drivers/drift.dart';
-import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/util/types.dart';
 import 'package:test/test.dart';
 

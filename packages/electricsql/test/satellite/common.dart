@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnectionUser;
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/electricsql.dart' hide Relation;
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/satellite.dart';
