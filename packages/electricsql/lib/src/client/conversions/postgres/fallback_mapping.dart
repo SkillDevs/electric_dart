@@ -1,6 +1,23 @@
-import 'dart:convert';
+import 'dart:convert' hide Converter;
 
+import 'package:electricsql/src/client/conversions/converter.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
+
+const kPostgresConverter = PostgresConverter();
+
+class PostgresConverter implements Converter {
+  const PostgresConverter();
+
+  @override
+  Object? decode(Object? v, PgType pgType) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Object? encode(Object? v, PgType pgType) {
+    throw UnimplementedError();
+  }
+}
 
 /// Map the [dartValue] into a value understood by drift's postgres driver.
 ///
@@ -18,13 +35,16 @@ String mapToSqlLiteral(
   PgType type,
   Object dartValue,
   String typeName,
-  Codec<Object, Object> codec,
 ) {
   throw UnsupportedError('Needs to be run in a dart:io environment.');
 }
 
 /// Map the [sqlValue] into the Dart value used by the Drift schema.
-Object mapToUser(PgType? type, Object sqlValue, Codec<Object, Object> codec) {
+Object mapToUser(
+  PgType? type,
+  Object sqlValue,
+  Codec<Object, Object>? enumCodec,
+) {
   throw UnsupportedError('Needs to be run in a dart:io environment.');
 }
 

@@ -1,15 +1,13 @@
 import 'package:drift/drift.dart' hide Migrator;
 import 'package:electricsql/drivers/drift.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/electricsql.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/client/model/client.dart';
-import 'package:electricsql/src/client/model/relation.dart';
-import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/client/model/transform.dart';
 import 'package:electricsql/src/config/config.dart';
 import 'package:electricsql/src/drivers/drift/sync_input.dart';
 import 'package:electricsql/src/electric/electric.dart' as electrify_lib;
-import 'package:electricsql/src/electric/electric.dart';
 import 'package:electricsql/src/notifiers/notifiers.dart';
 import 'package:electricsql/src/satellite/satellite.dart';
 import 'package:electricsql/src/sockets/sockets.dart';
@@ -66,7 +64,8 @@ Future<ElectricClient<DB>> electrify<DB extends GeneratedDatabase>({
     ),
   );
 
-  final driftClient = DriftElectricClient(namespace as ElectricClientImpl, db);
+  final driftClient =
+      DriftElectricClient(namespace as ElectricClientRawImpl, db);
   driftClient.init();
 
   return driftClient;
@@ -84,23 +83,37 @@ Dialect driftDialectToElectric(DatabaseConnectionUser db) {
 
 abstract interface class ElectricClient<DB extends GeneratedDatabase>
     implements BaseElectricClient {
-  DB get db;
-  SyncManager get syncManager;
+  @internal
+  ElectricClientRaw get rawClient;
 
-  /// Creates a Shape subscription. A shape is a set of related data that's synced
-  /// onto the local device.
+  DB get db;
+
+  /// Subscribes to the given shape, returnig a [ShapeSubscription] object which
+  /// can be used to wait for the shape to sync initial data.
+  ///
   /// https://electric-sql.com/docs/usage/data-access/shapes
+  ///
+  /// NOTE: If you establish a shape subscription that has already synced its initial data,
+  /// awaiting `shape.synced` will always resolve immediately as shape subscriptions are persisted.
+  /// i.e.: imagine that you re-sync the same shape during subsequent application loads.
+  /// Awaiting `shape.synced` a second time will only ensure that the initial
+  /// shape load is complete. It does not ensure that the replication stream
+  /// has caught up to the central DB's more recent state.
+  ///
+  /// @param i - The shape to subscribe to
+  /// @param key - An optional unique key that identifies the subscription
+  /// @returns A shape subscription
   Future<ShapeSubscription> syncTable<T extends Table>(
     T table, {
-    SyncIncludeBuilder<T>? include,
-    SyncWhereBuilder<T>? where,
+    ShapeIncludeBuilder<T>? include,
+    ShapeWhereBuilder<T>? where,
     String? key,
   });
 
   /// Same as [syncTable] but you would be providing table names, and foreign key
   /// relationships manually. This is more low-level and should be avoided if
   /// possible.
-  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput);
+  Future<ShapeSubscription> syncTableRaw(ShapeInputRaw shapeInput);
 
   /// Puts transforms in place such that any data being replicated
   /// to or from this table is first handled appropriately while
@@ -114,8 +127,8 @@ abstract interface class ElectricClient<DB extends GeneratedDatabase>
   /// to avoid partially transformed tables.
   void setTableReplicationTransform<TableDsl extends Table, D>(
     TableInfo<TableDsl, D> table, {
-    required Insertable<D> Function(D row) transformInbound,
-    required Insertable<D> Function(D row) transformOutbound,
+    required D Function(D row) transformInbound,
+    required D Function(D row) transformOutbound,
     Insertable<D> Function(D)? toInsertable,
   });
 
@@ -133,7 +146,11 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   @override
   SyncManager get syncManager => _baseClient.syncManager;
 
-  final ElectricClientImpl _baseClient;
+  final ElectricClientRaw _baseClient;
+
+  @override
+  @internal
+  ElectricClientRaw get rawClient => _baseClient;
 
   void Function()? _disposeHook;
 
@@ -235,10 +252,19 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   Satellite get satellite => _baseClient.satellite;
 
   @override
+  IReplicationTransformManager get replicationTransformManager =>
+      _baseClient.replicationTransformManager;
+
+  @override
   void setIsConnected(ConnectivityState connectivityState) {
     return _baseClient.setIsConnected(connectivityState);
   }
 
+  /// Connects to the Electric sync service.
+  /// This method is idempotent, it is safe to call it multiple times.
+  /// @param token - The JWT token to use to connect to the Electric sync service.
+  ///                This token is required on first connection but can be left out when reconnecting
+  ///                in which case the last seen token is reused.
   @override
   Future<void> connect([String? token]) {
     return _baseClient.connect(token);
@@ -252,88 +278,58 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   @override
   Future<ShapeSubscription> syncTable<T extends Table>(
     T table, {
-    SyncIncludeBuilder<T>? include,
-    SyncWhereBuilder<T>? where,
+    ShapeIncludeBuilder<T>? include,
+    ShapeWhereBuilder<T>? where,
     String? key,
   }) {
     final shape = computeShapeForDrift<T>(
       db,
+      dbDescription,
       table,
       include: include,
       where: where,
     );
 
     // print("SHAPE ${shape.toMap()}");
-
-    return _baseClient.syncShapeInternal(shape, key);
+    return _baseClient.satellite.subscribe([shape], key);
   }
 
   @override
-  Future<ShapeSubscription> syncTableRaw(SyncInputRaw syncInput) async {
-    final shape = computeShape(syncInput);
-    return _baseClient.syncShapeInternal(shape, syncInput.key);
+  Future<ShapeSubscription> syncTableRaw(ShapeInputRaw shapeInput) {
+    return syncManager.subscribe(shapeInput);
   }
 
   @override
   void setTableReplicationTransform<TableDsl extends Table, D>(
     TableInfo<TableDsl, D> table, {
-    required Insertable<D> Function(D row) transformInbound,
-    required Insertable<D> Function(D row) transformOutbound,
+    required D Function(D row) transformInbound,
+    required D Function(D row) transformOutbound,
     Insertable<D> Function(D)? toInsertable,
   }) {
-    // forbid transforming relation keys to avoid breaking
-    // referential integrity
-
-    final tableRelations = getTableRelations(table)?.$relationsList ?? [];
-
-    final outgoingRelations =
-        tableRelations.where((r) => r.isOutgoingRelation());
-    final incomingRelations =
-        tableRelations.where((r) => r.isIncomingRelation());
-
-    // the column could be the FK column when it is an outgoing FK
-    // or it could be a PK column when it is an incoming FK
-    final fkCols = outgoingRelations.map((r) => r.fromField);
-
-    // Incoming relations don't have the `fromField` and `toField` filled in
-    // so we need to fetch the `toField` from the opposite relation
-    // which is effectively a column in this table to which the FK points
-    final pkCols =
-        incomingRelations.map((r) => r.getOppositeRelation(db).toField);
-
-    // Merge all columns that are part of a FK relation.
-    // Remove duplicate columns in case a column has both an outgoing FK and an incoming FK.
-    final immutableFields = <String>{...fkCols, ...pkCols}.toList();
-
     final QualifiedTablename qualifiedTableName = _getQualifiedTableName(table);
 
-    // ignore: invalid_use_of_protected_member
-    _baseClient.replicationTransformManager.setTableTransform(
-      qualifiedTableName,
-      ReplicatedRowTransformer(
-        transformInbound: (DbRecord record) {
-          final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
-            table,
-            dataClass,
-            transformInbound,
-            immutableFields,
-            toInsertable: toInsertable,
+    Insertable<D> _getInsertable(D d) {
+      if (d is Insertable<D>) {
+        return d;
+      } else {
+        if (toInsertable == null) {
+          throw ArgumentError(
+            'toInsertable is required for non-insertable data classes',
           );
-          return driftInsertableToValues(insertable);
-        },
-        transformOutbound: (DbRecord record) {
-          final dataClass = table.map(record) as D;
-          final insertable = transformTableRecord<TableDsl, D, DbRecord>(
-            table,
-            dataClass,
-            transformOutbound,
-            immutableFields,
-            toInsertable: toInsertable,
-          );
-          return driftInsertableToValues(insertable);
-        },
-      ),
+        }
+        return toInsertable(d);
+      }
+    }
+
+    setReplicationTransform(
+      dbDescription: dbDescription,
+      replicationTransformManager: replicationTransformManager,
+      qualifiedTableName: qualifiedTableName,
+      transformInbound: transformInbound,
+      transformOutbound: transformOutbound,
+      validateFun: (d) => validateDriftRecord(table, _getInsertable(d)),
+      toRecord: (d) => driftInsertableToValues(_getInsertable(d)),
+      fromRecord: (r) => table.map(r) as D,
     );
   }
 
@@ -354,6 +350,13 @@ class DriftElectricClient<DB extends GeneratedDatabase>
   }
 }
 
+void validateDriftRecord<TableDsl extends Table, D>(
+  TableInfo<TableDsl, D> table,
+  Insertable<D> record,
+) {
+  table.validateIntegrity(record, isInserting: true).throwIfInvalid(record);
+}
+
 class _TableUpdateFromElectric extends TableUpdate {
   _TableUpdateFromElectric(super.table);
 }
@@ -372,4 +375,15 @@ Object? _expressionToValue(Expression<Object?> expression) {
   } else {
     throw ArgumentError('Unsupported expression type: $expression');
   }
+}
+
+TableInfo<T, dynamic>
+    findDriftTableInfo<DB extends GeneratedDatabase, T extends Table>(
+  DB db,
+  T table,
+) {
+  final TableInfo<Table, dynamic> genTable = db.allTables.firstWhere((t) {
+    return t.asDslTable == table;
+  });
+  return genTable as TableInfo<T, dynamic>;
 }

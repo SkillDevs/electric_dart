@@ -1,5 +1,5 @@
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/migrators.dart';
-import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/util/types.dart';
 
 class MockDatabaseAdapter implements DatabaseAdapter {

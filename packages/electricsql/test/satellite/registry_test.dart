@@ -1,6 +1,6 @@
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/client/model/schema.dart';
 import 'package:electricsql/src/config/config.dart';
-import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/electric/mock.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/mock.dart';
@@ -16,8 +16,8 @@ import 'package:test/test.dart';
 const dbName = 'test.db';
 
 final DatabaseAdapter adapter = MockDatabaseAdapter();
-final DBSchema dbDescription =
-    DBSchemaRaw(fields: {}, migrations: [], pgMigrations: []);
+const DBSchema dbDescription =
+    DBSchemaRaw(tableSchemas: {}, migrations: [], pgMigrations: []);
 final Migrator migrator = MockMigrator(queryBuilder: kSqliteQueryBuilder);
 final SocketFactory socketFactory = WebSocketIOFactory();
 final notifier = MockNotifier(dbName);

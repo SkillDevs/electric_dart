@@ -1,17 +1,11 @@
-import 'package:drift/drift.dart';
 import 'package:electricsql/electricsql.dart';
-import 'package:electricsql/src/client/conversions/custom_types.dart';
-import 'package:electricsql/src/client/conversions/types.dart';
 import 'package:electricsql/src/satellite/shapes/types.dart';
-import 'package:meta/meta.dart';
+import 'package:equatable/equatable.dart';
 
 typedef FieldName = String;
+typedef RelationName = String;
 
 typedef Fields = Map<FieldName, PgType>;
-
-mixin ElectricTableMixin on Table {
-  TableRelations? get $relations => null;
-}
 
 class ElectricMigrations {
   final List<Migration> sqliteMigrations;
@@ -23,8 +17,21 @@ class ElectricMigrations {
   });
 }
 
+class TableSchema with EquatableMixin {
+  final Fields fields;
+  final List<Relation> relations;
+
+  const TableSchema({
+    required this.fields,
+    required this.relations,
+  });
+
+  @override
+  List<Object?> get props => [fields, relations];
+}
+
 abstract class DBSchema {
-  final Map<String, Fields> _fieldsByTable;
+  final Map<String, TableSchema> tableSchemas;
   final List<Migration> _migrations;
   final List<Migration> _pgMigrations;
 
@@ -34,140 +41,83 @@ abstract class DBSchema {
   /// @param tables Description of the database tables
   /// @param migrations Bundled SQLite migrations
   /// @param pgMigrations Bundled Postgres migrations
-  DBSchema({
-    required Map<String, Fields> fieldsByTable,
+  const DBSchema({
+    required this.tableSchemas,
     required List<Migration> migrations,
     required List<Migration> pgMigrations,
-  })  : _fieldsByTable = fieldsByTable,
-        _migrations = migrations,
+  })  : _migrations = migrations,
         _pgMigrations = pgMigrations;
 
   bool hasTable(String table) {
-    return _fieldsByTable.containsKey(table);
+    return tableSchemas.containsKey(table);
+  }
+
+  TableSchema getTableSchema(String table) {
+    return tableSchemas[table]!;
   }
 
   Fields getFields(String table) {
-    return _fieldsByTable[table]!;
+    return getTableSchema(table).fields;
+  }
+
+  List<Relation> getRelations(String table) {
+    return getTableSchema(table).relations;
+  }
+
+  List<Relation> getOutgoingRelations(TableName table) {
+    return getRelations(table).where((r) => r.isOutgoingRelation()).toList();
+  }
+
+  List<Relation> getIncomingRelations(TableName table) {
+    return getRelations(table).where((r) => r.isIncomingRelation()).toList();
+  }
+
+  // RelationName getRelationName(TableName table, FieldName field) {
+  //   return getRelations(table)
+  //       .firstWhere((r) => r.relationField == field)
+  //       .relationName;
+  // }
+
+  Relation getRelation(String table, RelationName relationName) {
+    return getRelations(table)
+        .firstWhere((r) => r.relationName == relationName);
+  }
+
+  // TableName getRelatedTable(TableName table, FieldName field) {
+  //   final relationName = getRelationName(table, field);
+  //   final relation = getRelation(table, relationName);
+  //   return relation.relatedTable;
+  // }
+
+  // FieldName getForeignKey(TableName table, FieldName field) {
+  //   final relationName = getRelationName(table, field);
+  //   return getForeignKeyFromRelationName(table, relationName);
+  // }
+
+  FieldName getForeignKeyFromRelationName(
+    TableName table,
+    RelationName relationName,
+  ) {
+    final relation = getRelation(table, relationName);
+    if (relation.isOutgoingRelation()) {
+      return relation.fromField;
+    }
+    // it's an incoming relation
+    // we need to fetch the `fromField` from the outgoing relation
+    final oppositeRelation = relation.getOppositeRelation(this);
+    return oppositeRelation.fromField;
   }
 }
 
-class DBSchemaDrift extends DBSchema {
-  final DatabaseConnectionUser db;
-
-  factory DBSchemaDrift({
-    required DatabaseConnectionUser db,
-    required List<Migration> migrations,
-    required List<Migration> pgMigrations,
-  }) {
-    // ignore: invalid_use_of_visible_for_overriding_member
-    final driftDb = db.attachedDatabase;
-
-    final _fieldsByTable = {
-      for (final table in driftDb.allTables)
-        table.actualTableName: _buildFieldsForTable(table, driftDb),
-    };
-
-    return DBSchemaDrift._(
-      fieldsByTable: _fieldsByTable,
-      migrations: migrations,
-      pgMigrations: pgMigrations,
-      db: db,
-    );
-  }
-
-  DBSchemaDrift._({
-    required super.fieldsByTable,
-    required super.migrations,
-    required super.pgMigrations,
-    required this.db,
-  });
-
-  static Fields _buildFieldsForTable(
-    TableInfo<dynamic, dynamic> table,
-    GeneratedDatabase genDb,
-  ) {
-    final Map<FieldName, PgType> fields = {};
-
-    for (final column in table.$columns) {
-      final pgType = _getPgTypeFromGeneratedDriftColumn(genDb, column);
-      if (pgType != null) {
-        fields[column.name] = pgType;
-      }
-    }
-    return fields;
-  }
-
-  static PgType? _getPgTypeFromGeneratedDriftColumn(
-    GeneratedDatabase genDb,
-    GeneratedColumn<Object> c,
-  ) {
-    //print("Column: ${c.name}  ${c.type}   ${c.driftSqlType}");
-    final type = c.type;
-    switch (type) {
-      case CustomElectricType():
-        return type.pgType;
-      case CustomSqlType<Object>():
-        return null;
-      case DriftSqlType.bool:
-        return PgType.bool;
-      case DriftSqlType.string:
-        return PgType.text;
-      case DriftSqlType.int:
-        return PgType.integer;
-      case DriftSqlType.dateTime:
-        return genDb.typeMapping.storeDateTimesAsText
-            ? PgType.text
-            : PgType.integer;
-      case DriftSqlType.double:
-        return PgType.real;
-      case DriftSqlType.bigInt:
-        return PgType.int8;
-      case DriftSqlType.blob:
-        return PgType.bytea;
-      case DriftSqlType.any:
-        // Unsupported
-        return null;
-      default:
-        return null;
-    }
-  }
-}
-
-@visibleForTesting
 class DBSchemaRaw extends DBSchema {
-  Map<String, Fields> get fields => _fieldsByTable;
+  Map<String, Fields> get fields =>
+      tableSchemas.map((k, v) => MapEntry(k, v.fields));
 
-  DBSchemaRaw({
-    required Map<String, Fields> fields,
+  const DBSchemaRaw({
+    required super.tableSchemas,
     required super.migrations,
     required super.pgMigrations,
-  }) : super(fieldsByTable: fields);
-}
-
-@protected
-Shape computeShape(SyncInputRaw i) {
-  final include = i.include ?? [];
-  final SyncWhere where = i.where ?? SyncWhere.raw('');
-
-  Rel includeRelToRel(IncludeRelRaw ir) {
-    return Rel(
-      foreignKey: ir.foreignKey,
-      select: computeShape(
-        ir.select,
-      ),
-    );
-  }
-
-  // Recursively go over the included fields
-  final List<Rel> includedTables =
-      include.map((e) => includeRelToRel(e)).toList();
-
-  final whereClause = where.where;
-  return Shape(
-    tablename: i.tableName,
-    include: includedTables.isEmpty ? null : includedTables,
-    where: whereClause == '' ? null : whereClause,
-  );
+  });
 }
 
 // TODO(dart): Equivalent implementation from official electric to add support for other map based
@@ -232,4 +182,41 @@ List<Map<String, Object?>> _extractWhereConditionsFor(
   }
 
   return conditions;
+}
+
+class Relation with EquatableMixin {
+  // final String relationField;
+  final String fromField;
+  final String toField;
+  final String relationName;
+  final String relatedTable;
+
+  const Relation({
+    // required this.relationField,
+    required this.fromField,
+    required this.toField,
+    required this.relationName,
+    required this.relatedTable,
+  });
+
+  bool isIncomingRelation() {
+    return fromField == '' && toField == '';
+  }
+
+  bool isOutgoingRelation() {
+    return !isIncomingRelation();
+  }
+
+  Relation getOppositeRelation(DBSchema dbDescription) {
+    return dbDescription.getRelation(relatedTable, relationName);
+  }
+
+  @override
+  List<Object?> get props => [
+        // relationField,
+        fromField,
+        toField,
+        relationName,
+        relatedTable,
+      ];
 }

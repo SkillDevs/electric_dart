@@ -73,7 +73,7 @@
 
 [shell satellite_2]
     # Subscribe to "items" and include "other_items"
-     !custom_03_25_sync_items db
+     !custom_03_26_sync_items db
 
     ?send: #SatSubsReq\{id: ([a-f0-9-]{36})
     [global client_2_subs_id=$1]

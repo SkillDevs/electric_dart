@@ -67,6 +67,9 @@ abstract class WebSocketBase implements Socket {
   void Function(CloseEvent)? _closeListener;
   void Function(Data data)? _messageListener;
 
+  // A way to signal an error when the socket is being opened
+  Completer<void>? _openingSocketErrorCompleter;
+
   WebSocketBase(this.protocolVsn);
 
   // event doesn't provide much
@@ -112,9 +115,13 @@ abstract class WebSocketBase implements Socket {
       );
     }
 
+    _openingSocketErrorCompleter = Completer<void>();
     try {
       _channel = createSocketChannel(opts.url);
-      await _channel!.ready;
+      await Future.any([
+        _channel!.ready,
+        _openingSocketErrorCompleter!.future,
+      ]);
     } catch (e) {
       _notifyErrorAndCloseSocket(
         error: SatelliteException(
@@ -124,6 +131,8 @@ abstract class WebSocketBase implements Socket {
         stackTrace: StackTrace.current,
       );
       return;
+    } finally {
+      _openingSocketErrorCompleter = null;
     }
 
     // Notify connected
@@ -231,6 +240,16 @@ abstract class WebSocketBase implements Socket {
   }
 
   void _socketClose() {
+    // Check if the socket is in the process of opening
+    if (_openingSocketErrorCompleter != null) {
+      if (!_openingSocketErrorCompleter!.isCompleted) {
+        _openingSocketErrorCompleter!.completeError(
+          Exception('socket closed before it was opened'),
+        );
+      }
+      return;
+    }
+
     for (final subscription in _subscriptions) {
       subscription.cancel();
     }

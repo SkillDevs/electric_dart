@@ -10,6 +10,8 @@ abstract interface class UncoordinatedDatabaseAdapter {
   );
 }
 
+/// A `DatabaseAdapter` adapts a database client to provide the
+/// normalised interface defined here.
 abstract class DatabaseAdapter implements UncoordinatedDatabaseAdapter {
   //db: AnyDatabase
 

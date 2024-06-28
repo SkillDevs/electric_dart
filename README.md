@@ -24,8 +24,8 @@ Client based on the Typescript client from the `clients/typescript` subfolder fr
 ### Reference implementation:
 
 * [NPM package](https://www.npmjs.com/package/electric-sql).
-* Version `v0.12.0-dev`
-* Commit: `ecdd4ab8e27461227172fcbaa1084715593fa78b`
+* Version `v0.12.1-dev`
+* Commit: `837ce928e3a887ee8a48966efd029224a585e6f1`
 
 
 ### What is ElectricSQL?
@@ -101,7 +101,8 @@ If the shape subscription is invalid, the first promise will be rejected. If the
 // Resolves once the shape subscription is confirmed by the server.
 final shape = await electric.syncTable(<some_shape>);
 
-// Resolves once the initial data load for the shape is complete.
+// Resolves when the initial data for the shape
+// has been synced into the local database.
 await shape.synced
 ```
 
@@ -130,13 +131,13 @@ In this example, projects are synced with all its related content (project issue
 final shape = await electric.syncTable(
     db.projects,
     include: (p) => [
-        SyncInputRelation.from(
+        ShapeInputRelation.from(
             p.$relations.issues,
             include: (i) => [
-                SyncInputRelation.from(
+                ShapeInputRelation.from(
                     i.$relations.comments,
                     include: (c) => [
-                        SyncInputRelation.from(c.$relations.author),
+                        ShapeInputRelation.from(c.$relations.author),
                     ],
                 ),
             ],

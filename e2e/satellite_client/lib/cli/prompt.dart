@@ -285,11 +285,11 @@ Future<void> start() async {
           command,
           getItemColumns,
         );
-      } else if (name == "insert_item") {
+      } else if (name == "insert_items") {
         await processCommand2Params<MyDriftElectricClient, List<dynamic>, void>(
           state,
           command,
-          (electric, keys) => insertItem(electric, keys.cast<String>()),
+          (electric, keys) => insertItems(electric, keys.cast<String>()),
         );
       } else if (name == "insert_extended_into") {
         await processCommand3Params<MyDriftElectricClient, String,
@@ -317,7 +317,7 @@ Future<void> start() async {
           command,
           getOtherItems,
         );
-      } else if (name == "insert_other_item") {
+      } else if (name == "insert_other_items") {
         await processCommand2Params<MyDriftElectricClient, List<dynamic>, void>(
           state,
           command,
@@ -369,11 +369,11 @@ Future<void> start() async {
             return await reconnect(electric, exp);
           },
         );
-      } else if (name == "custom_03_25_sync_items") {
+      } else if (name == "custom_03_26_sync_items") {
         await processCommand1Param<MyDriftElectricClient, void>(
           state,
           command,
-          custom0325SyncItems,
+          custom0326SyncItems,
         );
       } else {
         throw Exception("Unknown command: $name");

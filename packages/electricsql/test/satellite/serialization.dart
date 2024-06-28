@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
-import 'package:electricsql/src/client/model/schema.dart';
-import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
@@ -49,29 +49,32 @@ void serializationTests({
       ],
     );
 
-    final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': {
-          'name1': PgType.text,
-          'name2': PgType.text,
-          'name3': PgType.text,
-          'blob1': PgType.bytea,
-          'blob2': PgType.bytea,
-          'blob3': PgType.bytea,
-          'int1': PgType.integer,
-          'int2': PgType.integer,
-          'bigint1': PgType.int8,
-          'bigint2': PgType.int8,
-          'float1': PgType.real,
-          'float2': PgType.float4,
-          'float3': PgType.float4,
-          'bool1': PgType.bool,
-          'bool2': PgType.bool,
-          'bool3': PgType.bool,
-          // enum types are transformed to text type by our generator
-          'enum1': PgType.text,
-          'enum2': PgType.text,
-        },
+    const dbDescription = DBSchemaRaw(
+      tableSchemas: {
+        'table': TableSchema(
+          fields: {
+            'name1': PgType.text,
+            'name2': PgType.text,
+            'name3': PgType.text,
+            'blob1': PgType.bytea,
+            'blob2': PgType.bytea,
+            'blob3': PgType.bytea,
+            'int1': PgType.integer,
+            'int2': PgType.integer,
+            'bigint1': PgType.int8,
+            'bigint2': PgType.int8,
+            'float1': PgType.real,
+            'float2': PgType.float4,
+            'float3': PgType.float4,
+            'bool1': PgType.bool,
+            'bool2': PgType.bool,
+            'bool3': PgType.bool,
+            // enum types are transformed to text type by our generator
+            'enum1': PgType.text,
+            'enum2': PgType.text,
+          },
+          relations: [],
+        ),
       },
       migrations: [],
       pgMigrations: [],
@@ -215,19 +218,22 @@ void serializationTests({
       ],
     );
 
-    final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': {
-          'bit0': PgType.text,
-          'bit1': PgType.text,
-          'bit2': PgType.text,
-          'bit3': PgType.text,
-          'bit4': PgType.text,
-          'bit5': PgType.text,
-          'bit6': PgType.text,
-          'bit7': PgType.text,
-          'bit8': PgType.text,
-        },
+    const dbDescription = DBSchemaRaw(
+      tableSchemas: {
+        'table': TableSchema(
+          fields: {
+            'bit0': PgType.text,
+            'bit1': PgType.text,
+            'bit2': PgType.text,
+            'bit3': PgType.text,
+            'bit4': PgType.text,
+            'bit5': PgType.text,
+            'bit6': PgType.text,
+            'bit7': PgType.text,
+            'bit8': PgType.text,
+          },
+          relations: [],
+        ),
       },
       migrations: [],
       pgMigrations: [],
@@ -272,12 +278,15 @@ void serializationTests({
     expect(boolColumn.type, 'INTEGER');
 
     // Db schema holds the correct Postgres types
-    final boolsDbDescription = DBSchemaRaw(
-      fields: {
-        'bools': {
-          'id': PgType.integer,
-          'b': PgType.bool,
-        },
+    const boolsDbDescription = DBSchemaRaw(
+      tableSchemas: {
+        'bools': TableSchema(
+          fields: {
+            'id': PgType.integer,
+            'b': PgType.bool,
+          },
+          relations: [],
+        ),
       },
       migrations: [],
       pgMigrations: [],
@@ -325,8 +334,8 @@ void serializationTests({
     expect(sqliteInferredRelations.length, 0);
 
     // Empty Db schema
-    final testDbDescription = DBSchemaRaw(
-      fields: {},
+    const testDbDescription = DBSchemaRaw(
+      tableSchemas: {},
       migrations: [],
       pgMigrations: [],
     );

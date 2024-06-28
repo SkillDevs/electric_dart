@@ -1,4 +1,4 @@
-import 'package:electricsql/electricsql.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/migrators.dart';
 import 'package:electricsql/src/devtools/shared.dart';
 import 'package:electricsql/util.dart';

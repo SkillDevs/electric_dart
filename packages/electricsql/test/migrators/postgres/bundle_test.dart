@@ -2,7 +2,7 @@
 library;
 
 import 'package:electricsql/drivers/drift.dart';
-import 'package:electricsql/src/electric/adapter.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/migrators/bundle.dart';
 import 'package:electricsql/src/util/random.dart';
 import 'package:test/test.dart';

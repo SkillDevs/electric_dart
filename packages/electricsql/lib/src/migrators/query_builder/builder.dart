@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:electricsql/src/migrators/triggers.dart';
 import 'package:electricsql/src/util/index.dart';
+import 'package:meta/meta.dart';
 
 enum Dialect {
   sqlite,
@@ -311,6 +312,22 @@ abstract class QueryBuilder {
     QualifiedTablename shadowTable,
   );
 
+  /// Generates IN clause for a WHERE statement, checking that the given
+  /// columns have a value present in the given args array
+  ///
+  /// The `args` array must be an array of values to compare each column to.
+  ///
+  /// If using a single column, then it can be a 1-dimensional array of
+  /// values to check against.
+  ///
+  /// If using multiple columns, then it needs to be a 2-dimensional array where
+  /// each entry is a row of values that the columns need to conform to
+  @protected
+  String createInClause(
+    List<String> columns,
+    List<Object> args, // String | List<String>
+  );
+
   /// Prepare multiple batched insert statements for an array of records.
   ///
   /// Since SQLite only supports a limited amount of positional `?` parameters,
@@ -406,14 +423,10 @@ abstract class QueryBuilder {
     final stmts = <Statement>[];
     final columnCount = columns.length;
     final recordCount = records.length;
+    final isSingleColumnQuery = columnCount == 1;
 
     // Amount of rows we can delete at once
     final batchMaxSize = (maxParameters / columnCount).floor();
-
-    // keep a temporary join array for joining strings, to avoid
-    // the overhead of generating a new array every time
-    final tempColumnComparisonJoinArr =
-        List<String>.filled(columnCount, '', growable: false);
 
     int processed = 0;
     int prevDeleteCount = -1;
@@ -426,13 +439,20 @@ abstract class QueryBuilder {
       // of `batchMaxSize` - ideally we can externalize this cache since for a
       // given adapter this is _always_ going to be the same
       if (currentDeleteCount != prevDeleteCount) {
-        deletePattern = List.generate(currentDeleteCount, (recordIdx) {
-          for (int i = 0; i < columnCount; i++) {
-            tempColumnComparisonJoinArr[i] =
-                '"${columns[i]}" = ${makePositionalParam(recordIdx * columnCount + i + 1)}';
-          }
-          return ' (${tempColumnComparisonJoinArr.join(' AND ')})';
-        }).join(' OR');
+        deletePattern = ' ${createInClause(
+          columns,
+          List.generate(
+            currentDeleteCount,
+            (recordIdx) => isSingleColumnQuery
+                ? makePositionalParam(recordIdx + 1)
+                : List.generate(
+                    columnCount,
+                    (colIdx) => makePositionalParam(
+                      recordIdx * columnCount + colIdx + 1,
+                    ),
+                  ),
+          ),
+        )}';
       }
       String sql = baseSql + deletePattern;
 

@@ -1,3 +1,4 @@
+export '../proto/satellite.pb.dart';
 export 'mock.dart' show MockRegistry;
 export 'process.dart' show SatelliteProcess, ShapeSubscription;
 export 'registry.dart' show GlobalRegistry, globalRegistry;

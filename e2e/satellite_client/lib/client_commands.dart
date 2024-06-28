@@ -13,6 +13,8 @@ import 'package:satellite_dart_client/drift/database.dart';
 import 'package:electricsql/drivers/drift.dart';
 import 'package:drift/native.dart';
 import 'package:satellite_dart_client/generated/electric/drift_schema.dart';
+import 'package:satellite_dart_client/generated/electric/schema.dart'
+    as raw_schema;
 import 'package:satellite_dart_client/util/json.dart';
 import 'package:satellite_dart_client/util/pretty_output.dart';
 
@@ -20,6 +22,13 @@ late String dbName;
 
 final QueryBuilder builder =
     dialect() == Dialect.postgres ? kPostgresQueryBuilder : kSqliteQueryBuilder;
+final withDal = dal();
+// final schema = withDal ? raw_schema.kDbSchema : kDriftSchemaWithoutDal;
+final DBSchema rawSchema = raw_schema.kDbSchema;
+
+final Converter converter =
+    dialect() == Dialect.postgres ? kPostgresConverter : kSqliteConverter;
+
 int? tokenExpirationMillis;
 
 Dialect dialect() {
@@ -33,6 +42,22 @@ Dialect dialect() {
       return Dialect.sqlite;
     default:
       throw Exception('Unrecognised dialect: $dialectEnv');
+  }
+}
+
+bool dal() {
+  final dalEnv = Platform.environment['DAL']?.toLowerCase();
+  switch (dalEnv) {
+    case 'false':
+      print('Running without DAL');
+      return false;
+    case 'true':
+    case '':
+    case null:
+      print('Running with DAL');
+      return true;
+    default:
+      throw Exception('Illegal value for DAL option: $dalEnv');
   }
 }
 
@@ -120,13 +145,13 @@ Future<MyDriftElectricClient> electrifyDb(
 }
 
 // reconnects with Electric, e.g. after expiration of the JWT
-Future<void> reconnect(ElectricClient electric, Duration? exp) async {
+Future<void> reconnect(BaseElectricClient electric, Duration? exp) async {
   final token = await mockSecureAuthToken(exp: exp);
   await electric.connect(token);
 }
 
 Future<void> checkTokenExpiration(
-    ElectricClient electric, int minimalTime) async {
+    BaseElectricClient electric, int minimalTime) async {
   final start = DateTime.now().millisecondsSinceEpoch;
   late void Function() unsubscribe;
   unsubscribe = electric.notifier.subscribeToConnectivityStateChanges((x) {
@@ -158,22 +183,52 @@ void setSubscribers(DriftElectricClient db) {
   });
 }
 
+Future<void> syncTableWithShape<T extends Table>(
+  MyDriftElectricClient electric,
+  String tableName, {
+  ShapeWhereBuilder<T>? shapeFilterDal,
+  ShapeIncludeBuilder<T>? includeDal,
+  String? shapeFilterRaw,
+  List<IncludeRelRaw>? includeRaw,
+}) async {
+  if (withDal) {
+    final table = electric.db.allTables
+        .where((t) => t.actualTableName == tableName)
+        .first as T;
+    final subs = await electric.syncTable<T>(
+      table,
+      where: shapeFilterDal ?? (_) => CustomExpression<bool>(shapeFilterRaw!),
+      include: includeDal,
+    );
+    return await subs.synced;
+  } else {
+    final subs = await electric.syncManager.subscribe(
+      ShapeInputRaw(
+        tableName: tableName,
+        where: shapeFilterRaw == null ? null : ShapeWhere.raw(shapeFilterRaw),
+        include: includeRaw,
+      ),
+    );
+    return await subs.synced;
+  }
+}
+
 Future<void> syncItemsTable(
     MyDriftElectricClient electric, String shapeFilter) async {
-  final subs = await electric.syncTable(
-    electric.db.items,
-    where: (_) => CustomExpression<bool>(shapeFilter),
+  return await syncTableWithShape(
+    electric,
+    'items',
+    shapeFilterRaw: shapeFilter,
   );
-  return await subs.synced;
 }
 
 Future<void> syncOtherItemsTable(
     MyDriftElectricClient electric, String shapeFilter) async {
-  final subs = await electric.syncTable(
-    electric.db.otherItems,
-    where: (_) => CustomExpression<bool>(shapeFilter),
+  return await syncTableWithShape(
+    electric,
+    'other_items',
+    shapeFilterRaw: shapeFilter,
   );
-  return await subs.synced;
 }
 
 Future<void> syncTable(String table) async {
@@ -192,12 +247,12 @@ Future<void> lowLevelSubscribe(
   return await synced;
 }
 
-Future<Rows> getTables(DriftElectricClient electric) async {
+Future<Rows> getTables(BaseElectricClient electric) async {
   final rows = await electric.adapter.query(builder.getLocalTableNames());
   return Rows(rows);
 }
 
-Future<Rows> getColumns(DriftElectricClient electric, String table) async {
+Future<Rows> getColumns(BaseElectricClient electric, String table) async {
   final namespace = builder.defaultNamespace;
   final qualifiedTablename = QualifiedTablename(namespace, table);
   final rows = await electric.adapter.query(
@@ -206,13 +261,9 @@ Future<Rows> getColumns(DriftElectricClient electric, String table) async {
   return Rows(rows);
 }
 
-Future<Rows> getRows(DriftElectricClient electric, String table) async {
-  final rows = await electric.db
-      .customSelect(
-        'SELECT * FROM "$table";',
-      )
-      .get();
-  return _toRows(rows);
+Future<Rows> getRows(BaseElectricClient electric, String table) async {
+  final rows = await rawQuery(electric, 'SELECT * FROM "$table";');
+  return Rows(rows);
 }
 
 Future<void> getTimestamps(MyDriftElectricClient electric) async {
@@ -220,7 +271,7 @@ Future<void> getTimestamps(MyDriftElectricClient electric) async {
   //await electric.db.timestamps.findMany();
 }
 
-Future<void> writeTimestamp(
+Future<void> writeTimestampDal(
     MyDriftElectricClient electric, Map<String, Object?> timestampMap) async {
   final companion = TimestampsCompanion.insert(
     id: timestampMap['id'] as String,
@@ -230,7 +281,22 @@ Future<void> writeTimestamp(
   await electric.db.timestamps.insert().insert(companion);
 }
 
-Future<void> writeDatetime(
+Future<void> writeTimestampRaw(
+    BaseElectricClient electric, Map<String, Object?> timestampMap) async {
+  final createdAt = TypeConverters.timestamp
+      .encode(DateTime.parse(timestampMap['created_at'] as String));
+  final updatedAt = TypeConverters.timestampTZ
+      .encode(DateTime.parse(timestampMap['updated_at'] as String));
+
+  await electric.adapter.run(Statement(
+    'INSERT INTO timestamps (id, created_at, updated_at) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}, ${builder.makePositionalParam(3)});',
+    [timestampMap['id'] as String, createdAt, updatedAt],
+  ));
+}
+
+final writeTimestamp = withDal ? writeTimestampDal : writeTimestampRaw;
+
+Future<void> writeDatetimeDal(
     MyDriftElectricClient electric, Map<String, Object?> datetimeMap) async {
   final companion = DatetimesCompanion.insert(
     id: datetimeMap['id'] as String,
@@ -240,7 +306,22 @@ Future<void> writeDatetime(
   await electric.db.datetimes.insert().insert(companion);
 }
 
-Future<Timestamp?> getTimestamp(
+Future<void> writeDatetimeRaw(
+    BaseElectricClient electric, Map<String, Object?> datetimeMap) async {
+  final d =
+      TypeConverters.date.encode(DateTime.parse(datetimeMap['d'] as String));
+  final t =
+      TypeConverters.time.encode(DateTime.parse(datetimeMap['t'] as String));
+
+  await electric.adapter.run(Statement(
+    '''INSERT INTO datetimes (id, d, t) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}, ${builder.makePositionalParam(3)});''',
+    [datetimeMap['id'] as String, d, t],
+  ));
+}
+
+final writeDatetime = withDal ? writeDatetimeDal : writeDatetimeRaw;
+
+Future<Timestamp?> getTimestampDal(
     MyDriftElectricClient electric, String id) async {
   final timestamp = await (electric.db.timestamps.select()
         ..where((tbl) => tbl.id.equals(id)))
@@ -248,25 +329,83 @@ Future<Timestamp?> getTimestamp(
   return timestamp;
 }
 
-Future<Datetime?> getDatetime(MyDriftElectricClient electric, String id) async {
+Future<Timestamp?> getTimestampRaw(
+    BaseElectricClient electric, String id) async {
+  final rows = await rawQuery(
+    electric,
+    '''SELECT * FROM timestamps WHERE id = ${builder.makePositionalParam(1)};''',
+    [id],
+  );
+  final result = rows.isNotEmpty ? rows[0] : null;
+
+  return result == null
+      ? null
+      : Timestamp(
+          id: result['id'] as String,
+          createdAt:
+              decodeRawColumn<DateTime>(result, 'timestamps', 'created_at'),
+          updatedAt:
+              decodeRawColumn<DateTime>(result, 'timestamps', 'updated_at'));
+}
+
+final getTimestamp = withDal ? getTimestampDal : getTimestampRaw;
+
+T decodeRawColumn<T>(Map<String, Object?> row, String table, String column) {
+  final tableSchema = rawSchema.tableSchemas[table]!;
+  final pgtype = tableSchema.fields[column]!;
+  final rawColVal = row[column];
+  final decoded = converter.decode(rawColVal, pgtype) as T;
+
+  if (pgtype == PgType.int8 && decoded is int) {
+    return BigInt.from(decoded as int) as T;
+  } else {
+    return decoded;
+  }
+}
+
+Map<String, Object?> decodeRow(Map<String, Object?> row, String table) {
+  return row.map((k, v) {
+    final newV = decodeRawColumn(row, table, k);
+    return MapEntry(k, newV);
+  });
+}
+
+Future<Datetime?> getDatetimeDal(
+    MyDriftElectricClient electric, String id) async {
   final datetime = await (electric.db.datetimes.select()
         ..where((tbl) => tbl.id.equals(id)))
       .getSingleOrNull();
 
-  final rowJ = JsonEncoder.withIndent('  ')
-      .convert(toColumns(datetime)?.map((key, value) {
-    final Object? effectiveValue;
-    if (value is DateTime) {
-      effectiveValue = value.toIso8601String();
-    } else {
-      effectiveValue = value;
-    }
-    return MapEntry(key, effectiveValue);
-  }));
+  final rowJ =
+      JsonEncoder.withIndent('  ').convert(toEncodableMap(toColumns(datetime)));
   print('Found date time?:\n$rowJ');
 
   return datetime;
 }
+
+Future<Datetime?> getDatetimeRaw(BaseElectricClient electric, String id) async {
+  final rows = await rawQuery(
+    electric,
+    '''SELECT * FROM datetimes WHERE id = ${builder.makePositionalParam(1)};''',
+    [id],
+  );
+  final result = rows.isNotEmpty ? rows[0] : null;
+
+  final datetime = result == null
+      ? null
+      : Datetime(
+          id: result['id'] as String,
+          d: decodeRawColumn<DateTime>(result, 'datetimes', 'd'),
+          t: decodeRawColumn<DateTime>(result, 'datetimes', 't'),
+        );
+  final rowJ =
+      JsonEncoder.withIndent('  ').convert(toEncodableMap(toColumns(datetime)));
+  print('Found date time?:\n$rowJ');
+
+  return datetime;
+}
+
+final getDatetime = withDal ? getDatetimeDal : getDatetimeRaw;
 
 Future<bool> assertTimestamp(MyDriftElectricClient electric, String id,
     String expectedCreatedAt, String expectedUpdatedAt) async {
@@ -285,6 +424,14 @@ Future<bool> assertDatetime(MyDriftElectricClient electric, String id,
 
 bool checkTimestamp(
     Timestamp? timestamp, String expectedCreatedAt, String expectedUpdatedAt) {
+  print("Timestamp: ${timestamp?.toJson()}");
+  print("Created at: ${timestamp?.createdAt.millisecondsSinceEpoch}");
+  print(
+      "Expected created at: ${DateTime.parse(expectedCreatedAt).millisecondsSinceEpoch}");
+  print("Updated at: ${timestamp?.updatedAt.millisecondsSinceEpoch}");
+  print(
+      "Expected updated at: ${DateTime.parse(expectedUpdatedAt).millisecondsSinceEpoch}");
+
   if (timestamp == null) return false;
 
   return timestamp.createdAt.millisecondsSinceEpoch ==
@@ -302,7 +449,7 @@ bool checkDatetime(
           DateTime.parse(expectedTime).millisecondsSinceEpoch;
 }
 
-Future<SingleRow> writeBool(
+Future<SingleRow> writeBoolDal(
     MyDriftElectricClient electric, String id, bool b) async {
   final row = await electric.db.bools.insertReturning(
     BoolsCompanion.insert(
@@ -313,11 +460,36 @@ Future<SingleRow> writeBool(
   return SingleRow.fromItem(row);
 }
 
-Future<bool?> getBool(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> writeBoolRaw(
+    BaseElectricClient electric, String id, bool b) async {
+  final boolVal =
+      converter.encode(b, rawSchema.tableSchemas['bools']!.fields['b']!);
+  final rows = await electric.adapter.query(Statement(
+    '''INSERT INTO bools (id, b) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}) RETURNING *;''',
+    [id, boolVal],
+  ));
+  return SingleRow.fromColumns(decodeRow(rows.first, 'bools'));
+}
+
+final writeBool = withDal ? writeBoolDal : writeBoolRaw;
+
+Future<bool?> getBoolDal(MyDriftElectricClient electric, String id) async {
   final row = await (electric.db.bools.select()..where((t) => t.id.equals(id)))
       .getSingle();
   return row.b;
 }
+
+Future<bool?> getBoolRaw(MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+      electric,
+      'SELECT b FROM bools WHERE id = ${builder.makePositionalParam(1)};',
+      [id]);
+  return rows.length == 1
+      ? decodeRawColumn<bool?>(rows.first, 'bools', 'b')
+      : null;
+}
+
+final getBool = withDal ? getBoolDal : getBoolRaw;
 
 Future<void> getDatetimes(MyDriftElectricClient electric) async {
   // final rows = await electric.db.datetimes.select().get();
@@ -352,11 +524,21 @@ Future<bool> existsItemWithContent(
   return item != null;
 }
 
-Future<SingleRow> getUUID(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> getUUIDDal(MyDriftElectricClient electric, String id) async {
   final row = await (electric.db.uuids.select()..where((t) => t.id.equals(id)))
       .getSingle();
   return SingleRow.fromItem(row);
 }
+
+Future<SingleRow> getUUIDRaw(MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+      electric,
+      'SELECT * FROM uuids WHERE id = ${builder.makePositionalParam(1)};',
+      [id]);
+  return SingleRow.fromColumns(rows.first);
+}
+
+final getUUID = withDal ? getUUIDDal : getUUIDRaw;
 
 Future<Rows> getUUIDs(MyDriftElectricClient electric) async {
   final rows = await electric.db
@@ -367,7 +549,8 @@ Future<Rows> getUUIDs(MyDriftElectricClient electric) async {
   return _toRows(rows);
 }
 
-Future<SingleRow> writeUUID(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> writeUUIDDal(
+    MyDriftElectricClient electric, String id) async {
   final item = await electric.db.uuids.insertReturning(
     UuidsCompanion.insert(
       id: id,
@@ -376,14 +559,37 @@ Future<SingleRow> writeUUID(MyDriftElectricClient electric, String id) async {
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> getInt(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> writeUUIDRaw(
+    MyDriftElectricClient electric, String id) async {
+  final uuidVal =
+      converter.encode(id, rawSchema.tableSchemas['uuids']!.fields['id']!);
+  final rows = await electric.adapter.query(Statement(
+    '''INSERT INTO uuids (id) VALUES (${builder.makePositionalParam(1)}) RETURNING *;''',
+    [uuidVal],
+  ));
+  return SingleRow.fromColumns(rows.first);
+}
+
+final writeUUID = withDal ? writeUUIDDal : writeUUIDRaw;
+
+Future<SingleRow> getIntDal(MyDriftElectricClient electric, String id) async {
   final item = await (electric.db.ints.select()..where((t) => t.id.equals(id)))
       .getSingle();
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int? i2,
-    int? i4, BigInt? i8) async {
+Future<SingleRow> getIntRaw(MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+      electric,
+      'SELECT id, i2, i4, i8 FROM ints WHERE id = ${builder.makePositionalParam(1)};',
+      [id]);
+  return SingleRow.fromColumns(decodeRow(rows.first, 'ints'));
+}
+
+final getInt = withDal ? getIntDal : getIntRaw;
+
+Future<SingleRow> writeIntDal(MyDriftElectricClient electric, String id,
+    int? i2, int? i4, BigInt? i8) async {
   try {
     final item = await electric.db.ints.insertReturning(
       IntsCompanion.insert(
@@ -404,14 +610,49 @@ Future<SingleRow> writeInt(MyDriftElectricClient electric, String id, int? i2,
   }
 }
 
-Future<SingleRow> getFloat(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> writeIntRaw(MyDriftElectricClient electric, String id,
+    int? i2, int? i4, BigInt? i8) async {
+  try {
+    final rows = await electric.adapter.query(Statement(
+      '''INSERT INTO ints (id, i2, i4, i8) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}, ${builder.makePositionalParam(3)}, ${builder.makePositionalParam(4)}) RETURNING id, i2, i4, i8;''',
+      [
+        id,
+        converter.encode(i2, PgType.int2),
+        converter.encode(i4, PgType.int4),
+        converter.encode(i8, PgType.int8),
+      ],
+    ));
+    return SingleRow.fromColumns(decodeRow(rows.first, 'ints'));
+  } catch (e) {
+    final eStr = e.toString();
+    if (eStr
+        .contains("Invalid argument (this): Should be in signed 64bit range")) {
+      throw Exception("BigInt value exceeds the range of 64 bits");
+    }
+    rethrow;
+  }
+}
+
+final writeInt = withDal ? writeIntDal : writeIntRaw;
+
+Future<SingleRow> getFloatDal(MyDriftElectricClient electric, String id) async {
   final item = await (electric.db.floats.select()
         ..where((t) => t.id.equals(id)))
       .getSingle();
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeFloat(
+Future<SingleRow> getFloatRaw(MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+      electric,
+      'SELECT * FROM floats WHERE id = ${builder.makePositionalParam(1)};',
+      [id]);
+  return SingleRow.fromColumns(decodeRow(rows.first, 'floats'));
+}
+
+final getFloat = withDal ? getFloatDal : getFloatRaw;
+
+Future<SingleRow> writeFloatDal(
     MyDriftElectricClient electric, String id, double f4, double f8) async {
   final item = await electric.db.floats.insertReturning(
     FloatsCompanion.insert(
@@ -423,12 +664,37 @@ Future<SingleRow> writeFloat(
   return SingleRow.fromItem(item);
 }
 
+Future<SingleRow> writeFloatRaw(
+    MyDriftElectricClient electric, String id, double f4, double f8) async {
+  final rows = await electric.adapter.query(Statement(
+    '''INSERT INTO floats (id, f4, f8) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}, ${builder.makePositionalParam(3)}) RETURNING *;''',
+    [
+      id,
+      converter.encode(f4, PgType.float4),
+      converter.encode(f8, PgType.float8),
+    ],
+  ));
+  return SingleRow.fromColumns(decodeRow(rows.first, 'floats'));
+}
+
+final writeFloat = withDal ? writeFloatDal : writeFloatRaw;
+
 Future<String?> getJsonRaw(MyDriftElectricClient electric, String id) async {
-  final res = await electric.db.customSelect(
+  final res = await rawQuery(
+    electric,
     'SELECT js FROM jsons WHERE id = ${builder.makePositionalParam(1)};',
-    variables: [Variable(id)],
-  ).get();
-  return res[0].read<String?>('js');
+    [id],
+  );
+  return res[0]['js'] as String?;
+}
+
+Future<List<Map<String, Object?>>> rawQuery(
+  BaseElectricClient electric,
+  String query, [
+  List<Object?> args = const [],
+]) async {
+  final rows = await electric.adapter.query(Statement(query, args));
+  return rows;
 }
 
 Future<String?> getJsonbRaw(MyDriftElectricClient electric, String id) async {
@@ -450,7 +716,7 @@ Future<String?> getJsonbRaw(MyDriftElectricClient electric, String id) async {
   return valueToPrettyStr(effectiveJ);
 }
 
-Future<SingleRow> getJson(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> getJsonDal(MyDriftElectricClient electric, String id) async {
   final item = await (electric.db.jsons.select()..where((t) => t.id.equals(id)))
       .getSingle();
   final cols = toColumns(item)!;
@@ -458,7 +724,19 @@ Future<SingleRow> getJson(MyDriftElectricClient electric, String id) async {
   return SingleRow.fromColumns(cols);
 }
 
-Future<SingleRow> getJsonb(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> getJsonRawInternal(
+    MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+    electric,
+    'SELECT id FROM jsons WHERE id = ${builder.makePositionalParam(1)};',
+    [id],
+  );
+  return SingleRow.fromColumns(decodeRow(rows.first, 'jsons'));
+}
+
+final getJson = withDal ? getJsonDal : getJsonRawInternal;
+
+Future<SingleRow> getJsonbDal(MyDriftElectricClient electric, String id) async {
   final item = await (electric.db.jsons.select()..where((t) => t.id.equals(id)))
       .getSingle();
   final cols = toColumns(item)!;
@@ -466,7 +744,19 @@ Future<SingleRow> getJsonb(MyDriftElectricClient electric, String id) async {
   return SingleRow.fromColumns(cols);
 }
 
-Future<SingleRow> writeJson(
+Future<SingleRow> getJsonbRawInternal(
+    MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+    electric,
+    'SELECT id, jsb FROM jsons WHERE id = ${builder.makePositionalParam(1)};',
+    [id],
+  );
+  return SingleRow.fromColumns(decodeRow(rows.first, 'jsons'));
+}
+
+final getJsonb = withDal ? getJsonbDal : getJsonbRawInternal;
+
+Future<SingleRow> writeJsonDal(
     MyDriftElectricClient electric, String id, Object? jsb) async {
   final item = await electric.db.jsons.insertReturning(
     JsonsCompanion.insert(
@@ -477,13 +767,42 @@ Future<SingleRow> writeJson(
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> getEnum(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> writeJsonRaw(
+    MyDriftElectricClient electric, String id, Object? jsb) async {
+  final rows = await electric.adapter.query(Statement(
+    '''INSERT INTO jsons (id, jsb) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}) RETURNING *;''',
+    [
+      id,
+      converter.encode(jsb, PgType.jsonb),
+    ],
+  ));
+  return SingleRow.fromColumns(decodeRow(rows.first, 'jsons'));
+}
+
+final writeJson = withDal ? writeJsonDal : writeJsonRaw;
+
+Future<SingleRow> getEnumDal(MyDriftElectricClient electric, String id) async {
   final item = await (electric.db.enums.select()..where((t) => t.id.equals(id)))
       .getSingle();
   return _enumClassToRawRow(item);
 }
 
-Future<SingleRow> writeEnum(
+Future<SingleRow> getEnumRaw(MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+    electric,
+    'SELECT * FROM enums WHERE id = ${builder.makePositionalParam(1)};',
+    [id],
+  );
+  final row = rows.first;
+  if (dialect() == Dialect.postgres) {
+    row['c'] = (row['c'] as pg.UndecodedBytes?)?.asString;
+  }
+  return SingleRow.fromColumns(decodeRow(row, 'enums'));
+}
+
+final getEnum = withDal ? getEnumDal : getEnumRaw;
+
+Future<SingleRow> writeEnumDal(
     MyDriftElectricClient electric, String id, String? enumStr) async {
   final enumValue =
       enumStr == null ? null : ElectricEnumCodecs.color.decode(enumStr);
@@ -498,6 +817,22 @@ Future<SingleRow> writeEnum(
   return _enumClassToRawRow(item);
 }
 
+Future<SingleRow> writeEnumRaw(
+    MyDriftElectricClient electric, String id, String? enumStr) async {
+  final rows = await electric.adapter.query(Statement(
+    '''INSERT INTO enums (id, c) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}) RETURNING *;''',
+    [id, enumStr],
+  ));
+  final row = rows.first;
+
+  if (dialect() == Dialect.postgres) {
+    row['c'] = (row['c'] as pg.UndecodedBytes?)?.asString;
+  }
+  return SingleRow.fromColumns(decodeRow(row, 'enums'));
+}
+
+final writeEnum = withDal ? writeEnumDal : writeEnumRaw;
+
 // Converts the dart enum into string for the Lux expected output
 SingleRow _enumClassToRawRow(Enum item) {
   final driftCols = toColumns(item)!;
@@ -509,13 +844,24 @@ SingleRow _enumClassToRawRow(Enum item) {
   return SingleRow(driftCols);
 }
 
-Future<SingleRow> getBlob(MyDriftElectricClient electric, String id) async {
+Future<SingleRow> getBlobDal(MyDriftElectricClient electric, String id) async {
   final item = await (electric.db.blobs.select()..where((t) => t.id.equals(id)))
       .getSingle();
   return SingleRow.fromItem(item);
 }
 
-Future<SingleRow> writeBlob(
+Future<SingleRow> getBlobRaw(MyDriftElectricClient electric, String id) async {
+  final rows = await rawQuery(
+    electric,
+    'SELECT * FROM blobs WHERE id = ${builder.makePositionalParam(1)};',
+    [id],
+  );
+  return SingleRow.fromColumns(decodeRow(rows.first, 'blobs'));
+}
+
+final getBlob = withDal ? getBlobDal : getBlobRaw;
+
+Future<SingleRow> writeBlobDal(
     MyDriftElectricClient electric, String id, List<int>? blob) async {
   final item = await electric.db.blobs.insertReturning(
     BlobsCompanion.insert(
@@ -525,6 +871,18 @@ Future<SingleRow> writeBlob(
   );
   return SingleRow.fromItem(item);
 }
+
+Future<SingleRow> writeBlobRaw(
+    MyDriftElectricClient electric, String id, List<int>? blob) async {
+  final rows = await electric.adapter.query(Statement(
+    '''INSERT INTO blobs (id, blob) VALUES (${builder.makePositionalParam(1)}, ${builder.makePositionalParam(2)}) RETURNING *;''',
+    [id, converter.encode(blob, PgType.bytea)],
+  ));
+  final row = rows.first;
+  return SingleRow.fromColumns(decodeRow(row, 'blobs'));
+}
+
+final writeBlob = withDal ? writeBlobDal : writeBlobRaw;
 
 Future<Rows> getItemColumns(
     MyDriftElectricClient electric, String table, String column) async {
@@ -536,7 +894,7 @@ Future<Rows> getItemColumns(
   return _toRows(rows);
 }
 
-Future<void> insertItem(
+Future<void> insertItems(
     MyDriftElectricClient electric, List<String> keys) async {
   await electric.db.transaction(() async {
     for (final key in keys) {
@@ -618,7 +976,7 @@ Future<void> insertOtherItem(
   });
 }
 
-void setItemReplicatonTransform(MyDriftElectricClient electric) {
+void setItemReplicatonTransformDal(MyDriftElectricClient electric) {
   electric.setTableReplicationTransform(
     electric.db.items,
     transformOutbound: (item) {
@@ -637,6 +995,32 @@ void setItemReplicatonTransform(MyDriftElectricClient electric) {
     },
   );
 }
+
+void setItemReplicatonTransformRaw(MyDriftElectricClient electric) {
+  final namespace = builder.defaultNamespace;
+  // ignore: invalid_use_of_internal_member
+  electric.rawClient.setReplicationTransform(
+    QualifiedTablename(namespace, 'items'),
+    ReplicatedRowTransformer(transformInbound: (itemRow) {
+      final newContent = (itemRow['content']! as String)
+          .split('')
+          .map((char) => String.fromCharCode(char.codeUnitAt(0) - 1))
+          .join('');
+      itemRow['content'] = newContent;
+      return itemRow;
+    }, transformOutbound: (itemRow) {
+      final newContent = (itemRow['content']! as String)
+          .split('')
+          .map((char) => String.fromCharCode(char.codeUnitAt(0) + 1))
+          .join('');
+      itemRow['content'] = newContent;
+      return itemRow;
+    }),
+  );
+}
+
+final setItemReplicatonTransform =
+    withDal ? setItemReplicatonTransformDal : setItemReplicatonTransformRaw;
 
 Future<void> stop(MyDriftElectricClient db) async {
   await globalRegistry.stopAll();
@@ -658,14 +1042,21 @@ void disconnect(MyDriftElectricClient db) {
   db.disconnect();
 }
 
-Future<void> custom0325SyncItems(MyDriftElectricClient electric) async {
-  final subs = await electric.syncTable(
-    electric.db.items,
-    where: (items) => items.content.like('items-_-'),
-    include: (items) => [SyncInputRelation.from(items.$relations.otherItems)],
+Future<void> custom0326SyncItems(MyDriftElectricClient electric) async {
+  await syncTableWithShape<Items>(
+    electric,
+    'items',
+    shapeFilterDal: (items) => items.content.like('items-_-'),
+    shapeFilterRaw: "this.content like 'items-_-'",
+    includeDal: (items) =>
+        [ShapeInputRelation.from(items.$relations.otherItems)],
+    includeRaw: [
+      IncludeRelRaw(
+        foreignKey: ['item_id'],
+        select: ShapeInputRaw(tableName: 'other_items'),
+      ),
+    ],
   );
-
-  await subs.synced;
 }
 
 /////////////////////////////////

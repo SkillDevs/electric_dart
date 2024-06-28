@@ -1,3 +1,10 @@
+## 0.8.1
+
+* Code based on official Typescript client [v0.12.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.12.1).
+* Fail if closing the websocket while the socket connection is being established.
+* Properly abort the process connection with retries if closing the client with `disconnect`.
+
+
 ## 0.8.0
 
 * Code based on official Typescript client [v0.12.0](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.12.0).

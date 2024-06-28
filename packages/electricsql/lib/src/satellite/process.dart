@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:electricsql/drivers/drivers.dart';
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/auth/secure.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/config/config.dart';
-import 'package:electricsql/src/electric/adapter.dart';
 import 'package:electricsql/src/migrators/migrators.dart';
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/migrators/triggers.dart';
@@ -41,6 +41,13 @@ typedef ChangeAccumulator = Map<String, Change>;
 
 class ShapeSubscription {
   final String key;
+
+  /// A promise that will resolve once the subscription has synced
+  /// the initial data for the shape.
+  ///
+  /// NOTE: This does not wait for the most recent data changes to
+  /// be synced into the local database, only an initial data batch
+  /// required to establish the subesequent data replication.
   final Future<void> synced;
 
   ShapeSubscription({required this.key, required this.synced});
@@ -1569,7 +1576,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
 
     // Batch-delete shadow entries
     final stmts = builder.prepareDeleteBatchedStatements(
-      'DELETE FROM ${opts.shadowTable} WHERE ',
+      'DELETE FROM ${opts.shadowTable} WHERE',
       ['namespace', 'tablename', 'primaryKey'],
       fakeOplogEntries.map((e) => e.toRow()).toList(),
       maxSqlParameters,

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:collection/collection.dart';
 import 'package:electricsql/satellite.dart';
 import 'package:electricsql/src/client/model/shapes.dart';
 import 'package:electricsql/src/util/js_array_funs.dart';
@@ -152,7 +151,7 @@ class ShapeManager {
       _knownSubscriptions.values
           .where((x) => !requested.contains(x?.fullKey))
           .map((x) => x?.shapes)
-          .whereNotNull()
+          .nonNulls
           .expand((x) => x)
           .toList(),
       defaultNamespace,
@@ -411,7 +410,7 @@ class ShapeManager {
     } else {
       final ids = sub.overshadowsFullKeys
           .map((x) => _knownSubscriptions[x]?.serverId)
-          .whereNotNull()
+          .nonNulls
           .toList();
       return () => ids;
     }
@@ -459,8 +458,7 @@ class ShapeManager {
   }
 
   List<RequestedSubscription> _getSubscriptionsWaitingForUnsub(String fullKey) {
-    return _knownSubscriptions.values
-        .whereNotNull()
+    return _knownSubscriptions.values.nonNulls
         .where((x) => x.overshadowsFullKeys.any((y) => y == fullKey))
         .toList();
   }
@@ -477,7 +475,7 @@ class ShapeManager {
         .map((k) => _activeSubscriptions[k])
         .map((k) => k != null ? _knownSubscriptions[k] : null)
         .map((x) => x?.serverId)
-        .whereNotNull()
+        .nonNulls
         .toList();
   }
 

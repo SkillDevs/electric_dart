@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:electricsql/src/auth/auth.dart';
 import 'package:electricsql/src/client/conversions/types.dart';
-import 'package:electricsql/src/client/model/schema.dart';
+import 'package:electricsql/src/client/model/schema.dart' hide Relation;
 import 'package:electricsql/src/migrators/query_builder/query_builder.dart';
 import 'package:electricsql/src/proto/satellite.pb.dart';
 import 'package:electricsql/src/satellite/client.dart';
@@ -271,12 +271,15 @@ void main() {
   test('receive transaction over multiple messages', () async {
     await connectAndAuth();
 
-    final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': {
-          'name1': PgType.text,
-          'name2': PgType.text,
-        },
+    const dbDescription = DBSchemaRaw(
+      tableSchemas: {
+        'table': TableSchema(
+          fields: {
+            'name1': PgType.text,
+            'name2': PgType.text,
+          },
+          relations: [],
+        ),
       },
       migrations: [],
       pgMigrations: [],
@@ -708,19 +711,22 @@ void main() {
       ],
     );
 
-    final Fields tblFields = {
-      'id': PgType.uuid,
-      'content': PgType.varchar,
-      'text_null': PgType.text,
-      'text_null_default': PgType.text,
-      'intvalue_null': PgType.int4,
-      'intvalue_null_default': PgType.int4,
-    };
-
-    final dbDescription = DBSchemaRaw(
+    const TableSchema tbl = TableSchema(
       fields: {
-        'table': tblFields,
-        'Items': tblFields,
+        'id': PgType.uuid,
+        'content': PgType.varchar,
+        'text_null': PgType.text,
+        'text_null_default': PgType.text,
+        'intvalue_null': PgType.int4,
+        'intvalue_null_default': PgType.int4,
+      },
+      relations: [],
+    );
+
+    const dbDescription = DBSchemaRaw(
+      tableSchemas: {
+        'table': tbl,
+        'Items': tbl,
       },
       migrations: [],
       pgMigrations: [],
@@ -1088,15 +1094,18 @@ void main() {
 
     const tablename = 'THE_TABLE_ID';
 
-    final Fields tblFields = {
-      'name1': PgType.text,
-      'name2': PgType.text,
-    };
-
-    final dbDescription = DBSchemaRaw(
+    const TableSchema tbl = TableSchema(
       fields: {
-        'table': tblFields,
-        tablename: tblFields,
+        'name1': PgType.text,
+        'name2': PgType.text,
+      },
+      relations: [],
+    );
+
+    const dbDescription = DBSchemaRaw(
+      tableSchemas: {
+        'table': tbl,
+        tablename: tbl,
       },
       migrations: [],
       pgMigrations: [],
@@ -1195,12 +1204,15 @@ void main() {
   test('client correctly handles additional data messages', () async {
     await connectAndAuth();
 
-    final dbDescription = DBSchemaRaw(
-      fields: {
-        'table': {
-          'name1': PgType.text,
-          'name2': PgType.text,
-        },
+    const dbDescription = DBSchemaRaw(
+      tableSchemas: {
+        'table': TableSchema(
+          fields: {
+            'name1': PgType.text,
+            'name2': PgType.text,
+          },
+          relations: [],
+        ),
       },
       migrations: [],
       pgMigrations: [],
