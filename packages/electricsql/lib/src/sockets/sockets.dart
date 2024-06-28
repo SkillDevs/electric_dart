@@ -3,8 +3,7 @@ import 'dart:typed_data';
 
 import 'package:electricsql/src/util/types.dart';
 import 'package:electricsql/src/version.dart';
-import 'package:meta/meta.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket/web_socket.dart';
 
 export 'stub.dart'
     if (dart.library.io) 'io.dart'
@@ -55,7 +54,7 @@ class CloseEvent {
 /// io and html both derive from the main logic here
 abstract class WebSocketBase implements Socket {
   final String protocolVsn;
-  WebSocketChannel? _channel;
+  WebSocket? _socket;
   List<StreamSubscription<dynamic>> _subscriptions = [];
 
   List<void Function()> _onceConnectCallbacks = [];
@@ -98,9 +97,6 @@ abstract class WebSocketBase implements Socket {
     }
   }
 
-  @protected
-  WebSocketChannel createSocketChannel(String url);
-
   @override
   Socket open(ConnectionOptions opts) {
     _asyncStart(opts);
@@ -108,20 +104,33 @@ abstract class WebSocketBase implements Socket {
   }
 
   Future<void> _asyncStart(ConnectionOptions opts) async {
-    if (_channel != null) {
+    if (_socket != null) {
       throw SatelliteException(
         SatelliteErrorCode.internal,
         'trying to open a socket before closing existing socket',
       );
     }
 
+    if (_openingSocketErrorCompleter != null) {
+      _openingSocketErrorCompleter!.completeError(
+        Exception(
+          'trying to open a socket while another socket is being opened',
+        ),
+      );
+      return;
+    }
+
     _openingSocketErrorCompleter = Completer<void>();
     try {
-      _channel = createSocketChannel(opts.url);
+      final _open = WebSocket.connect(
+        Uri.parse(opts.url),
+        protocols: [protocolVsn],
+      );
       await Future.any([
-        _channel!.ready,
+        _open,
         _openingSocketErrorCompleter!.future,
       ]);
+      _socket = await _open;
     } catch (e) {
       _notifyErrorAndCloseSocket(
         error: SatelliteException(
@@ -138,22 +147,26 @@ abstract class WebSocketBase implements Socket {
     // Notify connected
     _connectListener();
 
-    final msgSubscription = _channel!.stream //
+    final msgSubscription = _socket!.events //
         .listen(
-      (rawData) {
-        try {
-          final bytes = rawData as Uint8List;
-
-          // Notify message
-          _messageListener?.call(bytes);
-        } catch (e) {
-          _notifyErrorAndCloseSocket(
-            error: SatelliteException(
-              SatelliteErrorCode.internal,
-              'error parsing processing socket data',
-            ),
-            stackTrace: StackTrace.current,
-          );
+      (WebSocketEvent event) async {
+        switch (event) {
+          case BinaryDataReceived(data: final data):
+            try {
+              // Notify message
+              _messageListener?.call(data);
+            } catch (e) {
+              _notifyErrorAndCloseSocket(
+                error: SatelliteException(
+                  SatelliteErrorCode.internal,
+                  'error parsing processing socket data',
+                ),
+                stackTrace: StackTrace.current,
+              );
+            }
+          case CloseReceived(code: final code, reason: final reason):
+            _socketClose(closeCode: code, closeReason: reason);
+          case TextDataReceived():
         }
       },
       cancelOnError: true,
@@ -169,7 +182,7 @@ abstract class WebSocketBase implements Socket {
 
   @override
   Socket write(Data data) {
-    _channel?.sink.add(data);
+    _socket?.sendBytes(data);
     return this;
   }
 
@@ -239,7 +252,10 @@ abstract class WebSocketBase implements Socket {
     _onceErrorCallbacks.remove(cb);
   }
 
-  void _socketClose() {
+  void _socketClose({
+    int? closeCode,
+    String? closeReason,
+  }) {
     // Check if the socket is in the process of opening
     if (_openingSocketErrorCompleter != null) {
       if (!_openingSocketErrorCompleter!.isCompleted) {
@@ -255,30 +271,37 @@ abstract class WebSocketBase implements Socket {
     }
     _subscriptions = [];
 
-    final channelToClose = _channel;
+    final socketToClose = _socket;
 
-    if (channelToClose != null) {
-      final closeFuture = channelToClose.sink.close();
+    if (socketToClose != null) {
+      // Close the websocket
+      final closeFuture = socketToClose.close().catchError((Object e) {
+        if (e is WebSocketConnectionClosed) {
+          // ignore, the socket is already closed
+        } else {
+          throw e;
+        }
+      });
+
       if (_closeListener != null) {
         final listener = _closeListener!;
         closeFuture.then((_) {
           listener.call(
             CloseEvent(
-              code: channelToClose.closeCode,
-              reason: channelToClose.closeReason,
+              code: closeCode,
+              reason: closeReason,
             ),
           );
         });
       }
+      _closeListener = null;
     }
-
-    _closeListener = null;
 
     _onceConnectCallbacks = [];
     _errorCallbacks = [];
     _onceErrorCallbacks = [];
     _messageListener = null;
 
-    _channel = null;
+    _socket = null;
   }
 }
