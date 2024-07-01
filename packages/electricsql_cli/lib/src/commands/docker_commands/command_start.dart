@@ -103,11 +103,8 @@ Future<void> runStartCommand({
   finalLogger.info('Docker compose config:');
   printConfig(finalLogger, Config(dockerConfig));
 
-  final proc = await dockerCompose(
-    'up',
-    [
-      ...(detach == true ? ['--detach'] : []),
-    ],
+  final proc = await dockerComposeUp(
+    userArgs: detach == true ? ['--detach'] : [],
     containerName: config.read<String>('CONTAINER_NAME'),
     env: dockerConfig,
   );

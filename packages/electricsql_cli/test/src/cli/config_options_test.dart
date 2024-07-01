@@ -35,6 +35,7 @@ const expectedEnvVars = <String>[
   'ELECTRIC_IMAGE',
   'CONTAINER_NAME',
   'ELECTRIC_FEATURES',
+  'DOCKER_NETWORK_USE_EXTERNAL',
 ];
 
 void main() {

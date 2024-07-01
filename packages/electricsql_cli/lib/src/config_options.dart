@@ -302,7 +302,14 @@ final _kConfigOptions = <String, ConfigOption<Object>>{
   'ELECTRIC_FEATURES': ConfigOption<String>(
     valueTypeName: 'features',
     defaultValue: '',
-    doc: 'Flags to enable experimental features',
+    doc: 'Flags to enable experimental features.',
+    groups: ['electric'],
+  ),
+  'DOCKER_NETWORK_USE_EXTERNAL': ConfigOption<String>(
+    valueTypeName: "'host' | name",
+    defaultValue: '',
+    doc:
+        "Name of an existing Docker network to use or 'host' to run the container using the host OS networking.",
     groups: ['electric'],
   ),
 };
