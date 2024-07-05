@@ -12,14 +12,17 @@
 
 #### 🛠️ WORK IN PROGRESS 🛠️
 
-[Electric](https://electric-sql.com/) is currently in **public alpha** phase, and the Dart client is currently being developed introducing the new features from the official client as they come out.
-For development updates make sure to check out the official [ElectricSQL Discord](https://discord.gg/B7kHGwDcbj) server, as well as the official [Javascript client](https://www.npmjs.com/package/electric-sql)
+[Electric](https://electric-sql.com/) is currently in **public alpha** phase, and you can read the [Roadmap](https://electric-sql.com/docs/reference/roadmap) to know about the current limitations.
+
+As of today, the Dart client is 100% feature parity with the official Javascript client. We add new features to the Dart client as they come out on the official client.
+
+For development updates make sure to check out the official [ElectricSQL Discord](https://discord.gg/B7kHGwDcbj) server.
 
 ---
 
 Unofficial Dart client implementation for [Electric](https://electric-sql.com/).
 
-Client based on the Typescript client from the `clients/typescript` subfolder from [electric git repository](https://github.com/electric-sql/electric)
+Client based on the Typescript client from the `clients/typescript` subfolder in the [Electric GitHub repository](https://github.com/electric-sql/electric)
 
 ### Reference implementation:
 
