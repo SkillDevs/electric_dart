@@ -742,7 +742,7 @@ INSERT $orIgnore INTO $qualifiedTableName (${columnNames.join(', ')}) VALUES '''
     }
 
     logger.warning(
-      'an error occurred in satellite: ${satelliteError.message}',
+      'an error occurred in satellite: ${capitalizeString(satelliteError.code.name)} ${satelliteError.message}',
     );
 
     unawaited(_handleOrThrowClientError(satelliteError));

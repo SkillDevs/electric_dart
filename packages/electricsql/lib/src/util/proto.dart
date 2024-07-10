@@ -196,7 +196,7 @@ const Map<SatSubsDataError_ShapeReqError_Code, SatelliteErrorCode>
 SatelliteException serverErrorToSatelliteError(SatErrorResp error) {
   return SatelliteException(
     serverErrorToSatError[error.errorType] ?? SatelliteErrorCode.unrecognized,
-    'server error',
+    'Server error: ${error.message}',
   );
 }
 
