@@ -133,8 +133,8 @@ ExtractedDateTime extractDateAndTime(DateTime v) {
 }
 
 extension BigIntExt on BigInt {
-  static final _bigIntMinValue64 = BigInt.from(-9223372036854775808);
-  static final _bigIntMaxValue64 = BigInt.from(9223372036854775807);
+  static final _bigIntMinValue64 = BigInt.parse('-9223372036854775808');
+  static final _bigIntMaxValue64 = BigInt.parse('9223372036854775807');
 
   int rangeCheckedToInt() {
     if (this < _bigIntMinValue64 || this > _bigIntMaxValue64) {
