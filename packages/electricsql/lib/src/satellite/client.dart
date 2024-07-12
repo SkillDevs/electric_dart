@@ -649,7 +649,7 @@ class SatelliteClient implements Client {
     SatInStartReplicationReq message,
   ) async {
     logger.info(
-      'Server sent a replication request to start from ${bytesToNumber(message.lsn)}, and options ${message.options.map((e) => e.name)}',
+      'Server sent a replication request to start from ${bytesToNumber(message.lsn)}, and options ${message.options.map((e) => e.name).toList()}',
     );
     if (outbound.isReplicating == ReplicationStatus.stopped) {
       // Use server-sent LSN as the starting point for replication
