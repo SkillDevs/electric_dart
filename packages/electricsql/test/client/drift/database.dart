@@ -57,7 +57,6 @@ class TestsDatabase extends _$TestsDatabase {
       PgDatabase(
         endpoint: endpoint,
         settings: settings,
-        enableMigrations: false,
         // logStatements: true,
       ),
     );
@@ -69,6 +68,7 @@ class TestsDatabase extends _$TestsDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
+          // Non-empty onCreate because we want to test a custom table via drift files
           await m.create(tableFromDriftFile);
         },
       );
