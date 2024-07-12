@@ -153,7 +153,8 @@ T? getOptionalConfigValue<T>(
   final defaultValGetter =
       (configOptions[name]!).getDefaultValue(options ?? {});
   if (defaultValGetter != null) {
-    return defaultValGetter() as T;
+    final defaultVal = defaultValGetter() as T;
+    return defaultVal;
   } else {
     return null;
   }
@@ -287,6 +288,7 @@ void addOptionToCommand(Command<dynamic> command, String optionName) {
       help: doc,
       aliases: aliases,
       negatable: false,
+      defaultsTo: null, // We handle defaults ourselves
     );
   } else {
     command.argParser.addOption(
@@ -294,6 +296,7 @@ void addOptionToCommand(Command<dynamic> command, String optionName) {
       help: doc,
       valueHelp: valueHelp,
       aliases: aliases,
+      defaultsTo: null, // We handle defaults ourselves
     );
   }
 }
