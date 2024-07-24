@@ -10,13 +10,21 @@
     Electric Dart
 </h1>
 
-#### 🛠️ WORK IN PROGRESS 🛠️
+#### ⚠️ DEPRECATION NOTICE ⚠️
 
-[Electric](https://electric-sql.com/) is currently in **public alpha** phase, and you can read the [Roadmap](https://electric-sql.com/docs/reference/roadmap) to know about the current limitations.
+With the introduction of Electric Next (https://next.electric-sql.com/about), the local first features from the original ElectricSQL project have been restructured. The team behind Electric has decided to improve reliability and performance by reducing the scope of the project and add more features incrementally.
 
-As of today, the Dart client is 100% feature parity with the official Javascript client. We add new features to the Dart client as they come out on the official client.
+Only the read path use case will be considered for the initial release. That is replicating rows to different devices via the Shapes API.
+Regarding writes you will need to use a remote API endpoint that inserts, updates or deletes from your Postgres, and Electric Next will make sure to stream those changes to the clients .
+What that means is that if your project needs offline CRUD operations on your apps, the new Electric won't be your best option for now. 
 
-For development updates make sure to check out the official [ElectricSQL Discord](https://discord.gg/B7kHGwDcbj) server.
+Electric Dart is open source and will remain as that, but with the announcement of Electric Next it can be considered deprecated until previous features from the original ElectricSQL local first vision are reintroduced back at an undetermined date.
+
+The good news is that if your app is fine with offline reads, and writes through an API, implementing a client should be very simple, as it's basically an HTTP wrapper that outputs JSON. You have the JS source code in the electric next repository (https://github.com/electric-sql/electric-next).
+
+Sorry for being the bearer of bad news for those who are affected. Hopefully the full local first experience can be reached one day. The development experience we had with drift and Electric has been awesome.
+
+If you are interested in the new approach or have questions make sure to check out the official [ElectricSQL Discord](https://discord.gg/B7kHGwDcbj) server.
 
 ---
 
