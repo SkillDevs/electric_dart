@@ -1,3 +1,8 @@
+## 0.8.3
+
+* Deprecation notice. Please refer to the README for more information.
+
+
 ## 0.8.1
 
 * Code based on official Typescript client [v0.12.1](https://github.com/electric-sql/electric/releases/tag/electric-sql%400.12.1).
